@@ -1,0 +1,26 @@
+<query> ::= <key> = <value>
+
+<key> ::= <path> | <tuple> | <path><tuple>
+
+<value> ::= <data> | "clear"
+
+<path> ::= <directory>"/"<path> | <directory>
+
+<tuple> ::= "("<elements>")"
+
+<elements> ::= <data>","<elements> | <tuple>","<elements> | <data> | <tuple>
+
+<data> ::= "_" | "?" | "nil" | <int> | <float> | <bool> | <scientific> | <string> | <uuid> | <base64>
+
+<int> ::= <number> | "-"<number>
+
+<float> ::= <number>"."<number> | "-"<number>"."<number>
+
+<bool> ::= "true" | "false"
+
+<scientific> ::= <number>"e"<number> | "-"<number>"e"<number> | <number>
+
+<number> ::= <digit> | <digit><number>
+
+<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+
