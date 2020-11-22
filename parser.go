@@ -14,13 +14,9 @@ type (
 	}
 
 	Key struct {
-		Directory Directory
-		Tuple     *Tuple
+		Directory []string
+		Tuple     []string
 	}
-
-	Directory []string
-
-	Tuple []string
 
 	Value string
 )
@@ -87,7 +83,7 @@ func ParseKey(str string) (*Key, error) {
 	}, nil
 }
 
-func ParseDirectory(str string) (Directory, error) {
+func ParseDirectory(str string) ([]string, error) {
 	if len(str) == 0 {
 		return nil, errors.New("directory path is an empty string")
 	}
@@ -126,7 +122,7 @@ func ParseDirectory(str string) (Directory, error) {
 	return directory, nil
 }
 
-func ParseTuple(str string) (*Tuple, error) {
+func ParseTuple(str string) ([]string, error) {
 	return nil, nil
 }
 
