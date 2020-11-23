@@ -37,6 +37,40 @@ func TestParseDirectory(t *testing.T) {
 	assert.Nil(t, dir)
 }
 
+func TestParseTuple(t *testing.T) {
+	data, err := ParseTuple("")
+	assert.Error(t, err)
+	assert.Nil(t, data)
+
+	data, err = ParseTuple("(")
+	assert.Error(t, err)
+	assert.Nil(t, data)
+
+	data, err = ParseTuple(")")
+	assert.Error(t, err)
+	assert.Nil(t, data)
+
+	data, err = ParseTuple("()")
+	assert.NoError(t, err)
+	assert.Equal(t, tup.Tuple{}, data)
+
+	data, err = ParseTuple("(17)")
+	assert.NoError(t, err)
+	assert.Equal(t, tup.Tuple{int64(17)}, data)
+
+	data, err = ParseTuple("(17, 'hello world')")
+	assert.NoError(t, err)
+	assert.Equal(t, tup.Tuple{int64(17), "hello world"}, data)
+
+	data, err = ParseTuple("('hello', 23.3, (-3))")
+	assert.NoError(t, err)
+	assert.Equal(t, tup.Tuple{"hello", 23.3, tup.Tuple{int64(-3)}}, data)
+
+	data, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
+	assert.NoError(t, err)
+	assert.Equal(t, tup.Tuple{tup.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, data)
+}
+
 func TestParseData(t *testing.T) {
 	data, err := ParseData("")
 	assert.Error(t, err)

@@ -2,7 +2,6 @@ package fdbq
 
 import (
 	"encoding/hex"
-	"fmt"
 	"regexp"
 	"strconv"
 	"strings"
@@ -152,13 +151,26 @@ func ParseTuple(str string) (tup.Tuple, error) {
 		return nil, errors.New("tuple must end with a ')")
 	}
 
+	str = str[1 : len(str)-1]
+	if len(str) == 0 {
+		return tup.Tuple{}, nil
+	}
+
 	var tuple tup.Tuple
-	for i, part := range strings.Split(str[1:len(str)-1], ",") {
-		data, err := ParseData(strings.TrimSpace(part))
-		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse %s element - %s", ordinal(i+1), data)
+	for i, elementStr := range strings.Split(str, ",") {
+		elementStr = strings.TrimSpace(elementStr)
+		var element interface{}
+		var err error
+
+		if elementStr[0] == '(' {
+			element, err = ParseTuple(elementStr)
+		} else {
+			element, err = ParseData(elementStr)
 		}
-		tuple = append(tuple, data)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse %s element - %s", ordinal(i+1), elementStr)
+		}
+		tuple = append(tuple, element)
 	}
 	return tuple, nil
 }
@@ -253,10 +265,7 @@ func ParseNumber(str string) (interface{}, error) {
 	if fErr == nil {
 		return f, nil
 	}
-	return nil, errors.Errorf("%v, %v, %v",
-		fmt.Sprintf("failed to parse as int - %s", iErr.Error()),
-		fmt.Sprintf("failed to parse as uint - %s", uErr.Error()),
-		fmt.Sprintf("failed to parse as float - %s", fErr.Error()))
+	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
 }
 
 func ParseValue(str string) (*Value, error) {
