@@ -58,7 +58,12 @@ func ParseKey(str string) (*Key, error) {
 		return nil, errors.New("input is empty")
 	}
 
-	parts := strings.SplitN(str, "(", 2)
+	var parts []string
+	if i := strings.Index(str, "("); i == -1 {
+		parts = []string{str}
+	} else {
+		parts = []string{str[:i], str[i:]}
+	}
 
 	var directoryStr string
 	var tupleStr string
@@ -78,19 +83,20 @@ func ParseKey(str string) (*Key, error) {
 		tupleStr = parts[1]
 	}
 
-	directory, err := ParseDirectory(directoryStr)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse directory - %s", directoryStr)
+	key := &Key{}
+	if len(directoryStr) > 0 {
+		key.Directory, err = ParseDirectory(directoryStr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse directory - %s", directoryStr)
+		}
 	}
-	tuple, err := ParseTuple(tupleStr)
-	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse tuple - %s", tupleStr)
+	if len(tupleStr) > 0 {
+		key.Tuple, err = ParseTuple(tupleStr)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse tuple - %s", tupleStr)
+		}
 	}
-
-	return &Key{
-		Directory: directory,
-		Tuple:     tuple,
-	}, nil
+	return key, nil
 }
 
 func ParseDirectory(str string) ([]string, error) {

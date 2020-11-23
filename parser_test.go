@@ -8,9 +8,28 @@ import (
 )
 
 func TestParseKey(t *testing.T) {
-	dir, err := ParseDirectory("")
+	key, err := ParseKey("")
 	assert.Error(t, err)
-	assert.Nil(t, dir)
+	assert.Nil(t, key)
+
+	key, err = ParseKey("/my/dir")
+	assert.NoError(t, err)
+	assert.Equal(t, &Key{
+		Directory: []string{"my", "dir"},
+	}, key)
+
+	key, err = ParseKey("('str', -13, (12e6))")
+	assert.NoError(t, err)
+	assert.Equal(t, &Key{
+		Tuple: tup.Tuple{"str", int64(-13), tup.Tuple{12e6}},
+	}, key)
+
+	key, err = ParseKey("/my/dir('str', -13, (12e6))")
+	assert.NoError(t, err)
+	assert.Equal(t, &Key{
+		Directory: []string{"my", "dir"},
+		Tuple:     tup.Tuple{"str", int64(-13), tup.Tuple{12e6}},
+	}, key)
 }
 
 func TestParseDirectory(t *testing.T) {
