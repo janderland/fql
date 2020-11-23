@@ -1,9 +1,13 @@
 package fdbq
 
 import (
+	"encoding/hex"
+	"fmt"
+	"regexp"
 	"strconv"
 	"strings"
 
+	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/pkg/errors"
 )
 
@@ -15,14 +19,24 @@ type (
 
 	Key struct {
 		Directory []string
-		Tuple     []string
+		Tuple     tup.Tuple
 	}
 
 	Value string
 )
 
-func ParseQuery(query string) (*Query, error) {
-	parts := strings.Split(query, "=")
+var uuidRegexp *regexp.Regexp
+
+func init() {
+	uuidRegexp = regexp.MustCompile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
+}
+
+func ParseQuery(str string) (*Query, error) {
+	if len(str) == 0 {
+		return nil, errors.New("input is empty")
+	}
+
+	parts := strings.Split(str, "=")
 	if len(parts) == 1 {
 		return nil, errors.New("query missing '=' separator between key and value")
 	} else if len(parts) > 2 {
@@ -48,6 +62,10 @@ func ParseQuery(query string) (*Query, error) {
 }
 
 func ParseKey(str string) (*Key, error) {
+	if len(str) == 0 {
+		return nil, errors.New("input is empty")
+	}
+
 	parts := strings.SplitN(str, "(", 2)
 
 	var directoryStr string
@@ -85,7 +103,7 @@ func ParseKey(str string) (*Key, error) {
 
 func ParseDirectory(str string) ([]string, error) {
 	if len(str) == 0 {
-		return nil, errors.New("directory path is an empty string")
+		return nil, errors.New("input is empty")
 	}
 
 	first, str := str[0], str[1:]
@@ -122,11 +140,130 @@ func ParseDirectory(str string) ([]string, error) {
 	return directory, nil
 }
 
-func ParseTuple(str string) ([]string, error) {
-	return nil, nil
+func ParseTuple(str string) (tup.Tuple, error) {
+	if len(str) == 0 {
+		return nil, errors.New("input is empty")
+	}
+
+	if str[0] != '(' {
+		return nil, errors.New("tuple must start with a '('")
+	}
+	if str[len(str)-1] != ')' {
+		return nil, errors.New("tuple must end with a ')")
+	}
+
+	var tuple tup.Tuple
+	for i, part := range strings.Split(str[1:len(str)-1], ",") {
+		data, err := ParseData(strings.TrimSpace(part))
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse %s element - %s", ordinal(i+1), data)
+		}
+		tuple = append(tuple, data)
+	}
+	return tuple, nil
+}
+
+func ParseData(str string) (interface{}, error) {
+	if len(str) == 0 {
+		return nil, errors.New("input is empty")
+	}
+	if str == "nil" {
+		return nil, nil
+	}
+	if str == "true" {
+		return true, nil
+	}
+	if str == "false" {
+		return false, nil
+	}
+	if str[0] == '\'' {
+		data, err := ParseString(str)
+		return data, errors.Wrap(err, "failed to parse as string")
+	}
+	if strings.Count(str, "-") == 4 {
+		data, err := ParseUUID(str)
+		return data, errors.Wrap(err, "failed to parse as UUID")
+	}
+	data, err := ParseNumber(str)
+	return data, errors.Wrap(err, "failed to parse as number")
+}
+
+func ParseString(str string) (string, error) {
+	if len(str) == 0 {
+		return "", errors.New("input is empty")
+	}
+	if str[0] != '\'' {
+		return "", errors.New("strings must start with single quotes")
+	}
+	if str[len(str)-1] != '\'' {
+		return "", errors.New("strings must end with single quotes")
+	}
+	return str[1 : len(str)-1], nil
+}
+
+func ParseUUID(str string) (tup.UUID, error) {
+	if len(str) == 0 {
+		return tup.UUID{}, errors.New("input is empty")
+	}
+
+	groups := strings.Split(str, "-")
+	checkLen := func(i int, expLen int) error {
+		if len(groups[i]) != expLen {
+			return errors.Errorf("the %s group should contain %d characters rather than %d", ordinal(i+1), expLen, len(groups[i]))
+		}
+		return nil
+	}
+	if err := checkLen(0, 8); err != nil {
+		return tup.UUID{}, err
+	}
+	if err := checkLen(1, 4); err != nil {
+		return tup.UUID{}, err
+	}
+	if err := checkLen(2, 4); err != nil {
+		return tup.UUID{}, err
+	}
+	if err := checkLen(3, 4); err != nil {
+		return tup.UUID{}, err
+	}
+	if err := checkLen(4, 12); err != nil {
+		return tup.UUID{}, err
+	}
+
+	var uuid tup.UUID
+	n, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
+	if err != nil {
+		return tup.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
+	}
+	if n != 16 {
+		return tup.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
+	}
+	return uuid, nil
+}
+
+func ParseNumber(str string) (interface{}, error) {
+	i, iErr := strconv.ParseInt(str, 10, 64)
+	if iErr == nil {
+		return i, nil
+	}
+	u, uErr := strconv.ParseUint(str, 10, 64)
+	if uErr == nil {
+		return u, nil
+	}
+	f, fErr := strconv.ParseFloat(str, 64)
+	if fErr == nil {
+		return f, nil
+	}
+	return nil, errors.Errorf("%v, %v, %v",
+		fmt.Sprintf("failed to parse as int - %s", iErr.Error()),
+		fmt.Sprintf("failed to parse as uint - %s", uErr.Error()),
+		fmt.Sprintf("failed to parse as float - %s", fErr.Error()))
 }
 
 func ParseValue(str string) (*Value, error) {
+	if len(str) == 0 {
+		return nil, errors.New("input is empty")
+	}
+
 	value := Value(str)
 	return &value, nil
 }

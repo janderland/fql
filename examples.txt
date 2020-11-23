@@ -2,10 +2,10 @@
 
 ```
 nil
--10
-12
 false
 true
+-10
+12
 33.29
 -12e6
 'this is a string'
