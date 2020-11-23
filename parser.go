@@ -97,36 +97,18 @@ func ParseDirectory(str string) ([]string, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
-
-	first, str := str[0], str[1:]
-	if first != '/' {
+	if str[0] != '/' {
 		return nil, errors.New("directory path must start with a '/'")
 	}
-	if len(str) == 0 {
-		return nil, errors.New("1st part of directory path is empty")
+	if str[len(str)-1] == '/' {
+		return nil, errors.New("directory path shouldn't have a trailing '/'")
 	}
 
 	var directory []string
-	for len(str) > 0 {
-		i := 0
-		for i < len(str) && str[i] != '/' {
-			i++
-		}
-
-		var part string
-		part, str = str[:i], str[i:]
-
+	for i, part := range strings.Split(str[1:], "/") {
 		if len(part) == 0 {
-			return nil, errors.Errorf("%s part of directory path is empty", ordinal(len(directory)+1))
+			return nil, errors.Errorf("%s part of directory path is empty", ordinal(i+1))
 		}
-		if len(str) == 1 && str[0] == '/' {
-			return nil, errors.New("directory path shouldn't include trailing '/'")
-		}
-		if len(str) > 0 {
-			// Drop the slash preceding the next part.
-			str = str[1:]
-		}
-
 		directory = append(directory, part)
 	}
 	return directory, nil
