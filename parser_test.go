@@ -69,6 +69,10 @@ func TestParseTuple(t *testing.T) {
 	data, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
 	assert.NoError(t, err)
 	assert.Equal(t, tup.Tuple{tup.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, data)
+
+	data, err = ParseTuple("('hello',, -3)")
+	assert.Error(t, err)
+	assert.Nil(t, data)
 }
 
 func TestParseData(t *testing.T) {

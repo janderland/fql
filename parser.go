@@ -2,7 +2,6 @@ package fdbq
 
 import (
 	"encoding/hex"
-	"regexp"
 	"strconv"
 	"strings"
 
@@ -23,12 +22,6 @@ type (
 
 	Value string
 )
-
-var uuidRegexp *regexp.Regexp
-
-func init() {
-	uuidRegexp = regexp.MustCompile("[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}")
-}
 
 func ParseQuery(str string) (*Query, error) {
 	if len(str) == 0 {
@@ -158,9 +151,13 @@ func ParseTuple(str string) (tup.Tuple, error) {
 
 	var tuple tup.Tuple
 	for i, elementStr := range strings.Split(str, ",") {
-		elementStr = strings.TrimSpace(elementStr)
 		var element interface{}
 		var err error
+
+		elementStr = strings.TrimSpace(elementStr)
+		if len(elementStr) == 0 {
+			return nil, errors.Errorf("%s element is empty", ordinal(i+1))
+		}
 
 		if elementStr[0] == '(' {
 			element, err = ParseTuple(elementStr)
