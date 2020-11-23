@@ -1,29 +1,17 @@
-package fdbq
+package parser
 
 import (
 	"encoding/hex"
 	"strconv"
 	"strings"
 
+	"github.com/janderland/fdbq/model"
+
 	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/pkg/errors"
 )
 
-type (
-	Query struct {
-		Key   *Key
-		Value *Value
-	}
-
-	Key struct {
-		Directory []string
-		Tuple     tup.Tuple
-	}
-
-	Value string
-)
-
-func ParseQuery(str string) (*Query, error) {
+func ParseQuery(str string) (*model.Query, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -47,13 +35,13 @@ func ParseQuery(str string) (*Query, error) {
 		return nil, errors.Wrapf(err, "failed to parse value - %s", valueStr)
 	}
 
-	return &Query{
+	return &model.Query{
 		Key:   key,
 		Value: value,
 	}, nil
 }
 
-func ParseKey(str string) (*Key, error) {
+func ParseKey(str string) (*model.Key, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -83,7 +71,7 @@ func ParseKey(str string) (*Key, error) {
 		tupleStr = parts[1]
 	}
 
-	key := &Key{}
+	key := &model.Key{}
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
 		if err != nil {
@@ -253,12 +241,12 @@ func ParseNumber(str string) (interface{}, error) {
 	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
 }
 
-func ParseValue(str string) (*Value, error) {
+func ParseValue(str string) (*model.Value, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
 
-	value := Value(str)
+	value := model.Value(str)
 	return &value, nil
 }
 
