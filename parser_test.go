@@ -7,6 +7,12 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestParseKey(t *testing.T) {
+	dir, err := ParseDirectory("")
+	assert.Error(t, err)
+	assert.Nil(t, dir)
+}
+
 func TestParseDirectory(t *testing.T) {
 	dir, err := ParseDirectory("")
 	assert.Error(t, err)
@@ -38,41 +44,41 @@ func TestParseDirectory(t *testing.T) {
 }
 
 func TestParseTuple(t *testing.T) {
-	data, err := ParseTuple("")
+	tuple, err := ParseTuple("")
 	assert.Error(t, err)
-	assert.Nil(t, data)
+	assert.Nil(t, tuple)
 
-	data, err = ParseTuple("(")
+	tuple, err = ParseTuple("(")
 	assert.Error(t, err)
-	assert.Nil(t, data)
+	assert.Nil(t, tuple)
 
-	data, err = ParseTuple(")")
+	tuple, err = ParseTuple(")")
 	assert.Error(t, err)
-	assert.Nil(t, data)
+	assert.Nil(t, tuple)
 
-	data, err = ParseTuple("()")
+	tuple, err = ParseTuple("()")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{}, data)
+	assert.Equal(t, tup.Tuple{}, tuple)
 
-	data, err = ParseTuple("(17)")
+	tuple, err = ParseTuple("(17)")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{int64(17)}, data)
+	assert.Equal(t, tup.Tuple{int64(17)}, tuple)
 
-	data, err = ParseTuple("(17, 'hello world')")
+	tuple, err = ParseTuple("(17, 'hello world')")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{int64(17), "hello world"}, data)
+	assert.Equal(t, tup.Tuple{int64(17), "hello world"}, tuple)
 
-	data, err = ParseTuple("('hello', 23.3, (-3))")
+	tuple, err = ParseTuple("('hello', 23.3, (-3))")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{"hello", 23.3, tup.Tuple{int64(-3)}}, data)
+	assert.Equal(t, tup.Tuple{"hello", 23.3, tup.Tuple{int64(-3)}}, tuple)
 
-	data, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
+	tuple, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{tup.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, data)
+	assert.Equal(t, tup.Tuple{tup.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
 
-	data, err = ParseTuple("('hello',, -3)")
+	tuple, err = ParseTuple("('hello',, -3)")
 	assert.Error(t, err)
-	assert.Nil(t, data)
+	assert.Nil(t, tuple)
 }
 
 func TestParseData(t *testing.T) {
@@ -118,59 +124,59 @@ func TestParseData(t *testing.T) {
 }
 
 func TestParseString(t *testing.T) {
-	data, err := ParseString("")
+	str, err := ParseString("")
 	assert.Error(t, err)
-	assert.Equal(t, "", data)
+	assert.Equal(t, "", str)
 
-	data, err = ParseString("'hello")
+	str, err = ParseString("'hello")
 	assert.Error(t, err)
-	assert.Equal(t, "", data)
+	assert.Equal(t, "", str)
 
-	data, err = ParseString("'hello world'")
+	str, err = ParseString("'hello world'")
 	assert.NoError(t, err)
-	assert.Equal(t, "hello world", data)
+	assert.Equal(t, "hello world", str)
 }
 
 func TestParseUUID(t *testing.T) {
-	data, err := ParseUUID("")
+	id, err := ParseUUID("")
 	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, data)
+	assert.Equal(t, tup.UUID{}, id)
 
-	data, err = ParseUUID("bcec-4d-43b-8c-81b886af9")
+	id, err = ParseUUID("bcec-4d-43b-8c-81b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, data)
+	assert.Equal(t, tup.UUID{}, id)
 
-	data, err = ParseUUID("bcefdyec-4df5-43%6-8c79-81b70bg86af9")
+	id, err = ParseUUID("bcefdyec-4df5-43%6-8c79-81b70bg86af9")
 	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, data)
+	assert.Equal(t, tup.UUID{}, id)
 
-	data, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
+	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
+	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
 }
 
 func TestParseNumber(t *testing.T) {
-	data, err := ParseNumber("")
+	num, err := ParseNumber("")
 	assert.Error(t, err)
-	assert.Nil(t, data)
+	assert.Nil(t, num)
 
-	data, err = ParseNumber("-34000")
+	num, err = ParseNumber("-34000")
 	assert.NoError(t, err)
-	assert.Equal(t, int64(-34000), data)
+	assert.Equal(t, int64(-34000), num)
 
-	data, err = ParseNumber("18446744073709551610")
+	num, err = ParseNumber("18446744073709551610")
 	assert.NoError(t, err)
-	assert.Equal(t, uint64(18446744073709551610), data)
+	assert.Equal(t, uint64(18446744073709551610), num)
 
-	data, err = ParseNumber("94.33")
+	num, err = ParseNumber("94.33")
 	assert.NoError(t, err)
-	assert.Equal(t, 94.33, data)
+	assert.Equal(t, 94.33, num)
 
-	data, err = ParseNumber("12.54e-8")
+	num, err = ParseNumber("12.54e-8")
 	assert.NoError(t, err)
-	assert.Equal(t, 12.54e-8, data)
+	assert.Equal(t, 12.54e-8, num)
 
-	data, err = ParseNumber("hello")
+	num, err = ParseNumber("hello")
 	assert.Error(t, err)
-	assert.Nil(t, data)
+	assert.Nil(t, num)
 }
