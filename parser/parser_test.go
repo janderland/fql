@@ -21,13 +21,13 @@ func TestParseKey(t *testing.T) {
 		Directory: []string{"my", "dir"},
 	}, key)
 
-	key, err = ParseKey("('str', -13, (12e6))")
+	key, err = ParseKey("(\"str\", -13, (12e6))")
 	assert.NoError(t, err)
 	assert.Equal(t, &model.Key{
 		Tuple: model.Tuple{"str", int64(-13), model.Tuple{12e6}},
 	}, key)
 
-	key, err = ParseKey("/my/dir('str', -13, (12e6))")
+	key, err = ParseKey("/my/dir(\"str\", -13, (12e6))")
 	assert.NoError(t, err)
 	assert.Equal(t, &model.Key{
 		Directory: []string{"my", "dir"},
@@ -86,11 +86,11 @@ func TestParseTuple(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, model.Tuple{int64(17)}, tuple)
 
-	tuple, err = ParseTuple("(17, 'hello world')")
+	tuple, err = ParseTuple("(17, \"hello world\")")
 	assert.NoError(t, err)
 	assert.Equal(t, model.Tuple{int64(17), "hello world"}, tuple)
 
-	tuple, err = ParseTuple("('hello', 23.3, (-3))")
+	tuple, err = ParseTuple("(\"hello\", 23.3, (-3))")
 	assert.NoError(t, err)
 	assert.Equal(t, model.Tuple{"hello", 23.3, model.Tuple{int64(-3)}}, tuple)
 
@@ -98,7 +98,7 @@ func TestParseTuple(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, model.Tuple{model.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
 
-	tuple, err = ParseTuple("('hello',, -3)")
+	tuple, err = ParseTuple("(\"hello\",, -3)")
 	assert.Error(t, err)
 	assert.Nil(t, tuple)
 }
@@ -120,7 +120,7 @@ func TestParseData(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, false, data)
 
-	data, err = ParseData("'hello world'")
+	data, err = ParseData("\"hello world\"")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", data)
 
@@ -150,11 +150,11 @@ func TestParseString(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "", str)
 
-	str, err = ParseString("'hello")
+	str, err = ParseString("\"hello")
 	assert.Error(t, err)
 	assert.Equal(t, "", str)
 
-	str, err = ParseString("'hello world'")
+	str, err = ParseString("\"hello world\"")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", str)
 }
