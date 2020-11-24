@@ -87,7 +87,7 @@ func ParseKey(str string) (*model.Key, error) {
 	return key, nil
 }
 
-func ParseDirectory(str string) ([]string, error) {
+func ParseDirectory(str string) (model.Directory, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -98,7 +98,7 @@ func ParseDirectory(str string) ([]string, error) {
 		return nil, errors.New("directory path shouldn't have a trailing '/'")
 	}
 
-	var directory []string
+	var directory model.Directory
 	for i, part := range strings.Split(str[1:], "/") {
 		if len(part) == 0 {
 			return nil, errors.Errorf("%s part of directory path is empty", ordinal(i+1))
@@ -258,13 +258,11 @@ func ParseNumber(str string) (interface{}, error) {
 	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
 }
 
-func ParseValue(str string) (*model.Value, error) {
+func ParseValue(str string) (model.Value, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
-
-	value := model.Value(str)
-	return &value, nil
+	return str, nil
 }
 
 func ordinal(x int) string {

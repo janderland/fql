@@ -3,17 +3,27 @@ package model
 type (
 	Query struct {
 		Key   *Key
-		Value *Value
+		Value Value
 	}
 
 	Key struct {
-		Directory []string
+		Directory Directory
 		Tuple     Tuple
 	}
 
+	// Contains string or Variable.
+	Directory []interface{}
+
+	// Contains nil, bool, string,
+	// int64, uint64, float64,
+	// tup.UUID, or Variable.
 	Tuple []interface{}
 
-	Value string
+	// Contains nil, bool, string,
+	// int64, uint64, float64,
+	// tup.UUID, Tuple, or
+	// Variable.
+	Value interface{}
 
 	Variable struct {
 		Name string

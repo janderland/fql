@@ -18,7 +18,7 @@ func TestParseKey(t *testing.T) {
 	key, err = ParseKey("/my/dir")
 	assert.NoError(t, err)
 	assert.Equal(t, &model.Key{
-		Directory: []string{"my", "dir"},
+		Directory: model.Directory{"my", "dir"},
 	}, key)
 
 	key, err = ParseKey("(\"str\", -13, (12e6))")
@@ -30,7 +30,7 @@ func TestParseKey(t *testing.T) {
 	key, err = ParseKey("/my/dir(\"str\", -13, (12e6))")
 	assert.NoError(t, err)
 	assert.Equal(t, &model.Key{
-		Directory: []string{"my", "dir"},
+		Directory: model.Directory{"my", "dir"},
 		Tuple:     model.Tuple{"str", int64(-13), model.Tuple{12e6}},
 	}, key)
 }
@@ -50,7 +50,7 @@ func TestParseDirectory(t *testing.T) {
 
 	dir, err = ParseDirectory("/hello")
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"hello"}, dir)
+	assert.Equal(t, model.Directory{"hello"}, dir)
 
 	dir, err = ParseDirectory("/hello/")
 	assert.Error(t, err)
@@ -58,7 +58,7 @@ func TestParseDirectory(t *testing.T) {
 
 	dir, err = ParseDirectory("/hello/world")
 	assert.NoError(t, err)
-	assert.Equal(t, []string{"hello", "world"}, dir)
+	assert.Equal(t, model.Directory{"hello", "world"}, dir)
 
 	dir, err = ParseDirectory("/hello/world/")
 	assert.Error(t, err)
