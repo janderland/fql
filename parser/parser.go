@@ -161,7 +161,7 @@ func ParseData(str string) (interface{}, error) {
 	if str == "false" {
 		return false, nil
 	}
-	if str[0] == '\'' {
+	if str[0] == '"' {
 		data, err := ParseString(str)
 		return data, errors.Wrap(err, "failed to parse as string")
 	}
@@ -177,10 +177,10 @@ func ParseString(str string) (string, error) {
 	if len(str) == 0 {
 		return "", errors.New("input is empty")
 	}
-	if str[0] != '\'' {
+	if str[0] != '"' {
 		return "", errors.New("strings must start with single quotes")
 	}
-	if str[len(str)-1] != '\'' {
+	if str[len(str)-1] != '"' {
 		return "", errors.New("strings must end with single quotes")
 	}
 	return str[1 : len(str)-1], nil
