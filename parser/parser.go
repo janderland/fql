@@ -161,6 +161,10 @@ func ParseData(str string) (interface{}, error) {
 	if str == "false" {
 		return false, nil
 	}
+	if str[0] == '{' {
+		data, err := ParseVariable(str)
+		return data, errors.Wrap(err, "failed to parse as variable")
+	}
 	if str[0] == '"' {
 		data, err := ParseString(str)
 		return data, errors.Wrap(err, "failed to parse as string")
@@ -171,6 +175,19 @@ func ParseData(str string) (interface{}, error) {
 	}
 	data, err := ParseNumber(str)
 	return data, errors.Wrap(err, "failed to parse as number")
+}
+
+func ParseVariable(str string) (*model.Variable, error) {
+	if len(str) == 0 {
+		return nil, errors.New("input is empty")
+	}
+	if str[0] != '{' {
+		return nil, errors.New("variable must start with '{'")
+	}
+	if str[len(str)-1] != '}' {
+		return nil, errors.New("variable must end with '}'")
+	}
+	return &model.Variable{Name: str[1 : len(str)-1]}, nil
 }
 
 func ParseString(str string) (string, error) {

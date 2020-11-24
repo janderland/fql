@@ -15,7 +15,9 @@ type (
 
 	Value string
 
-	Variable struct{}
+	Variable struct {
+		Name string
+	}
 
 	Clear struct{}
 )

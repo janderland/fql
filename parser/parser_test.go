@@ -120,6 +120,10 @@ func TestParseData(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, false, data)
 
+	data, err = ParseData("{var}")
+	assert.NoError(t, err)
+	assert.Equal(t, &model.Variable{Name: "var"}, data)
+
 	data, err = ParseData("\"hello world\"")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", data)
@@ -143,6 +147,28 @@ func TestParseData(t *testing.T) {
 	data, err = ParseData("invalid")
 	assert.Error(t, err)
 	assert.Nil(t, data)
+}
+
+func TestParseVariable(t *testing.T) {
+	v, err := ParseVariable("")
+	assert.Error(t, err)
+	assert.Nil(t, v)
+
+	v, err = ParseVariable("{")
+	assert.Error(t, err)
+	assert.Nil(t, v)
+
+	v, err = ParseVariable("}")
+	assert.Error(t, err)
+	assert.Nil(t, v)
+
+	v, err = ParseVariable("{}")
+	assert.NoError(t, err)
+	assert.Equal(t, &model.Variable{}, v)
+
+	v, err = ParseVariable("{var}")
+	assert.NoError(t, err)
+	assert.Equal(t, &model.Variable{Name: "var"}, v)
 }
 
 func TestParseString(t *testing.T) {
