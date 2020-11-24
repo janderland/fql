@@ -13,7 +13,9 @@ type (
 
 	Tuple []interface{}
 
+	Value string
+
 	Variable struct{}
 
-	Value string
+	Clear struct{}
 )
