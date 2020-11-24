@@ -1,26 +1,33 @@
-<query> ::= <key> = <value>
+<query> ::= <key> '=' <value> | <key>
 
-<key> ::= <path> | <tuple> | <path><tuple>
+<key> ::= <path> | <tuple> | <path> <tuple>
 
-<value> ::= <data> | "clear"
+<value> ::= <tuple> | <data> | 'clear'
 
-<path> ::= <directory>"/"<path> | <directory>
+<path> ::= '/' <directory> <path> | '/' <directory>
 
-<tuple> ::= "("<elements>")"
+<tuple> ::= '(' <elements> ')'
 
-<elements> ::= <data>","<elements> | <tuple>","<elements> | <data> | <tuple>
+<elements> ::= <data> ',' <elements> | <tuple> ',' <elements> | <data> | <tuple>
 
-<data> ::= "_" | "?" | "nil" | <int> | <float> | <bool> | <scientific> | <string> | <uuid> | <base64>
+<data> ::= 'nil' | <bool> | <int> | <float> | <scientific> | <string> | <uuid> | <base64>
 
-<int> ::= <number> | "-"<number>
+<bool> ::= 'true' | 'false'
 
-<float> ::= <number>"."<number> | "-"<number>"."<number>
+; Whitespace after the '-' is not allowed.
+<int> ::= <number> | '-'<number>
 
-<bool> ::= "true" | "false"
+; Whitespace around the '.' is not allowed.
+<float> ::= <int>'.'<number>
 
-<scientific> ::= <number>"e"<number> | "-"<number>"e"<number> | <number>
+; Whitespace around the 'e' is not allowed.
+<scientific> ::= <int>'e'<int> | <float>'e'<int>
+
+<string> ::= '"'<words>'"'
 
 <number> ::= <digit> | <digit><number>
 
-<digit> ::= "0" | "1" | "2" | "3" | "4" | "5" | "6" | "7" | "8" | "9"
+<words> ::= <character><words> | <character>
 
+; <digit> includes all single digit numbers 0-9.
+; <character> includes all ASCII characters.

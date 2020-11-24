@@ -2,13 +2,13 @@
 
 ```
 nil
-false
 true
--10
+false
 12
+-10
 33.29
 -12e6
-'this is a string'
+"this is a string"
 7a78b9b7-7b04-4e5c-a57c-b17895667fd9
 ```
 
@@ -16,20 +16,20 @@ true
 # Set Syntax
 
 ```
-/dir/path(-10,false,(nil,12)) = 'hello'
+/dir/path(-10,false,(nil,12)) = "hello"
 
-/deep/dir/path('years',true,10e3) = nil
+/deep/dir/path("years",true,10e3) = nil
 
-/dir(12,'lives') = (true,false,false)
+/dir(12,"lives") = (true,false,false)
 ```
 
 
 # Get Syntax
 
 ```
-/dir/?(1,2,3) = nil
+/dir/{}(1,2,3) = nil
 
-/deep/dir/path(_,true,10e3) = ?
+/deep/dir/path({},true,10e3) = {}
 ```
 
 
@@ -38,13 +38,3 @@ true
 ```
 /dir/path(-10,false,(nil,12)) = clear
 ```
-
-
-# Composition
-
-At first, queries will be composed by calling fdbq multiple
-times. The input & output formats for the tool should be
-the same to allow this. After we have this working, we can
-setup a convenience syntax that performs multiple queries
-with a single invocation of fdbq.
-
