@@ -3,9 +3,10 @@ package parser
 import (
 	"testing"
 
+	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
+
 	"github.com/janderland/fdbq/model"
 
-	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -23,14 +24,14 @@ func TestParseKey(t *testing.T) {
 	key, err = ParseKey("('str', -13, (12e6))")
 	assert.NoError(t, err)
 	assert.Equal(t, &model.Key{
-		Tuple: tup.Tuple{"str", int64(-13), tup.Tuple{12e6}},
+		Tuple: model.Tuple{"str", int64(-13), model.Tuple{12e6}},
 	}, key)
 
 	key, err = ParseKey("/my/dir('str', -13, (12e6))")
 	assert.NoError(t, err)
 	assert.Equal(t, &model.Key{
 		Directory: []string{"my", "dir"},
-		Tuple:     tup.Tuple{"str", int64(-13), tup.Tuple{12e6}},
+		Tuple:     model.Tuple{"str", int64(-13), model.Tuple{12e6}},
 	}, key)
 }
 
@@ -79,23 +80,23 @@ func TestParseTuple(t *testing.T) {
 
 	tuple, err = ParseTuple("()")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{}, tuple)
+	assert.Equal(t, model.Tuple{}, tuple)
 
 	tuple, err = ParseTuple("(17)")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{int64(17)}, tuple)
+	assert.Equal(t, model.Tuple{int64(17)}, tuple)
 
 	tuple, err = ParseTuple("(17, 'hello world')")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{int64(17), "hello world"}, tuple)
+	assert.Equal(t, model.Tuple{int64(17), "hello world"}, tuple)
 
 	tuple, err = ParseTuple("('hello', 23.3, (-3))")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{"hello", 23.3, tup.Tuple{int64(-3)}}, tuple)
+	assert.Equal(t, model.Tuple{"hello", 23.3, model.Tuple{int64(-3)}}, tuple)
 
 	tuple, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.Tuple{tup.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
+	assert.Equal(t, model.Tuple{model.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
 
 	tuple, err = ParseTuple("('hello',, -3)")
 	assert.Error(t, err)

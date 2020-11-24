@@ -108,7 +108,7 @@ func ParseDirectory(str string) ([]string, error) {
 	return directory, nil
 }
 
-func ParseTuple(str string) (tup.Tuple, error) {
+func ParseTuple(str string) (model.Tuple, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -122,10 +122,10 @@ func ParseTuple(str string) (tup.Tuple, error) {
 
 	str = str[1 : len(str)-1]
 	if len(str) == 0 {
-		return tup.Tuple{}, nil
+		return model.Tuple{}, nil
 	}
 
-	var tuple tup.Tuple
+	var tuple model.Tuple
 	for i, elementStr := range strings.Split(str, ",") {
 		var element interface{}
 		var err error
