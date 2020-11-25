@@ -32,6 +32,20 @@ func TestParseKey(t *testing.T) {
 	}, key)
 }
 
+func TestParseValue(t *testing.T) {
+	val, err := ParseValue("")
+	assert.Error(t, err)
+	assert.Nil(t, val)
+
+	val, err = ParseValue("clear")
+	assert.NoError(t, err)
+	assert.Equal(t, model.Clear{}, val)
+
+	val, err = ParseValue("-16")
+	assert.NoError(t, err)
+	assert.Equal(t, int64(-16), val)
+}
+
 func TestParseDirectory(t *testing.T) {
 	dir, err := ParseDirectory("")
 	assert.Error(t, err)

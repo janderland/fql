@@ -260,7 +260,10 @@ func ParseValue(str string) (model.Value, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
-	return str, nil
+	if str == "clear" {
+		return model.Clear{}, nil
+	}
+	return ParseData(str)
 }
 
 func ordinal(x int) string {
