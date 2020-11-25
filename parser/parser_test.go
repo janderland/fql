@@ -4,7 +4,6 @@ import (
 	"testing"
 
 	"github.com/janderland/fdbq/model"
-
 	"github.com/stretchr/testify/assert"
 )
 
