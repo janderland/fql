@@ -41,6 +41,10 @@ func TestParseValue(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, model.Clear{}, val)
 
+	val, err = ParseValue("(-16,13.2,\"hi\")")
+	assert.NoError(t, err)
+	assert.Equal(t, model.Tuple{int64(-16), 13.2, "hi"}, val)
+
 	val, err = ParseValue("-16")
 	assert.NoError(t, err)
 	assert.Equal(t, int64(-16), val)

@@ -263,6 +263,9 @@ func ParseValue(str string) (model.Value, error) {
 	if str == "clear" {
 		return model.Clear{}, nil
 	}
+	if str[0] == '(' {
+		return ParseTuple(str)
+	}
 	return ParseData(str)
 }
 
