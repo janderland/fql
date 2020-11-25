@@ -36,7 +36,7 @@ func ParseQuery(str string) (*model.Query, error) {
 	}
 
 	return &model.Query{
-		Key:   key,
+		Key:   *key,
 		Value: value,
 	}, nil
 }

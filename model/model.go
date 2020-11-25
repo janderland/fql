@@ -2,7 +2,7 @@ package model
 
 type (
 	Query struct {
-		Key   *Key
+		Key   Key
 		Value Value
 	}
 
@@ -11,8 +11,7 @@ type (
 		Tuple     Tuple
 	}
 
-	// Contains string or Variable.
-	Directory []interface{}
+	Directory []string
 
 	// Contains nil, bool, string,
 	// int64, uint64, float64,
