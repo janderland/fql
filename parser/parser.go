@@ -6,8 +6,6 @@ import (
 	"strings"
 
 	"github.com/janderland/fdbq/model"
-
-	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/pkg/errors"
 )
 
@@ -203,9 +201,9 @@ func ParseString(str string) (string, error) {
 	return str[1 : len(str)-1], nil
 }
 
-func ParseUUID(str string) (tup.UUID, error) {
+func ParseUUID(str string) (model.UUID, error) {
 	if len(str) == 0 {
-		return tup.UUID{}, errors.New("input is empty")
+		return model.UUID{}, errors.New("input is empty")
 	}
 
 	groups := strings.Split(str, "-")
@@ -216,28 +214,28 @@ func ParseUUID(str string) (tup.UUID, error) {
 		return nil
 	}
 	if err := checkLen(0, 8); err != nil {
-		return tup.UUID{}, err
+		return model.UUID{}, err
 	}
 	if err := checkLen(1, 4); err != nil {
-		return tup.UUID{}, err
+		return model.UUID{}, err
 	}
 	if err := checkLen(2, 4); err != nil {
-		return tup.UUID{}, err
+		return model.UUID{}, err
 	}
 	if err := checkLen(3, 4); err != nil {
-		return tup.UUID{}, err
+		return model.UUID{}, err
 	}
 	if err := checkLen(4, 12); err != nil {
-		return tup.UUID{}, err
+		return model.UUID{}, err
 	}
 
-	var uuid tup.UUID
+	var uuid model.UUID
 	n, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
 	if err != nil {
-		return tup.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
+		return model.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
 	}
 	if n != 16 {
-		return tup.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
+		return model.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
 	}
 	return uuid, nil
 }

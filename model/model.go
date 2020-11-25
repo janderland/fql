@@ -15,14 +15,16 @@ type (
 
 	// Contains nil, bool, string,
 	// int64, uint64, float64,
-	// tup.UUID, or Variable.
+	// UUID, or Variable.
 	Tuple []interface{}
 
 	// Contains nil, bool, string,
 	// int64, uint64, float64,
-	// tup.UUID, Tuple, or
+	// UUID, Tuple, or
 	// Variable.
 	Value interface{}
+
+	UUID [16]byte
 
 	Variable struct {
 		Name string

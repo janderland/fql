@@ -3,8 +3,6 @@ package parser
 import (
 	"testing"
 
-	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
 	"github.com/janderland/fdbq/model"
 
 	"github.com/stretchr/testify/assert"
@@ -96,7 +94,7 @@ func TestParseTuple(t *testing.T) {
 
 	tuple, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{model.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
+	assert.Equal(t, model.Tuple{model.Tuple{model.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
 
 	tuple, err = ParseTuple("(\"hello\",, -3)")
 	assert.Error(t, err)
@@ -130,7 +128,7 @@ func TestParseData(t *testing.T) {
 
 	data, err = ParseData("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
+	assert.Equal(t, model.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
 
 	data, err = ParseData("123")
 	assert.NoError(t, err)
@@ -188,19 +186,19 @@ func TestParseString(t *testing.T) {
 func TestParseUUID(t *testing.T) {
 	id, err := ParseUUID("")
 	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
+	assert.Equal(t, model.UUID{}, id)
 
 	id, err = ParseUUID("bcec-4d-43b-8c-81b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
+	assert.Equal(t, model.UUID{}, id)
 
 	id, err = ParseUUID("bcefdyec-4df5-43%6-8c79-81b70bg86af9")
 	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
+	assert.Equal(t, model.UUID{}, id)
 
 	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.NoError(t, err)
-	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
+	assert.Equal(t, model.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
 }
 
 func TestParseNumber(t *testing.T) {
