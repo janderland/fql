@@ -21,8 +21,8 @@ func ParseQuery(str string) (*model.Query, error) {
 		return nil, errors.New("query should only contain a single '='")
 	}
 
-	keyStr := parts[0]
-	valueStr := parts[1]
+	keyStr := strings.TrimSpace(parts[0])
+	valueStr := strings.TrimSpace(parts[1])
 
 	key, err := ParseKey(keyStr)
 	if err != nil {
@@ -69,6 +69,9 @@ func ParseKey(str string) (*model.Key, error) {
 		tupleStr = parts[1]
 	}
 
+	directoryStr = strings.TrimSpace(directoryStr)
+	tupleStr = strings.TrimSpace(tupleStr)
+
 	key := &model.Key{}
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
@@ -98,6 +101,7 @@ func ParseDirectory(str string) (model.Directory, error) {
 
 	var directory model.Directory
 	for i, part := range strings.Split(str[1:], "/") {
+		part = strings.TrimSpace(part)
 		if len(part) == 0 {
 			return nil, errors.Errorf("%s part of directory path is empty", ordinal(i+1))
 		}

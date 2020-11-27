@@ -7,6 +7,26 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestParseQuery(t *testing.T) {
+	query, err := ParseQuery("")
+	assert.Error(t, err)
+	assert.Nil(t, query)
+
+	query, err = ParseQuery("()=()")
+	assert.NoError(t, err)
+	assert.Equal(t, &model.Query{
+		Key:   model.Key{Tuple: model.Tuple{}},
+		Value: model.Tuple{},
+	}, query)
+
+	query, err = ParseQuery("() \t= \n()")
+	assert.NoError(t, err)
+	assert.Equal(t, &model.Query{
+		Key:   model.Key{Tuple: model.Tuple{}},
+		Value: model.Tuple{},
+	}, query)
+}
+
 func TestParseKey(t *testing.T) {
 	key, err := ParseKey("")
 	assert.Error(t, err)
@@ -29,6 +49,13 @@ func TestParseKey(t *testing.T) {
 	assert.Equal(t, &model.Key{
 		Directory: model.Directory{"my", "dir"},
 		Tuple:     model.Tuple{"str", int64(-13), model.Tuple{12e6}},
+	}, key)
+
+	key, err = ParseKey("/my/dir \n\t()")
+	assert.NoError(t, err)
+	assert.Equal(t, &model.Key{
+		Directory: model.Directory{"my", "dir"},
+		Tuple:     model.Tuple{},
 	}, key)
 }
 
@@ -78,6 +105,10 @@ func TestParseDirectory(t *testing.T) {
 	dir, err = ParseDirectory("/hello/world/")
 	assert.Error(t, err)
 	assert.Nil(t, dir)
+
+	dir, err = ParseDirectory("/hello\n/ world")
+	assert.NoError(t, err)
+	assert.Equal(t, model.Directory{"hello", "world"}, dir)
 }
 
 func TestParseTuple(t *testing.T) {
@@ -116,6 +147,10 @@ func TestParseTuple(t *testing.T) {
 	tuple, err = ParseTuple("(\"hello\",, -3)")
 	assert.Error(t, err)
 	assert.Nil(t, tuple)
+
+	tuple, err = ParseTuple("(\n-15 \t, \n \"hello\"  )")
+	assert.NoError(t, err)
+	assert.Equal(t, model.Tuple{int64(-15), "hello"}, tuple)
 }
 
 func TestParseData(t *testing.T) {
