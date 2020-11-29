@@ -105,7 +105,15 @@ func ParseDirectory(str string) (query.Directory, error) {
 		if len(part) == 0 {
 			return nil, errors.Errorf("%s part of directory path is empty", ordinal(i+1))
 		}
-		directory = append(directory, part)
+		if part[0] == '{' {
+			variable, err := ParseVariable(part)
+			if err != nil {
+				return nil, errors.Wrapf(err, "failed to parse %s part of directory path as a variable", ordinal(i+1))
+			}
+			directory = append(directory, *variable)
+		} else {
+			directory = append(directory, part)
+		}
 	}
 	return directory, nil
 }

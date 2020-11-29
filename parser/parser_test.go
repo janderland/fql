@@ -106,6 +106,10 @@ func TestParseDirectory(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, dir)
 
+	dir, err = ParseDirectory("/hello/{var}/thing")
+	assert.NoError(t, err)
+	assert.Equal(t, query.Directory{"hello", query.Variable{Name: "var"}, "thing"}, dir)
+
 	dir, err = ParseDirectory("/hello\n/ world")
 	assert.NoError(t, err)
 	assert.Equal(t, query.Directory{"hello", "world"}, dir)

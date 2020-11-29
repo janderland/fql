@@ -11,7 +11,8 @@ type (
 		Tuple     Tuple
 	}
 
-	Directory []string
+	// Contains string or Variable.
+	Directory []interface{}
 
 	// Contains nil, bool, string,
 	// int64, uint64, float64,
