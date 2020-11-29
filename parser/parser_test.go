@@ -8,23 +8,23 @@ import (
 )
 
 func TestParseQuery(t *testing.T) {
-	query, err := ParseQuery("")
+	q, err := ParseQuery("")
 	assert.Error(t, err)
-	assert.Nil(t, query)
+	assert.Nil(t, q)
 
-	query, err = ParseQuery("()=()")
+	q, err = ParseQuery("()=()")
 	assert.NoError(t, err)
 	assert.Equal(t, &query.Query{
 		Key:   query.Key{Tuple: query.Tuple{}},
 		Value: query.Tuple{},
-	}, query)
+	}, q)
 
-	query, err = ParseQuery("() \t= \n()")
+	q, err = ParseQuery("() \t= \n()")
 	assert.NoError(t, err)
 	assert.Equal(t, &query.Query{
 		Key:   query.Key{Tuple: query.Tuple{}},
 		Value: query.Tuple{},
-	}, query)
+	}, q)
 }
 
 func TestParseKey(t *testing.T) {
