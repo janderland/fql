@@ -20,8 +20,7 @@ type (
 
 	// Contains nil, bool, string,
 	// int64, uint64, float64,
-	// UUID, Tuple, or
-	// Variable.
+	// UUID, Tuple, or Variable.
 	Value interface{}
 
 	UUID [16]byte
