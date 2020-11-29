@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/janderland/fdbq/model"
+	"github.com/janderland/fdbq/query"
 	"github.com/pkg/errors"
 )
 
-func ParseQuery(str string) (*model.Query, error) {
+func ParseQuery(str string) (*query.Query, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -33,13 +33,13 @@ func ParseQuery(str string) (*model.Query, error) {
 		return nil, errors.Wrapf(err, "failed to parse value - %s", valueStr)
 	}
 
-	return &model.Query{
+	return &query.Query{
 		Key:   *key,
 		Value: value,
 	}, nil
 }
 
-func ParseKey(str string) (*model.Key, error) {
+func ParseKey(str string) (*query.Key, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -72,7 +72,7 @@ func ParseKey(str string) (*model.Key, error) {
 	directoryStr = strings.TrimSpace(directoryStr)
 	tupleStr = strings.TrimSpace(tupleStr)
 
-	key := &model.Key{}
+	key := &query.Key{}
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
 		if err != nil {
@@ -88,7 +88,7 @@ func ParseKey(str string) (*model.Key, error) {
 	return key, nil
 }
 
-func ParseDirectory(str string) (model.Directory, error) {
+func ParseDirectory(str string) (query.Directory, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -99,7 +99,7 @@ func ParseDirectory(str string) (model.Directory, error) {
 		return nil, errors.New("directory path shouldn't have a trailing '/'")
 	}
 
-	var directory model.Directory
+	var directory query.Directory
 	for i, part := range strings.Split(str[1:], "/") {
 		part = strings.TrimSpace(part)
 		if len(part) == 0 {
@@ -110,7 +110,7 @@ func ParseDirectory(str string) (model.Directory, error) {
 	return directory, nil
 }
 
-func ParseTuple(str string) (model.Tuple, error) {
+func ParseTuple(str string) (query.Tuple, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -124,10 +124,10 @@ func ParseTuple(str string) (model.Tuple, error) {
 
 	str = str[1 : len(str)-1]
 	if len(str) == 0 {
-		return model.Tuple{}, nil
+		return query.Tuple{}, nil
 	}
 
-	var tuple model.Tuple
+	var tuple query.Tuple
 	for i, elementStr := range strings.Split(str, ",") {
 		var element interface{}
 		var err error
@@ -179,7 +179,7 @@ func ParseData(str string) (interface{}, error) {
 	return data, errors.Wrap(err, "failed to parse as number")
 }
 
-func ParseVariable(str string) (*model.Variable, error) {
+func ParseVariable(str string) (*query.Variable, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -189,7 +189,7 @@ func ParseVariable(str string) (*model.Variable, error) {
 	if str[len(str)-1] != '}' {
 		return nil, errors.New("variable must end with '}'")
 	}
-	return &model.Variable{Name: str[1 : len(str)-1]}, nil
+	return &query.Variable{Name: str[1 : len(str)-1]}, nil
 }
 
 func ParseString(str string) (string, error) {
@@ -205,9 +205,9 @@ func ParseString(str string) (string, error) {
 	return str[1 : len(str)-1], nil
 }
 
-func ParseUUID(str string) (model.UUID, error) {
+func ParseUUID(str string) (query.UUID, error) {
 	if len(str) == 0 {
-		return model.UUID{}, errors.New("input is empty")
+		return query.UUID{}, errors.New("input is empty")
 	}
 
 	groups := strings.Split(str, "-")
@@ -218,28 +218,28 @@ func ParseUUID(str string) (model.UUID, error) {
 		return nil
 	}
 	if err := checkLen(0, 8); err != nil {
-		return model.UUID{}, err
+		return query.UUID{}, err
 	}
 	if err := checkLen(1, 4); err != nil {
-		return model.UUID{}, err
+		return query.UUID{}, err
 	}
 	if err := checkLen(2, 4); err != nil {
-		return model.UUID{}, err
+		return query.UUID{}, err
 	}
 	if err := checkLen(3, 4); err != nil {
-		return model.UUID{}, err
+		return query.UUID{}, err
 	}
 	if err := checkLen(4, 12); err != nil {
-		return model.UUID{}, err
+		return query.UUID{}, err
 	}
 
-	var uuid model.UUID
+	var uuid query.UUID
 	n, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
 	if err != nil {
-		return model.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
+		return query.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
 	}
 	if n != 16 {
-		return model.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
+		return query.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
 	}
 	return uuid, nil
 }
@@ -260,12 +260,12 @@ func ParseNumber(str string) (interface{}, error) {
 	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
 }
 
-func ParseValue(str string) (model.Value, error) {
+func ParseValue(str string) (query.Value, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
 	if str == "clear" {
-		return model.Clear{}, nil
+		return query.Clear{}, nil
 	}
 	if str[0] == '(' {
 		return ParseTuple(str)

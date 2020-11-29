@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/janderland/fdbq/model"
+	"github.com/janderland/fdbq/query"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -14,16 +14,16 @@ func TestParseQuery(t *testing.T) {
 
 	query, err = ParseQuery("()=()")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Query{
-		Key:   model.Key{Tuple: model.Tuple{}},
-		Value: model.Tuple{},
+	assert.Equal(t, &query.Query{
+		Key:   query.Key{Tuple: query.Tuple{}},
+		Value: query.Tuple{},
 	}, query)
 
 	query, err = ParseQuery("() \t= \n()")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Query{
-		Key:   model.Key{Tuple: model.Tuple{}},
-		Value: model.Tuple{},
+	assert.Equal(t, &query.Query{
+		Key:   query.Key{Tuple: query.Tuple{}},
+		Value: query.Tuple{},
 	}, query)
 }
 
@@ -34,28 +34,28 @@ func TestParseKey(t *testing.T) {
 
 	key, err = ParseKey("/my/dir")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Key{
-		Directory: model.Directory{"my", "dir"},
+	assert.Equal(t, &query.Key{
+		Directory: query.Directory{"my", "dir"},
 	}, key)
 
 	key, err = ParseKey("(\"str\", -13, (12e6))")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Key{
-		Tuple: model.Tuple{"str", int64(-13), model.Tuple{12e6}},
+	assert.Equal(t, &query.Key{
+		Tuple: query.Tuple{"str", int64(-13), query.Tuple{12e6}},
 	}, key)
 
 	key, err = ParseKey("/my/dir(\"str\", -13, (12e6))")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Key{
-		Directory: model.Directory{"my", "dir"},
-		Tuple:     model.Tuple{"str", int64(-13), model.Tuple{12e6}},
+	assert.Equal(t, &query.Key{
+		Directory: query.Directory{"my", "dir"},
+		Tuple:     query.Tuple{"str", int64(-13), query.Tuple{12e6}},
 	}, key)
 
 	key, err = ParseKey("/my/dir \n\t()")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Key{
-		Directory: model.Directory{"my", "dir"},
-		Tuple:     model.Tuple{},
+	assert.Equal(t, &query.Key{
+		Directory: query.Directory{"my", "dir"},
+		Tuple:     query.Tuple{},
 	}, key)
 }
 
@@ -66,11 +66,11 @@ func TestParseValue(t *testing.T) {
 
 	val, err = ParseValue("clear")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Clear{}, val)
+	assert.Equal(t, query.Clear{}, val)
 
 	val, err = ParseValue("(-16,13.2,\"hi\")")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{int64(-16), 13.2, "hi"}, val)
+	assert.Equal(t, query.Tuple{int64(-16), 13.2, "hi"}, val)
 
 	val, err = ParseValue("-16")
 	assert.NoError(t, err)
@@ -92,7 +92,7 @@ func TestParseDirectory(t *testing.T) {
 
 	dir, err = ParseDirectory("/hello")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Directory{"hello"}, dir)
+	assert.Equal(t, query.Directory{"hello"}, dir)
 
 	dir, err = ParseDirectory("/hello/")
 	assert.Error(t, err)
@@ -100,7 +100,7 @@ func TestParseDirectory(t *testing.T) {
 
 	dir, err = ParseDirectory("/hello/world")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Directory{"hello", "world"}, dir)
+	assert.Equal(t, query.Directory{"hello", "world"}, dir)
 
 	dir, err = ParseDirectory("/hello/world/")
 	assert.Error(t, err)
@@ -108,7 +108,7 @@ func TestParseDirectory(t *testing.T) {
 
 	dir, err = ParseDirectory("/hello\n/ world")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Directory{"hello", "world"}, dir)
+	assert.Equal(t, query.Directory{"hello", "world"}, dir)
 }
 
 func TestParseTuple(t *testing.T) {
@@ -126,23 +126,23 @@ func TestParseTuple(t *testing.T) {
 
 	tuple, err = ParseTuple("()")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{}, tuple)
+	assert.Equal(t, query.Tuple{}, tuple)
 
 	tuple, err = ParseTuple("(17)")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{int64(17)}, tuple)
+	assert.Equal(t, query.Tuple{int64(17)}, tuple)
 
 	tuple, err = ParseTuple("(17, \"hello world\")")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{int64(17), "hello world"}, tuple)
+	assert.Equal(t, query.Tuple{int64(17), "hello world"}, tuple)
 
 	tuple, err = ParseTuple("(\"hello\", 23.3, (-3))")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{"hello", 23.3, model.Tuple{int64(-3)}}, tuple)
+	assert.Equal(t, query.Tuple{"hello", 23.3, query.Tuple{int64(-3)}}, tuple)
 
 	tuple, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{model.Tuple{model.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
+	assert.Equal(t, query.Tuple{query.Tuple{query.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
 
 	tuple, err = ParseTuple("(\"hello\",, -3)")
 	assert.Error(t, err)
@@ -150,7 +150,7 @@ func TestParseTuple(t *testing.T) {
 
 	tuple, err = ParseTuple("(\n-15 \t, \n \"hello\"  )")
 	assert.NoError(t, err)
-	assert.Equal(t, model.Tuple{int64(-15), "hello"}, tuple)
+	assert.Equal(t, query.Tuple{int64(-15), "hello"}, tuple)
 }
 
 func TestParseData(t *testing.T) {
@@ -172,7 +172,7 @@ func TestParseData(t *testing.T) {
 
 	data, err = ParseData("{var}")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Variable{Name: "var"}, data)
+	assert.Equal(t, &query.Variable{Name: "var"}, data)
 
 	data, err = ParseData("\"hello world\"")
 	assert.NoError(t, err)
@@ -180,7 +180,7 @@ func TestParseData(t *testing.T) {
 
 	data, err = ParseData("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.NoError(t, err)
-	assert.Equal(t, model.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
+	assert.Equal(t, query.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
 
 	data, err = ParseData("123")
 	assert.NoError(t, err)
@@ -214,11 +214,11 @@ func TestParseVariable(t *testing.T) {
 
 	v, err = ParseVariable("{}")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Variable{}, v)
+	assert.Equal(t, &query.Variable{}, v)
 
 	v, err = ParseVariable("{var}")
 	assert.NoError(t, err)
-	assert.Equal(t, &model.Variable{Name: "var"}, v)
+	assert.Equal(t, &query.Variable{Name: "var"}, v)
 }
 
 func TestParseString(t *testing.T) {
@@ -238,19 +238,19 @@ func TestParseString(t *testing.T) {
 func TestParseUUID(t *testing.T) {
 	id, err := ParseUUID("")
 	assert.Error(t, err)
-	assert.Equal(t, model.UUID{}, id)
+	assert.Equal(t, query.UUID{}, id)
 
 	id, err = ParseUUID("bcec-4d-43b-8c-81b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, model.UUID{}, id)
+	assert.Equal(t, query.UUID{}, id)
 
 	id, err = ParseUUID("bcefdyec-4df5-43%6-8c79-81b70bg86af9")
 	assert.Error(t, err)
-	assert.Equal(t, model.UUID{}, id)
+	assert.Equal(t, query.UUID{}, id)
 
 	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.NoError(t, err)
-	assert.Equal(t, model.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
+	assert.Equal(t, query.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
 }
 
 func TestParseNumber(t *testing.T) {

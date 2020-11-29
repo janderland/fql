@@ -1,4 +1,4 @@
-package model
+package query
 
 type (
 	Query struct {
