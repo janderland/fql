@@ -40,15 +40,15 @@ func (e *Engine) Execute(queries []query.Query) ([]interface{}, error) {
 	return nil, err
 }
 
-func (e *Engine) clear(q query.Query) error {
+func (e *Engine) clear(_ query.Query) error {
 	return errors.New("not implemented")
 }
 
-func (e *Engine) get(q query.Query) (interface{}, error) {
+func (e *Engine) get(_ query.Query) (interface{}, error) {
 	return nil, nil
 }
 
-func (e *Engine) set(q query.Query) error {
+func (e *Engine) set(_ query.Query) error {
 	return errors.New("not implemented")
 }
 

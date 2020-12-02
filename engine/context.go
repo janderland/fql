@@ -31,6 +31,13 @@ func NewQueryCtx(tr fdb.Transaction) QueryCtx {
 	}
 }
 
+func (c *QueryCtx) err(err error) {
+	select {
+	case <-c.ctx.Done():
+	case c.errCh <- err:
+	}
+}
+
 func (c *QueryCtx) OpenDirectories(directory query.Directory) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
 
@@ -48,7 +55,7 @@ func (c *QueryCtx) OpenDirectories(directory query.Directory) chan dir.Directory
 }
 
 func (c *QueryCtx) openDirectories(directory query.Directory, dirCh chan dir.DirectorySubspace) {
-	prefix, variable, suffix := splitAtVariable(directory)
+	prefix, variable, suffix := splitAtFirstVariable(directory)
 
 	var prefixStr []string
 	for _, segment := range prefix {
@@ -58,7 +65,7 @@ func (c *QueryCtx) openDirectories(directory query.Directory, dirCh chan dir.Dir
 	if variable != nil {
 		subDirs, err := dir.List(c.tr, prefixStr)
 		if err != nil {
-			c.errCh <- errors.Wrap(err, "failed to list directories")
+			c.err(errors.Wrap(err, "failed to list directories"))
 			return
 		}
 
@@ -72,7 +79,7 @@ func (c *QueryCtx) openDirectories(directory query.Directory, dirCh chan dir.Dir
 	} else {
 		directory, err := dir.CreateOrOpen(c.tr, prefixStr, nil)
 		if err != nil {
-			c.errCh <- errors.Wrap(err, "failed to open directory")
+			c.err(errors.Wrap(err, "failed to open directory"))
 			return
 		}
 
@@ -117,24 +124,19 @@ func (c *QueryCtx) ReadRange(tuple query.Tuple, dirCh chan dir.DirectorySubspace
 }
 
 func (c *QueryCtx) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
-	for {
-		var directory dir.DirectorySubspace
-		var open bool
+	read := func() (dir.DirectorySubspace, bool) {
 		select {
 		case <-c.ctx.Done():
-			return
-		case directory, open = <-dirCh:
-			if !open {
-				return
-			}
+			return nil, false
+		case directory, open := <-dirCh:
+			return directory, open
 		}
+	}
 
+	for directory, running := read(); running; directory, running = read() {
 		rng, err := fdb.PrefixRange(directory.Pack(tuple))
 		if err != nil {
-			select {
-			case <-c.ctx.Done():
-			case c.errCh <- errors.Wrap(err, "failed to create prefix range"):
-			}
+			c.err(errors.Wrap(err, "failed to create prefix range"))
 			return
 		}
 
@@ -142,21 +144,19 @@ func (c *QueryCtx) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, 
 		for iter.Advance() {
 			kv, err := iter.Get()
 			if err != nil {
-				select {
-				case <-c.ctx.Done():
-				case c.errCh <- errors.Wrap(err, "failed to get key-value"):
-				}
+				c.err(errors.Wrap(err, "failed to get key-value"))
 				return
 			}
 			select {
 			case <-c.ctx.Done():
+				return
 			case kvCh <- DirKeyValue{dir: directory, kv: kv}:
 			}
 		}
 	}
 }
 
-func splitAtVariable(list []interface{}) ([]interface{}, *query.Variable, []interface{}) {
+func splitAtFirstVariable(list []interface{}) ([]interface{}, *query.Variable, []interface{}) {
 	for i, segment := range list {
 		switch segment.(type) {
 		case query.Variable:
