@@ -13,17 +13,16 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 )
 
-type QueryCtx struct {
+type Coordinator struct {
 	tr     fdb.Transaction
 	ctx    context.Context
 	cancel context.CancelFunc
-	wgs    []*sync.WaitGroup
 	errCh  chan error
 }
 
-func NewQueryCtx(tr fdb.Transaction) QueryCtx {
+func NewCoordinator(tr fdb.Transaction) Coordinator {
 	ctx, cancel := context.WithCancel(context.Background())
-	return QueryCtx{
+	return Coordinator{
 		tr:     tr,
 		ctx:    ctx,
 		cancel: cancel,
@@ -31,41 +30,32 @@ func NewQueryCtx(tr fdb.Transaction) QueryCtx {
 	}
 }
 
-func (c *QueryCtx) err(err error) {
+func (c *Coordinator) signalError(err error) {
 	select {
 	case <-c.ctx.Done():
 	case c.errCh <- err:
 	}
 }
 
-func (c *QueryCtx) OpenDirectories(directory query.Directory) chan dir.DirectorySubspace {
+func (c *Coordinator) OpenDirectories(directory query.Directory) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
 
-	var wg sync.WaitGroup
-	c.wgs = append(c.wgs, &wg)
-
-	wg.Add(1)
 	go func() {
 		defer close(dirCh)
-		defer wg.Done()
 		c.openDirectories(directory, dirCh)
 	}()
 
 	return dirCh
 }
 
-func (c *QueryCtx) openDirectories(directory query.Directory, dirCh chan dir.DirectorySubspace) {
+func (c *Coordinator) openDirectories(directory query.Directory, dirCh chan dir.DirectorySubspace) {
 	prefix, variable, suffix := splitAtFirstVariable(directory)
-
-	var prefixStr []string
-	for _, segment := range prefix {
-		prefixStr = append(prefixStr, segment.(string))
-	}
+	prefixStr := toStringArray(prefix)
 
 	if variable != nil {
 		subDirs, err := dir.List(c.tr, prefixStr)
 		if err != nil {
-			c.err(errors.Wrap(err, "failed to list directories"))
+			c.signalError(errors.Wrap(err, "failed to list directories"))
 			return
 		}
 
@@ -79,7 +69,7 @@ func (c *QueryCtx) openDirectories(directory query.Directory, dirCh chan dir.Dir
 	} else {
 		directory, err := dir.CreateOrOpen(c.tr, prefixStr, nil)
 		if err != nil {
-			c.err(errors.Wrap(err, "failed to open directory"))
+			c.signalError(errors.Wrap(err, "failed to open directory"))
 			return
 		}
 
@@ -96,16 +86,10 @@ type DirKeyValue struct {
 	kv  fdb.KeyValue
 }
 
-func (c *QueryCtx) ReadRange(tuple query.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
+func (c *Coordinator) ReadRange(tuple query.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
 	kvCh := make(chan DirKeyValue)
-
+	fdbTuple := toFDBTuple(tuple)
 	var wg sync.WaitGroup
-	c.wgs = append(c.wgs, &wg)
-
-	fdbTuple := make(tup.Tuple, len(tuple))
-	for i := range tuple {
-		fdbTuple[i] = tuple[i].(tup.TupleElement)
-	}
 
 	for i := 0; i < 4; i++ {
 		wg.Add(1)
@@ -123,7 +107,7 @@ func (c *QueryCtx) ReadRange(tuple query.Tuple, dirCh chan dir.DirectorySubspace
 	return kvCh
 }
 
-func (c *QueryCtx) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
+func (c *Coordinator) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
 	read := func() (dir.DirectorySubspace, bool) {
 		select {
 		case <-c.ctx.Done():
@@ -136,7 +120,7 @@ func (c *QueryCtx) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, 
 	for directory, running := read(); running; directory, running = read() {
 		rng, err := fdb.PrefixRange(directory.Pack(tuple))
 		if err != nil {
-			c.err(errors.Wrap(err, "failed to create prefix range"))
+			c.signalError(errors.Wrap(err, "failed to create prefix range"))
 			return
 		}
 
@@ -144,7 +128,7 @@ func (c *QueryCtx) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, 
 		for iter.Advance() {
 			kv, err := iter.Get()
 			if err != nil {
-				c.err(errors.Wrap(err, "failed to get key-value"))
+				c.signalError(errors.Wrap(err, "failed to get key-value"))
 				return
 			}
 			select {
@@ -165,4 +149,20 @@ func splitAtFirstVariable(list []interface{}) ([]interface{}, *query.Variable, [
 		}
 	}
 	return list, nil, nil
+}
+
+func toStringArray(in []interface{}) []string {
+	out := make([]string, len(in))
+	for i := range in {
+		out[i] = in[i].(string)
+	}
+	return out
+}
+
+func toFDBTuple(in query.Tuple) tup.Tuple {
+	out := make(tup.Tuple, len(in))
+	for i := range in {
+		out[i] = in[i].(tup.TupleElement)
+	}
+	return out
 }
