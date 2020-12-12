@@ -131,6 +131,7 @@ func (c *Coordinator) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspac
 				c.signalError(errors.Wrap(err, "failed to get key-value"))
 				return
 			}
+
 			select {
 			case <-c.ctx.Done():
 				return
@@ -138,6 +139,31 @@ func (c *Coordinator) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspac
 			}
 		}
 	}
+}
+
+func (c *Coordinator) FilterRange(tuple query.Tuple, in chan DirKeyValue) chan DirKeyValue {
+	out := make(chan DirKeyValue)
+	fdbTuple := toFDBTuple(tuple)
+	var wg sync.WaitGroup
+
+	for i := 0; i < 4; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			c.filterRange(fdbTuple, in, out)
+		}()
+	}
+
+	go func() {
+		defer close(out)
+		wg.Wait()
+	}()
+
+	return out
+}
+
+func (c *Coordinator) filterRange(tuple tup.Tuple, in chan DirKeyValue, out chan DirKeyValue) {
+	// TODO
 }
 
 func splitAtFirstVariable(list []interface{}) ([]interface{}, *query.Variable, []interface{}) {
@@ -159,7 +185,7 @@ func toStringArray(in []interface{}) []string {
 	return out
 }
 
-func toFDBTuple(in query.Tuple) tup.Tuple {
+func toFDBTuple(in []interface{}) tup.Tuple {
 	out := make(tup.Tuple, len(in))
 	for i := range in {
 		out[i] = in[i].(tup.TupleElement)
