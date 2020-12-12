@@ -10,7 +10,7 @@ type Engine struct {
 	DB fdb.Transactor
 }
 
-func (e *Engine) Execute(queries []query.Query) ([]interface{}, error) {
+func (e *Engine) Execute(queries []query.Core) ([]interface{}, error) {
 	results, err := e.DB.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		var results []interface{}
 		for i, q := range queries {
@@ -40,19 +40,19 @@ func (e *Engine) Execute(queries []query.Query) ([]interface{}, error) {
 	return nil, err
 }
 
-func (e *Engine) clear(_ query.Query) error {
+func (e *Engine) clear(_ query.Core) error {
 	return errors.New("not implemented")
 }
 
-func (e *Engine) get(_ query.Query) (interface{}, error) {
+func (e *Engine) get(_ query.Core) (interface{}, error) {
 	return nil, nil
 }
 
-func (e *Engine) set(_ query.Query) error {
+func (e *Engine) set(_ query.Core) error {
 	return errors.New("not implemented")
 }
 
-func queryHasVariable(q query.Query) bool {
+func queryHasVariable(q query.Core) bool {
 	for _, dir := range q.Key.Directory {
 		if _, ok := dir.(query.Variable); ok {
 			return true

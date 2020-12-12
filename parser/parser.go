@@ -9,7 +9,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ParseQuery(str string) (*query.Query, error) {
+func ParseQuery(str string) (*query.Core, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -33,7 +33,7 @@ func ParseQuery(str string) (*query.Query, error) {
 		return nil, errors.Wrapf(err, "failed to parse value - %s", valueStr)
 	}
 
-	return &query.Query{
+	return &query.Core{
 		Key:   *key,
 		Value: value,
 	}, nil

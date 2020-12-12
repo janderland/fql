@@ -1,7 +1,7 @@
 package query
 
 type (
-	Query struct {
+	Core struct {
 		Key   Key
 		Value Value
 	}

@@ -14,14 +14,14 @@ func TestParseQuery(t *testing.T) {
 
 	q, err = ParseQuery("()=()")
 	assert.NoError(t, err)
-	assert.Equal(t, &query.Query{
+	assert.Equal(t, &query.Core{
 		Key:   query.Key{Tuple: query.Tuple{}},
 		Value: query.Tuple{},
 	}, q)
 
 	q, err = ParseQuery("() \t= \n()")
 	assert.NoError(t, err)
-	assert.Equal(t, &query.Query{
+	assert.Equal(t, &query.Core{
 		Key:   query.Key{Tuple: query.Tuple{}},
 		Value: query.Tuple{},
 	}, q)
