@@ -7,7 +7,7 @@ import (
 	dir "github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 
-	"github.com/janderland/fdbq/query"
+	"github.com/janderland/fdbq/kv"
 	"github.com/pkg/errors"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -37,7 +37,7 @@ func (c *Coordinator) signalError(err error) {
 	}
 }
 
-func (c *Coordinator) OpenDirectories(directory query.Directory) chan dir.DirectorySubspace {
+func (c *Coordinator) OpenDirectories(directory kv.Directory) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
 
 	go func() {
@@ -48,7 +48,7 @@ func (c *Coordinator) OpenDirectories(directory query.Directory) chan dir.Direct
 	return dirCh
 }
 
-func (c *Coordinator) openDirectories(directory query.Directory, dirCh chan dir.DirectorySubspace) {
+func (c *Coordinator) openDirectories(directory kv.Directory, dirCh chan dir.DirectorySubspace) {
 	prefix, variable, suffix := splitAtFirstVariable(directory)
 	prefixStr := toStringArray(prefix)
 
@@ -60,7 +60,7 @@ func (c *Coordinator) openDirectories(directory query.Directory, dirCh chan dir.
 		}
 
 		for _, sDir := range subDirs {
-			var directory query.Directory
+			var directory kv.Directory
 			directory = append(directory, prefix...)
 			directory = append(directory, sDir)
 			directory = append(directory, suffix...)
@@ -86,7 +86,7 @@ type DirKeyValue struct {
 	kv  fdb.KeyValue
 }
 
-func (c *Coordinator) ReadRange(tuple query.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
+func (c *Coordinator) ReadRange(tuple kv.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
 	kvCh := make(chan DirKeyValue)
 	fdbTuple := toFDBTuple(tuple)
 	var wg sync.WaitGroup
@@ -141,7 +141,7 @@ func (c *Coordinator) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspac
 	}
 }
 
-func (c *Coordinator) FilterRange(tuple query.Tuple, in chan DirKeyValue) chan DirKeyValue {
+func (c *Coordinator) FilterRange(tuple kv.Tuple, in chan DirKeyValue) chan DirKeyValue {
 	out := make(chan DirKeyValue)
 	fdbTuple := toFDBTuple(tuple)
 	var wg sync.WaitGroup
@@ -166,11 +166,11 @@ func (c *Coordinator) filterRange(tuple tup.Tuple, in chan DirKeyValue, out chan
 	// TODO
 }
 
-func splitAtFirstVariable(list []interface{}) ([]interface{}, *query.Variable, []interface{}) {
+func splitAtFirstVariable(list []interface{}) ([]interface{}, *kv.Variable, []interface{}) {
 	for i, segment := range list {
 		switch segment.(type) {
-		case query.Variable:
-			v := segment.(query.Variable)
+		case kv.Variable:
+			v := segment.(kv.Variable)
 			return list[:i], &v, list[:i+1]
 		}
 	}

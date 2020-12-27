@@ -14,7 +14,7 @@ import (
 func main() {
 	query, err := parser.ParseQuery(strings.Join(os.Args[1:], " "))
 	if err != nil {
-		fmt.Println(errors.Wrap(err, "failed to parse query"))
+		fmt.Println(errors.Wrap(err, "failed to parse kv"))
 		os.Exit(1)
 	}
 	str, err := json.MarshalIndent(query, "", "  ")
