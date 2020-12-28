@@ -5,11 +5,11 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/janderland/fdbq/kv"
+	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
 
-func ParseQuery(str string) (*kv.KeyValue, error) {
+func ParseQuery(str string) (*keyval.KeyValue, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -33,13 +33,13 @@ func ParseQuery(str string) (*kv.KeyValue, error) {
 		return nil, errors.Wrapf(err, "failed to parse value - %s", valueStr)
 	}
 
-	return &kv.KeyValue{
+	return &keyval.KeyValue{
 		Key:   *key,
 		Value: value,
 	}, nil
 }
 
-func ParseKey(str string) (*kv.Key, error) {
+func ParseKey(str string) (*keyval.Key, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -72,7 +72,7 @@ func ParseKey(str string) (*kv.Key, error) {
 	directoryStr = strings.TrimSpace(directoryStr)
 	tupleStr = strings.TrimSpace(tupleStr)
 
-	key := &kv.Key{}
+	key := &keyval.Key{}
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
 		if err != nil {
@@ -88,7 +88,7 @@ func ParseKey(str string) (*kv.Key, error) {
 	return key, nil
 }
 
-func ParseDirectory(str string) (kv.Directory, error) {
+func ParseDirectory(str string) (keyval.Directory, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -99,7 +99,7 @@ func ParseDirectory(str string) (kv.Directory, error) {
 		return nil, errors.New("directory path shouldn't have a trailing '/'")
 	}
 
-	var directory kv.Directory
+	var directory keyval.Directory
 	for i, part := range strings.Split(str[1:], "/") {
 		part = strings.TrimSpace(part)
 		if len(part) == 0 {
@@ -118,7 +118,7 @@ func ParseDirectory(str string) (kv.Directory, error) {
 	return directory, nil
 }
 
-func ParseTuple(str string) (kv.Tuple, error) {
+func ParseTuple(str string) (keyval.Tuple, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -132,10 +132,10 @@ func ParseTuple(str string) (kv.Tuple, error) {
 
 	str = str[1 : len(str)-1]
 	if len(str) == 0 {
-		return kv.Tuple{}, nil
+		return keyval.Tuple{}, nil
 	}
 
-	var tuple kv.Tuple
+	var tuple keyval.Tuple
 	for i, elementStr := range strings.Split(str, ",") {
 		var element interface{}
 		var err error
@@ -187,7 +187,7 @@ func ParseData(str string) (interface{}, error) {
 	return data, errors.Wrap(err, "failed to parse as number")
 }
 
-func ParseVariable(str string) (*kv.Variable, error) {
+func ParseVariable(str string) (*keyval.Variable, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -197,7 +197,7 @@ func ParseVariable(str string) (*kv.Variable, error) {
 	if str[len(str)-1] != '}' {
 		return nil, errors.New("variable must end with '}'")
 	}
-	return &kv.Variable{Name: str[1 : len(str)-1]}, nil
+	return &keyval.Variable{Name: str[1 : len(str)-1]}, nil
 }
 
 func ParseString(str string) (string, error) {
@@ -213,9 +213,9 @@ func ParseString(str string) (string, error) {
 	return str[1 : len(str)-1], nil
 }
 
-func ParseUUID(str string) (kv.UUID, error) {
+func ParseUUID(str string) (keyval.UUID, error) {
 	if len(str) == 0 {
-		return kv.UUID{}, errors.New("input is empty")
+		return keyval.UUID{}, errors.New("input is empty")
 	}
 
 	groups := strings.Split(str, "-")
@@ -226,28 +226,28 @@ func ParseUUID(str string) (kv.UUID, error) {
 		return nil
 	}
 	if err := checkLen(0, 8); err != nil {
-		return kv.UUID{}, err
+		return keyval.UUID{}, err
 	}
 	if err := checkLen(1, 4); err != nil {
-		return kv.UUID{}, err
+		return keyval.UUID{}, err
 	}
 	if err := checkLen(2, 4); err != nil {
-		return kv.UUID{}, err
+		return keyval.UUID{}, err
 	}
 	if err := checkLen(3, 4); err != nil {
-		return kv.UUID{}, err
+		return keyval.UUID{}, err
 	}
 	if err := checkLen(4, 12); err != nil {
-		return kv.UUID{}, err
+		return keyval.UUID{}, err
 	}
 
-	var uuid kv.UUID
+	var uuid keyval.UUID
 	n, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
 	if err != nil {
-		return kv.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
+		return keyval.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
 	}
 	if n != 16 {
-		return kv.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
+		return keyval.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
 	}
 	return uuid, nil
 }
@@ -268,12 +268,12 @@ func ParseNumber(str string) (interface{}, error) {
 	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
 }
 
-func ParseValue(str string) (kv.Value, error) {
+func ParseValue(str string) (keyval.Value, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
 	if str == "clear" {
-		return kv.Clear{}, nil
+		return keyval.Clear{}, nil
 	}
 	if str[0] == '(' {
 		return ParseTuple(str)

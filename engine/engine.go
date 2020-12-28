@@ -2,7 +2,7 @@ package engine
 
 import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-	"github.com/janderland/fdbq/kv"
+	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
 
@@ -10,11 +10,11 @@ type Engine struct {
 	DB fdb.Transactor
 }
 
-func (e *Engine) Execute(queries []kv.KeyValue) ([]interface{}, error) {
+func (e *Engine) Execute(queries []keyval.KeyValue) ([]interface{}, error) {
 	results, err := e.DB.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		var results []interface{}
 		for i, q := range queries {
-			if _, ok := q.Value.(kv.Clear); ok {
+			if _, ok := q.Value.(keyval.Clear); ok {
 				err := e.clear(q)
 				if err != nil {
 					return nil, errors.Wrapf(err, "failed to execute query %d as clear", i)
@@ -40,21 +40,21 @@ func (e *Engine) Execute(queries []kv.KeyValue) ([]interface{}, error) {
 	return nil, err
 }
 
-func (e *Engine) clear(_ kv.KeyValue) error {
+func (e *Engine) clear(_ keyval.KeyValue) error {
 	return errors.New("not implemented")
 }
 
-func (e *Engine) get(_ kv.KeyValue) (interface{}, error) {
+func (e *Engine) get(_ keyval.KeyValue) (interface{}, error) {
 	return nil, nil
 }
 
-func (e *Engine) set(_ kv.KeyValue) error {
+func (e *Engine) set(_ keyval.KeyValue) error {
 	return errors.New("not implemented")
 }
 
-func queryHasVariable(q kv.KeyValue) bool {
+func queryHasVariable(q keyval.KeyValue) bool {
 	for _, dir := range q.Key.Directory {
-		if _, ok := dir.(kv.Variable); ok {
+		if _, ok := dir.(keyval.Variable); ok {
 			return true
 		}
 	}
@@ -64,25 +64,25 @@ func queryHasVariable(q kv.KeyValue) bool {
 	}
 
 	switch q.Value.(type) {
-	case kv.Tuple:
-		if tupleHasVariable(q.Value.(kv.Tuple)) {
+	case keyval.Tuple:
+		if tupleHasVariable(q.Value.(keyval.Tuple)) {
 			return true
 		}
-	case kv.Variable:
+	case keyval.Variable:
 		return true
 	}
 
 	return false
 }
 
-func tupleHasVariable(tuple kv.Tuple) bool {
+func tupleHasVariable(tuple keyval.Tuple) bool {
 	for _, element := range tuple {
 		switch element.(type) {
-		case kv.Tuple:
-			if tupleHasVariable(element.(kv.Tuple)) {
+		case keyval.Tuple:
+			if tupleHasVariable(element.(keyval.Tuple)) {
 				return true
 			}
-		case kv.Variable:
+		case keyval.Variable:
 			return true
 		}
 	}

@@ -1,4 +1,4 @@
-package kv
+package keyval
 
 type (
 	KeyValue struct {
