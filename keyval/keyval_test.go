@@ -18,6 +18,8 @@ func TestTupIsVariable(t *testing.T) {
 	assert.False(t, TupIsVariable(tup))
 	tup[1] = Variable{}
 	assert.True(t, TupIsVariable(tup))
+	tup[1] = Tuple{"hello", Variable{}}
+	assert.True(t, TupIsVariable(tup))
 }
 
 func TestValIsVariable(t *testing.T) {
