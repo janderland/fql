@@ -12,6 +12,22 @@ func TestParseQuery(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, q)
 
+	q, err = ParseQuery("()")
+	assert.Error(t, err)
+	assert.Nil(t, q)
+
+	q, err = ParseQuery("()=()=()")
+	assert.Error(t, err)
+	assert.Nil(t, q)
+
+	q, err = ParseQuery("badkey=()")
+	assert.Error(t, err)
+	assert.Nil(t, q)
+
+	q, err = ParseQuery("()=badvalue")
+	assert.Error(t, err)
+	assert.Nil(t, q)
+
 	q, err = ParseQuery("()=()")
 	assert.NoError(t, err)
 	assert.Equal(t, &keyval.KeyValue{
@@ -29,6 +45,14 @@ func TestParseQuery(t *testing.T) {
 
 func TestParseKey(t *testing.T) {
 	key, err := ParseKey("")
+	assert.Error(t, err)
+	assert.Nil(t, key)
+
+	key, err = ParseKey("baddir")
+	assert.Error(t, err)
+	assert.Nil(t, key)
+
+	key, err = ParseKey("/dir(badtup")
 	assert.Error(t, err)
 	assert.Nil(t, key)
 
@@ -90,6 +114,10 @@ func TestParseDirectory(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, dir)
 
+	dir, err = ParseDirectory("/ /empty-path")
+	assert.Error(t, err)
+	assert.Nil(t, dir)
+
 	dir, err = ParseDirectory("/hello")
 	assert.NoError(t, err)
 	assert.Equal(t, keyval.Directory{"hello"}, dir)
@@ -109,6 +137,10 @@ func TestParseDirectory(t *testing.T) {
 	dir, err = ParseDirectory("/hello/{var}/thing")
 	assert.NoError(t, err)
 	assert.Equal(t, keyval.Directory{"hello", keyval.Variable{Name: "var"}, "thing"}, dir)
+
+	dir, err = ParseDirectory("/hello/{/thing")
+	assert.Error(t, err)
+	assert.Nil(t, dir)
 
 	dir, err = ParseDirectory("/hello\n/ world")
 	assert.NoError(t, err)
@@ -131,6 +163,10 @@ func TestParseTuple(t *testing.T) {
 	tuple, err = ParseTuple("()")
 	assert.NoError(t, err)
 	assert.Equal(t, keyval.Tuple{}, tuple)
+
+	tuple, err = ParseTuple("(badelem)")
+	assert.Error(t, err)
+	assert.Nil(t, tuple)
 
 	tuple, err = ParseTuple("(17)")
 	assert.NoError(t, err)
@@ -234,6 +270,10 @@ func TestParseString(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, "", str)
 
+	str, err = ParseString("'hello")
+	assert.Error(t, err)
+	assert.Equal(t, "", str)
+
 	str, err = ParseString("\"hello world\"")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", str)
@@ -244,7 +284,23 @@ func TestParseUUID(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, keyval.UUID{}, id)
 
-	id, err = ParseUUID("bcec-4d-43b-8c-81b886af9")
+	id, err = ParseUUID("cefd2ec-4df5-43b6-8c79-81b70b886af9")
+	assert.Error(t, err)
+	assert.Equal(t, keyval.UUID{}, id)
+
+	id, err = ParseUUID("bcefd2ec-df5-43b6-8c79-81b70b886af9")
+	assert.Error(t, err)
+	assert.Equal(t, keyval.UUID{}, id)
+
+	id, err = ParseUUID("bcefd2ec-4df5-3b6-8c79-81b70b886af9")
+	assert.Error(t, err)
+	assert.Equal(t, keyval.UUID{}, id)
+
+	id, err = ParseUUID("bcefd2ec-4df5-43b6-c79-81b70b886af9")
+	assert.Error(t, err)
+	assert.Equal(t, keyval.UUID{}, id)
+
+	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-1b70b886af9")
 	assert.Error(t, err)
 	assert.Equal(t, keyval.UUID{}, id)
 

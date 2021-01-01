@@ -46,33 +46,17 @@ func ParseKey(str string) (*keyval.Key, error) {
 
 	var parts []string
 	if i := strings.Index(str, "("); i == -1 {
-		parts = []string{str}
+		parts = []string{str, ""}
 	} else {
 		parts = []string{str[:i], str[i:]}
 	}
 
-	var directoryStr string
-	var tupleStr string
-	var err error
-
-	if len(parts) == 1 {
-		part := parts[0]
-		if part[0] == '/' {
-			directoryStr = part
-		} else if part[0] == '(' {
-			tupleStr = part
-		} else {
-			return nil, errors.New("key must start with either a directory '/' or a tuple '('")
-		}
-	} else {
-		directoryStr = parts[0]
-		tupleStr = parts[1]
-	}
-
-	directoryStr = strings.TrimSpace(directoryStr)
-	tupleStr = strings.TrimSpace(tupleStr)
+	directoryStr := strings.TrimSpace(parts[0])
+	tupleStr := strings.TrimSpace(parts[1])
 
 	key := &keyval.Key{}
+	var err error
+
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
 		if err != nil {
@@ -205,10 +189,10 @@ func ParseString(str string) (string, error) {
 		return "", errors.New("input is empty")
 	}
 	if str[0] != '"' {
-		return "", errors.New("strings must start with single quotes")
+		return "", errors.New("strings must start with double quotes")
 	}
 	if str[len(str)-1] != '"' {
-		return "", errors.New("strings must end with single quotes")
+		return "", errors.New("strings must end with double quotes")
 	}
 	return str[1 : len(str)-1], nil
 }
@@ -242,12 +226,9 @@ func ParseUUID(str string) (keyval.UUID, error) {
 	}
 
 	var uuid keyval.UUID
-	n, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
+	_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
 	if err != nil {
 		return keyval.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
-	}
-	if n != 16 {
-		return keyval.UUID{}, errors.Errorf("decoded %d bytes instead of 16", n)
 	}
 	return uuid, nil
 }
