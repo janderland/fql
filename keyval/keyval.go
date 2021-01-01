@@ -49,6 +49,7 @@ type (
 	Clear struct{}
 )
 
+// IsVariable returns true if the KeyValue contains a Variable.
 func IsVariable(kv *KeyValue) bool {
 	if DirIsVariable(kv.Key.Directory) {
 		return true
@@ -62,6 +63,7 @@ func IsVariable(kv *KeyValue) bool {
 	return false
 }
 
+// DirIsVariable returns true if the Directory contains a Variable.
 func DirIsVariable(dir Directory) bool {
 	for _, element := range dir {
 		if _, ok := element.(Variable); ok {
@@ -71,6 +73,7 @@ func DirIsVariable(dir Directory) bool {
 	return false
 }
 
+// TupIsVariable returns true if the Tuple contains a Variable.
 func TupIsVariable(tup Tuple) bool {
 	for _, element := range tup {
 		switch element.(type) {
@@ -85,6 +88,7 @@ func TupIsVariable(tup Tuple) bool {
 	return false
 }
 
+// ValIsVariable returns true if the Value contains a Variable.
 func ValIsVariable(val Value) bool {
 	switch val.(type) {
 	case Tuple:
