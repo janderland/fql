@@ -20,6 +20,11 @@ type Coordinator struct {
 	errCh  chan error
 }
 
+type DirKeyValue struct {
+	dir dir.DirectorySubspace
+	kv  fdb.KeyValue
+}
+
 func New(tr fdb.Transaction) Coordinator {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -53,20 +58,20 @@ func (c *Coordinator) signalError(err error) {
 	}
 }
 
-func (c *Coordinator) OpenDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
+func (c *Coordinator) openDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
 	c.wg.Add(1)
 
 	go func() {
 		defer close(dirCh)
 		defer c.wg.Done()
-		c.openDirectories(directory, dirCh)
+		c.doOpenDirectories(directory, dirCh)
 	}()
 
 	return dirCh
 }
 
-func (c *Coordinator) openDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
+func (c *Coordinator) doOpenDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
 	prefix, variable, suffix := splitAtFirstVariable(directory)
 	prefixStr := toStringArray(prefix)
 
@@ -82,7 +87,7 @@ func (c *Coordinator) openDirectories(directory keyval.Directory, dirCh chan dir
 			directory = append(directory, prefix...)
 			directory = append(directory, sDir)
 			directory = append(directory, suffix...)
-			c.openDirectories(directory, dirCh)
+			c.doOpenDirectories(directory, dirCh)
 		}
 	} else {
 		directory, err := dir.Open(c.tr, prefixStr, nil)
@@ -99,14 +104,8 @@ func (c *Coordinator) openDirectories(directory keyval.Directory, dirCh chan dir
 	}
 }
 
-type DirKeyValue struct {
-	dir dir.DirectorySubspace
-	kv  fdb.KeyValue
-}
-
-func (c *Coordinator) ReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
+func (c *Coordinator) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
 	kvCh := make(chan DirKeyValue)
-	fdbTuple := toFDBTuple(tuple)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
@@ -116,7 +115,7 @@ func (c *Coordinator) ReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubs
 		go func() {
 			defer c.wg.Done()
 			defer wg.Done()
-			c.readRange(fdbTuple, dirCh, kvCh)
+			c.doReadRange(toFDBTuple(tuple), dirCh, kvCh)
 		}()
 	}
 
@@ -128,7 +127,7 @@ func (c *Coordinator) ReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubs
 	return kvCh
 }
 
-func (c *Coordinator) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
+func (c *Coordinator) doReadRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
 	read := func() (dir.DirectorySubspace, bool) {
 		select {
 		case <-c.ctx.Done():
@@ -162,7 +161,7 @@ func (c *Coordinator) readRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspac
 	}
 }
 
-func (c *Coordinator) FilterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirKeyValue {
+func (c *Coordinator) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirKeyValue {
 	out := make(chan DirKeyValue)
 	var wg sync.WaitGroup
 
@@ -173,7 +172,7 @@ func (c *Coordinator) FilterRange(tuple keyval.Tuple, in chan DirKeyValue) chan 
 		go func() {
 			defer c.wg.Done()
 			defer wg.Done()
-			c.filterRange(toFDBTuple(tuple), in, out)
+			c.doFilterRange(toFDBTuple(tuple), in, out)
 		}()
 	}
 
@@ -185,7 +184,7 @@ func (c *Coordinator) FilterRange(tuple keyval.Tuple, in chan DirKeyValue) chan 
 	return out
 }
 
-func (c *Coordinator) filterRange(tuple tup.Tuple, in chan DirKeyValue, out chan DirKeyValue) {
+func (c *Coordinator) doFilterRange(tuple tup.Tuple, in chan DirKeyValue, out chan DirKeyValue) {
 	read := func() (DirKeyValue, bool) {
 		select {
 		case <-c.ctx.Done():
@@ -284,7 +283,7 @@ func toStringArray(in []interface{}) []string {
 func toFDBTuple(in []interface{}) tup.Tuple {
 	out := make(tup.Tuple, len(in))
 	for i := range in {
-		out[i] = in[i].(tup.TupleElement)
+		out[i] = tup.TupleElement(in[i])
 	}
 	return out
 }

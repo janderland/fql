@@ -20,7 +20,7 @@ func init() {
 	db = fdb.MustOpenDefault()
 }
 
-func TestCoordinator_OpenDirectories(t *testing.T) {
+func TestCoordinator_openDirectories(t *testing.T) {
 	tests := []struct {
 		name     string           // name of test
 		query    keyval.Directory // query to execute
@@ -74,7 +74,7 @@ func TestCoordinator_OpenDirectories(t *testing.T) {
 				}
 
 				// Execute the query.
-				dirCh := c.OpenDirectories(append(keyval.Directory{root}, test.query...))
+				dirCh := c.openDirectories(append(keyval.Directory{root}, test.query...))
 				waitForDirs := collectDirs(dirCh)
 
 				// Wait for the query to complete and check for errors.
