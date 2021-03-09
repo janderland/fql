@@ -5,9 +5,8 @@ import (
 	"math/big"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
 	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestParseTuple(t *testing.T) {
