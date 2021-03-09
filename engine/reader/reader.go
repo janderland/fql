@@ -44,48 +44,48 @@ func New(tr fdb.Transaction) Reader {
 	}
 }
 
-func (c *Reader) Read(kv keyval.KeyValue) (chan DirTupValue, chan error) {
-	dirCh := c.openDirectories(kv.Key.Directory)
-	dkvCh := c.readRange(kv.Key.Tuple, dirCh)
-	dtvCh := c.filterRange(kv.Key.Tuple, dkvCh)
+func (r *Reader) Read(kv keyval.KeyValue) (chan DirTupValue, chan error) {
+	dirCh := r.openDirectories(kv.Key.Directory)
+	dkvCh := r.readRange(kv.Key.Tuple, dirCh)
+	dtvCh := r.filterRange(kv.Key.Tuple, dkvCh)
 
 	go func() {
-		c.wg.Wait()
-		close(c.errCh)
+		r.wg.Wait()
+		close(r.errCh)
 	}()
 
-	return dtvCh, c.errCh
+	return dtvCh, r.errCh
 }
 
-func (c *Reader) signalError(err error) {
+func (r *Reader) signalError(err error) {
 	select {
-	case c.errCh <- err:
-		c.cancel()
-	case <-c.ctx.Done():
+	case r.errCh <- err:
+		r.cancel()
+	case <-r.ctx.Done():
 	}
 }
 
-func (c *Reader) openDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
+func (r *Reader) openDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
-	c.wg.Add(1)
+	r.wg.Add(1)
 
 	go func() {
 		defer close(dirCh)
-		defer c.wg.Done()
-		c.doOpenDirectories(directory, dirCh)
+		defer r.wg.Done()
+		r.doOpenDirectories(directory, dirCh)
 	}()
 
 	return dirCh
 }
 
-func (c *Reader) doOpenDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
+func (r *Reader) doOpenDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
 	prefix, variable, suffix := splitAtFirstVariable(directory)
 	prefixStr := toStringArray(prefix)
 
 	if variable != nil {
-		subDirs, err := dir.List(c.tr, prefixStr)
+		subDirs, err := dir.List(r.tr, prefixStr)
 		if err != nil {
-			c.signalError(errors.Wrap(err, "failed to list directories"))
+			r.signalError(errors.Wrap(err, "failed to list directories"))
 			return
 		}
 
@@ -94,35 +94,35 @@ func (c *Reader) doOpenDirectories(directory keyval.Directory, dirCh chan dir.Di
 			directory = append(directory, prefix...)
 			directory = append(directory, sDir)
 			directory = append(directory, suffix...)
-			c.doOpenDirectories(directory, dirCh)
+			r.doOpenDirectories(directory, dirCh)
 		}
 	} else {
-		directory, err := dir.Open(c.tr, prefixStr, nil)
+		directory, err := dir.Open(r.tr, prefixStr, nil)
 		if err != nil {
-			c.signalError(errors.Wrap(err, "failed to open directory"))
+			r.signalError(errors.Wrap(err, "failed to open directory"))
 			return
 		}
 
 		select {
-		case <-c.ctx.Done():
+		case <-r.ctx.Done():
 			return
 		case dirCh <- directory:
 		}
 	}
 }
 
-func (c *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
+func (r *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
 	kvCh := make(chan DirKeyValue)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
-		c.wg.Add(1)
+		r.wg.Add(1)
 		wg.Add(1)
 
 		go func() {
-			defer c.wg.Done()
+			defer r.wg.Done()
 			defer wg.Done()
-			c.doReadRange(tuple, dirCh, kvCh)
+			r.doReadRange(tuple, dirCh, kvCh)
 		}()
 	}
 
@@ -134,10 +134,10 @@ func (c *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace)
 	return kvCh
 }
 
-func (c *Reader) doReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
+func (r *Reader) doReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
 	read := func() (dir.DirectorySubspace, bool) {
 		select {
-		case <-c.ctx.Done():
+		case <-r.ctx.Done():
 			return nil, false
 		case directory, open := <-dirCh:
 			return directory, open
@@ -150,20 +150,20 @@ func (c *Reader) doReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspac
 	for directory, running := read(); running; directory, running = read() {
 		rng, err := fdb.PrefixRange(directory.Pack(fdbPrefix))
 		if err != nil {
-			c.signalError(errors.Wrap(err, "failed to create prefix range"))
+			r.signalError(errors.Wrap(err, "failed to create prefix range"))
 			return
 		}
 
-		iter := c.tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
+		iter := r.tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
 		for iter.Advance() {
 			kv, err := iter.Get()
 			if err != nil {
-				c.signalError(errors.Wrap(err, "failed to get key-value"))
+				r.signalError(errors.Wrap(err, "failed to get key-value"))
 				return
 			}
 
 			select {
-			case <-c.ctx.Done():
+			case <-r.ctx.Done():
 				return
 			case kvCh <- DirKeyValue{dir: directory, kv: kv}:
 			}
@@ -171,18 +171,18 @@ func (c *Reader) doReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspac
 	}
 }
 
-func (c *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirTupValue {
+func (r *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirTupValue {
 	out := make(chan DirTupValue)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
-		c.wg.Add(1)
+		r.wg.Add(1)
 		wg.Add(1)
 
 		go func() {
-			defer c.wg.Done()
+			defer r.wg.Done()
 			defer wg.Done()
-			c.doFilterRange(tuple, in, out)
+			r.doFilterRange(tuple, in, out)
 		}()
 	}
 
@@ -194,10 +194,10 @@ func (c *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirTu
 	return out
 }
 
-func (c *Reader) doFilterRange(pattern keyval.Tuple, in chan DirKeyValue, out chan DirTupValue) {
+func (r *Reader) doFilterRange(pattern keyval.Tuple, in chan DirKeyValue, out chan DirTupValue) {
 	read := func() (DirKeyValue, bool) {
 		select {
-		case <-c.ctx.Done():
+		case <-r.ctx.Done():
 			return DirKeyValue{}, false
 		case directory, open := <-in:
 			return directory, open
@@ -207,12 +207,12 @@ func (c *Reader) doFilterRange(pattern keyval.Tuple, in chan DirKeyValue, out ch
 	for dkv, running := read(); running; dkv, running = read() {
 		tuple, err := dkv.dir.Unpack(dkv.kv.Key)
 		if err != nil {
-			c.signalError(errors.Wrap(err, "failed to unpack key"))
+			r.signalError(errors.Wrap(err, "failed to unpack key"))
 		}
 
 		if compareTuples(pattern, tuple) == -1 {
 			select {
-			case <-c.ctx.Done():
+			case <-r.ctx.Done():
 				return
 			case out <- DirTupValue{dir: dkv.dir, tup: tuple, val: dkv.kv.Value}:
 			}
