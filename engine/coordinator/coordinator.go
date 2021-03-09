@@ -71,6 +71,10 @@ func (c *Coordinator) openDirectories(directory keyval.Directory, create bool, d
 	prefixStr := toStringArray(prefix)
 
 	if variable != nil {
+		if create {
+			c.signalError(errors.New("cannot create variable directory"))
+		}
+
 		subDirs, err := dir.List(c.tr, prefixStr)
 		if err != nil {
 			c.signalError(errors.Wrap(err, "failed to list directories"))
