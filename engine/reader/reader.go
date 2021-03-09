@@ -12,7 +12,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Coordinator struct {
+type Reader struct {
 	tr     fdb.Transaction
 	wg     *sync.WaitGroup
 	ctx    context.Context
@@ -25,11 +25,11 @@ type DirKeyValue struct {
 	kv  fdb.KeyValue
 }
 
-func New(tr fdb.Transaction) Coordinator {
+func New(tr fdb.Transaction) Reader {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
 
-	return Coordinator{
+	return Reader{
 		tr:     tr,
 		wg:     &wg,
 		ctx:    ctx,
@@ -38,7 +38,7 @@ func New(tr fdb.Transaction) Coordinator {
 	}
 }
 
-func (c *Coordinator) Wait() error {
+func (c *Reader) Wait() error {
 	go func() {
 		c.wg.Wait()
 		close(c.errCh)
@@ -50,7 +50,7 @@ func (c *Coordinator) Wait() error {
 	return nil
 }
 
-func (c *Coordinator) signalError(err error) {
+func (c *Reader) signalError(err error) {
 	select {
 	case c.errCh <- err:
 		c.cancel()
@@ -58,7 +58,7 @@ func (c *Coordinator) signalError(err error) {
 	}
 }
 
-func (c *Coordinator) openDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
+func (c *Reader) openDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
 	c.wg.Add(1)
 
@@ -71,7 +71,7 @@ func (c *Coordinator) openDirectories(directory keyval.Directory) chan dir.Direc
 	return dirCh
 }
 
-func (c *Coordinator) doOpenDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
+func (c *Reader) doOpenDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
 	prefix, variable, suffix := splitAtFirstVariable(directory)
 	prefixStr := toStringArray(prefix)
 
@@ -104,7 +104,7 @@ func (c *Coordinator) doOpenDirectories(directory keyval.Directory, dirCh chan d
 	}
 }
 
-func (c *Coordinator) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
+func (c *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
 	kvCh := make(chan DirKeyValue)
 	var wg sync.WaitGroup
 
@@ -127,7 +127,7 @@ func (c *Coordinator) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubs
 	return kvCh
 }
 
-func (c *Coordinator) doReadRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
+func (c *Reader) doReadRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
 	read := func() (dir.DirectorySubspace, bool) {
 		select {
 		case <-c.ctx.Done():
@@ -161,7 +161,7 @@ func (c *Coordinator) doReadRange(tuple tup.Tuple, dirCh chan dir.DirectorySubsp
 	}
 }
 
-func (c *Coordinator) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirKeyValue {
+func (c *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirKeyValue {
 	out := make(chan DirKeyValue)
 	var wg sync.WaitGroup
 
@@ -184,7 +184,7 @@ func (c *Coordinator) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan 
 	return out
 }
 
-func (c *Coordinator) doFilterRange(tuple tup.Tuple, in chan DirKeyValue, out chan DirKeyValue) {
+func (c *Reader) doFilterRange(tuple tup.Tuple, in chan DirKeyValue, out chan DirKeyValue) {
 	read := func() (DirKeyValue, bool) {
 		select {
 		case <-c.ctx.Done():

@@ -64,7 +64,7 @@ func TestCoordinator_openDirectories(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, c Coordinator) {
+			testEnv(t, func(tr fdb.Transaction, c Reader) {
 				// Set up initial state of directories.
 				for _, dir := range test.initial {
 					_, err := directory.Create(tr, append([]string{root}, dir...), nil)
@@ -96,7 +96,7 @@ func TestCoordinator_openDirectories(t *testing.T) {
 	}
 }
 
-func testEnv(t *testing.T, f func(fdb.Transaction, Coordinator)) {
+func testEnv(t *testing.T, f func(fdb.Transaction, Reader)) {
 	exists, err := directory.Exists(db, []string{root})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
