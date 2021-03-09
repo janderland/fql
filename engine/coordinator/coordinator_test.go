@@ -21,78 +21,89 @@ func init() {
 }
 
 func TestCoordinator_OpenDirectories(t *testing.T) {
-	t.Run("no exist one", func(t *testing.T) {
-		test(t, func(_ fdb.Transaction, c Coordinator) {
-			_ = c.OpenDirectories(keyval.Directory{root, "hello"}, false)
-			assert.Error(t, c.Wait())
+	tests := []struct {
+		name     string           // name of test
+		query    keyval.Directory // query to execute
+		initial  [][]string       // initial directory state
+		expected [][]string       // directories expected to be returned
+		error    bool             // an error should be returned
+	}{
+		{
+			name:  "no exist one",
+			query: keyval.Directory{"hello"},
+			error: true,
+		},
+		{
+			name:     "exist one",
+			query:    keyval.Directory{"hello"},
+			initial:  [][]string{{"hello"}},
+			expected: [][]string{{"hello"}},
+		},
+		{
+			name:  "no exist many",
+			query: keyval.Directory{"people", keyval.Variable{}},
+			error: true,
+		},
+		{
+			name:  "exist many",
+			query: keyval.Directory{"people", keyval.Variable{}, "job", keyval.Variable{}},
+			initial: [][]string{
+				{"people", "billy", "job", "dancer"},
+				{"people", "billy", "job", "tailor"},
+				{"people", "jon", "job", "programmer"},
+				{"people", "sally", "job", "designer"},
+			},
+			expected: [][]string{
+				{"people", "billy", "job", "dancer"},
+				{"people", "billy", "job", "tailor"},
+				{"people", "jon", "job", "programmer"},
+				{"people", "sally", "job", "designer"},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testEnv(t, func(tr fdb.Transaction, c Coordinator) {
+				// Set up initial state of directories.
+				for _, initDir := range test.initial {
+					_, err := directory.Create(tr, append([]string{root}, initDir...), nil)
+					assert.NoError(t, err)
+				}
+
+				// Execute the query.
+				dirCh := c.OpenDirectories(append(keyval.Directory{root}, test.query...))
+				waitForDirs := collectDirs(dirCh)
+
+				// Wait for the query to complete and check for errors.
+				if test.error {
+					assert.Error(t, c.Wait())
+				} else {
+					assert.NoError(t, c.Wait())
+				}
+
+				// Collect the query output and assert it's as expected.
+				directories := waitForDirs()
+				assert.Equal(t, len(test.expected), len(directories))
+				if len(test.expected) == len(directories) {
+					for i := range test.expected {
+						assert.Equal(t, append([]string{root}, test.expected[i]...), directories[i].GetPath())
+					}
+				}
+			})
 		})
-	})
-
-	t.Run("exist one", func(t *testing.T) {
-		test(t, func(tr fdb.Transaction, c Coordinator) {
-			_, err := directory.Create(tr, []string{root, "hello"}, nil)
-			assert.NoError(t, err)
-
-			dirCh := c.OpenDirectories(keyval.Directory{root, "hello"}, false)
-			waitForDirs := collectDirs(dirCh)
-
-			assert.NoError(t, c.Wait())
-			directories := waitForDirs()
-			assert.Equal(t, 1, len(directories))
-			assert.Equal(t, []string{root, "hello"}, directories[0].GetPath())
-		})
-	})
-
-	t.Run("create one", func(t *testing.T) {
-		test(t, func(tr fdb.Transaction, c Coordinator) {
-			dirCh := c.OpenDirectories(keyval.Directory{root, "what", "who"}, true)
-			waitForDirs := collectDirs(dirCh)
-
-			assert.NoError(t, c.Wait())
-			directories := waitForDirs()
-			assert.Equal(t, 1, len(directories))
-			assert.Equal(t, []string{root, "what", "who"}, directories[0].GetPath())
-		})
-	})
-
-	t.Run("no exist many", func(t *testing.T) {
-		test(t, func(_ fdb.Transaction, c Coordinator) {
-			dirCh := c.OpenDirectories(keyval.Directory{root, "people", keyval.Variable{}}, false)
-			_ = collectDirs(dirCh) // unblock sender
-			assert.Error(t, c.Wait())
-		})
-	})
-
-	t.Run("exist many", func(t *testing.T) {
-		test(t, func(tr fdb.Transaction, c Coordinator) {
-			_, err := directory.Create(tr, []string{root, "people", "bill"}, nil)
-			assert.NoError(t, err)
-			_, err = directory.Create(tr, []string{root, "people", "jon"}, nil)
-			assert.NoError(t, err)
-			_, err = directory.Create(tr, []string{root, "people", "sally"}, nil)
-			assert.NoError(t, err)
-
-			dirCh := c.OpenDirectories(keyval.Directory{root, "people", keyval.Variable{}}, false)
-			waitForDirs := collectDirs(dirCh)
-
-			assert.NoError(t, c.Wait())
-			directories := waitForDirs()
-			assert.Equal(t, 3, len(directories))
-			assert.Equal(t, []string{root, "people", "bill"}, directories[0].GetPath())
-			assert.Equal(t, []string{root, "people", "jon"}, directories[1].GetPath())
-			assert.Equal(t, []string{root, "people", "sally"}, directories[2].GetPath())
-		})
-	})
-
-	t.Run("create many", func(t *testing.T) {
-		test(t, func(tr fdb.Transaction, c Coordinator) {
-			_ = c.OpenDirectories(keyval.Directory{root, keyval.Variable{}}, true)
-			assert.Error(t, c.Wait())
-		})
-	})
+	}
 }
 
-func test(t *testing.T, f func(fdb.Transaction, Coordinator)) {
+func testEnv(t *testing.T, f func(fdb.Transaction, Coordinator)) {
+	exists, err := directory.Exists(db, []string{root})
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
+	}
+	if exists {
+		t.Fatal(errors.New("root directory already exists"))
+	}
+
 	defer func() {
 		_, err := directory.Root().Remove(db, []string{root})
 		if err != nil {
@@ -100,7 +111,7 @@ func test(t *testing.T, f func(fdb.Transaction, Coordinator)) {
 		}
 	}()
 
-	_, err := db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		f(tr, New(tr))
 		return nil, nil
 	})

@@ -53,28 +53,24 @@ func (c *Coordinator) signalError(err error) {
 	}
 }
 
-func (c *Coordinator) OpenDirectories(directory keyval.Directory, create bool) chan dir.DirectorySubspace {
+func (c *Coordinator) OpenDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
 	c.wg.Add(1)
 
 	go func() {
 		defer close(dirCh)
 		defer c.wg.Done()
-		c.openDirectories(directory, create, dirCh)
+		c.openDirectories(directory, dirCh)
 	}()
 
 	return dirCh
 }
 
-func (c *Coordinator) openDirectories(directory keyval.Directory, create bool, dirCh chan dir.DirectorySubspace) {
+func (c *Coordinator) openDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
 	prefix, variable, suffix := splitAtFirstVariable(directory)
 	prefixStr := toStringArray(prefix)
 
 	if variable != nil {
-		if create {
-			c.signalError(errors.New("cannot create variable directory"))
-		}
-
 		subDirs, err := dir.List(c.tr, prefixStr)
 		if err != nil {
 			c.signalError(errors.Wrap(err, "failed to list directories"))
@@ -86,17 +82,10 @@ func (c *Coordinator) openDirectories(directory keyval.Directory, create bool, d
 			directory = append(directory, prefix...)
 			directory = append(directory, sDir)
 			directory = append(directory, suffix...)
-			c.openDirectories(directory, create, dirCh)
+			c.openDirectories(directory, dirCh)
 		}
 	} else {
-		var directory dir.DirectorySubspace
-		var err error
-
-		if create {
-			directory, err = dir.CreateOrOpen(c.tr, prefixStr, nil)
-		} else {
-			directory, err = dir.Open(c.tr, prefixStr, nil)
-		}
+		directory, err := dir.Open(c.tr, prefixStr, nil)
 		if err != nil {
 			c.signalError(errors.Wrap(err, "failed to open directory"))
 			return
@@ -250,6 +239,10 @@ func compareTuples(pattern tup.Tuple, candidate tup.Tuple) int {
 				}
 			case *big.Int:
 				if p.BigInt().Cmp(e.(*big.Int)) != 0 {
+					return
+				}
+			case float32:
+				if p.Float() != float64(e.(float32)) {
 					return
 				}
 			case float64:
