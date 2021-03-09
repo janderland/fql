@@ -25,8 +25,8 @@ func TestCoordinator_OpenDirectories(t *testing.T) {
 		name     string           // name of test
 		query    keyval.Directory // query to execute
 		initial  [][]string       // initial directory state
-		expected [][]string       // directories expected to be returned
-		error    bool             // an error should be returned
+		expected [][]string       // expected results
+		error    bool             // expect error?
 	}{
 		{
 			name:  "no exist one",
@@ -66,9 +66,11 @@ func TestCoordinator_OpenDirectories(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, c Coordinator) {
 				// Set up initial state of directories.
-				for _, initDir := range test.initial {
-					_, err := directory.Create(tr, append([]string{root}, initDir...), nil)
-					assert.NoError(t, err)
+				for _, dir := range test.initial {
+					_, err := directory.Create(tr, append([]string{root}, dir...), nil)
+					if !assert.NoError(t, err) {
+						t.FailNow()
+					}
 				}
 
 				// Execute the query.
@@ -84,8 +86,7 @@ func TestCoordinator_OpenDirectories(t *testing.T) {
 
 				// Collect the query output and assert it's as expected.
 				directories := waitForDirs()
-				assert.Equal(t, len(test.expected), len(directories))
-				if len(test.expected) == len(directories) {
+				if assert.Equal(t, len(test.expected), len(directories)) {
 					for i := range test.expected {
 						assert.Equal(t, append([]string{root}, test.expected[i]...), directories[i].GetPath())
 					}
