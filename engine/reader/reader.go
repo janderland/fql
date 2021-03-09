@@ -25,6 +25,12 @@ type DirKeyValue struct {
 	kv  fdb.KeyValue
 }
 
+type DirTupValue struct {
+	dir dir.DirectorySubspace
+	tup tup.Tuple
+	val []byte
+}
+
 func New(tr fdb.Transaction) Reader {
 	ctx, cancel := context.WithCancel(context.Background())
 	var wg sync.WaitGroup
@@ -38,16 +44,17 @@ func New(tr fdb.Transaction) Reader {
 	}
 }
 
-func (c *Reader) Wait() error {
+func (c *Reader) Read(kv keyval.KeyValue) (chan DirTupValue, chan error) {
+	dirCh := c.openDirectories(kv.Key.Directory)
+	dkvCh := c.readRange(kv.Key.Tuple, dirCh)
+	dtvCh := c.filterRange(kv.Key.Tuple, dkvCh)
+
 	go func() {
 		c.wg.Wait()
 		close(c.errCh)
 	}()
 
-	for err := range c.errCh {
-		return err
-	}
-	return nil
+	return dtvCh, c.errCh
 }
 
 func (c *Reader) signalError(err error) {
@@ -115,7 +122,7 @@ func (c *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace)
 		go func() {
 			defer c.wg.Done()
 			defer wg.Done()
-			c.doReadRange(toFDBTuple(tuple), dirCh, kvCh)
+			c.doReadRange(tuple, dirCh, kvCh)
 		}()
 	}
 
@@ -127,7 +134,7 @@ func (c *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace)
 	return kvCh
 }
 
-func (c *Reader) doReadRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
+func (c *Reader) doReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
 	read := func() (dir.DirectorySubspace, bool) {
 		select {
 		case <-c.ctx.Done():
@@ -137,8 +144,11 @@ func (c *Reader) doReadRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, 
 		}
 	}
 
+	prefix, _, _ := splitAtFirstVariable(tuple)
+	fdbPrefix := toFDBTuple(prefix)
+
 	for directory, running := read(); running; directory, running = read() {
-		rng, err := fdb.PrefixRange(directory.Pack(tuple))
+		rng, err := fdb.PrefixRange(directory.Pack(fdbPrefix))
 		if err != nil {
 			c.signalError(errors.Wrap(err, "failed to create prefix range"))
 			return
@@ -161,8 +171,8 @@ func (c *Reader) doReadRange(tuple tup.Tuple, dirCh chan dir.DirectorySubspace, 
 	}
 }
 
-func (c *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirKeyValue {
-	out := make(chan DirKeyValue)
+func (c *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirTupValue {
+	out := make(chan DirTupValue)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
@@ -172,7 +182,7 @@ func (c *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirKe
 		go func() {
 			defer c.wg.Done()
 			defer wg.Done()
-			c.doFilterRange(toFDBTuple(tuple), in, out)
+			c.doFilterRange(tuple, in, out)
 		}()
 	}
 
@@ -184,7 +194,7 @@ func (c *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirKe
 	return out
 }
 
-func (c *Reader) doFilterRange(tuple tup.Tuple, in chan DirKeyValue, out chan DirKeyValue) {
+func (c *Reader) doFilterRange(pattern keyval.Tuple, in chan DirKeyValue, out chan DirTupValue) {
 	read := func() (DirKeyValue, bool) {
 		select {
 		case <-c.ctx.Done():
@@ -195,22 +205,22 @@ func (c *Reader) doFilterRange(tuple tup.Tuple, in chan DirKeyValue, out chan Di
 	}
 
 	for dkv, running := read(); running; dkv, running = read() {
-		otherTuple, err := dkv.dir.Unpack(dkv.kv.Key)
+		tuple, err := dkv.dir.Unpack(dkv.kv.Key)
 		if err != nil {
 			c.signalError(errors.Wrap(err, "failed to unpack key"))
 		}
 
-		if compareTuples(tuple, otherTuple) == -1 {
+		if compareTuples(pattern, tuple) == -1 {
 			select {
 			case <-c.ctx.Done():
 				return
-			case out <- dkv:
+			case out <- DirTupValue{dir: dkv.dir, tup: tuple, val: dkv.kv.Value}:
 			}
 		}
 	}
 }
 
-func compareTuples(pattern tup.Tuple, candidate tup.Tuple) int {
+func compareTuples(pattern keyval.Tuple, candidate tup.Tuple) int {
 	if len(pattern) < len(candidate) {
 		return len(pattern)
 	}

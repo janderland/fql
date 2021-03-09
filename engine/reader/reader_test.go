@@ -20,7 +20,7 @@ func init() {
 	db = fdb.MustOpenDefault()
 }
 
-func TestCoordinator_openDirectories(t *testing.T) {
+func TestReader_openDirectories(t *testing.T) {
 	tests := []struct {
 		name     string           // name of test
 		query    keyval.Directory // query to execute
@@ -64,7 +64,7 @@ func TestCoordinator_openDirectories(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, c Reader) {
+			testEnv(t, func(tr fdb.Transaction, r Reader) {
 				// Set up initial state of directories.
 				for _, dir := range test.initial {
 					_, err := directory.Create(tr, append([]string{root}, dir...), nil)
@@ -74,14 +74,14 @@ func TestCoordinator_openDirectories(t *testing.T) {
 				}
 
 				// Execute the query.
-				dirCh := c.openDirectories(append(keyval.Directory{root}, test.query...))
+				dirCh := r.openDirectories(append(keyval.Directory{root}, test.query...))
 				waitForDirs := collectDirs(dirCh)
 
 				// Wait for the query to complete and check for errors.
 				if test.error {
-					assert.Error(t, c.Wait())
+					assert.Error(t, waitForErr(r))
 				} else {
-					assert.NoError(t, c.Wait())
+					assert.NoError(t, waitForErr(r))
 				}
 
 				// Collect the query output and assert it's as expected.
@@ -137,4 +137,16 @@ func collectDirs(dirCh chan directory.DirectorySubspace) func() []directory.Dire
 		wg.Wait()
 		return directories
 	}
+}
+
+func waitForErr(r Reader) error {
+	go func() {
+		r.wg.Wait()
+		close(r.errCh)
+	}()
+
+	for err := range r.errCh {
+		return err
+	}
+	return nil
 }
