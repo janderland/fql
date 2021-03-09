@@ -1,54 +1,72 @@
-package engine
+package coordinator
 
 import (
 	"context"
+	"math/big"
 	"sync"
 
+	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	dir "github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
 	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
-
-	"github.com/apple/foundationdb/bindings/go/src/fdb"
 )
 
 type Coordinator struct {
 	tr     fdb.Transaction
+	wg     *sync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
 	errCh  chan error
 }
 
-func NewCoordinator(tr fdb.Transaction) Coordinator {
+func New(tr fdb.Transaction) Coordinator {
 	ctx, cancel := context.WithCancel(context.Background())
+	var wg sync.WaitGroup
+
 	return Coordinator{
 		tr:     tr,
+		wg:     &wg,
 		ctx:    ctx,
 		cancel: cancel,
 		errCh:  make(chan error),
 	}
 }
 
+func (c *Coordinator) Wait() error {
+	go func() {
+		c.wg.Wait()
+		close(c.errCh)
+	}()
+
+	for err := range c.errCh {
+		return err
+	}
+	return nil
+}
+
 func (c *Coordinator) signalError(err error) {
 	select {
-	case <-c.ctx.Done():
 	case c.errCh <- err:
+		c.cancel()
+	case <-c.ctx.Done():
 	}
 }
 
-func (c *Coordinator) OpenDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
+func (c *Coordinator) OpenDirectories(directory keyval.Directory, create bool) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
+	c.wg.Add(1)
 
 	go func() {
 		defer close(dirCh)
-		c.openDirectories(directory, dirCh)
+		defer c.wg.Done()
+		c.openDirectories(directory, create, dirCh)
 	}()
 
 	return dirCh
 }
 
-func (c *Coordinator) openDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
+func (c *Coordinator) openDirectories(directory keyval.Directory, create bool, dirCh chan dir.DirectorySubspace) {
 	prefix, variable, suffix := splitAtFirstVariable(directory)
 	prefixStr := toStringArray(prefix)
 
@@ -64,10 +82,17 @@ func (c *Coordinator) openDirectories(directory keyval.Directory, dirCh chan dir
 			directory = append(directory, prefix...)
 			directory = append(directory, sDir)
 			directory = append(directory, suffix...)
-			c.openDirectories(directory, dirCh)
+			c.openDirectories(directory, create, dirCh)
 		}
 	} else {
-		directory, err := dir.CreateOrOpen(c.tr, prefixStr, nil)
+		var directory dir.DirectorySubspace
+		var err error
+
+		if create {
+			directory, err = dir.CreateOrOpen(c.tr, prefixStr, nil)
+		} else {
+			directory, err = dir.Open(c.tr, prefixStr, nil)
+		}
 		if err != nil {
 			c.signalError(errors.Wrap(err, "failed to open directory"))
 			return
@@ -92,8 +117,11 @@ func (c *Coordinator) ReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubs
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
+		c.wg.Add(1)
 		wg.Add(1)
+
 		go func() {
+			defer c.wg.Done()
 			defer wg.Done()
 			c.readRange(fdbTuple, dirCh, kvCh)
 		}()
@@ -146,8 +174,11 @@ func (c *Coordinator) FilterRange(tuple keyval.Tuple, in chan DirKeyValue) chan 
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
+		c.wg.Add(1)
 		wg.Add(1)
+
 		go func() {
+			defer c.wg.Done()
 			defer wg.Done()
 			c.filterRange(toFDBTuple(tuple), in, out)
 		}()
@@ -162,7 +193,76 @@ func (c *Coordinator) FilterRange(tuple keyval.Tuple, in chan DirKeyValue) chan 
 }
 
 func (c *Coordinator) filterRange(tuple tup.Tuple, in chan DirKeyValue, out chan DirKeyValue) {
-	// TODO
+	read := func() (DirKeyValue, bool) {
+		select {
+		case <-c.ctx.Done():
+			return DirKeyValue{}, false
+		case directory, open := <-in:
+			return directory, open
+		}
+	}
+
+	for dkv, running := read(); running; dkv, running = read() {
+		otherTuple, err := dkv.dir.Unpack(dkv.kv.Key)
+		if err != nil {
+			c.signalError(errors.Wrap(err, "failed to unpack key"))
+		}
+
+		if compareTuples(tuple, otherTuple) == -1 {
+			select {
+			case <-c.ctx.Done():
+				return
+			case out <- dkv:
+			}
+		}
+	}
+}
+
+func compareTuples(pattern tup.Tuple, candidate tup.Tuple) int {
+	if len(pattern) < len(candidate) {
+		return len(pattern)
+	}
+	if len(pattern) > len(candidate) {
+		return len(candidate)
+	}
+
+	var i int
+	var e tup.TupleElement
+	err := keyval.ParseTuple(candidate, func(p *keyval.TupleParser) {
+		for i, e = range pattern {
+			switch e.(type) {
+			// TODO: Ensure all possible FDB tuple elements are covered.
+			case int64:
+				if p.Int() != e.(int64) {
+					return
+				}
+			case uint64:
+				if p.Uint() != e.(uint64) {
+					return
+				}
+			case string:
+				if p.String() != e.(string) {
+					return
+				}
+			case *big.Int:
+				if p.BigInt().Cmp(e.(*big.Int)) != 0 {
+					return
+				}
+			case float64:
+				if p.Float() != e.(float64) {
+					return
+				}
+			case bool:
+				if p.Bool() != e.(bool) {
+					return
+				}
+			}
+		}
+	})
+	if err != nil {
+		return i
+	}
+	return -1
 }
 
 func splitAtFirstVariable(list []interface{}) ([]interface{}, *keyval.Variable, []interface{}) {
