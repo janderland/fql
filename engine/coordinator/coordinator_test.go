@@ -23,8 +23,7 @@ func init() {
 func TestCoordinator_OpenDirectories(t *testing.T) {
 	t.Run("no exist one", func(t *testing.T) {
 		test(t, func(_ fdb.Transaction, c Coordinator) {
-			dirCh := c.OpenDirectories(keyval.Directory{root, "hello"}, false)
-			_ = collectDirs(dirCh) // unblock sender
+			_ = c.OpenDirectories(keyval.Directory{root, "hello"}, false)
 			assert.Error(t, c.Wait())
 		})
 	})
@@ -87,8 +86,7 @@ func TestCoordinator_OpenDirectories(t *testing.T) {
 
 	t.Run("create many", func(t *testing.T) {
 		test(t, func(tr fdb.Transaction, c Coordinator) {
-			dirCh := c.OpenDirectories(keyval.Directory{root, keyval.Variable{}}, false)
-			_ = collectDirs(dirCh) // unblock sender
+			_ = c.OpenDirectories(keyval.Directory{root, keyval.Variable{}}, true)
 			assert.Error(t, c.Wait())
 		})
 	})
