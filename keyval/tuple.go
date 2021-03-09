@@ -5,10 +5,8 @@ import (
 	"math/big"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-
-	"github.com/pkg/errors"
-
 	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
+	"github.com/pkg/errors"
 )
 
 type TupleParser struct {
@@ -24,7 +22,7 @@ func ParseTuple(t tup.Tuple, f func(p *TupleParser)) (err error) {
 				return
 			}
 			if e == ShortTupleError {
-				err = e.(error)
+				err = ShortTupleError
 				return
 			}
 			panic(e)

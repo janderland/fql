@@ -21,6 +21,7 @@ func TestParseTuple(t *testing.T) {
 		math.MaxFloat64,
 		tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9},
 		[]byte{0xFF, 0xAA, 0x00},
+		tup.Tuple{true, int64(10)},
 	}
 
 	out := make(tup.Tuple, len(in))
@@ -34,6 +35,7 @@ func TestParseTuple(t *testing.T) {
 		out[6] = p.Float()
 		out[7] = p.UUID()
 		out[8] = p.Bytes()
+		out[9] = p.Tuple()
 	})
 
 	assert.NoError(t, err)
