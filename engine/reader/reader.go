@@ -7,7 +7,6 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	dir "github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
@@ -20,72 +19,100 @@ type Reader struct {
 	errCh  chan error
 }
 
-type DirKeyValue struct {
-	dir dir.DirectorySubspace
-	kv  fdb.KeyValue
-}
-
-type DirTupValue struct {
-	dir dir.DirectorySubspace
-	tup tup.Tuple
-	val []byte
-}
-
 func New(tr fdb.Transaction) Reader {
 	ctx, cancel := context.WithCancel(context.Background())
-	var wg sync.WaitGroup
 
 	return Reader{
 		tr:     tr,
-		wg:     &wg,
+		wg:     &sync.WaitGroup{},
 		ctx:    ctx,
 		cancel: cancel,
 		errCh:  make(chan error),
 	}
 }
 
-func (r *Reader) Read(kv keyval.KeyValue) (chan DirTupValue, chan error) {
-	dirCh := r.openDirectories(kv.Key.Directory)
-	dkvCh := r.readRange(kv.Key.Tuple, dirCh)
-	dtvCh := r.filterRange(kv.Key.Tuple, dkvCh)
+func (r *Reader) Read(query keyval.KeyValue) (chan keyval.KeyValue, chan error) {
+	stage1 := r.openDirectories(query)
+	stage2 := r.readRange(query, stage1)
+	stage3 := r.filterKeys(query, stage2)
+	out := r.filterValues(query, stage3)
 
 	go func() {
 		r.wg.Wait()
 		close(r.errCh)
 	}()
 
-	return dtvCh, r.errCh
+	return out, r.errCh
 }
 
-func (r *Reader) signalError(err error) {
+func (r *Reader) sendDir(ch chan<- dir.DirectorySubspace, d dir.DirectorySubspace) {
 	select {
-	case r.errCh <- err:
-		r.cancel()
 	case <-r.ctx.Done():
+	case ch <- d:
 	}
 }
 
-func (r *Reader) openDirectories(directory keyval.Directory) chan dir.DirectorySubspace {
+func (r *Reader) recvDir(ch <-chan dir.DirectorySubspace) dir.DirectorySubspace {
+	select {
+	case <-r.ctx.Done():
+	case directory, open := <-ch:
+		if open {
+			return directory
+		}
+	}
+	return nil
+}
+
+func (r *Reader) sendKV(ch chan<- keyval.KeyValue, dtv keyval.KeyValue) {
+	select {
+	case <-r.ctx.Done():
+	case ch <- dtv:
+	}
+}
+
+func (r *Reader) recvKV(ch <-chan keyval.KeyValue) *keyval.KeyValue {
+	select {
+	case <-r.ctx.Done():
+	case dtv, open := <-ch:
+		if open {
+			return &dtv
+		}
+	}
+	return nil
+}
+
+func (r *Reader) sendError(err error) {
+	select {
+	case <-r.ctx.Done():
+	case r.errCh <- err:
+		r.cancel()
+	}
+}
+
+func (r *Reader) openDirectories(query keyval.KeyValue) chan dir.DirectorySubspace {
 	dirCh := make(chan dir.DirectorySubspace)
 	r.wg.Add(1)
 
 	go func() {
 		defer close(dirCh)
 		defer r.wg.Done()
-		r.doOpenDirectories(directory, dirCh)
+		r.doOpenDirectories(query.Key.Directory, dirCh)
 	}()
 
 	return dirCh
 }
 
-func (r *Reader) doOpenDirectories(directory keyval.Directory, dirCh chan dir.DirectorySubspace) {
-	prefix, variable, suffix := splitAtFirstVariable(directory)
-	prefixStr := toStringArray(prefix)
+func (r *Reader) doOpenDirectories(query keyval.Directory, dirCh chan dir.DirectorySubspace) {
+	prefix, variable, suffix := keyval.SplitAtFirstVariable(query)
+	prefixStr, err := keyval.ToStringArray(prefix)
+	if err != nil {
+		r.sendError(errors.Wrapf(err, "fail to convert directory prefix to string array"))
+	}
 
 	if variable != nil {
 		subDirs, err := dir.List(r.tr, prefixStr)
 		if err != nil {
-			r.signalError(errors.Wrap(err, "failed to list directories"))
+			r.sendError(errors.Wrap(err, "failed to list directories"))
 			return
 		}
 
@@ -99,20 +126,15 @@ func (r *Reader) doOpenDirectories(directory keyval.Directory, dirCh chan dir.Di
 	} else {
 		directory, err := dir.Open(r.tr, prefixStr, nil)
 		if err != nil {
-			r.signalError(errors.Wrap(err, "failed to open directory"))
+			r.sendError(errors.Wrap(err, "failed to open directory"))
 			return
 		}
-
-		select {
-		case <-r.ctx.Done():
-			return
-		case dirCh <- directory:
-		}
+		r.sendDir(dirCh, directory)
 	}
 }
 
-func (r *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace) chan DirKeyValue {
-	kvCh := make(chan DirKeyValue)
+func (r *Reader) readRange(query keyval.KeyValue, dirCh chan dir.DirectorySubspace) chan keyval.KeyValue {
+	kvCh := make(chan keyval.KeyValue)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
@@ -122,7 +144,7 @@ func (r *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace)
 		go func() {
 			defer r.wg.Done()
 			defer wg.Done()
-			r.doReadRange(tuple, dirCh, kvCh)
+			r.doReadRange(query.Key.Tuple, dirCh, kvCh)
 		}()
 	}
 
@@ -134,23 +156,14 @@ func (r *Reader) readRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace)
 	return kvCh
 }
 
-func (r *Reader) doReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan DirKeyValue) {
-	read := func() (dir.DirectorySubspace, bool) {
-		select {
-		case <-r.ctx.Done():
-			return nil, false
-		case directory, open := <-dirCh:
-			return directory, open
-		}
-	}
+func (r *Reader) doReadRange(query keyval.Tuple, dirCh chan dir.DirectorySubspace, kvCh chan keyval.KeyValue) {
+	prefix, _, _ := keyval.SplitAtFirstVariable(query)
+	fdbPrefix := keyval.ToFDBTuple(prefix)
 
-	prefix, _, _ := splitAtFirstVariable(tuple)
-	fdbPrefix := toFDBTuple(prefix)
-
-	for directory, running := read(); running; directory, running = read() {
+	for directory := r.recvDir(dirCh); directory != nil; directory = r.recvDir(dirCh) {
 		rng, err := fdb.PrefixRange(directory.Pack(fdbPrefix))
 		if err != nil {
-			r.signalError(errors.Wrap(err, "failed to create prefix range"))
+			r.sendError(errors.Wrap(err, "failed to create prefix range"))
 			return
 		}
 
@@ -158,21 +171,29 @@ func (r *Reader) doReadRange(tuple keyval.Tuple, dirCh chan dir.DirectorySubspac
 		for iter.Advance() {
 			kv, err := iter.Get()
 			if err != nil {
-				r.signalError(errors.Wrap(err, "failed to get key-value"))
+				r.sendError(errors.Wrap(err, "failed to get key-value"))
 				return
 			}
 
-			select {
-			case <-r.ctx.Done():
+			tuple, err := directory.Unpack(kv.Key)
+			if err != nil {
+				r.sendError(errors.Wrap(err, "failed to unpack key"))
 				return
-			case kvCh <- DirKeyValue{dir: directory, kv: kv}:
 			}
+
+			r.sendKV(kvCh, keyval.KeyValue{
+				Key: keyval.Key{
+					Directory: keyval.FromStringArray(directory.GetPath()),
+					Tuple:     keyval.FromFDBTuple(tuple),
+				},
+				Value: kv.Value,
+			})
 		}
 	}
 }
 
-func (r *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirTupValue {
-	out := make(chan DirTupValue)
+func (r *Reader) filterKeys(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
+	out := make(chan keyval.KeyValue)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
@@ -182,7 +203,7 @@ func (r *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirTu
 		go func() {
 			defer r.wg.Done()
 			defer wg.Done()
-			r.doFilterRange(tuple, in, out)
+			r.doFilterKeys(query.Key.Tuple, in, out)
 		}()
 	}
 
@@ -194,106 +215,124 @@ func (r *Reader) filterRange(tuple keyval.Tuple, in chan DirKeyValue) chan DirTu
 	return out
 }
 
-func (r *Reader) doFilterRange(pattern keyval.Tuple, in chan DirKeyValue, out chan DirTupValue) {
-	read := func() (DirKeyValue, bool) {
-		select {
-		case <-r.ctx.Done():
-			return DirKeyValue{}, false
-		case directory, open := <-in:
-			return directory, open
-		}
-	}
-
-	for dkv, running := read(); running; dkv, running = read() {
-		tuple, err := dkv.dir.Unpack(dkv.kv.Key)
-		if err != nil {
-			r.signalError(errors.Wrap(err, "failed to unpack key"))
-		}
-
-		if compareTuples(pattern, tuple) == -1 {
-			select {
-			case <-r.ctx.Done():
-				return
-			case out <- DirTupValue{dir: dkv.dir, tup: tuple, val: dkv.kv.Value}:
-			}
+func (r *Reader) doFilterKeys(query keyval.Tuple, in chan keyval.KeyValue, out chan keyval.KeyValue) {
+	for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
+		mismatch := compareTuples(query, kv.Key.Tuple)
+		if len(mismatch) == 0 {
+			r.sendKV(out, *kv)
 		}
 	}
 }
 
-func compareTuples(pattern keyval.Tuple, candidate tup.Tuple) int {
-	if len(pattern) < len(candidate) {
-		return len(pattern)
-	}
-	if len(pattern) > len(candidate) {
-		return len(candidate)
+func (r *Reader) filterValues(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
+	out := make(chan keyval.KeyValue)
+	var wg sync.WaitGroup
+
+	for i := 0; i < 4; i++ {
+		r.wg.Add(1)
+		wg.Add(1)
+
+		go func() {
+			defer r.wg.Done()
+			defer wg.Done()
+			r.doFilterValues(query.Value, in, out)
+		}()
 	}
 
-	var i int
-	var e tup.TupleElement
-	err := keyval.ParseTuple(candidate, func(p *keyval.TupleParser) {
-		for i, e = range pattern {
+	go func() {
+		defer close(out)
+		wg.Wait()
+	}()
+
+	return out
+}
+
+func (r *Reader) doFilterValues(_ keyval.Value, in <-chan keyval.KeyValue, out chan<- keyval.KeyValue) {
+	// TODO: Implement value filtering.
+	for kv := range in {
+		r.sendKV(out, kv)
+	}
+}
+
+func compareTuples(pattern keyval.Tuple, candidate keyval.Tuple) []int {
+	var index []int
+	err := keyval.ParseTuple(candidate, func(p *keyval.TupleParser) error {
+		for i, e := range pattern {
 			switch e.(type) {
-			// TODO: Ensure all possible FDB tuple elements are covered.
+			case keyval.Variable:
+				// TODO: Check variable constraints.
+				break
+
+			case keyval.Tuple:
+				if subIndex := compareTuples(e.(keyval.Tuple), p.Tuple()); len(subIndex) > 0 {
+					index = append([]int{i}, subIndex...)
+					return nil
+				}
+
 			case int64:
 				if p.Int() != e.(int64) {
-					return
+					index = []int{i}
+					return nil
 				}
+
 			case uint64:
 				if p.Uint() != e.(uint64) {
-					return
+					index = []int{i}
+					return nil
 				}
+
 			case string:
 				if p.String() != e.(string) {
-					return
+					index = []int{i}
+					return nil
 				}
+
 			case *big.Int:
 				if p.BigInt().Cmp(e.(*big.Int)) != 0 {
-					return
+					index = []int{i}
+					return nil
 				}
+
 			case float32:
 				if p.Float() != float64(e.(float32)) {
-					return
+					index = []int{i}
+					return nil
 				}
+
 			case float64:
 				if p.Float() != e.(float64) {
-					return
+					index = []int{i}
+					return nil
 				}
+
 			case bool:
 				if p.Bool() != e.(bool) {
-					return
+					index = []int{i}
+					return nil
+				}
+
+			default:
+				if e != p.Any() {
+					index = []int{i}
+					return nil
 				}
 			}
 		}
+		return nil
 	})
-	if err != nil {
-		return i
+	if len(index) > 0 {
+		return index
 	}
-	return -1
-}
-
-func splitAtFirstVariable(list []interface{}) ([]interface{}, *keyval.Variable, []interface{}) {
-	for i, segment := range list {
-		switch segment.(type) {
-		case keyval.Variable:
-			v := segment.(keyval.Variable)
-			return list[:i], &v, list[i+1:]
+	if err != nil {
+		if c, ok := err.(keyval.ConversionError); ok {
+			return []int{c.Index}
+		}
+		if err == keyval.ShortTupleError {
+			return []int{len(candidate) + 1}
+		}
+		if err == keyval.LongTupleError {
+			return []int{len(pattern) + 1}
 		}
 	}
-	return list, nil, nil
-}
-
-func toStringArray(in []interface{}) []string {
-	out := make([]string, len(in))
-	for i := range in {
-		out[i] = in[i].(string)
-	}
-	return out
-}
-
-func toFDBTuple(in []interface{}) tup.Tuple {
-	out := make(tup.Tuple, len(in))
-	for i := range in {
-		out[i] = tup.TupleElement(in[i])
-	}
-	return out
+	return nil
 }

@@ -74,7 +74,9 @@ func TestReader_openDirectories(t *testing.T) {
 				}
 
 				// Execute the query.
-				dirCh := r.openDirectories(append(keyval.Directory{root}, test.query...))
+				dirCh := r.openDirectories(keyval.KeyValue{
+					Key: keyval.Key{Directory: append(keyval.Directory{root}, test.query...)},
+				})
 				waitForDirs := collectDirs(dirCh)
 
 				// Wait for the query to complete and check for errors.

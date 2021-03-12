@@ -4,17 +4,18 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
+
+	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/pkg/errors"
 )
 
 type TupleParser struct {
-	t tup.Tuple
+	t Tuple
 	i int
 }
 
-func ParseTuple(t tup.Tuple, f func(p *TupleParser)) (err error) {
+func ParseTuple(t Tuple, f func(p *TupleParser) error) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			if e, ok := e.(ConversionError); ok {
@@ -30,7 +31,9 @@ func ParseTuple(t tup.Tuple, f func(p *TupleParser)) (err error) {
 	}()
 
 	p := TupleParser{t: t}
-	f(&p)
+	if err := f(&p); err != nil {
+		return err
+	}
 
 	if p.i != len(t) {
 		return LongTupleError
@@ -184,9 +187,9 @@ func (p *TupleParser) Bytes() (out []byte) {
 	})
 }
 
-func (p *TupleParser) Tuple() (out tup.Tuple) {
+func (p *TupleParser) Tuple() (out Tuple) {
 	i := p.getIndex()
-	if val, ok := p.t[i].(tup.Tuple); ok {
+	if val, ok := p.t[i].(Tuple); ok {
 		return val
 	}
 	panic(ConversionError{
