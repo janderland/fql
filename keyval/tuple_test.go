@@ -24,7 +24,7 @@ func TestParseTuple(t *testing.T) {
 	}
 
 	out := make(Tuple, len(in))
-	err := ParseTuple(in, func(p *TupleParser) error {
+	err := ParseTuple(in, AllErrors, func(p *TupleParser) error {
 		out[0] = p.Any()
 		out[1] = p.Bool()
 		out[2] = p.String()

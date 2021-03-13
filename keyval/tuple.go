@@ -4,10 +4,32 @@ import (
 	"fmt"
 	"math/big"
 
-	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
+	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/pkg/errors"
+)
+
+type TupleFlag = int
+
+const (
+	AllErrors TupleFlag = iota
+	AllowLong
+)
+
+type ConversionError struct {
+	InValue interface{}
+	OutType interface{}
+	Index   int
+}
+
+func (t ConversionError) Error() string {
+	return fmt.Sprintf("failed to convert element %d from %v to %T",
+		t.Index, t.InValue, t.OutType)
+}
+
+var (
+	ShortTupleError = errors.New("read past end of tuple")
+	LongTupleError  = errors.New("did not parse entire tuple")
 )
 
 type TupleParser struct {
@@ -15,7 +37,7 @@ type TupleParser struct {
 	i int
 }
 
-func ParseTuple(t Tuple, f func(p *TupleParser) error) (err error) {
+func ParseTuple(t Tuple, flag TupleFlag, f func(p *TupleParser) error) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			if e, ok := e.(ConversionError); ok {
@@ -35,7 +57,7 @@ func ParseTuple(t Tuple, f func(p *TupleParser) error) (err error) {
 		return err
 	}
 
-	if p.i != len(t) {
+	if flag == AllErrors && p.i != len(t) {
 		return LongTupleError
 	}
 	return nil
@@ -160,9 +182,9 @@ func (p *TupleParser) Float() (out float64) {
 	})
 }
 
-func (p *TupleParser) UUID() (out tup.UUID) {
+func (p *TupleParser) UUID() (out UUID) {
 	i := p.getIndex()
-	if val, ok := p.t[i].(tup.UUID); ok {
+	if val, ok := p.t[i].(UUID); ok {
 		return val
 	}
 	panic(ConversionError{
@@ -192,6 +214,9 @@ func (p *TupleParser) Tuple() (out Tuple) {
 	if val, ok := p.t[i].(Tuple); ok {
 		return val
 	}
+	if val, ok := p.t[i].(tuple.Tuple); ok {
+		return FromFDBTuple(val)
+	}
 	panic(ConversionError{
 		InValue: p.t[i],
 		OutType: out,
@@ -199,18 +224,114 @@ func (p *TupleParser) Tuple() (out Tuple) {
 	})
 }
 
-type ConversionError struct {
-	InValue interface{}
-	OutType interface{}
-	Index   int
+func NormalizeTuple(tup Tuple) Tuple {
+	for i, e := range tup {
+		switch e.(type) {
+		case int:
+			tup[i] = int64(e.(int))
+		case uint:
+			tup[i] = uint64(e.(uint))
+		case float32:
+			tup[i] = float64(e.(float32))
+		case tuple.Tuple:
+			tup[i] = NormalizeTuple(FromFDBTuple(e.(tuple.Tuple)))
+		case big.Int:
+			val := e.(big.Int)
+			tup[i] = &val
+		}
+	}
+	return tup
 }
 
-func (t ConversionError) Error() string {
-	return fmt.Sprintf("failed to convert element %d from %v to %T",
-		t.Index, t.InValue, t.OutType)
-}
+func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
+	if len(pattern) == 0 {
+		return nil, errors.New("empty pattern")
+	}
 
-var (
-	ShortTupleError = errors.New("read past end of tuple")
-	LongTupleError  = errors.New("did not parse entire tuple")
-)
+	switch pattern[len(pattern)-1].(type) {
+	case MaybeMore:
+		pattern = pattern[:len(pattern)-1]
+	default:
+		if len(pattern) < len(candidate) {
+			return []int{len(pattern) + 1}, nil
+		}
+	}
+
+	if len(pattern) > len(candidate) {
+		return []int{len(candidate) + 1}, nil
+	}
+
+	var index []int
+	err := ParseTuple(candidate, AllowLong, func(p *TupleParser) error {
+		for i, e := range pattern {
+			switch e.(type) {
+			case int64:
+				if p.Int() != e.(int64) {
+					index = []int{i}
+					return nil
+				}
+
+			case uint64:
+				if p.Uint() != e.(uint64) {
+					index = []int{i}
+					return nil
+				}
+
+			case string:
+				if p.String() != e.(string) {
+					index = []int{i}
+					return nil
+				}
+
+			case float64:
+				if p.Float() != e.(float64) {
+					index = []int{i}
+					return nil
+				}
+
+			case bool:
+				if p.Bool() != e.(bool) {
+					index = []int{i}
+					return nil
+				}
+
+			case nil:
+				if e != p.Any() {
+					index = []int{i}
+					return nil
+				}
+
+			case *big.Int:
+				if p.BigInt().Cmp(e.(*big.Int)) != 0 {
+					index = []int{i}
+					return nil
+				}
+
+			case Variable:
+				break
+
+			case Tuple:
+				subIndex, err := CompareTuples(e.(Tuple), p.Tuple())
+				if err != nil {
+					return errors.Wrap(err, "failed to compare sub-tuple")
+				}
+				if len(subIndex) > 0 {
+					index = append([]int{i}, subIndex...)
+					return nil
+				}
+
+			default:
+				index = []int{i}
+				return nil
+			}
+		}
+		return nil
+	})
+	if err != nil {
+		if c, ok := err.(ConversionError); ok {
+			return []int{c.Index}, nil
+		}
+		return nil, errors.Wrap(err, "unexpected error")
+	}
+	return index, nil
+}

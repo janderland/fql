@@ -2,6 +2,8 @@
 // and functions for inspecting the key values.
 package keyval
 
+import "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
+
 type (
 	// A KeyValue is a query or result depending on the
 	// context. If the KeyValue is a result, it will not
@@ -24,8 +26,8 @@ type (
 	// contain instances of string or Variable.
 	Directory []interface{}
 
-	// A Tuple is equivalent to an FDB tuple. This type may
-	// contain nil, bool, string, int64, float64, UUID, or
+	// A Tuple is similar to a tuple.Tuple. It may contain
+	// anything in a valid tuple.Tuple in addition to a
 	// Variable.
 	Tuple []interface{}
 
@@ -34,14 +36,20 @@ type (
 	// uint64, float64, UUID, Tuple, Variable, or Clear.
 	Value interface{}
 
-	// A UUID is equivalent to an FDB UUID.
-	UUID [16]byte
+	// A UUID is equivalent to a tuple.UUID.
+	UUID = tuple.UUID
 
 	// A Variable is used as a placeholder for any valid
 	// values within the contexts that allow it.
 	Variable struct {
 		Name string
 	}
+
+	// A MaybeMore is a special kind of Tuple element. It
+	// may only appear as the last element of the Tuple.
+	// It designates that the Tuple will match all Tuples
+	// which contain a matching prefix.
+	MaybeMore struct{}
 
 	// A Clear is a special kind of Value which designates
 	// a KeyValue as a clear operation.
