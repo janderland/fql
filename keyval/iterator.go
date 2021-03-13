@@ -12,10 +12,18 @@ import (
 type TupleFlag = int
 
 const (
+	// AllErrors tells ReadTuple to check for
+	// a LongTupleError.
 	AllErrors TupleFlag = iota
+
+	// AllowLong tells ReadTuple to not check
+	// for a LongTupleError.
 	AllowLong
 )
 
+// A ConversionError is returned by ReadTuple when
+// the TupleIterator fails to convert a Tuple element
+// to the requested type.
 type ConversionError struct {
 	InValue interface{}
 	OutType interface{}
@@ -23,21 +31,26 @@ type ConversionError struct {
 }
 
 func (t ConversionError) Error() string {
-	return fmt.Sprintf("failed to convert element %d from %v to %T",
-		t.Index, t.InValue, t.OutType)
+	return fmt.Sprintf("failed to convert element %d from %v to %T", t.Index, t.InValue, t.OutType)
 }
 
 var (
+	// ShortTupleError is returned by ReadTuple when the TupleIterator
+	// reads beyond the length of the Tuple.
 	ShortTupleError = errors.New("read past end of tuple")
-	LongTupleError  = errors.New("did not parse entire tuple")
+
+	// LongTupleError is returned by ReadTuple when the entire Tuple
+	// is not consumed. This error isn't checked for nor returned when
+	// ReadTuple is given the AllowLong flag.
+	LongTupleError = errors.New("did not parse entire tuple")
 )
 
-type TupleParser struct {
+type TupleIterator struct {
 	t Tuple
 	i int
 }
 
-func ParseTuple(t Tuple, flag TupleFlag, f func(p *TupleParser) error) (err error) {
+func ReadTuple(t Tuple, flag TupleFlag, f func(*TupleIterator) error) (err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			if e, ok := e.(ConversionError); ok {
@@ -52,7 +65,7 @@ func ParseTuple(t Tuple, flag TupleFlag, f func(p *TupleParser) error) (err erro
 		}
 	}()
 
-	p := TupleParser{t: t}
+	p := TupleIterator{t: t}
 	if err := f(&p); err != nil {
 		return err
 	}
@@ -63,7 +76,7 @@ func ParseTuple(t Tuple, flag TupleFlag, f func(p *TupleParser) error) (err erro
 	return nil
 }
 
-func (p *TupleParser) getIndex() int {
+func (p *TupleIterator) getIndex() int {
 	if p.i >= len(p.t) {
 		panic(ShortTupleError)
 	}
@@ -72,11 +85,11 @@ func (p *TupleParser) getIndex() int {
 	return p.i - 1
 }
 
-func (p *TupleParser) Any() interface{} {
+func (p *TupleIterator) Any() interface{} {
 	return p.t[p.getIndex()]
 }
 
-func (p *TupleParser) Bool() (out bool) {
+func (p *TupleIterator) Bool() (out bool) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(bool); ok {
 		return val
@@ -88,7 +101,7 @@ func (p *TupleParser) Bool() (out bool) {
 	})
 }
 
-func (p *TupleParser) String() (out string) {
+func (p *TupleIterator) String() (out string) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(string); ok {
 		return val
@@ -100,7 +113,7 @@ func (p *TupleParser) String() (out string) {
 	})
 }
 
-func (p *TupleParser) Int() (out int64) {
+func (p *TupleIterator) Int() (out int64) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(int64); ok {
 		return val
@@ -115,7 +128,7 @@ func (p *TupleParser) Int() (out int64) {
 	})
 }
 
-func (p *TupleParser) Uint() (out uint64) {
+func (p *TupleIterator) Uint() (out uint64) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(int64); ok {
 		return uint64(val)
@@ -136,7 +149,7 @@ func (p *TupleParser) Uint() (out uint64) {
 	})
 }
 
-func (p *TupleParser) BigInt() (out *big.Int) {
+func (p *TupleIterator) BigInt() (out *big.Int) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(int64); ok {
 		return big.NewInt(val)
@@ -167,7 +180,7 @@ func (p *TupleParser) BigInt() (out *big.Int) {
 	})
 }
 
-func (p *TupleParser) Float() (out float64) {
+func (p *TupleIterator) Float() (out float64) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(float64); ok {
 		return val
@@ -182,7 +195,7 @@ func (p *TupleParser) Float() (out float64) {
 	})
 }
 
-func (p *TupleParser) UUID() (out UUID) {
+func (p *TupleIterator) UUID() (out UUID) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(UUID); ok {
 		return val
@@ -194,7 +207,7 @@ func (p *TupleParser) UUID() (out UUID) {
 	})
 }
 
-func (p *TupleParser) Bytes() (out []byte) {
+func (p *TupleIterator) Bytes() (out []byte) {
 	i := p.getIndex()
 	if val, ok := p.t[i].([]byte); ok {
 		return val
@@ -209,7 +222,7 @@ func (p *TupleParser) Bytes() (out []byte) {
 	})
 }
 
-func (p *TupleParser) Tuple() (out Tuple) {
+func (p *TupleIterator) Tuple() (out Tuple) {
 	i := p.getIndex()
 	if val, ok := p.t[i].(Tuple); ok {
 		return val

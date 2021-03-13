@@ -45,47 +45,47 @@ func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
 	}
 
 	var index []int
-	err := ParseTuple(candidate, AllowLong, func(p *TupleParser) error {
+	err := ReadTuple(candidate, AllowLong, func(iter *TupleIterator) error {
 		for i, e := range pattern {
 			switch e.(type) {
 			case int64:
-				if p.Int() != e.(int64) {
+				if iter.Int() != e.(int64) {
 					index = []int{i}
 					return nil
 				}
 
 			case uint64:
-				if p.Uint() != e.(uint64) {
+				if iter.Uint() != e.(uint64) {
 					index = []int{i}
 					return nil
 				}
 
 			case string:
-				if p.String() != e.(string) {
+				if iter.String() != e.(string) {
 					index = []int{i}
 					return nil
 				}
 
 			case float64:
-				if p.Float() != e.(float64) {
+				if iter.Float() != e.(float64) {
 					index = []int{i}
 					return nil
 				}
 
 			case bool:
-				if p.Bool() != e.(bool) {
+				if iter.Bool() != e.(bool) {
 					index = []int{i}
 					return nil
 				}
 
 			case nil:
-				if e != p.Any() {
+				if e != iter.Any() {
 					index = []int{i}
 					return nil
 				}
 
 			case *big.Int:
-				if p.BigInt().Cmp(e.(*big.Int)) != 0 {
+				if iter.BigInt().Cmp(e.(*big.Int)) != 0 {
 					index = []int{i}
 					return nil
 				}
@@ -94,7 +94,7 @@ func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
 				break
 
 			case Tuple:
-				subIndex, err := CompareTuples(e.(Tuple), p.Tuple())
+				subIndex, err := CompareTuples(e.(Tuple), iter.Tuple())
 				if err != nil {
 					return errors.Wrap(err, "failed to compare sub-tuple")
 				}
