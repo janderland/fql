@@ -7,30 +7,17 @@ import (
 	"github.com/pkg/errors"
 )
 
-func NormalizeTuple(tup Tuple) Tuple {
-	for i, e := range tup {
-		switch e.(type) {
-		case int:
-			tup[i] = int64(e.(int))
-		case uint:
-			tup[i] = uint64(e.(uint))
-		case float32:
-			tup[i] = float64(e.(float32))
-		case tuple.Tuple:
-			tup[i] = NormalizeTuple(FromFDBTuple(e.(tuple.Tuple)))
-		case big.Int:
-			val := e.(big.Int)
-			tup[i] = &val
-		}
-	}
-	return tup
-}
-
 func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
+	// Guards against invalid indexes in the
+	// MaybeMore type switch.
 	if len(pattern) == 0 {
 		return nil, errors.New("empty pattern")
 	}
 
+	// If this pattern ends with a MaybeMore, we
+	// don't need to check if the candidate is
+	// longer. Get rid of the MaybeMore as it's
+	// not used in the actual comparisons.
 	switch pattern[len(pattern)-1].(type) {
 	case MaybeMore:
 		pattern = pattern[:len(pattern)-1]
@@ -40,59 +27,100 @@ func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
 		}
 	}
 
+	// This check would be done by the ReadTuple()
+	// call below, but as an optimization we may
+	// exit early by checking here.
 	if len(pattern) > len(candidate) {
 		return []int{len(candidate) + 1}, nil
 	}
 
+	// Loop over both tuples, comparing their elements.
 	var index []int
 	err := ReadTuple(candidate, AllowLong, func(iter *TupleIterator) error {
 		for i, e := range pattern {
 			switch e.(type) {
+			// Int
 			case int64:
 				if iter.Int() != e.(int64) {
 					index = []int{i}
 					return nil
 				}
+			case int:
+				if iter.Int() != int64(e.(int)) {
+					index = []int{i}
+					return nil
+				}
 
+			// Uint
 			case uint64:
 				if iter.Uint() != e.(uint64) {
 					index = []int{i}
 					return nil
 				}
+			case uint:
+				if iter.Uint() != uint64(e.(uint)) {
+					index = []int{i}
+					return nil
+				}
 
+			// String
 			case string:
 				if iter.String() != e.(string) {
 					index = []int{i}
 					return nil
 				}
 
+			// Float
 			case float64:
 				if iter.Float() != e.(float64) {
 					index = []int{i}
 					return nil
 				}
+			case float32:
+				if iter.Float() != float64(e.(float32)) {
+					index = []int{i}
+					return nil
+				}
 
+			// Bool
 			case bool:
 				if iter.Bool() != e.(bool) {
 					index = []int{i}
 					return nil
 				}
 
+			// Nil
 			case nil:
 				if e != iter.Any() {
 					index = []int{i}
 					return nil
 				}
 
+			// big.Int
+			case big.Int:
+				v := e.(big.Int)
+				if iter.BigInt().Cmp(&v) != 0 {
+					index = []int{i}
+					return nil
+				}
 			case *big.Int:
 				if iter.BigInt().Cmp(e.(*big.Int)) != 0 {
 					index = []int{i}
 					return nil
 				}
 
+			// UUID
+			case UUID:
+				if iter.UUID() != e.(UUID) {
+					index = []int{i}
+					return nil
+				}
+
+			// Variable
 			case Variable:
 				break
 
+			// Tuple
 			case Tuple:
 				subIndex, err := CompareTuples(e.(Tuple), iter.Tuple())
 				if err != nil {
@@ -102,7 +130,17 @@ func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
 					index = append([]int{i}, subIndex...)
 					return nil
 				}
+			case tuple.Tuple:
+				subIndex, err := CompareTuples(FromFDBTuple(e.(tuple.Tuple)), iter.Tuple())
+				if err != nil {
+					return errors.Wrap(err, "failed to compare sub-tuple")
+				}
+				if len(subIndex) > 0 {
+					index = append([]int{i}, subIndex...)
+					return nil
+				}
 
+			// Unknown
 			default:
 				index = []int{i}
 				return nil

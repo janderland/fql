@@ -238,7 +238,6 @@ func (r *Reader) doReadRange(query keyval.Tuple, dirCh chan directory.DirectoryS
 }
 
 func (r *Reader) doFilterKeys(query keyval.Tuple, in chan keyval.KeyValue, out chan keyval.KeyValue) {
-	query = keyval.NormalizeTuple(query)
 	for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
 		mismatch, err := keyval.CompareTuples(query, kv.Key.Tuple)
 		if err != nil {
