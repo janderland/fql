@@ -34,7 +34,10 @@ func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
 		return []int{len(candidate) + 1}, nil
 	}
 
-	// Loop over both tuples, comparing their elements.
+	// Loop over both tuples, comparing their elements. If a pair of elements
+	// don't match, place the current index in the array. If the comparison
+	// happened within a sub-tuple, the index of the sub-tuple will be prepended
+	// before the int of the mismatch within the tuple.
 	var index []int
 	err := ReadTuple(candidate, AllowLong, func(iter *TupleIterator) error {
 		for i, e := range pattern {
@@ -118,6 +121,8 @@ func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
 
 			// Variable
 			case Variable:
+				// TODO: Check variable constraints.
+				_ = iter.Any()
 				break
 
 			// Tuple
