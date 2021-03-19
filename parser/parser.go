@@ -56,7 +56,6 @@ func ParseKey(str string) (*keyval.Key, error) {
 
 	key := &keyval.Key{}
 	var err error
-
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
 		if err != nil {
@@ -92,7 +91,7 @@ func ParseDirectory(str string) (keyval.Directory, error) {
 		if part[0] == '{' {
 			variable, err := ParseVariable(part)
 			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse %s part of directory path as a variable", ordinal(i+1))
+				return nil, errors.Wrapf(err, "failed to parse %s part of directory path as a variable - %s", ordinal(i+1), part)
 			}
 			directory = append(directory, *variable)
 		} else {
@@ -181,7 +180,16 @@ func ParseVariable(str string) (*keyval.Variable, error) {
 	if str[len(str)-1] != '}' {
 		return nil, errors.New("variable must end with '}'")
 	}
-	return &keyval.Variable{Name: str[1 : len(str)-1]}, nil
+
+	variable := &keyval.Variable{}
+	if typeStr := str[1 : len(str)-1]; len(typeStr) > 0 {
+		var err error
+		variable.Type, err = ParseVariableType(typeStr)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse type")
+		}
+	}
+	return variable, nil
 }
 
 func ParseString(str string) (string, error) {
@@ -260,6 +268,23 @@ func ParseValue(str string) (keyval.Value, error) {
 		return ParseTuple(str)
 	}
 	return ParseData(str)
+}
+
+func ParseVariableType(str string) ([]keyval.ValueType, error) {
+	var types []keyval.ValueType
+
+loop:
+	for i, typeStr := range strings.Split(str, "|") {
+		for _, v := range keyval.AllTypes() {
+			if string(v) == typeStr {
+				types = append(types, keyval.ValueType(typeStr))
+				continue loop
+			}
+		}
+		return nil, errors.Errorf("failed to parse %s type - %s", ordinal(i+1), typeStr)
+	}
+
+	return types, nil
 }
 
 func ordinal(x int) string {

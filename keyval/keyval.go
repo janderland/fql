@@ -42,7 +42,7 @@ type (
 	// A Variable is used as a placeholder for any valid
 	// values within the contexts that allow it.
 	Variable struct {
-		Name string
+		Type []ValueType
 	}
 
 	// A MaybeMore is a special kind of Tuple element. It
@@ -55,3 +55,35 @@ type (
 	// a KeyValue as a clear operation.
 	Clear struct{}
 )
+
+// ValueType specifies the variable's expected type. When the
+// variable is a part of the key, the queries
+type ValueType string
+
+const (
+	AnyType    ValueType = ""
+	IntType              = "int"
+	UintType             = "uint"
+	BoolType             = "bool"
+	FloatType            = "float"
+	BigIntType           = "bigint"
+	StringType           = "string"
+	BytesType            = "bytes"
+	UUIDType             = "uuid"
+	TupleType            = "tuple"
+)
+
+func AllTypes() []ValueType {
+	return []ValueType{
+		AnyType,
+		IntType,
+		UintType,
+		BoolType,
+		FloatType,
+		BigIntType,
+		StringType,
+		BytesType,
+		UUIDType,
+		TupleType,
+	}
+}

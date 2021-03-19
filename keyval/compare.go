@@ -161,3 +161,28 @@ func CompareTuples(pattern Tuple, candidate Tuple) ([]int, error) {
 	}
 	return index, nil
 }
+
+/*
+func CompareVariables(pattern Value, candidate Value) ([]int, error) {
+	switch pattern.(type) {
+	case Variable:
+		// TODO: Check variable constraints.
+		return nil, nil
+
+	// Tuple
+	case Tuple, tuple.Tuple:
+		switch candidate.(type) {
+		case Tuple:
+
+		}
+		subIndex, err := CompareTuples(pattern.(Tuple))
+		if err != nil {
+			return errors.Wrap(err, "failed to compare sub-tuple")
+		}
+		if len(subIndex) > 0 {
+			index = append([]int{i}, subIndex...)
+			return nil
+		}
+	}
+}
+*/

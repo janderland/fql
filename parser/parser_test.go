@@ -134,9 +134,9 @@ func TestParseDirectory(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, dir)
 
-	dir, err = ParseDirectory("/hello/{var}/thing")
+	dir, err = ParseDirectory("/hello/{int}/thing")
 	assert.NoError(t, err)
-	assert.Equal(t, keyval.Directory{"hello", keyval.Variable{Name: "var"}, "thing"}, dir)
+	assert.Equal(t, keyval.Directory{"hello", keyval.Variable{Type: []keyval.ValueType{keyval.IntType}}, "thing"}, dir)
 
 	dir, err = ParseDirectory("/hello/{/thing")
 	assert.Error(t, err)
@@ -210,9 +210,9 @@ func TestParseData(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, false, data)
 
-	data, err = ParseData("{var}")
+	data, err = ParseData("{int}")
 	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Variable{Name: "var"}, data)
+	assert.Equal(t, &keyval.Variable{Type: []keyval.ValueType{keyval.IntType}}, data)
 
 	data, err = ParseData("\"hello world\"")
 	assert.NoError(t, err)
@@ -256,9 +256,9 @@ func TestParseVariable(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, &keyval.Variable{}, v)
 
-	v, err = ParseVariable("{var}")
+	v, err = ParseVariable("{int|float}")
 	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Variable{Name: "var"}, v)
+	assert.Equal(t, &keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.FloatType}}, v)
 }
 
 func TestParseString(t *testing.T) {
