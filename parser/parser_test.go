@@ -261,6 +261,24 @@ func TestParseVariable(t *testing.T) {
 	assert.Equal(t, &keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.FloatType}}, v)
 }
 
+func TestParseVariableType(t *testing.T) {
+	types, err := ParseVariableType("")
+	assert.NoError(t, err)
+	assert.Equal(t, []keyval.ValueType{keyval.AnyType}, types)
+
+	types, err = ParseVariableType("int")
+	assert.NoError(t, err)
+	assert.Equal(t, []keyval.ValueType{keyval.IntType}, types)
+
+	types, err = ParseVariableType("int|float|tuple")
+	assert.NoError(t, err)
+	assert.Equal(t, []keyval.ValueType{keyval.IntType, keyval.FloatType, keyval.TupleType}, types)
+
+	types, err = ParseVariableType("invalid")
+	assert.Error(t, err)
+	assert.Nil(t, types)
+}
+
 func TestParseString(t *testing.T) {
 	str, err := ParseString("")
 	assert.Error(t, err)
