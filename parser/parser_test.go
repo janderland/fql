@@ -259,6 +259,10 @@ func TestParseVariable(t *testing.T) {
 	v, err = ParseVariable("{int|float}")
 	assert.NoError(t, err)
 	assert.Equal(t, &keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.FloatType}}, v)
+
+	v, err = ParseVariable("{invalid}")
+	assert.Error(t, err)
+	assert.Nil(t, v)
 }
 
 func TestParseVariableType(t *testing.T) {
