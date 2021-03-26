@@ -27,8 +27,8 @@ type (
 	Directory []interface{}
 
 	// A Tuple is similar to a tuple.Tuple. It may contain
-	// anything in a valid tuple.Tuple in addition to a
-	// Variable.
+	// anything in a valid tuple.Tuple in addition to
+	// Variable and Tuple.
 	Tuple []interface{}
 
 	// A Value represents an FDB value stored alongside
