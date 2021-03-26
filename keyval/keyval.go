@@ -56,8 +56,7 @@ type (
 	Clear struct{}
 )
 
-// ValueType specifies the variable's expected type. When the
-// variable is a part of the key, the queries
+// ValueType specifies the variable's expected type.
 type ValueType string
 
 const (
