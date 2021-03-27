@@ -46,8 +46,14 @@ func UnpackValue(typ ValueType, val []byte) (Value, error) {
 	case AnyType:
 		return val, nil
 	case IntType:
+		if len(val) != 8 {
+			return nil, errors.New("not 8 bytes")
+		}
 		return int64(binary.LittleEndian.Uint64(val)), nil
 	case UintType:
+		if len(val) != 8 {
+			return nil, errors.New("not 8 bytes")
+		}
 		return binary.LittleEndian.Uint64(val), nil
 	case BoolType:
 		if len(val) != 1 {
@@ -58,6 +64,9 @@ func UnpackValue(typ ValueType, val []byte) (Value, error) {
 		}
 		return false, nil
 	case FloatType:
+		if len(val) != 8 {
+			return nil, errors.New("not 8 bytes")
+		}
 		return math.Float64frombits(binary.LittleEndian.Uint64(val)), nil
 	case StringType:
 		return string(val), nil

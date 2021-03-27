@@ -33,3 +33,30 @@ func TestPackUnpackValue(t *testing.T) {
 		})
 	}
 }
+
+func TestInvalidPackValue(t *testing.T) {
+	out, err := PackValue(int(12))
+	assert.Error(t, err)
+	assert.Nil(t, out)
+}
+
+func TestInvalidUnpackValue(t *testing.T) {
+	tests := []struct {
+		val []byte
+		typ ValueType
+	}{
+		{val: []byte{0x88, 0x10, 0xA2, 0xBB}, typ: IntType},
+		{val: []byte{0x12, 0xA7, 0x0B}, typ: UintType},
+		{val: []byte{0x12, 0xA7}, typ: BoolType},
+		{val: []byte{0x88, 0x10, 0xA2, 0xBB, 0x74}, typ: FloatType},
+		{val: []byte{0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81}, typ: UUIDType},
+	}
+
+	for _, test := range tests {
+		t.Run(string(test.typ), func(t *testing.T) {
+			out, err := UnpackValue(test.typ, test.val)
+			assert.Error(t, err)
+			assert.Nil(t, out)
+		})
+	}
+}
