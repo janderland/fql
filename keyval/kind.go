@@ -27,22 +27,22 @@ const (
 	RangeReadKind Kind = "range"
 )
 
-// IsVariable returns true if the KeyValue contains a Variable.
-func IsVariable(kv *KeyValue) bool {
-	if DirIsVariable(kv.Key.Directory) {
+// HasVariable returns true if the KeyValue contains a Variable.
+func HasVariable(kv *KeyValue) bool {
+	if DirHasVariable(kv.Key.Directory) {
 		return true
 	}
-	if TupIsVariable(kv.Key.Tuple) {
+	if TupHasVariable(kv.Key.Tuple) {
 		return true
 	}
-	if ValIsVariable(kv.Value) {
+	if ValHasVariable(kv.Value) {
 		return true
 	}
 	return false
 }
 
-// DirIsVariable returns true if the Directory contains a Variable.
-func DirIsVariable(dir Directory) bool {
+// DirHasVariable returns true if the Directory contains a Variable.
+func DirHasVariable(dir Directory) bool {
 	for _, element := range dir {
 		if _, ok := element.(Variable); ok {
 			return true
@@ -51,12 +51,12 @@ func DirIsVariable(dir Directory) bool {
 	return false
 }
 
-// TupIsVariable returns true if the Tuple contains a Variable.
-func TupIsVariable(tup Tuple) bool {
+// TupHasVariable returns true if the Tuple contains a Variable.
+func TupHasVariable(tup Tuple) bool {
 	for _, element := range tup {
 		switch element.(type) {
 		case Tuple:
-			if TupIsVariable(element.(Tuple)) {
+			if TupHasVariable(element.(Tuple)) {
 				return true
 			}
 		case Variable:
@@ -66,11 +66,11 @@ func TupIsVariable(tup Tuple) bool {
 	return false
 }
 
-// ValIsVariable returns true if the Value contains a Variable.
-func ValIsVariable(val Value) bool {
+// ValHasVariable returns true if the Value contains a Variable.
+func ValHasVariable(val Value) bool {
 	switch val.(type) {
 	case Tuple:
-		return TupIsVariable(val.(Tuple))
+		return TupHasVariable(val.(Tuple))
 	case Variable:
 		return true
 	}
