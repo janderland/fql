@@ -6,6 +6,72 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestKeyValue_Kind(t *testing.T) {
+	tests := []struct {
+		kind Kind
+		kv   KeyValue
+	}{
+		{
+			kind: ConstantKind,
+			kv: KeyValue{
+				Key: Key{
+					Directory: Directory{"my", "dir"},
+					Tuple:     Tuple{123, -55.8, "wow"},
+				},
+				Value: -38,
+			},
+		},
+		{
+			kind: ClearKind,
+			kv: KeyValue{
+				Key: Key{
+					Directory: Directory{"my", "dir"},
+					Tuple:     Tuple{123, -55.8, "wow"},
+				},
+				Value: Clear{},
+			},
+		},
+		{
+			kind: SingleReadKind,
+			kv: KeyValue{
+				Key: Key{
+					Directory: Directory{"my", "dir"},
+					Tuple:     Tuple{123, -55.8, "wow"},
+				},
+				Value: Variable{},
+			},
+		},
+		{
+			kind: RangeReadKind,
+			kv: KeyValue{
+				Key: Key{
+					Directory: Directory{Variable{}, "dir"},
+					Tuple:     Tuple{123, -55.8, "wow"},
+				},
+				Value: -38,
+			},
+		},
+		{
+			kind: RangeReadKind,
+			kv: KeyValue{
+				Key: Key{
+					Directory: Directory{Variable{}, "dir"},
+					Tuple:     Tuple{123, -55.8, "wow"},
+				},
+				Value: Variable{},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(string(test.kind), func(t *testing.T) {
+			kind, err := test.kv.Kind()
+			assert.NoError(t, err)
+			assert.Equal(t, test.kind, kind)
+		})
+	}
+}
+
 func TestDirIsVariable(t *testing.T) {
 	dir := Directory{"my", "dir", "path"}
 	assert.False(t, DirHasVariable(dir))
@@ -30,31 +96,20 @@ func TestValIsVariable(t *testing.T) {
 	assert.True(t, ValHasVariable(Variable{}))
 }
 
-func TestIsVariable(t *testing.T) {
-	newKV := func() *KeyValue {
-		return &KeyValue{
-			Key: Key{
-				Directory: Directory{"my", "dir", "path"},
-				Tuple:     Tuple{true, 22.8, "yup"},
-			},
-			Value: Tuple{true, 22.8, "yup"},
+func TestKeyHasVariable(t *testing.T) {
+	newKey := func() Key {
+		return Key{
+			Directory: Directory{"my", "dir", "path"},
+			Tuple:     Tuple{true, 22.8, "yup"},
 		}
 	}
-	assert.False(t, HasVariable(newKV()))
+	assert.False(t, KeyHasVariable(newKey()))
 
-	kv := newKV()
-	kv.Key.Directory[1] = Variable{}
-	assert.True(t, HasVariable(kv))
+	key := newKey()
+	key.Directory[1] = Variable{}
+	assert.True(t, KeyHasVariable(key))
 
-	kv = newKV()
-	kv.Key.Tuple[1] = Variable{}
-	assert.True(t, HasVariable(kv))
-
-	kv = newKV()
-	kv.Value = Variable{}
-	assert.True(t, HasVariable(kv))
-
-	kv = newKV()
-	kv.Value.(Tuple)[1] = Variable{}
-	assert.True(t, HasVariable(kv))
+	key = newKey()
+	key.Tuple[1] = Variable{}
+	assert.True(t, KeyHasVariable(key))
 }

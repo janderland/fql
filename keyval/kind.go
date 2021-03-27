@@ -1,5 +1,7 @@
 package keyval
 
+import "github.com/pkg/errors"
+
 // Kind categorizes a KeyValue.
 type Kind string
 
@@ -25,17 +27,35 @@ const (
 	// KeyValue can be used to perform a get operation that
 	// returns multiple KeyValue.
 	RangeReadKind Kind = "range"
+
+	// InvalidKind specifies the KeyValue is invalid.
+	InvalidKind Kind = ""
 )
 
-// HasVariable returns true if the KeyValue contains a Variable.
-func HasVariable(kv *KeyValue) bool {
-	if DirHasVariable(kv.Key.Directory) {
+func (kv *KeyValue) Kind() (Kind, error) {
+	// TODO: Check validity of all elements.
+	if KeyHasVariable(kv.Key) {
+		if ValHasClear(kv.Value) {
+			return InvalidKind, errors.New("cannot have variable key with clear value")
+		}
+		return RangeReadKind, nil
+	} else {
+		if ValHasClear(kv.Value) {
+			return ClearKind, nil
+		}
+		if ValHasVariable(kv.Value) {
+			return SingleReadKind, nil
+		}
+		return ConstantKind, nil
+	}
+}
+
+// KeyHasVariable returns true if the Key contains a Variable or MaybeMore.
+func KeyHasVariable(key Key) bool {
+	if DirHasVariable(key.Directory) {
 		return true
 	}
-	if TupHasVariable(kv.Key.Tuple) {
-		return true
-	}
-	if ValHasVariable(kv.Value) {
+	if TupHasVariable(key.Tuple) {
 		return true
 	}
 	return false
@@ -51,7 +71,7 @@ func DirHasVariable(dir Directory) bool {
 	return false
 }
 
-// TupHasVariable returns true if the Tuple contains a Variable.
+// TupHasVariable returns true if the Tuple contains a Variable or MaybeMore.
 func TupHasVariable(tup Tuple) bool {
 	for _, element := range tup {
 		switch element.(type) {
@@ -60,6 +80,8 @@ func TupHasVariable(tup Tuple) bool {
 				return true
 			}
 		case Variable:
+			return true
+		case MaybeMore:
 			return true
 		}
 	}
@@ -75,4 +97,10 @@ func ValHasVariable(val Value) bool {
 		return true
 	}
 	return false
+}
+
+// ValHasClear returns true if the Value is an instance of Clear.
+func ValHasClear(val Value) bool {
+	_, hasClear := val.(Clear)
+	return hasClear
 }
