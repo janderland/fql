@@ -51,6 +51,8 @@ func FromFDBTuple(in tup.Tuple) Tuple {
 	return out
 }
 
+// TODO: Replace IsVariable logic with GetKind.
+
 // IsVariable returns true if the KeyValue contains a Variable.
 func IsVariable(kv *KeyValue) bool {
 	if DirIsVariable(kv.Key.Directory) {
