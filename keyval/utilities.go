@@ -51,60 +51,6 @@ func FromFDBTuple(in tup.Tuple) Tuple {
 	return out
 }
 
-// TODO: Replace IsVariable logic with GetKind.
-
-// IsVariable returns true if the KeyValue contains a Variable.
-func IsVariable(kv *KeyValue) bool {
-	if DirIsVariable(kv.Key.Directory) {
-		return true
-	}
-	if TupIsVariable(kv.Key.Tuple) {
-		return true
-	}
-	if ValIsVariable(kv.Value) {
-		return true
-	}
-	return false
-}
-
-// DirIsVariable returns true if the Directory contains a Variable.
-func DirIsVariable(dir Directory) bool {
-	for _, element := range dir {
-		if _, ok := element.(Variable); ok {
-			return true
-		}
-	}
-	return false
-}
-
-// TupIsVariable returns true if the Tuple contains a Variable.
-func TupIsVariable(tup Tuple) bool {
-	for _, element := range tup {
-		switch element.(type) {
-		case Tuple:
-			if TupIsVariable(element.(Tuple)) {
-				return true
-			}
-		case Variable:
-			return true
-		}
-	}
-	return false
-}
-
-// ValIsVariable returns true if the Value contains a Variable.
-func ValIsVariable(val Value) bool {
-	switch val.(type) {
-	case Tuple:
-		if TupIsVariable(val.(Tuple)) {
-			return true
-		}
-	case Variable:
-		return true
-	}
-	return false
-}
-
 // SplitAtFirstVariable accepts either a Directory or Tuple and returns a slice of the elements
 // before the first variable, the first variable, and a slice of the elements after the variable.
 func SplitAtFirstVariable(list []interface{}) ([]interface{}, *Variable, []interface{}) {
