@@ -1,6 +1,7 @@
 package reader
 
 import (
+	"bytes"
 	"context"
 	"sync"
 
@@ -34,7 +35,7 @@ func (r *Reader) Read(query keyval.KeyValue) (chan keyval.KeyValue, chan error) 
 	stage1 := r.openDirectories(query)
 	stage2 := r.readRange(query, stage1)
 	stage3 := r.filterKeys(query, stage2)
-	out := r.filterValues(query, stage3)
+	out := r.unpackValues(query, stage3)
 
 	go func() {
 		r.wg.Wait()
@@ -101,7 +102,7 @@ func (r *Reader) openDirectories(query keyval.KeyValue) chan directory.Directory
 	return dirCh
 }
 
-func (r *Reader) readRange(query keyval.KeyValue, dirCh chan directory.DirectorySubspace) chan keyval.KeyValue {
+func (r *Reader) readRange(query keyval.KeyValue, in chan directory.DirectorySubspace) chan keyval.KeyValue {
 	kvCh := make(chan keyval.KeyValue)
 	var wg sync.WaitGroup
 
@@ -112,7 +113,7 @@ func (r *Reader) readRange(query keyval.KeyValue, dirCh chan directory.Directory
 		go func() {
 			defer r.wg.Done()
 			defer wg.Done()
-			r.doReadRange(query.Key.Tuple, dirCh, kvCh)
+			r.doReadRange(query.Key.Tuple, in, kvCh)
 		}()
 	}
 
@@ -147,7 +148,7 @@ func (r *Reader) filterKeys(query keyval.KeyValue, in chan keyval.KeyValue) chan
 	return out
 }
 
-func (r *Reader) filterValues(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
+func (r *Reader) unpackValues(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
 	out := make(chan keyval.KeyValue)
 	var wg sync.WaitGroup
 
@@ -158,7 +159,7 @@ func (r *Reader) filterValues(query keyval.KeyValue, in chan keyval.KeyValue) ch
 		go func() {
 			defer r.wg.Done()
 			defer wg.Done()
-			r.doFilterValues(query.Value, in, out)
+			r.doUnpackValues(query.Value, in, out)
 		}()
 	}
 
@@ -170,7 +171,7 @@ func (r *Reader) filterValues(query keyval.KeyValue, in chan keyval.KeyValue) ch
 	return out
 }
 
-func (r *Reader) doOpenDirectories(query keyval.Directory, dirCh chan directory.DirectorySubspace) {
+func (r *Reader) doOpenDirectories(query keyval.Directory, out chan directory.DirectorySubspace) {
 	prefix, variable, suffix := keyval.SplitAtFirstVariable(query)
 	prefixStr, err := keyval.ToStringArray(prefix)
 	if err != nil {
@@ -189,7 +190,7 @@ func (r *Reader) doOpenDirectories(query keyval.Directory, dirCh chan directory.
 			dir = append(dir, prefix...)
 			dir = append(dir, subDir)
 			dir = append(dir, suffix...)
-			r.doOpenDirectories(dir, dirCh)
+			r.doOpenDirectories(dir, out)
 		}
 	} else {
 		dir, err := directory.Open(r.tr, prefixStr, nil)
@@ -197,15 +198,15 @@ func (r *Reader) doOpenDirectories(query keyval.Directory, dirCh chan directory.
 			r.sendError(errors.Wrap(err, "failed to open directory"))
 			return
 		}
-		r.sendDir(dirCh, dir)
+		r.sendDir(out, dir)
 	}
 }
 
-func (r *Reader) doReadRange(query keyval.Tuple, dirCh chan directory.DirectorySubspace, kvCh chan keyval.KeyValue) {
+func (r *Reader) doReadRange(query keyval.Tuple, in chan directory.DirectorySubspace, out chan keyval.KeyValue) {
 	prefix, _, _ := keyval.SplitAtFirstVariable(query)
 	fdbPrefix := keyval.ToFDBTuple(prefix)
 
-	for dir := r.recvDir(dirCh); dir != nil; dir = r.recvDir(dirCh) {
+	for dir := r.recvDir(in); dir != nil; dir = r.recvDir(in) {
 		rng, err := fdb.PrefixRange(dir.Pack(fdbPrefix))
 		if err != nil {
 			r.sendError(errors.Wrap(err, "failed to create prefix range"))
@@ -226,7 +227,7 @@ func (r *Reader) doReadRange(query keyval.Tuple, dirCh chan directory.DirectoryS
 				return
 			}
 
-			r.sendKV(kvCh, keyval.KeyValue{
+			r.sendKV(out, keyval.KeyValue{
 				Key: keyval.Key{
 					Directory: keyval.FromStringArray(dir.GetPath()),
 					Tuple:     keyval.FromFDBTuple(tup),
@@ -239,16 +240,35 @@ func (r *Reader) doReadRange(query keyval.Tuple, dirCh chan directory.DirectoryS
 
 func (r *Reader) doFilterKeys(query keyval.Tuple, in chan keyval.KeyValue, out chan keyval.KeyValue) {
 	for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
-		mismatch := keyval.CompareTuples(query, kv.Key.Tuple)
-		if len(mismatch) == 0 {
+		if keyval.CompareTuples(query, kv.Key.Tuple) == nil {
 			r.sendKV(out, *kv)
 		}
 	}
 }
 
-func (r *Reader) doFilterValues(_ keyval.Value, in <-chan keyval.KeyValue, out chan<- keyval.KeyValue) {
-	// TODO: Implement value filtering.
-	for kv := range in {
-		r.sendKV(out, kv)
+func (r *Reader) doUnpackValues(query keyval.Value, in chan keyval.KeyValue, out chan keyval.KeyValue) {
+	if variable, isVar := query.(keyval.Variable); isVar {
+		for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
+			for _, typ := range variable.Type {
+				outVal, err := keyval.UnpackValue(typ, kv.Value.([]byte))
+				if err != nil {
+					continue
+				}
+				kv.Value = outVal
+				r.sendKV(out, *kv)
+				break
+			}
+		}
+	} else {
+		queryBytes, err := keyval.PackValue(query)
+		if err != nil {
+			r.sendError(errors.Wrap(err, "failed to pack query value"))
+			return
+		}
+		for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
+			if bytes.Compare(queryBytes, kv.Value.([]byte)) == 0 {
+				r.sendKV(out, *kv)
+			}
+		}
 	}
 }

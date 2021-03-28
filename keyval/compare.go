@@ -9,10 +9,10 @@ import (
 )
 
 // CompareTuples checks if the candidate Tuple conforms to the structure
-// and values of the given pattern Tuple. The pattern Tuple may be of either
-// ConstantKind, SingleReadKind, or RangeReadKind, while the candidate must
-// be of ConstantKind. The elements of each Tuple are compared for equality.
-// If an element of the pattern Tuple is a Variable, then the candidate's
+// and values of the given pattern Tuple. The pattern Tuple may contain
+// Variable or MaybeMore while the candidate must not contain Variable or
+// MaybeMore. The elements of each Tuple are compared for equality. If an
+// element of the pattern Tuple is a Variable, then the candidate's
 // corresponding element must conform for the constraints of the Variable.
 // If all the elements match then a nil array is returned. If an element
 // doesn't match, then an array is returned specifying the index path to the
