@@ -22,8 +22,7 @@ func TestCompareTuples(t *testing.T) {
 		pattern := make(Tuple, len(candidate))
 		assert.Equal(t, copy(pattern, candidate), len(candidate))
 
-		mismatch, err := CompareTuples(pattern, candidate)
-		assert.NoError(t, err)
+		mismatch := CompareTuples(pattern, candidate)
 		assert.Empty(t, mismatch)
 	})
 
@@ -47,12 +46,10 @@ func TestCompareTuples(t *testing.T) {
 			Variable{},
 		}
 
-		mismatch, err := CompareTuples(pattern, candidate1)
-		assert.NoError(t, err)
+		mismatch := CompareTuples(pattern, candidate1)
 		assert.Empty(t, mismatch)
 
-		mismatch, err = CompareTuples(pattern, candidate2)
-		assert.NoError(t, err)
+		mismatch = CompareTuples(pattern, candidate2)
 		assert.Empty(t, mismatch)
 	})
 
@@ -71,8 +68,7 @@ func TestCompareTuples(t *testing.T) {
 			Variable{},
 		}
 
-		mismatch, err := CompareTuples(pattern, candidate)
-		assert.NoError(t, err)
+		mismatch := CompareTuples(pattern, candidate)
 		assert.NotEmpty(t, mismatch)
 	})
 
@@ -89,8 +85,7 @@ func TestCompareTuples(t *testing.T) {
 			Variable{},
 		}
 
-		mismatch, err := CompareTuples(pattern, candidate)
-		assert.NoError(t, err)
+		mismatch := CompareTuples(pattern, candidate)
 		assert.NotEmpty(t, mismatch)
 	})
 
@@ -109,8 +104,7 @@ func TestCompareTuples(t *testing.T) {
 			MaybeMore{},
 		}
 
-		mismatch, err := CompareTuples(pattern, candidate)
-		assert.NoError(t, err)
+		mismatch := CompareTuples(pattern, candidate)
 		assert.Empty(t, mismatch)
 	})
 }

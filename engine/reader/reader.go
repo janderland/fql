@@ -239,10 +239,7 @@ func (r *Reader) doReadRange(query keyval.Tuple, dirCh chan directory.DirectoryS
 
 func (r *Reader) doFilterKeys(query keyval.Tuple, in chan keyval.KeyValue, out chan keyval.KeyValue) {
 	for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
-		mismatch, err := keyval.CompareTuples(query, kv.Key.Tuple)
-		if err != nil {
-			r.sendError(errors.Wrap(err, "failed to compare tuples"))
-		}
+		mismatch := keyval.CompareTuples(query, kv.Key.Tuple)
 		if len(mismatch) == 0 {
 			r.sendKV(out, *kv)
 		}
