@@ -10,6 +10,17 @@ import (
 
 func PackValue(val Value) ([]byte, error) {
 	switch val.(type) {
+	// Nil
+	case nil:
+		return nil, nil
+
+	// Bool
+	case bool:
+		if val.(bool) {
+			return []byte{1}, nil
+		}
+		return []byte{0}, nil
+
 	// Int
 	case int64:
 		b := make([]byte, 8)
@@ -30,13 +41,6 @@ func PackValue(val Value) ([]byte, error) {
 		binary.LittleEndian.PutUint64(b, uint64(val.(uint)))
 		return b, nil
 
-	// Bool
-	case bool:
-		if val.(bool) {
-			return []byte{1}, nil
-		}
-		return []byte{0}, nil
-
 	// Float
 	case float64:
 		b := make([]byte, 8)
@@ -50,10 +54,6 @@ func PackValue(val Value) ([]byte, error) {
 	// String
 	case string:
 		return []byte(val.(string)), nil
-
-	// Nil
-	case nil:
-		return nil, nil
 
 	// Bytes
 	case []byte:
@@ -80,6 +80,15 @@ func UnpackValue(typ ValueType, val []byte) (Value, error) {
 	case AnyType:
 		return val, nil
 
+	case BoolType:
+		if len(val) != 1 {
+			return nil, errors.New("not 1 byte")
+		}
+		if val[0] == 1 {
+			return true, nil
+		}
+		return false, nil
+
 	case IntType:
 		if len(val) != 8 {
 			return nil, errors.New("not 8 bytes")
@@ -91,15 +100,6 @@ func UnpackValue(typ ValueType, val []byte) (Value, error) {
 			return nil, errors.New("not 8 bytes")
 		}
 		return binary.LittleEndian.Uint64(val), nil
-
-	case BoolType:
-		if len(val) != 1 {
-			return nil, errors.New("not 1 byte")
-		}
-		if val[0] == 1 {
-			return true, nil
-		}
-		return false, nil
 
 	case FloatType:
 		if len(val) != 8 {

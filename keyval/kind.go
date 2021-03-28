@@ -128,6 +128,14 @@ func tupSubKind(tup Tuple) (subKind, error) {
 
 	for i, e := range tup {
 		switch e.(type) {
+		// Nil
+		case nil:
+			continue
+
+		// Bool
+		case bool:
+			continue
+
 		// Int
 		case int64:
 			continue
@@ -140,28 +148,23 @@ func tupSubKind(tup Tuple) (subKind, error) {
 		case uint:
 			continue
 
-		// String
-		case string:
-			continue
-
 		// Float
 		case float64:
 			continue
 		case float32:
 			continue
 
-		// Bool
-		case bool:
-			continue
-
-		// Nil
-		case nil:
-			continue
-
 		// BigInt
 		case big.Int:
 			continue
 		case *big.Int:
+			continue
+
+		// String
+		case string:
+			continue
+
+		case []byte:
 			continue
 
 		// UUID
@@ -196,6 +199,14 @@ func tupSubKind(tup Tuple) (subKind, error) {
 
 func valSubKind(val Value) (subKind, error) {
 	switch val.(type) {
+	// Nil
+	case nil:
+		return constantSubKind, nil
+
+	// Bool
+	case bool:
+		return constantSubKind, nil
+
 	// Int
 	case int64:
 		return constantSubKind, nil
@@ -206,10 +217,6 @@ func valSubKind(val Value) (subKind, error) {
 	case uint64:
 		return constantSubKind, nil
 	case uint:
-		return constantSubKind, nil
-
-	// Bool
-	case bool:
 		return constantSubKind, nil
 
 	// Float
@@ -238,13 +245,13 @@ func valSubKind(val Value) (subKind, error) {
 		kind, err := tupSubKind(FromFDBTuple(val.(tuple.Tuple)))
 		return kind, errors.Wrap(err, "invalid tuple")
 
-	// Clear
-	case Clear:
-		return clearSubKind, nil
-
 	// Variable
 	case Variable:
 		return variableSubKind, nil
+
+	// Clear
+	case Clear:
+		return clearSubKind, nil
 
 	default:
 		return invalidSubKind, errors.Errorf("value has type %T", val)

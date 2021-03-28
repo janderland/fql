@@ -1,6 +1,7 @@
 package keyval
 
 import (
+	"bytes"
 	"math/big"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
@@ -58,6 +59,20 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 	err := ReadTuple(candidate, AllowLong, func(iter *TupleIterator) error {
 		for i, e := range pattern {
 			switch e.(type) {
+			// Nil
+			case nil:
+				if e != iter.Any() {
+					index = []int{i}
+					return nil
+				}
+
+			// Bool
+			case bool:
+				if iter.Bool() != e.(bool) {
+					index = []int{i}
+					return nil
+				}
+
 			// Int
 			case int64:
 				if iter.Int() != e.(int64) {
@@ -82,13 +97,6 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 					return nil
 				}
 
-			// String
-			case string:
-				if iter.String() != e.(string) {
-					index = []int{i}
-					return nil
-				}
-
 			// Float
 			case float64:
 				if iter.Float() != e.(float64) {
@@ -97,20 +105,6 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 				}
 			case float32:
 				if iter.Float() != float64(e.(float32)) {
-					index = []int{i}
-					return nil
-				}
-
-			// Bool
-			case bool:
-				if iter.Bool() != e.(bool) {
-					index = []int{i}
-					return nil
-				}
-
-			// Nil
-			case nil:
-				if e != iter.Any() {
 					index = []int{i}
 					return nil
 				}
@@ -128,18 +122,26 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 					return nil
 				}
 
+			// String
+			case string:
+				if iter.String() != e.(string) {
+					index = []int{i}
+					return nil
+				}
+
+			// Bytes
+			case []byte:
+				if bytes.Compare(iter.Bytes(), e.([]byte)) != 0 {
+					index = []int{i}
+					return nil
+				}
+
 			// UUID
 			case UUID:
 				if iter.UUID() != e.(UUID) {
 					index = []int{i}
 					return nil
 				}
-
-			// Variable
-			case Variable:
-				// TODO: Check variable constraints.
-				_ = iter.Any()
-				break
 
 			// Tuple
 			case Tuple:
@@ -154,6 +156,12 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 					index = append([]int{i}, subIndex...)
 					return nil
 				}
+
+			// Variable
+			case Variable:
+				// TODO: Check variable constraints.
+				_ = iter.Any()
+				break
 
 			// Unknown
 			default:

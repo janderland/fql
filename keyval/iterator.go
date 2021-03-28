@@ -5,6 +5,7 @@ import (
 	"math/big"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/pkg/errors"
 )
@@ -112,18 +113,6 @@ func (i *TupleIterator) Bool() (out bool) {
 	})
 }
 
-func (i *TupleIterator) String() (out string) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(string); ok {
-		return val
-	}
-	panic(ConversionError{
-		InValue: i.t[index],
-		OutType: out,
-		Index:   index,
-	})
-}
-
 func (i *TupleIterator) Int() (out int64) {
 	index := i.getIndex()
 	if val, ok := i.t[index].(int64); ok {
@@ -206,9 +195,9 @@ func (i *TupleIterator) Float() (out float64) {
 	})
 }
 
-func (i *TupleIterator) UUID() (out UUID) {
+func (i *TupleIterator) String() (out string) {
 	index := i.getIndex()
-	if val, ok := i.t[index].(UUID); ok {
+	if val, ok := i.t[index].(string); ok {
 		return val
 	}
 	panic(ConversionError{
@@ -225,6 +214,18 @@ func (i *TupleIterator) Bytes() (out []byte) {
 	}
 	if val, ok := i.t[index].(fdb.KeyConvertible); ok {
 		return val.FDBKey()
+	}
+	panic(ConversionError{
+		InValue: i.t[index],
+		OutType: out,
+		Index:   index,
+	})
+}
+
+func (i *TupleIterator) UUID() (out UUID) {
+	index := i.getIndex()
+	if val, ok := i.t[index].(UUID); ok {
+		return val
 	}
 	panic(ConversionError{
 		InValue: i.t[index],
