@@ -89,15 +89,18 @@ const (
 )
 
 func keySubKind(key Key) (subKind, error) {
-	kind, err := dirSubKind(key.Directory)
+	dirKind, err := dirSubKind(key.Directory)
 	if err != nil {
-		return kind, errors.Wrap(err, "directory is invalid")
+		return invalidSubKind, errors.Wrap(err, "directory is invalid")
 	}
-	kind, err = tupSubKind(key.Tuple)
+	tupKind, err := tupSubKind(key.Tuple)
 	if err != nil {
-		return kind, errors.Wrap(err, "tuple is invalid")
+		return invalidSubKind, errors.Wrap(err, "tuple is invalid")
 	}
-	return kind, nil
+	if dirKind == variableSubKind || tupKind == variableSubKind {
+		return variableSubKind, nil
+	}
+	return constantSubKind, nil
 }
 
 func dirSubKind(dir Directory) (subKind, error) {
@@ -193,33 +196,55 @@ func tupSubKind(tup Tuple) (subKind, error) {
 
 func valSubKind(val Value) (subKind, error) {
 	switch val.(type) {
+	// Int
 	case int64:
 		return constantSubKind, nil
-
-	case uint64:
+	case int:
 		return constantSubKind, nil
 
+	// Uint
+	case uint64:
+		return constantSubKind, nil
+	case uint:
+		return constantSubKind, nil
+
+	// Bool
 	case bool:
 		return constantSubKind, nil
 
+	// Float
 	case float64:
 		return constantSubKind, nil
+	case float32:
+		return constantSubKind, nil
 
+	// String
 	case string:
 		return constantSubKind, nil
 
+	// Bytes
 	case []byte:
 		return constantSubKind, nil
 
+	// UUID
 	case UUID:
 		return constantSubKind, nil
 
+	// Tuple
 	case Tuple:
 		kind, err := tupSubKind(val.(Tuple))
 		return kind, errors.Wrap(err, "invalid tuple")
+	case tuple.Tuple:
+		kind, err := tupSubKind(FromFDBTuple(val.(tuple.Tuple)))
+		return kind, errors.Wrap(err, "invalid tuple")
 
+	// Clear
 	case Clear:
 		return clearSubKind, nil
+
+	// Variable
+	case Variable:
+		return variableSubKind, nil
 
 	default:
 		return invalidSubKind, errors.Errorf("value has type %T", val)

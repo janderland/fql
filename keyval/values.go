@@ -10,39 +10,61 @@ import (
 
 func PackValue(val Value) ([]byte, error) {
 	switch val.(type) {
+	// Int
 	case int64:
 		b := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b, uint64(val.(int64)))
 		return b, nil
+	case int:
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, uint64(val.(int)))
+		return b, nil
 
+	// Uint
 	case uint64:
 		b := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b, val.(uint64))
 		return b, nil
+	case uint:
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, uint64(val.(uint)))
+		return b, nil
 
+	// Bool
 	case bool:
 		if val.(bool) {
 			return []byte{1}, nil
 		}
 		return []byte{0}, nil
 
+	// Float
 	case float64:
 		b := make([]byte, 8)
 		binary.LittleEndian.PutUint64(b, math.Float64bits(val.(float64)))
 		return b, nil
+	case float32:
+		b := make([]byte, 8)
+		binary.LittleEndian.PutUint64(b, math.Float64bits(float64(val.(float32))))
+		return b, nil
 
+	// String
 	case string:
 		return []byte(val.(string)), nil
 
+	// Bytes
 	case []byte:
 		return val.([]byte), nil
 
+	// UUID
 	case UUID:
 		uuid := val.(UUID)
 		return uuid[:], nil
 
+	// Tuple
 	case Tuple:
 		return ToFDBTuple(val.(Tuple)).Pack(), nil
+	case tuple.Tuple:
+		return val.(tuple.Tuple).Pack(), nil
 
 	default:
 		return nil, errors.Errorf("unknown Value type '%T'", val)

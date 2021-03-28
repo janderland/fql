@@ -35,7 +35,10 @@ func TestPackUnpackValue(t *testing.T) {
 }
 
 func TestInvalidPackValue(t *testing.T) {
-	out, err := PackValue(int(12))
+	out, err := PackValue(struct {
+		f1 string
+		f2 float32
+	}{})
 	assert.Error(t, err)
 	assert.Nil(t, out)
 }
