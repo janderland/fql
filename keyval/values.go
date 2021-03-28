@@ -51,6 +51,10 @@ func PackValue(val Value) ([]byte, error) {
 	case string:
 		return []byte(val.(string)), nil
 
+	// Nil
+	case nil:
+		return nil, nil
+
 	// Bytes
 	case []byte:
 		return val.([]byte), nil
