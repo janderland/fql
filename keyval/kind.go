@@ -1,14 +1,23 @@
 package keyval
 
-import "github.com/pkg/errors"
+import (
+	"math/big"
+	"strconv"
+
+	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
+	"github.com/pkg/errors"
+)
 
 // Kind categorizes a KeyValue.
 type Kind string
 
 const (
-	// ConstantKind specifies that the KeyValue has no Variable
-	// or Clear. This kind of KeyValue can be used to perform a
-	// set operation or is returned by a get operation.
+	// InvalidKind specifies that the KeyValue is malformed.
+	InvalidKind Kind = ""
+
+	// ConstantKind specifies that the KeyValue has no Variable,
+	// MaybeMore, or Clear. This kind of KeyValue can be used to
+	// perform a set operation or is returned by a get operation.
 	ConstantKind Kind = "constant"
 
 	// ClearKind specifies that the KeyValue has no Variable and
@@ -20,87 +29,219 @@ const (
 	// Value (doesn't have a Clear) and doesn't have a Variable
 	// in it's Key. This kind of KeyValue can be used to perform
 	// a get operation that returns a single KeyValue.
-	SingleReadKind Kind = "read"
+	SingleReadKind Kind = "single"
 
 	// RangeReadKind specifies that the KeyValue has a Variable
 	// in it's Key and doesn't have a Clear Value. This kind of
 	// KeyValue can be used to perform a get operation that
 	// returns multiple KeyValue.
 	RangeReadKind Kind = "range"
-
-	// InvalidKind specifies the KeyValue is invalid.
-	InvalidKind Kind = ""
 )
 
+// Kind returns the Kind of the given KeyValue. If the KeyValue
+// is malformed then InvalidKind and a non-nil error are returned.
+// For details on what a malformed KeyValue is, see the KeyValue,
+// Key, Directory, Tuple, and Value documentation.
 func (kv *KeyValue) Kind() (Kind, error) {
-	// TODO: Check validity of all elements.
-	if KeyHasVariable(kv.Key) {
-		if ValHasClear(kv.Value) {
-			return InvalidKind, errors.New("cannot have variable key with clear value")
-		}
-		return RangeReadKind, nil
-	} else {
-		if ValHasClear(kv.Value) {
+	keyKind, err := keySubKind(kv.Key)
+	if err != nil {
+		return InvalidKind, errors.Wrap(err, "key is invalid")
+	}
+	valKind, err := valSubKind(kv.Value)
+	if err != nil {
+		return InvalidKind, errors.Wrap(err, "value is invalid")
+	}
+
+	if keyKind == constantSubKind {
+		if valKind == clearSubKind {
 			return ClearKind, nil
 		}
-		if ValHasVariable(kv.Value) {
+		if valKind == variableSubKind {
 			return SingleReadKind, nil
 		}
 		return ConstantKind, nil
-	}
-}
-
-// KeyHasVariable returns true if the Key contains a Variable or MaybeMore.
-func KeyHasVariable(key Key) bool {
-	if DirHasVariable(key.Directory) {
-		return true
-	}
-	if TupHasVariable(key.Tuple) {
-		return true
-	}
-	return false
-}
-
-// DirHasVariable returns true if the Directory contains a Variable.
-func DirHasVariable(dir Directory) bool {
-	for _, element := range dir {
-		if _, ok := element.(Variable); ok {
-			return true
+	} else {
+		if valKind == clearSubKind {
+			return InvalidKind, errors.New("variable key with clear value")
 		}
+		return RangeReadKind, nil
 	}
-	return false
 }
 
-// TupHasVariable returns true if the Tuple contains a Variable or MaybeMore.
-func TupHasVariable(tup Tuple) bool {
-	for _, element := range tup {
-		switch element.(type) {
-		case Tuple:
-			if TupHasVariable(element.(Tuple)) {
-				return true
-			}
+// subKind categorizes the Key, Directory,
+// Tuple, and Value within a KeyValue.
+type subKind = int
+
+const (
+	// invalidSubKind specifies that the component is malformed.
+	invalidSubKind subKind = iota
+
+	// constantSubKind specifies that the component contains no
+	// Variable, MaybeMore, or Clear.
+	constantSubKind
+
+	// variableSubKind specifies that the component contains a
+	// Variable or MaybeMore.
+	variableSubKind
+
+	// clearSubKind specifies that the component contains a Clear.
+	clearSubKind
+)
+
+func keySubKind(key Key) (subKind, error) {
+	kind, err := dirSubKind(key.Directory)
+	if err != nil {
+		return kind, errors.Wrap(err, "directory is invalid")
+	}
+	kind, err = tupSubKind(key.Tuple)
+	if err != nil {
+		return kind, errors.Wrap(err, "tuple is invalid")
+	}
+	return kind, nil
+}
+
+func dirSubKind(dir Directory) (subKind, error) {
+	kind := constantSubKind
+
+	for i, e := range dir {
+		switch e.(type) {
+		case string:
+			continue
+
 		case Variable:
-			return true
-		case MaybeMore:
-			return true
+			kind = variableSubKind
+
+		default:
+			return invalidSubKind, errors.Errorf("%s element is type %T", ordinal(i), e)
 		}
 	}
-	return false
+
+	return kind, nil
 }
 
-// ValHasVariable returns true if the Value contains a Variable.
-func ValHasVariable(val Value) bool {
-	switch val.(type) {
-	case Tuple:
-		return TupHasVariable(val.(Tuple))
-	case Variable:
-		return true
+func tupSubKind(tup Tuple) (subKind, error) {
+	kind := constantSubKind
+	var err error
+
+	for i, e := range tup {
+		switch e.(type) {
+		// Int
+		case int64:
+			continue
+		case int:
+			continue
+
+		// Uint
+		case uint64:
+			continue
+		case uint:
+			continue
+
+		// String
+		case string:
+			continue
+
+		// Float
+		case float64:
+			continue
+		case float32:
+			continue
+
+		// Bool
+		case bool:
+			continue
+
+		// Nil
+		case nil:
+			continue
+
+		// BigInt
+		case big.Int:
+			continue
+		case *big.Int:
+			continue
+
+		// UUID
+		case UUID:
+			continue
+
+		// Tuple
+		case Tuple:
+			kind, err = tupSubKind(e.(Tuple))
+			if err != nil {
+				return kind, errors.Wrapf(err, "invalid tuple at element %d", i)
+			}
+		case tuple.Tuple:
+			kind, err = tupSubKind(FromFDBTuple(e.(tuple.Tuple)))
+			if err != nil {
+				return kind, errors.Wrapf(err, "invalid tuple at element %d", i)
+			}
+
+		// Variable
+		case Variable:
+			kind = variableSubKind
+		case MaybeMore:
+			kind = variableSubKind
+
+		default:
+			return invalidSubKind, errors.Errorf("%s element is type %T", ordinal(i), e)
+		}
 	}
-	return false
+
+	return kind, nil
 }
 
-// ValHasClear returns true if the Value is an instance of Clear.
-func ValHasClear(val Value) bool {
-	_, hasClear := val.(Clear)
-	return hasClear
+func valSubKind(val Value) (subKind, error) {
+	switch val.(type) {
+	case int64:
+		return constantSubKind, nil
+
+	case uint64:
+		return constantSubKind, nil
+
+	case bool:
+		return constantSubKind, nil
+
+	case float64:
+		return constantSubKind, nil
+
+	case string:
+		return constantSubKind, nil
+
+	case []byte:
+		return constantSubKind, nil
+
+	case UUID:
+		return constantSubKind, nil
+
+	case Tuple:
+		kind, err := tupSubKind(val.(Tuple))
+		return kind, errors.Wrap(err, "invalid tuple")
+
+	case Clear:
+		return clearSubKind, nil
+
+	default:
+		return invalidSubKind, errors.Errorf("value has type %T", val)
+	}
+}
+
+// TODO: Reuse from parser package.
+func ordinal(x int) string {
+	suffix := "th"
+	switch x % 10 {
+	case 1:
+		if x%100 != 11 {
+			suffix = "st"
+		}
+	case 2:
+		if x%100 != 12 {
+			suffix = "nd"
+		}
+	case 3:
+		if x%100 != 13 {
+			suffix = "rd"
+		}
+	}
+	return strconv.Itoa(x) + suffix
 }
