@@ -90,20 +90,20 @@ func (r *Reader) sendError(err error) {
 }
 
 func (r *Reader) openDirectories(query keyval.KeyValue) chan directory.DirectorySubspace {
-	dirCh := make(chan directory.DirectorySubspace)
+	out := make(chan directory.DirectorySubspace)
 	r.wg.Add(1)
 
 	go func() {
-		defer close(dirCh)
+		defer close(out)
 		defer r.wg.Done()
-		r.doOpenDirectories(query.Key.Directory, dirCh)
+		r.doOpenDirectories(query.Key.Directory, out)
 	}()
 
-	return dirCh
+	return out
 }
 
 func (r *Reader) readRange(query keyval.KeyValue, in chan directory.DirectorySubspace) chan keyval.KeyValue {
-	kvCh := make(chan keyval.KeyValue)
+	out := make(chan keyval.KeyValue)
 	var wg sync.WaitGroup
 
 	for i := 0; i < 4; i++ {
@@ -113,16 +113,16 @@ func (r *Reader) readRange(query keyval.KeyValue, in chan directory.DirectorySub
 		go func() {
 			defer r.wg.Done()
 			defer wg.Done()
-			r.doReadRange(query.Key.Tuple, in, kvCh)
+			r.doReadRange(query.Key.Tuple, in, out)
 		}()
 	}
 
 	go func() {
-		defer close(kvCh)
+		defer close(out)
 		wg.Wait()
 	}()
 
-	return kvCh
+	return out
 }
 
 func (r *Reader) filterKeys(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
