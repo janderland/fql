@@ -37,6 +37,7 @@ type (
 	Value interface{}
 
 	// A UUID is equivalent to a tuple.UUID.
+	// TODO: Remove this alias.
 	UUID = tuple.UUID
 
 	// A Variable is used as a placeholder for any valid
