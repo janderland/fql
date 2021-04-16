@@ -1,11 +1,15 @@
 package reader
 
 import (
+	"context"
+	"math/big"
+	"strings"
 	"sync"
 	"testing"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/assert"
@@ -66,20 +70,21 @@ func TestReader_openDirectories(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, r Reader) {
 				// Set up initial state of directories.
-				for _, dir := range test.initial {
-					_, err := directory.Create(tr, append([]string{root}, dir...), nil)
+				for _, path := range test.initial {
+					_, err := directory.Create(tr, path, nil)
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
 				}
 
 				// Execute the query.
-				dirCh := r.openDirectories(keyval.KeyValue{
+				out := r.openDirectories(keyval.KeyValue{
 					Key: keyval.Key{Directory: append(keyval.Directory{root}, test.query...)},
 				})
-				waitForDirs := collectDirs(dirCh)
+				waitForDirs := collectDirs(out)
 
-				// Wait for the query to complete and check for errors.
+				// Wait for the query to complete
+				// and check for errors.
 				if test.error {
 					assert.Error(t, waitForErr(r))
 				} else {
@@ -93,6 +98,144 @@ func TestReader_openDirectories(t *testing.T) {
 						assert.Equal(t, append([]string{root}, test.expected[i]...), directories[i].GetPath())
 					}
 				}
+			})
+		})
+	}
+}
+
+func TestReader_readRange(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    keyval.Tuple
+		initial  []keyval.KeyValue
+		expected []keyval.Tuple
+	}{
+		{
+			name:  "no variable",
+			query: keyval.Tuple{123, "hello", -50.6},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{123, "hello", -50.6},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{321, "goodbye", 50.6},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"second"},
+						Tuple:     keyval.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}},
+					},
+				},
+			},
+			expected: []keyval.Tuple{{int64(123), "hello", -50.6}},
+		},
+		{
+			name:  "variable",
+			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"iam"},
+						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+					},
+				},
+			},
+			expected: []keyval.Tuple{
+				{int64(123), "song", "sing"},
+				{int64(123), 13.45, "sing"},
+			},
+		},
+		{
+			name:  "read everything",
+			query: keyval.Tuple{},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"iam"},
+						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+					},
+				},
+			},
+			expected: []keyval.Tuple{
+				{int64(123), "song", "sing"},
+				{int64(123), 13.45, "sing"},
+				{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testEnv(t, func(tr fdb.Transaction, r Reader) {
+				paths := make(map[string]struct{})
+				var dirs []directory.DirectorySubspace
+
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				// Setup initial key-values.
+				for _, kv := range test.initial {
+					path, err := keyval.ToStringArray(kv.Key.Directory)
+					if !assert.NoError(t, err) {
+						t.FailNow()
+					}
+					dir, err := directory.CreateOrOpen(tr, path, nil)
+					if !assert.NoError(t, err) {
+						t.FailNow()
+					}
+					tr.Set(dir.Pack(keyval.ToFDBTuple(kv.Key.Tuple)), nil)
+
+					pathStr := strings.Join(path, "/")
+					if _, exists := paths[pathStr]; !exists {
+						paths[pathStr] = struct{}{}
+						dirs = append(dirs, dir)
+					}
+				}
+
+				// Execute query.
+				out := r.readRange(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, dirs))
+				waitForKVs := collectKVs(out)
+
+				// Wait for the query to complete
+				// and check for errors.
+				assert.NoError(t, waitForErr(r))
+
+				kvs := waitForKVs()
+				tuples := make([]keyval.Tuple, len(kvs))
+				for i := range tuples {
+					tuples[i] = kvs[i].Key.Tuple
+				}
+				assert.Equal(t, test.expected, tuples)
 			})
 		})
 	}
@@ -123,22 +266,74 @@ func testEnv(t *testing.T, f func(fdb.Transaction, Reader)) {
 	}
 }
 
-func collectDirs(dirCh chan directory.DirectorySubspace) func() []directory.DirectorySubspace {
-	var directories []directory.DirectorySubspace
+func collectDirs(in chan directory.DirectorySubspace) func() []directory.DirectorySubspace {
+	var out []directory.DirectorySubspace
 	var wg sync.WaitGroup
 
 	wg.Add(1)
 	go func() {
 		defer wg.Done()
-		for dir := range dirCh {
-			directories = append(directories, dir)
+		for dir := range in {
+			out = append(out, dir)
 		}
 	}()
 
 	return func() []directory.DirectorySubspace {
 		wg.Wait()
-		return directories
+		return out
 	}
+}
+
+func collectKVs(in chan keyval.KeyValue) func() []keyval.KeyValue {
+	var out []keyval.KeyValue
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		for kv := range in {
+			out = append(out, kv)
+		}
+	}()
+
+	return func() []keyval.KeyValue {
+		wg.Wait()
+		return out
+	}
+}
+
+func sendDirs(ctx context.Context, in []directory.DirectorySubspace) chan directory.DirectorySubspace {
+	out := make(chan directory.DirectorySubspace)
+
+	go func() {
+		defer close(out)
+		for _, dir := range in {
+			select {
+			case <-ctx.Done():
+				return
+			case out <- dir:
+			}
+		}
+	}()
+
+	return out
+}
+
+func sendKVs(ctx context.Context, in []keyval.KeyValue) chan keyval.KeyValue {
+	out := make(chan keyval.KeyValue)
+
+	go func() {
+		defer close(out)
+		for _, kv := range in {
+			select {
+			case <-ctx.Done():
+				return
+			case out <- kv:
+			}
+		}
+	}()
+
+	return out
 }
 
 func waitForErr(r Reader) error {
@@ -147,8 +342,5 @@ func waitForErr(r Reader) error {
 		close(r.errCh)
 	}()
 
-	for err := range r.errCh {
-		return err
-	}
-	return nil
+	return <-r.errCh
 }
