@@ -108,7 +108,7 @@ func TestReader_readRange(t *testing.T) {
 		name     string
 		query    keyval.Tuple
 		initial  []keyval.KeyValue
-		expected []keyval.Tuple
+		expected []keyval.KeyValue
 	}{
 		{
 			name:  "no variable",
@@ -133,8 +133,17 @@ func TestReader_readRange(t *testing.T) {
 					},
 				},
 			},
-			expected: []keyval.Tuple{{int64(123), "hello", -50.6}},
+			expected: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{int64(123), "hello", -50.6},
+					},
+					Value: []byte{},
+				},
+			},
 		},
+
 		{
 			name:  "variable",
 			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
@@ -158,11 +167,24 @@ func TestReader_readRange(t *testing.T) {
 					},
 				},
 			},
-			expected: []keyval.Tuple{
-				{int64(123), "song", "sing"},
-				{int64(123), 13.45, "sing"},
+			expected: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{int64(123), "song", "sing"},
+					},
+					Value: []byte{},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{int64(123), 13.45, "sing"},
+					},
+					Value: []byte{},
+				},
 			},
 		},
+
 		{
 			name:  "read everything",
 			query: keyval.Tuple{},
@@ -186,10 +208,28 @@ func TestReader_readRange(t *testing.T) {
 					},
 				},
 			},
-			expected: []keyval.Tuple{
-				{int64(123), "song", "sing"},
-				{int64(123), 13.45, "sing"},
-				{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+			expected: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{int64(123), "song", "sing"},
+					},
+					Value: []byte{},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{int64(123), 13.45, "sing"},
+					},
+					Value: []byte{},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"iam"},
+						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+					},
+					Value: []byte{},
+				},
 			},
 		},
 	}
@@ -217,25 +257,22 @@ func TestReader_readRange(t *testing.T) {
 
 					pathStr := strings.Join(path, "/")
 					if _, exists := paths[pathStr]; !exists {
+						t.Logf("adding to dir list: %s", pathStr)
 						paths[pathStr] = struct{}{}
 						dirs = append(dirs, dir)
 					}
 				}
 
 				// Execute query.
-				out := r.readRange(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, dirs))
-				waitForKVs := collectKVs(out)
+				out := r.readRange(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
+				waitForKVs := collectKVs(t, out)
 
 				// Wait for the query to complete
 				// and check for errors.
 				assert.NoError(t, waitForErr(r))
 
-				kvs := waitForKVs()
-				tuples := make([]keyval.Tuple, len(kvs))
-				for i := range tuples {
-					tuples[i] = kvs[i].Key.Tuple
-				}
-				assert.Equal(t, test.expected, tuples)
+				// Ensure the read key-values are as expected.
+				assert.Equal(t, test.expected, waitForKVs())
 			})
 		})
 	}
@@ -284,7 +321,7 @@ func collectDirs(in chan directory.DirectorySubspace) func() []directory.Directo
 	}
 }
 
-func collectKVs(in chan keyval.KeyValue) func() []keyval.KeyValue {
+func collectKVs(t *testing.T, in chan keyval.KeyValue) func() []keyval.KeyValue {
 	var out []keyval.KeyValue
 	var wg sync.WaitGroup
 
@@ -292,6 +329,7 @@ func collectKVs(in chan keyval.KeyValue) func() []keyval.KeyValue {
 	go func() {
 		defer wg.Done()
 		for kv := range in {
+			t.Logf("received kv: %+v", kv)
 			out = append(out, kv)
 		}
 	}()
@@ -302,7 +340,7 @@ func collectKVs(in chan keyval.KeyValue) func() []keyval.KeyValue {
 	}
 }
 
-func sendDirs(ctx context.Context, in []directory.DirectorySubspace) chan directory.DirectorySubspace {
+func sendDirs(ctx context.Context, t *testing.T, in []directory.DirectorySubspace) chan directory.DirectorySubspace {
 	out := make(chan directory.DirectorySubspace)
 
 	go func() {
@@ -312,6 +350,7 @@ func sendDirs(ctx context.Context, in []directory.DirectorySubspace) chan direct
 			case <-ctx.Done():
 				return
 			case out <- dir:
+				t.Logf("sent dir: %s", dir.GetPath())
 			}
 		}
 	}()
