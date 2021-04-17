@@ -67,39 +67,37 @@ func TestReader_openDirectories(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, r Reader) {
-				// Set up initial state of directories.
-				for _, path := range test.initial {
-					_, err := directory.Create(tr, path, nil)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
+		t.Run(test.name, dbEnv(func(tr fdb.Transaction, r Reader) {
+			// Set up initial state of directories.
+			for _, path := range test.initial {
+				_, err := directory.Create(tr, path, nil)
+				if !assert.NoError(t, err) {
+					t.FailNow()
 				}
+			}
 
-				// Execute the query.
-				out := r.openDirectories(keyval.KeyValue{
-					Key: keyval.Key{Directory: append(keyval.Directory{root}, test.query...)},
-				})
-				waitForDirs := collectDirs(out)
-
-				// Wait for the query to complete
-				// and check for errors.
-				if test.error {
-					assert.Error(t, waitForErr(r))
-				} else {
-					assert.NoError(t, waitForErr(r))
-				}
-
-				// Collect the query output and assert it's as expected.
-				directories := waitForDirs()
-				if assert.Equal(t, len(test.expected), len(directories)) {
-					for i := range test.expected {
-						assert.Equal(t, append([]string{root}, test.expected[i]...), directories[i].GetPath())
-					}
-				}
+			// Execute the query.
+			out := r.openDirectories(keyval.KeyValue{
+				Key: keyval.Key{Directory: append(keyval.Directory{root}, test.query...)},
 			})
-		})
+			waitForDirs := collectDirs(out)
+
+			// Wait for the query to complete
+			// and check for errors.
+			if test.error {
+				assert.Error(t, waitForErr(r))
+			} else {
+				assert.NoError(t, waitForErr(r))
+			}
+
+			// Collect the query output and assert it's as expected.
+			directories := waitForDirs()
+			if assert.Equal(t, len(test.expected), len(directories)) {
+				for i := range test.expected {
+					assert.Equal(t, append([]string{root}, test.expected[i]...), directories[i].GetPath())
+				}
+			}
+		}))
 	}
 }
 
@@ -235,71 +233,71 @@ func TestReader_readRange(t *testing.T) {
 	}
 
 	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, r Reader) {
-				paths := make(map[string]struct{})
-				var dirs []directory.DirectorySubspace
+		t.Run(test.name, dbEnv(func(tr fdb.Transaction, r Reader) {
+			paths := make(map[string]struct{})
+			var dirs []directory.DirectorySubspace
 
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-				// Setup initial key-values.
-				for _, kv := range test.initial {
-					path, err := keyval.ToStringArray(kv.Key.Directory)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
-					dir, err := directory.CreateOrOpen(tr, path, nil)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
-					tr.Set(dir.Pack(keyval.ToFDBTuple(kv.Key.Tuple)), nil)
-
-					pathStr := strings.Join(path, "/")
-					if _, exists := paths[pathStr]; !exists {
-						t.Logf("adding to dir list: %s", pathStr)
-						paths[pathStr] = struct{}{}
-						dirs = append(dirs, dir)
-					}
+			// Setup initial key-values.
+			for _, kv := range test.initial {
+				path, err := keyval.ToStringArray(kv.Key.Directory)
+				if !assert.NoError(t, err) {
+					t.FailNow()
 				}
+				dir, err := directory.CreateOrOpen(tr, path, nil)
+				if !assert.NoError(t, err) {
+					t.FailNow()
+				}
+				tr.Set(dir.Pack(keyval.ToFDBTuple(kv.Key.Tuple)), nil)
 
-				// Execute query.
-				out := r.readRange(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
-				waitForKVs := collectKVs(t, out)
+				pathStr := strings.Join(path, "/")
+				if _, exists := paths[pathStr]; !exists {
+					t.Logf("adding to dir list: %s", pathStr)
+					paths[pathStr] = struct{}{}
+					dirs = append(dirs, dir)
+				}
+			}
 
-				// Wait for the query to complete
-				// and check for errors.
-				assert.NoError(t, waitForErr(r))
+			// Execute query.
+			out := r.readRange(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
+			waitForKVs := collectKVs(t, out)
 
-				// Ensure the read key-values are as expected.
-				assert.Equal(t, test.expected, waitForKVs())
-			})
-		})
+			// Wait for the query to complete
+			// and check for errors.
+			assert.NoError(t, waitForErr(r))
+
+			// Ensure the read key-values are as expected.
+			assert.Equal(t, test.expected, waitForKVs())
+		}))
 	}
 }
 
-func testEnv(t *testing.T, f func(fdb.Transaction, Reader)) {
-	exists, err := directory.Exists(db, []string{root})
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
-	}
-	if exists {
-		t.Fatal(errors.New("root directory already exists"))
-	}
-
-	defer func() {
-		_, err := directory.Root().Remove(db, []string{root})
+func dbEnv(f func(fdb.Transaction, Reader)) func(*testing.T) {
+	return func(t *testing.T) {
+		exists, err := directory.Exists(db, []string{root})
 		if err != nil {
-			t.Error(errors.Wrap(err, "failed to clean root directory"))
+			t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
 		}
-	}()
+		if exists {
+			t.Fatal(errors.New("root directory already exists"))
+		}
 
-	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		f(tr, New(tr))
-		return nil, nil
-	})
-	if err != nil {
-		t.Error(errors.Wrap(err, "transaction failed"))
+		defer func() {
+			_, err := directory.Root().Remove(db, []string{root})
+			if err != nil {
+				t.Error(errors.Wrap(err, "failed to clean root directory"))
+			}
+		}()
+
+		_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+			f(tr, New(tr))
+			return nil, nil
+		})
+		if err != nil {
+			t.Error(errors.Wrap(err, "transaction failed"))
+		}
 	}
 }
 
