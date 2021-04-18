@@ -71,7 +71,7 @@ func TestReader_openDirectories(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, r Reader) {
 				// Set up initial state of directories.
 				for _, path := range test.initial {
-					_, err := directory.Create(tr, path, nil)
+					_, err := directory.Create(tr, append([]string{root}, path...), nil)
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
@@ -81,7 +81,7 @@ func TestReader_openDirectories(t *testing.T) {
 				out := r.openDirectories(keyval.KeyValue{
 					Key: keyval.Key{Directory: append(keyval.Directory{root}, test.query...)},
 				})
-				waitForDirs := collectDirs(out)
+				waitForDirs := collectDirs(t, out)
 
 				// Wait for the query to complete
 				// and check for errors.
@@ -303,7 +303,7 @@ func testEnv(t *testing.T, f func(fdb.Transaction, Reader)) {
 	}
 }
 
-func collectDirs(in chan directory.DirectorySubspace) func() []directory.DirectorySubspace {
+func collectDirs(t *testing.T, in chan directory.DirectorySubspace) func() []directory.DirectorySubspace {
 	var out []directory.DirectorySubspace
 	var wg sync.WaitGroup
 
@@ -311,6 +311,7 @@ func collectDirs(in chan directory.DirectorySubspace) func() []directory.Directo
 	go func() {
 		defer wg.Done()
 		for dir := range in {
+			t.Logf("received directory: %s", dir.GetPath())
 			out = append(out, dir)
 		}
 	}()
