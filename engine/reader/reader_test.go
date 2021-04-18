@@ -93,9 +93,10 @@ func TestReader_openDirectories(t *testing.T) {
 
 				// Collect the query output and assert it's as expected.
 				directories := waitForDirs()
-				if assert.Equal(t, len(test.expected), len(directories)) {
-					for i := range test.expected {
-						assert.Equal(t, append([]string{root}, test.expected[i]...), directories[i].GetPath())
+				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
+					for i, expected := range test.expected {
+						expected = append([]string{root}, test.expected[i]...)
+						assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i)
 					}
 				}
 			})
@@ -240,16 +241,13 @@ func TestReader_readRange(t *testing.T) {
 				paths := make(map[string]struct{})
 				var dirs []directory.DirectorySubspace
 
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
 				// Setup initial key-values.
 				for _, kv := range test.initial {
 					path, err := keyval.ToStringArray(kv.Key.Directory)
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
-					dir, err := directory.CreateOrOpen(tr, path, nil)
+					dir, err := directory.CreateOrOpen(tr, append([]string{root}, path...), nil)
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
@@ -257,11 +255,15 @@ func TestReader_readRange(t *testing.T) {
 
 					pathStr := strings.Join(path, "/")
 					if _, exists := paths[pathStr]; !exists {
-						t.Logf("adding to dir list: %s", pathStr)
+						t.Logf("adding to dir list: %v", dir.GetPath())
 						paths[pathStr] = struct{}{}
 						dirs = append(dirs, dir)
 					}
 				}
+
+				// ctx ensures sendDirs() returns when the test exits.
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
 
 				// Execute query.
 				out := r.readRange(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
@@ -272,7 +274,12 @@ func TestReader_readRange(t *testing.T) {
 				assert.NoError(t, waitForErr(r))
 
 				// Ensure the read key-values are as expected.
-				assert.Equal(t, test.expected, waitForKVs())
+				kvs := waitForKVs()
+				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
+				for i, expected := range test.expected {
+					expected.Key.Directory = append(keyval.Directory{root}, expected.Key.Directory...)
+					assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i)
+				}
 			})
 		})
 	}
