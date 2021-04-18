@@ -68,10 +68,10 @@ func TestReader_openDirectories(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, r Reader) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
 				// Set up initial state of directories.
 				for _, path := range test.initial {
-					_, err := directory.Create(tr, append([]string{root}, path...), nil)
+					_, err := rootDir.Create(tr, path, nil)
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
@@ -79,7 +79,7 @@ func TestReader_openDirectories(t *testing.T) {
 
 				// Execute the query.
 				out := r.openDirectories(keyval.KeyValue{
-					Key: keyval.Key{Directory: append(keyval.Directory{root}, test.query...)},
+					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), test.query...)},
 				})
 				waitForDirs := collectDirs(t, out)
 
@@ -95,7 +95,7 @@ func TestReader_openDirectories(t *testing.T) {
 				directories := waitForDirs()
 				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
 					for i, expected := range test.expected {
-						expected = append([]string{root}, test.expected[i]...)
+						expected = append(rootDir.GetPath(), test.expected[i]...)
 						assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i)
 					}
 				}
@@ -237,7 +237,7 @@ func TestReader_readRange(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, r Reader) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
 				paths := make(map[string]struct{})
 				var dirs []directory.DirectorySubspace
 
@@ -247,7 +247,7 @@ func TestReader_readRange(t *testing.T) {
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
-					dir, err := directory.CreateOrOpen(tr, append([]string{root}, path...), nil)
+					dir, err := rootDir.CreateOrOpen(tr, path, nil)
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
@@ -275,9 +275,10 @@ func TestReader_readRange(t *testing.T) {
 
 				// Ensure the read key-values are as expected.
 				kvs := waitForKVs()
+				rootPath := keyval.FromStringArray(rootDir.GetPath())
 				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
-					expected.Key.Directory = append(keyval.Directory{root}, expected.Key.Directory...)
+					expected.Key.Directory = append(rootPath, expected.Key.Directory...)
 					assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i)
 				}
 			})
@@ -285,15 +286,19 @@ func TestReader_readRange(t *testing.T) {
 	}
 }
 
-func testEnv(t *testing.T, f func(fdb.Transaction, Reader)) {
+func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, Reader)) {
 	exists, err := directory.Exists(db, []string{root})
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
+	if !assert.NoError(t, err) {
+		t.FailNow()
 	}
 	if exists {
 		t.Fatal(errors.New("root directory already exists"))
 	}
 
+	dir, err := directory.Create(db, []string{root}, nil)
+	if !assert.NoError(t, err) {
+		t.FailNow()
+	}
 	defer func() {
 		_, err := directory.Root().Remove(db, []string{root})
 		if err != nil {
@@ -302,12 +307,10 @@ func testEnv(t *testing.T, f func(fdb.Transaction, Reader)) {
 	}()
 
 	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		f(tr, New(tr))
+		f(tr, dir, New(tr))
 		return nil, nil
 	})
-	if err != nil {
-		t.Error(errors.Wrap(err, "transaction failed"))
-	}
+	assert.NoError(t, err)
 }
 
 func collectDirs(t *testing.T, in chan directory.DirectorySubspace) func() []directory.DirectorySubspace {
