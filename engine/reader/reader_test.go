@@ -17,18 +17,13 @@ import (
 
 const root = "root"
 
-var db fdb.Database
+var (
+	db fdb.Database
 
-func init() {
-	fdb.MustAPIVersion(610)
-	db = fdb.MustOpenDefault()
-}
-
-func TestReader_openDirectories(t *testing.T) {
-	tests := []struct {
+	openDirectoriesTests = []struct {
 		name     string           // name of test
 		query    keyval.Directory // query to execute
-		initial  [][]string       // initial directory state
+		initial  [][]string       // initial state
 		expected [][]string       // expected results
 		error    bool             // expect error?
 	}{
@@ -66,52 +61,11 @@ func TestReader_openDirectories(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
-				// Set up initial state of directories.
-				for _, path := range test.initial {
-					_, err := rootDir.Create(tr, path, nil)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
-				}
-
-				// Execute the query.
-				out := r.openDirectories(keyval.KeyValue{
-					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), test.query...)},
-				})
-				waitForDirs := collectDirs(t, out)
-
-				// Wait for the query to complete
-				// and check for errors.
-				if test.error {
-					assert.Error(t, waitForErr(r))
-				} else {
-					assert.NoError(t, waitForErr(r))
-				}
-
-				// Collect the query output and assert it's as expected.
-				directories := waitForDirs()
-				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
-					for i, expected := range test.expected {
-						expected = append(rootDir.GetPath(), test.expected[i]...)
-						if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i) {
-							t.FailNow()
-						}
-					}
-				}
-			})
-		})
-	}
-}
-
-func TestReader_readRange(t *testing.T) {
-	tests := []struct {
-		name     string
-		query    keyval.Tuple
-		initial  []keyval.KeyValue
-		expected []keyval.KeyValue
+	readRangeTests = []struct {
+		name     string            // name of test
+		query    keyval.Tuple      // query to execute
+		initial  []keyval.KeyValue // initial state
+		expected []keyval.KeyValue // expected results
 	}{
 		{
 			name:  "no variable",
@@ -146,7 +100,6 @@ func TestReader_readRange(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name:  "variable",
 			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
@@ -187,7 +140,6 @@ func TestReader_readRange(t *testing.T) {
 				},
 			},
 		},
-
 		{
 			name:  "read everything",
 			query: keyval.Tuple{},
@@ -237,7 +189,158 @@ func TestReader_readRange(t *testing.T) {
 		},
 	}
 
-	for _, test := range tests {
+	filterKeysTests = []struct {
+		name     string            // name of test
+		query    keyval.Tuple      // query to execute
+		initial  []keyval.KeyValue // initial state
+		expected []keyval.KeyValue // expected results
+	}{
+		{
+			name:  "no variable",
+			query: keyval.Tuple{123, "hello", -50.6},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{123, "hello", -50.6},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{321, "goodbye", 50.6},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"second"},
+						Tuple:     keyval.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}},
+					},
+				},
+			},
+			expected: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{123, "hello", -50.6},
+					},
+				},
+			},
+		},
+		{
+			name:  "variable",
+			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"iam"},
+						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+					},
+				},
+			},
+			expected: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+			},
+		},
+		{
+			name:  "read everything",
+			query: keyval.Tuple{},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"iam"},
+						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+)
+
+func init() {
+	fdb.MustAPIVersion(620)
+	db = fdb.MustOpenDefault()
+}
+
+func TestReader_openDirectories(t *testing.T) {
+	for _, test := range openDirectoriesTests {
+		t.Run(test.name, func(t *testing.T) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
+				// Set up initial state of directories.
+				for _, path := range test.initial {
+					_, err := rootDir.Create(tr, path, nil)
+					if !assert.NoError(t, err) {
+						t.FailNow()
+					}
+				}
+
+				// Execute the query.
+				out := r.openDirectories(keyval.KeyValue{
+					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), test.query...)},
+				})
+				waitForDirs := collectDirs(t, out)
+
+				// Wait for the query to complete
+				// and check for errors.
+				if test.error {
+					assert.Error(t, waitForErr(r))
+				} else {
+					assert.NoError(t, waitForErr(r))
+				}
+
+				// Collect the query output and assert it's as expected.
+				directories := waitForDirs()
+				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
+					for i, expected := range test.expected {
+						expected = append(rootDir.GetPath(), test.expected[i]...)
+						if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i) {
+							t.FailNow()
+						}
+					}
+				}
+			})
+		})
+	}
+}
+
+func TestReader_readRange(t *testing.T) {
+	for _, test := range readRangeTests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
 				paths := make(map[string]struct{})
@@ -291,112 +394,7 @@ func TestReader_readRange(t *testing.T) {
 }
 
 func TestReader_filterKeys(t *testing.T) {
-	tests := []struct {
-		name     string
-		query    keyval.Tuple
-		initial  []keyval.KeyValue
-		expected []keyval.KeyValue
-	}{
-		{
-			name:  "no variable",
-			query: keyval.Tuple{123, "hello", -50.6},
-			initial: []keyval.KeyValue{
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"first"},
-						Tuple:     keyval.Tuple{123, "hello", -50.6},
-					},
-				},
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"first"},
-						Tuple:     keyval.Tuple{321, "goodbye", 50.6},
-					},
-				},
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"second"},
-						Tuple:     keyval.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}},
-					},
-				},
-			},
-			expected: []keyval.KeyValue{
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"first"},
-						Tuple:     keyval.Tuple{123, "hello", -50.6},
-					},
-				},
-			},
-		},
-
-		{
-			name:  "variable",
-			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
-			initial: []keyval.KeyValue{
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"this", "thing"},
-						Tuple:     keyval.Tuple{123, "song", "sing"},
-					},
-				},
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"that", "there"},
-						Tuple:     keyval.Tuple{123, 13.45, "sing"},
-					},
-				},
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"iam"},
-						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
-					},
-				},
-			},
-			expected: []keyval.KeyValue{
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"this", "thing"},
-						Tuple:     keyval.Tuple{123, "song", "sing"},
-					},
-				},
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"that", "there"},
-						Tuple:     keyval.Tuple{123, 13.45, "sing"},
-					},
-				},
-			},
-		},
-
-		{
-			name:  "read everything",
-			query: keyval.Tuple{},
-			initial: []keyval.KeyValue{
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"this", "thing"},
-						Tuple:     keyval.Tuple{123, "song", "sing"},
-					},
-				},
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"that", "there"},
-						Tuple:     keyval.Tuple{123, 13.45, "sing"},
-					},
-				},
-				{
-					Key: keyval.Key{
-						Directory: keyval.Directory{"iam"},
-						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
-					},
-				},
-			},
-			expected: nil,
-		},
-	}
-
-	for _, test := range tests {
+	for _, test := range filterKeysTests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
 				// ctx ensures sendKVs() returns when the test exits.
