@@ -238,6 +238,7 @@ func (r *Reader) doUnpackValues(query keyval.Value, in chan keyval.KeyValue, out
 		}
 		for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
 			if bytes.Compare(queryBytes, kv.Value.([]byte)) == 0 {
+				kv.Value = query
 				r.sendKV(out, *kv)
 			}
 		}

@@ -291,6 +291,27 @@ var (
 			expected: nil,
 		},
 	}
+
+	unpackValuesTests = []struct {
+		name     string            // name of test
+		query    keyval.Value      // query to execute
+		initial  []keyval.KeyValue // initial state
+		expected []keyval.KeyValue // expected results
+	}{
+		{
+			name:  "no variable",
+			query: 123,
+			initial: []keyval.KeyValue{
+				{Value: packWithPanic(123)},
+				{Value: packWithPanic("hello world")},
+				{Value: []byte{}},
+			},
+			expected: []keyval.KeyValue{
+				{Value: 123},
+			},
+		},
+		// TODO: Add more tests.
+	}
 )
 
 func init() {
@@ -422,6 +443,35 @@ func TestReader_filterKeys(t *testing.T) {
 	}
 }
 
+func TestReader_unpackValues(t *testing.T) {
+	for _, test := range unpackValuesTests {
+		t.Run(test.name, func(t *testing.T) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
+				// ctx ensures sendKVs() returns when the test exits.
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				// Execute query.
+				out := r.unpackValues(keyval.KeyValue{Value: test.query}, sendKVs(ctx, t, test.initial))
+				waitForKVs := collectKVs(t, out)
+
+				// Wait for the query to complete
+				// and check for errors.
+				assert.NoError(t, waitForErr(r))
+
+				// Ensure the read key-values are as expected.
+				kvs := waitForKVs()
+				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
+				for i, expected := range test.expected {
+					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
+						t.FailNow()
+					}
+				}
+			})
+		})
+	}
+}
+
 func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, Reader)) {
 	exists, err := directory.Exists(db, []string{root})
 	if err != nil {
@@ -523,6 +573,14 @@ func sendKVs(ctx context.Context, t *testing.T, in []keyval.KeyValue) chan keyva
 	}()
 
 	return out
+}
+
+func packWithPanic(val keyval.Value) []byte {
+	packed, err := keyval.PackValue(val)
+	if err != nil {
+		panic(err)
+	}
+	return packed
 }
 
 func waitForErr(r Reader) error {
