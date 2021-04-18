@@ -96,7 +96,9 @@ func TestReader_openDirectories(t *testing.T) {
 				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
 					for i, expected := range test.expected {
 						expected = append(rootDir.GetPath(), test.expected[i]...)
-						assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i)
+						if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i) {
+							t.FailNow()
+						}
 					}
 				}
 			})
@@ -279,7 +281,9 @@ func TestReader_readRange(t *testing.T) {
 				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
 					expected.Key.Directory = append(rootPath, expected.Key.Directory...)
-					assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i)
+					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
+						t.FailNow()
+					}
 				}
 			})
 		})

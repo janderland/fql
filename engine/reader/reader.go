@@ -104,22 +104,12 @@ func (r *Reader) openDirectories(query keyval.KeyValue) chan directory.Directory
 
 func (r *Reader) readRange(query keyval.KeyValue, in chan directory.DirectorySubspace) chan keyval.KeyValue {
 	out := make(chan keyval.KeyValue)
-	var wg sync.WaitGroup
-
-	for i := 0; i < 4; i++ {
-		r.wg.Add(1)
-		wg.Add(1)
-
-		go func() {
-			defer r.wg.Done()
-			defer wg.Done()
-			r.doReadRange(query.Key.Tuple, in, out)
-		}()
-	}
+	r.wg.Add(1)
 
 	go func() {
 		defer close(out)
-		wg.Wait()
+		defer r.wg.Done()
+		r.doReadRange(query.Key.Tuple, in, out)
 	}()
 
 	return out
@@ -127,22 +117,12 @@ func (r *Reader) readRange(query keyval.KeyValue, in chan directory.DirectorySub
 
 func (r *Reader) filterKeys(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
 	out := make(chan keyval.KeyValue)
-	var wg sync.WaitGroup
-
-	for i := 0; i < 4; i++ {
-		r.wg.Add(1)
-		wg.Add(1)
-
-		go func() {
-			defer r.wg.Done()
-			defer wg.Done()
-			r.doFilterKeys(query.Key.Tuple, in, out)
-		}()
-	}
+	r.wg.Add(1)
 
 	go func() {
 		defer close(out)
-		wg.Wait()
+		defer r.wg.Done()
+		r.doFilterKeys(query.Key.Tuple, in, out)
 	}()
 
 	return out
@@ -150,22 +130,13 @@ func (r *Reader) filterKeys(query keyval.KeyValue, in chan keyval.KeyValue) chan
 
 func (r *Reader) unpackValues(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
 	out := make(chan keyval.KeyValue)
-	var wg sync.WaitGroup
 
-	for i := 0; i < 4; i++ {
-		r.wg.Add(1)
-		wg.Add(1)
-
-		go func() {
-			defer r.wg.Done()
-			defer wg.Done()
-			r.doUnpackValues(query.Value, in, out)
-		}()
-	}
+	r.wg.Add(1)
 
 	go func() {
 		defer close(out)
-		wg.Wait()
+		defer r.wg.Done()
+		r.doUnpackValues(query.Value, in, out)
 	}()
 
 	return out
