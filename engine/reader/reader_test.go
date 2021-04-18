@@ -290,18 +290,152 @@ func TestReader_readRange(t *testing.T) {
 	}
 }
 
+func TestReader_filterKeys(t *testing.T) {
+	tests := []struct {
+		name     string
+		query    keyval.Tuple
+		initial  []keyval.KeyValue
+		expected []keyval.KeyValue
+	}{
+		{
+			name:  "no variable",
+			query: keyval.Tuple{123, "hello", -50.6},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{123, "hello", -50.6},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{321, "goodbye", 50.6},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"second"},
+						Tuple:     keyval.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}},
+					},
+				},
+			},
+			expected: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"first"},
+						Tuple:     keyval.Tuple{123, "hello", -50.6},
+					},
+				},
+			},
+		},
+
+		{
+			name:  "variable",
+			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"iam"},
+						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+					},
+				},
+			},
+			expected: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+			},
+		},
+
+		{
+			name:  "read everything",
+			query: keyval.Tuple{},
+			initial: []keyval.KeyValue{
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"this", "thing"},
+						Tuple:     keyval.Tuple{123, "song", "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"that", "there"},
+						Tuple:     keyval.Tuple{123, 13.45, "sing"},
+					},
+				},
+				{
+					Key: keyval.Key{
+						Directory: keyval.Directory{"iam"},
+						Tuple:     keyval.Tuple{tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+					},
+				},
+			},
+			expected: nil,
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
+				// ctx ensures sendKVs() returns when the test exits.
+				ctx, cancel := context.WithCancel(context.Background())
+				defer cancel()
+
+				// Execute query.
+				out := r.filterKeys(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendKVs(ctx, t, test.initial))
+				waitForKVs := collectKVs(t, out)
+
+				// Wait for the query to complete
+				// and check for errors.
+				assert.NoError(t, waitForErr(r))
+
+				// Ensure the read key-values are as expected.
+				kvs := waitForKVs()
+				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
+				for i, expected := range test.expected {
+					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
+						t.FailNow()
+					}
+				}
+			})
+		})
+	}
+}
+
 func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, Reader)) {
 	exists, err := directory.Exists(db, []string{root})
-	if !assert.NoError(t, err) {
-		t.FailNow()
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
 	}
 	if exists {
 		t.Fatal(errors.New("root directory already exists"))
 	}
 
 	dir, err := directory.Create(db, []string{root}, nil)
-	if !assert.NoError(t, err) {
-		t.FailNow()
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "failed to create root directory"))
 	}
 	defer func() {
 		_, err := directory.Root().Remove(db, []string{root})
@@ -314,7 +448,9 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 		f(tr, dir, New(tr))
 		return nil, nil
 	})
-	assert.NoError(t, err)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "transaction failed"))
+	}
 }
 
 func collectDirs(t *testing.T, in chan directory.DirectorySubspace) func() []directory.DirectorySubspace {
@@ -373,7 +509,7 @@ func sendDirs(ctx context.Context, t *testing.T, in []directory.DirectorySubspac
 	return out
 }
 
-func sendKVs(ctx context.Context, in []keyval.KeyValue) chan keyval.KeyValue {
+func sendKVs(ctx context.Context, t *testing.T, in []keyval.KeyValue) chan keyval.KeyValue {
 	out := make(chan keyval.KeyValue)
 
 	go func() {
@@ -383,6 +519,7 @@ func sendKVs(ctx context.Context, in []keyval.KeyValue) chan keyval.KeyValue {
 			case <-ctx.Done():
 				return
 			case out <- kv:
+				t.Logf("sent kv: %+v", kv)
 			}
 		}
 	}()
