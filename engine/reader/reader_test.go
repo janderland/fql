@@ -2,6 +2,7 @@ package reader
 
 import (
 	"context"
+	"flag"
 	"math/big"
 	"strings"
 	"sync"
@@ -310,7 +311,21 @@ var (
 				{Value: 123},
 			},
 		},
-		// TODO: Add more tests.
+		{
+			name:  "variable",
+			query: keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.BigIntType, keyval.TupleType}},
+			initial: []keyval.KeyValue{
+				{Value: packWithPanic("hello world")},
+				{Value: packWithPanic(55)},
+				{Value: packWithPanic(23.9)},
+				{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
+			},
+			expected: []keyval.KeyValue{
+				{Value: int64(55)},
+				{Value: unpackWithPanic(keyval.IntType, packWithPanic(23.9))},
+				{Value: keyval.Tuple{"there we go", nil}},
+			},
+		},
 	}
 )
 
@@ -472,18 +487,25 @@ func TestReader_unpackValues(t *testing.T) {
 	}
 }
 
+var allowedToDelete = flag.Bool("force", false, "remove test directory if it exists")
+
 func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, Reader)) {
 	exists, err := directory.Exists(db, []string{root})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
 	}
 	if exists {
-		t.Fatal(errors.New("root directory already exists"))
+		if !*allowedToDelete {
+			t.Fatal(errors.New("test directory already exists, use '-force' flag to remove"))
+		}
+		if _, err := directory.Root().Remove(db, []string{root}); err != nil {
+			t.Fatal(errors.Wrap(err, "failed to remove directory"))
+		}
 	}
 
 	dir, err := directory.Create(db, []string{root}, nil)
 	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to create root directory"))
+		t.Fatal(errors.Wrap(err, "failed to create test directory"))
 	}
 	defer func() {
 		_, err := directory.Root().Remove(db, []string{root})
@@ -581,6 +603,14 @@ func packWithPanic(val keyval.Value) []byte {
 		panic(err)
 	}
 	return packed
+}
+
+func unpackWithPanic(typ keyval.ValueType, bytes []byte) keyval.Value {
+	unpacked, err := keyval.UnpackValue(typ, bytes)
+	if err != nil {
+		panic(err)
+	}
+	return unpacked
 }
 
 func waitForErr(r Reader) error {
