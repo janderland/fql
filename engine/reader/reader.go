@@ -12,15 +12,15 @@ import (
 )
 
 type Reader struct {
-	tr     fdb.Transaction
+	tr     fdb.ReadTransaction
 	wg     *sync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
 	errCh  chan error
 }
 
-func New(tr fdb.Transaction) Reader {
-	ctx, cancel := context.WithCancel(context.Background())
+func New(ctx context.Context, tr fdb.ReadTransaction) Reader {
+	ctx, cancel := context.WithCancel(ctx)
 
 	return Reader{
 		tr:     tr,
