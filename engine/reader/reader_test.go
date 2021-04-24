@@ -287,43 +287,43 @@ func TestReader_filterKeys(t *testing.T) {
 	}
 }
 
-var unpackValuesTests = []struct {
-	name     string            // name of test
-	query    keyval.Value      // query to execute
-	initial  []keyval.KeyValue // initial state
-	expected []keyval.KeyValue // expected results
-}{
-	{
-		name:  "no variable",
-		query: 123,
-		initial: []keyval.KeyValue{
-			{Value: packWithPanic(123)},
-			{Value: packWithPanic("hello world")},
-			{Value: []byte{}},
-		},
-		expected: []keyval.KeyValue{
-			{Value: 123},
-		},
-	},
-	{
-		name:  "variable",
-		query: keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.BigIntType, keyval.TupleType}},
-		initial: []keyval.KeyValue{
-			{Value: packWithPanic("hello world")},
-			{Value: packWithPanic(55)},
-			{Value: packWithPanic(23.9)},
-			{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
-		},
-		expected: []keyval.KeyValue{
-			{Value: int64(55)},
-			{Value: unpackWithPanic(keyval.IntType, packWithPanic(23.9))},
-			{Value: keyval.Tuple{"there we go", nil}},
-		},
-	},
-}
-
 func TestReader_unpackValues(t *testing.T) {
-	for _, test := range unpackValuesTests {
+	var tests = []struct {
+		name     string            // name of test
+		query    keyval.Value      // query to execute
+		initial  []keyval.KeyValue // initial state
+		expected []keyval.KeyValue // expected results
+	}{
+		{
+			name:  "no variable",
+			query: 123,
+			initial: []keyval.KeyValue{
+				{Value: packWithPanic(123)},
+				{Value: packWithPanic("hello world")},
+				{Value: []byte{}},
+			},
+			expected: []keyval.KeyValue{
+				{Value: 123},
+			},
+		},
+		{
+			name:  "variable",
+			query: keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.BigIntType, keyval.TupleType}},
+			initial: []keyval.KeyValue{
+				{Value: packWithPanic("hello world")},
+				{Value: packWithPanic(55)},
+				{Value: packWithPanic(23.9)},
+				{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
+			},
+			expected: []keyval.KeyValue{
+				{Value: int64(55)},
+				{Value: unpackWithPanic(keyval.IntType, packWithPanic(23.9))},
+				{Value: keyval.Tuple{"there we go", nil}},
+			},
+		},
+	}
+
+	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
 				// ctx ensures sendKVs() returns when the test exits.
