@@ -130,7 +130,6 @@ func (r *Reader) filterKeys(query keyval.KeyValue, in chan keyval.KeyValue) chan
 
 func (r *Reader) unpackValues(query keyval.KeyValue, in chan keyval.KeyValue) chan keyval.KeyValue {
 	out := make(chan keyval.KeyValue)
-
 	r.wg.Add(1)
 
 	go func() {
