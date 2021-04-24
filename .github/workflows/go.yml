@@ -2,9 +2,9 @@ name: Go
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
 
@@ -20,6 +20,8 @@ jobs:
     
     - name: Lint
       uses: golangci/golangci-lint-action@v2
+      with:
+        skip-go-installation: true
 
     - name: Build
       run: go build -v ./...
