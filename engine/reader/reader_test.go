@@ -4,9 +4,12 @@ import (
 	"context"
 	"flag"
 	"math/big"
+	"os"
 	"strings"
 	"sync"
 	"testing"
+
+	"github.com/rs/zerolog"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -378,8 +381,11 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 		}
 	}()
 
+	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
+
 	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		f(tr, dir, New(context.Background(), tr))
+		f(tr, dir, New(log.WithContext(context.Background()), tr))
 		return nil, nil
 	})
 	if err != nil {

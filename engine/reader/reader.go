@@ -9,10 +9,13 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 )
 
 type Reader struct {
-	tr     fdb.ReadTransaction
+	tr  fdb.ReadTransaction
+	log *zerolog.Logger
+
 	wg     *sync.WaitGroup
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -23,7 +26,9 @@ func New(ctx context.Context, tr fdb.ReadTransaction) Reader {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return Reader{
-		tr:     tr,
+		tr:  tr,
+		log: zerolog.Ctx(ctx),
+
 		wg:     &sync.WaitGroup{},
 		ctx:    ctx,
 		cancel: cancel,
@@ -142,10 +147,12 @@ func (r *Reader) unpackValues(query keyval.KeyValue, in chan keyval.KeyValue) ch
 }
 
 func (r *Reader) doOpenDirectories(query keyval.Directory, out chan directory.DirectorySubspace) {
+	log := r.log.With().Str("stage", "open directories").Interface("query", query).Logger()
+
 	prefix, variable, suffix := keyval.SplitAtFirstVariable(query)
 	prefixStr, err := keyval.ToStringArray(prefix)
 	if err != nil {
-		r.sendError(errors.Wrapf(err, "fail to convert directory prefix to string array"))
+		r.sendError(errors.Wrapf(err, "failed to convert directory prefix to string array"))
 	}
 
 	if variable != nil {
@@ -154,6 +161,11 @@ func (r *Reader) doOpenDirectories(query keyval.Directory, out chan directory.Di
 			r.sendError(errors.Wrap(err, "failed to list directories"))
 			return
 		}
+		if len(subDirs) == 0 {
+			r.sendError(errors.Errorf("no subdirectories for %v", prefixStr))
+		}
+
+		log.Trace().Strs("sub dirs", subDirs).Msg("found subdirectories")
 
 		for _, subDir := range subDirs {
 			var dir keyval.Directory
@@ -165,18 +177,25 @@ func (r *Reader) doOpenDirectories(query keyval.Directory, out chan directory.Di
 	} else {
 		dir, err := directory.Open(r.tr, prefixStr, nil)
 		if err != nil {
-			r.sendError(errors.Wrap(err, "failed to open directory"))
+			r.sendError(errors.Wrapf(err, "failed to open directory %v", prefixStr))
 			return
 		}
+
+		log.Debug().Strs("dir", dir.GetPath()).Msg("sending directory")
 		r.sendDir(out, dir)
 	}
 }
 
 func (r *Reader) doReadRange(query keyval.Tuple, in chan directory.DirectorySubspace, out chan keyval.KeyValue) {
+	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
+
 	prefix, _, _ := keyval.SplitAtFirstVariable(query)
 	fdbPrefix := keyval.ToFDBTuple(prefix)
 
 	for dir := r.recvDir(in); dir != nil; dir = r.recvDir(in) {
+		log := log.With().Strs("dir", dir.GetPath()).Logger()
+		log.Debug().Msg("received directory")
+
 		rng, err := fdb.PrefixRange(dir.Pack(fdbPrefix))
 		if err != nil {
 			r.sendError(errors.Wrap(err, "failed to create prefix range"))
@@ -185,46 +204,62 @@ func (r *Reader) doReadRange(query keyval.Tuple, in chan directory.DirectorySubs
 
 		iter := r.tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
 		for iter.Advance() {
-			kv, err := iter.Get()
+			fromDB, err := iter.Get()
 			if err != nil {
 				r.sendError(errors.Wrap(err, "failed to get key-value"))
 				return
 			}
 
-			tup, err := dir.Unpack(kv.Key)
+			tup, err := dir.Unpack(fromDB.Key)
 			if err != nil {
 				r.sendError(errors.Wrap(err, "failed to unpack key"))
 				return
 			}
 
-			r.sendKV(out, keyval.KeyValue{
+			kv := keyval.KeyValue{
 				Key: keyval.Key{
 					Directory: keyval.FromStringArray(dir.GetPath()),
 					Tuple:     keyval.FromFDBTuple(tup),
 				},
-				Value: kv.Value,
-			})
+				Value: fromDB.Value,
+			}
+
+			log.Debug().Interface("kv", kv).Msg("sending key-value")
+			r.sendKV(out, kv)
 		}
 	}
 }
 
 func (r *Reader) doFilterKeys(query keyval.Tuple, in chan keyval.KeyValue, out chan keyval.KeyValue) {
+	log := r.log.With().Str("stage", "filter keys").Interface("query", query).Logger()
+
 	for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
+		log := log.With().Interface("kv", kv).Logger()
+		log.Debug().Msg("received key-value")
+
 		if keyval.CompareTuples(query, kv.Key.Tuple) == nil {
+			log.Debug().Msg("sending key-value")
 			r.sendKV(out, *kv)
 		}
 	}
 }
 
 func (r *Reader) doUnpackValues(query keyval.Value, in chan keyval.KeyValue, out chan keyval.KeyValue) {
+	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
+
 	if variable, isVar := query.(keyval.Variable); isVar {
 		for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
+			log := log.With().Interface("kv", kv).Logger()
+			log.Debug().Msg("received key-value")
+
 			for _, typ := range variable.Type {
 				outVal, err := keyval.UnpackValue(typ, kv.Value.([]byte))
 				if err != nil {
 					continue
 				}
+
 				kv.Value = outVal
+				log.Debug().Interface("kv", kv).Msg("sending key-value")
 				r.sendKV(out, *kv)
 				break
 			}
@@ -235,9 +270,14 @@ func (r *Reader) doUnpackValues(query keyval.Value, in chan keyval.KeyValue, out
 			r.sendError(errors.Wrap(err, "failed to pack query value"))
 			return
 		}
+
 		for kv := r.recvKV(in); kv != nil; kv = r.recvKV(in) {
-			if !bytes.Equal(queryBytes, kv.Value.([]byte)) {
+			log := log.With().Interface("kv", kv).Logger()
+			log.Debug().Msg("received key-value")
+
+			if bytes.Equal(queryBytes, kv.Value.([]byte)) {
 				kv.Value = query
+				log.Debug().Interface("kv", kv).Msg("sending key-value")
 				r.sendKV(out, *kv)
 			}
 		}

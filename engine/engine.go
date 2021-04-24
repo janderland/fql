@@ -142,7 +142,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan KeyV
 					if !open {
 						return nil, nil
 					}
-					send(KeyValErr{Err: errors.Wrap(err, "reader failed")})
+					return nil, err
 
 				case kv, open := <-kvCh:
 					if !open {
@@ -153,7 +153,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan KeyV
 			}
 		})
 		if err != nil {
-			send(KeyValErr{Err: errors.Wrap(err, "transaction failed")})
+			send(KeyValErr{Err: err})
 		}
 	}()
 
