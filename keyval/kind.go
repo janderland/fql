@@ -127,7 +127,7 @@ func tupSubKind(tup Tuple) (subKind, error) {
 	var err error
 
 	for i, e := range tup {
-		switch e.(type) {
+		switch e := e.(type) {
 		// Nil
 		case nil:
 			continue
@@ -173,12 +173,12 @@ func tupSubKind(tup Tuple) (subKind, error) {
 
 		// Tuple
 		case Tuple:
-			kind, err = tupSubKind(e.(Tuple))
+			kind, err = tupSubKind(e)
 			if err != nil {
 				return kind, errors.Wrapf(err, "invalid tuple at element %d", i)
 			}
 		case tuple.Tuple:
-			kind, err = tupSubKind(FromFDBTuple(e.(tuple.Tuple)))
+			kind, err = tupSubKind(FromFDBTuple(e))
 			if err != nil {
 				return kind, errors.Wrapf(err, "invalid tuple at element %d", i)
 			}
@@ -198,7 +198,7 @@ func tupSubKind(tup Tuple) (subKind, error) {
 }
 
 func valSubKind(val Value) (subKind, error) {
-	switch val.(type) {
+	switch val := val.(type) {
 	// Nil
 	case nil:
 		return constantSubKind, nil
@@ -239,10 +239,10 @@ func valSubKind(val Value) (subKind, error) {
 
 	// Tuple
 	case Tuple:
-		kind, err := tupSubKind(val.(Tuple))
+		kind, err := tupSubKind(val)
 		return kind, errors.Wrap(err, "invalid tuple")
 	case tuple.Tuple:
-		kind, err := tupSubKind(FromFDBTuple(val.(tuple.Tuple)))
+		kind, err := tupSubKind(FromFDBTuple(val))
 		return kind, errors.Wrap(err, "invalid tuple")
 
 	// Variable

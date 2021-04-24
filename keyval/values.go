@@ -9,14 +9,14 @@ import (
 )
 
 func PackValue(val Value) ([]byte, error) {
-	switch val.(type) {
+	switch val := val.(type) {
 	// Nil
 	case nil:
 		return nil, nil
 
 	// Bool
 	case bool:
-		if val.(bool) {
+		if val {
 			return []byte{1}, nil
 		}
 		return []byte{0}, nil
@@ -24,51 +24,51 @@ func PackValue(val Value) ([]byte, error) {
 	// Int
 	case int64:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, uint64(val.(int64)))
+		binary.LittleEndian.PutUint64(b, uint64(val))
 		return b, nil
 	case int:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, uint64(val.(int)))
+		binary.LittleEndian.PutUint64(b, uint64(val))
 		return b, nil
 
 	// Uint
 	case uint64:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, val.(uint64))
+		binary.LittleEndian.PutUint64(b, val)
 		return b, nil
 	case uint:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, uint64(val.(uint)))
+		binary.LittleEndian.PutUint64(b, uint64(val))
 		return b, nil
 
 	// Float
 	case float64:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, math.Float64bits(val.(float64)))
+		binary.LittleEndian.PutUint64(b, math.Float64bits(val))
 		return b, nil
 	case float32:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, math.Float64bits(float64(val.(float32))))
+		binary.LittleEndian.PutUint64(b, math.Float64bits(float64(val)))
 		return b, nil
 
 	// String
 	case string:
-		return []byte(val.(string)), nil
+		return []byte(val), nil
 
 	// Bytes
 	case []byte:
-		return val.([]byte), nil
+		return val, nil
 
 	// UUID
 	case UUID:
-		uuid := val.(UUID)
+		uuid := val
 		return uuid[:], nil
 
 	// Tuple
 	case Tuple:
-		return ToFDBTuple(val.(Tuple)).Pack(), nil
+		return ToFDBTuple(val).Pack(), nil
 	case tuple.Tuple:
-		return val.(tuple.Tuple).Pack(), nil
+		return val.Pack(), nil
 
 	default:
 		return nil, errors.Errorf("unknown Value type '%T'", val)

@@ -364,7 +364,7 @@ func TestReader_openDirectories(t *testing.T) {
 				directories := waitForDirs()
 				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
 					for i, expected := range test.expected {
-						expected = append(rootDir.GetPath(), test.expected[i]...)
+						expected = append(rootDir.GetPath(), expected...)
 						if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i) {
 							t.FailNow()
 						}
@@ -515,7 +515,7 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 	}()
 
 	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		f(tr, dir, New(tr))
+		f(tr, dir, New(context.Background(), tr))
 		return nil, nil
 	})
 	if err != nil {

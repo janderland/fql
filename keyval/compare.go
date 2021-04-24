@@ -58,7 +58,7 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 	var index []int
 	err := ReadTuple(candidate, AllowLong, func(iter *TupleIterator) error {
 		for i, e := range pattern {
-			switch e.(type) {
+			switch e := e.(type) {
 			// Nil
 			case nil:
 				if e != iter.Any() {
@@ -68,90 +68,89 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 
 			// Bool
 			case bool:
-				if iter.Bool() != e.(bool) {
+				if iter.Bool() != e {
 					index = []int{i}
 					return nil
 				}
 
 			// Int
 			case int64:
-				if iter.Int() != e.(int64) {
+				if iter.Int() != e {
 					index = []int{i}
 					return nil
 				}
 			case int:
-				if iter.Int() != int64(e.(int)) {
+				if iter.Int() != int64(e) {
 					index = []int{i}
 					return nil
 				}
 
 			// Uint
 			case uint64:
-				if iter.Uint() != e.(uint64) {
+				if iter.Uint() != e {
 					index = []int{i}
 					return nil
 				}
 			case uint:
-				if iter.Uint() != uint64(e.(uint)) {
+				if iter.Uint() != uint64(e) {
 					index = []int{i}
 					return nil
 				}
 
 			// Float
 			case float64:
-				if iter.Float() != e.(float64) {
+				if iter.Float() != e {
 					index = []int{i}
 					return nil
 				}
 			case float32:
-				if iter.Float() != float64(e.(float32)) {
+				if iter.Float() != float64(e) {
 					index = []int{i}
 					return nil
 				}
 
 			// big.Int
 			case big.Int:
-				v := e.(big.Int)
-				if iter.BigInt().Cmp(&v) != 0 {
+				if iter.BigInt().Cmp(&e) != 0 {
 					index = []int{i}
 					return nil
 				}
 			case *big.Int:
-				if iter.BigInt().Cmp(e.(*big.Int)) != 0 {
+				if iter.BigInt().Cmp(e) != 0 {
 					index = []int{i}
 					return nil
 				}
 
 			// String
 			case string:
-				if iter.String() != e.(string) {
+				if iter.String() != e {
 					index = []int{i}
 					return nil
 				}
 
 			// Bytes
 			case []byte:
-				if bytes.Compare(iter.Bytes(), e.([]byte)) != 0 {
+				if !bytes.Equal(iter.Bytes(), e) {
 					index = []int{i}
 					return nil
 				}
 
 			// UUID
 			case UUID:
-				if iter.UUID() != e.(UUID) {
+				if iter.UUID() != e {
 					index = []int{i}
 					return nil
 				}
 
 			// Tuple
 			case Tuple:
-				subIndex := CompareTuples(e.(Tuple), iter.Tuple())
+				subIndex := CompareTuples(e, iter.Tuple())
 				if len(subIndex) > 0 {
 					index = append([]int{i}, subIndex...)
 					return nil
 				}
 			case tuple.Tuple:
-				subIndex := CompareTuples(FromFDBTuple(e.(tuple.Tuple)), iter.Tuple())
+				subIndex := CompareTuples(FromFDBTuple(e), iter.Tuple())
 				if len(subIndex) > 0 {
 					index = append([]int{i}, subIndex...)
 					return nil
@@ -161,7 +160,6 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 			case Variable:
 				// TODO: Check variable constraints.
 				_ = iter.Any()
-				break
 
 			// Unknown
 			default:

@@ -55,10 +55,8 @@ func FromFDBTuple(in tup.Tuple) Tuple {
 // before the first variable, the first variable, and a slice of the elements after the variable.
 func SplitAtFirstVariable(list []interface{}) ([]interface{}, *Variable, []interface{}) {
 	for i, segment := range list {
-		switch segment.(type) {
-		case Variable:
-			v := segment.(Variable)
-			return list[:i], &v, list[i+1:]
+		if segment, ok := segment.(Variable); ok {
+			return list[:i], &segment, list[i+1:]
 		}
 	}
 	return list, nil, nil

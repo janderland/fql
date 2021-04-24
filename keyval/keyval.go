@@ -62,15 +62,15 @@ type ValueType string
 
 const (
 	AnyType    ValueType = ""
-	IntType              = "int"
-	UintType             = "uint"
-	BoolType             = "bool"
-	FloatType            = "float"
-	BigIntType           = "bigint"
-	StringType           = "string"
-	BytesType            = "bytes"
-	UUIDType             = "uuid"
-	TupleType            = "tuple"
+	IntType    ValueType = "int"
+	UintType   ValueType = "uint"
+	BoolType   ValueType = "bool"
+	FloatType  ValueType = "float"
+	BigIntType ValueType = "bigint"
+	StringType ValueType = "string"
+	BytesType  ValueType = "bytes"
+	UUIDType   ValueType = "uuid"
+	TupleType  ValueType = "tuple"
 )
 
 func AllTypes() []ValueType {
