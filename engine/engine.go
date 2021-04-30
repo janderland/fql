@@ -10,7 +10,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Engine struct{ fdb.Transactor }
+type Engine struct{ db fdb.Transactor }
+
+func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
+	return e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+		return f(Engine{tr})
+	})
+}
 
 func (e *Engine) Set(query keyval.KeyValue) error {
 	kind, err := query.Kind()
@@ -30,7 +36,7 @@ func (e *Engine) Set(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to pack value")
 	}
 
-	_, err = e.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		dir, err := directory.CreateOrOpen(tr, path, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
@@ -55,7 +61,7 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	_, err = e.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		dir, err := directory.CreateOrOpen(tr, path, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
@@ -80,7 +86,7 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	bytes, err := e.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	bytes, err := e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		dir, err := directory.CreateOrOpen(tr, path, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
@@ -91,7 +97,7 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 		return nil, errors.Wrap(err, "transaction failed")
 	}
 
-	for _, typ := range query.Value.(keyval.Variable).Type {
+	for _, typ := range query.Value.(keyval.Variable) {
 		value, err := keyval.UnpackValue(typ, bytes.([]byte))
 		if err != nil {
 			continue
@@ -132,7 +138,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan KeyV
 			return
 		}
 
-		_, err = e.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			r := reader.New(ctx, tr)
 			kvCh, errCh := r.Read(query)
 
