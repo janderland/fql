@@ -204,6 +204,9 @@ func StringData(in interface{}) string {
 	case string:
 		return StringString(in)
 
+	case tuple.UUID:
+		return StringUUID(in)
+
 	default:
 		var str strings.Builder
 		str.WriteRune(VarStart)
@@ -309,6 +312,20 @@ func ParseUUID(str string) (tuple.UUID, error) {
 		return tuple.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
 	}
 	return uuid, nil
+}
+
+func StringUUID(in tuple.UUID) string {
+	var out strings.Builder
+	out.WriteString(hex.EncodeToString(in[:4]))
+	out.WriteRune('-')
+	out.WriteString(hex.EncodeToString(in[4:6]))
+	out.WriteRune('-')
+	out.WriteString(hex.EncodeToString(in[6:8]))
+	out.WriteRune('-')
+	out.WriteString(hex.EncodeToString(in[8:10]))
+	out.WriteRune('-')
+	out.WriteString(hex.EncodeToString(in[10:]))
+	return out.String()
 }
 
 func ParseNumber(str string) (interface{}, error) {
