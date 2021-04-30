@@ -252,7 +252,7 @@ func (r *Reader) doUnpackValues(query keyval.Value, in chan keyval.KeyValue, out
 			log := log.With().Interface("kv", kv).Logger()
 			log.Debug().Msg("received key-value")
 
-			for _, typ := range variable.Type {
+			for _, typ := range variable {
 				outVal, err := keyval.UnpackValue(typ, kv.Value.([]byte))
 				if err != nil {
 					continue

@@ -311,7 +311,7 @@ func TestReader_unpackValues(t *testing.T) {
 		},
 		{
 			name:  "variable",
-			query: keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.BigIntType, keyval.TupleType}},
+			query: keyval.Variable{keyval.IntType, keyval.BigIntType, keyval.TupleType},
 			initial: []keyval.KeyValue{
 				{Value: packWithPanic("hello world")},
 				{Value: packWithPanic(55)},
