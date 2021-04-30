@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/hex"
+	"fmt"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"strconv"
 	"strings"
@@ -142,20 +143,30 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 	return tuple, nil
 }
 
+const (
+	Nil = "nil"
+	True = "true"
+	False = "false"
+
+	VarStart = '{'
+	VarSep = '|'
+	VarEnd = '}'
+)
+
 func ParseData(str string) (interface{}, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
-	if str == "nil" {
+	if str == Nil {
 		return nil, nil
 	}
-	if str == "true" {
+	if str == True {
 		return true, nil
 	}
-	if str == "false" {
+	if str == False {
 		return false, nil
 	}
-	if str[0] == '{' {
+	if str[0] == VarStart {
 		data, err := ParseVariable(str)
 		return data, errors.Wrap(err, "failed to parse as variable")
 	}
@@ -169,6 +180,31 @@ func ParseData(str string) (interface{}, error) {
 	}
 	data, err := ParseNumber(str)
 	return data, errors.Wrap(err, "failed to parse as number")
+}
+
+func StringData(in interface{}) string {
+	switch in := in.(type) {
+	case nil:
+		return Nil
+
+	case bool:
+		if in {
+			return True
+		} else {
+			return False
+		}
+
+	case keyval.Variable:
+		return StringVariable(in)
+
+	default:
+		var str strings.Builder
+		str.WriteRune(VarStart)
+		str.WriteString("invalid:")
+		str.WriteString(fmt.Sprintf("%T(%v) ", in, in))
+		str.WriteRune(VarEnd)
+		return str.String()
+	}
 }
 
 func ParseVariable(str string) (keyval.Variable, error) {
@@ -185,7 +221,7 @@ func ParseVariable(str string) (keyval.Variable, error) {
 	var variable keyval.Variable
 	if typeStr := str[1 : len(str)-1]; len(typeStr) > 0 {
 	loop:
-		for i, typeStr := range strings.Split(typeStr, "|") {
+		for i, typeStr := range strings.Split(typeStr, string(VarSep)) {
 			for _, v := range keyval.AllTypes() {
 				if string(v) == typeStr {
 					variable = append(variable, keyval.ValueType(typeStr))
@@ -196,6 +232,19 @@ func ParseVariable(str string) (keyval.Variable, error) {
 		}
 	}
 	return variable, nil
+}
+
+func StringVariable(in keyval.Variable) string {
+	var str strings.Builder
+	str.WriteRune(VarStart)
+	for i, typ := range in {
+		str.WriteString(string(typ))
+		if i != len(in)-1 {
+			str.WriteRune(VarSep)
+		}
+	}
+	str.WriteRune(VarEnd)
+	return str.String()
 }
 
 func ParseString(str string) (string, error) {

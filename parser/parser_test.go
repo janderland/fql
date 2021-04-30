@@ -1,8 +1,9 @@
 package parser
 
 import (
-	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"testing"
+
+	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 
 	"github.com/janderland/fdbq/keyval"
 	"github.com/stretchr/testify/assert"
@@ -241,33 +242,44 @@ func TestParseData(t *testing.T) {
 }
 
 func TestParseVariable(t *testing.T) {
-	v, err := ParseVariable("")
-	assert.Error(t, err)
-	assert.Nil(t, v)
+	tests := []struct {
+		name string
+		str  string
+		ast  keyval.Variable
+	}{
+		{name: "empty", str: "{}", ast: nil},
+		{name: "single", str: "{int}", ast: keyval.Variable{keyval.IntType}},
+		{name: "multiple", str: "{int|float|tuple}", ast: keyval.Variable{keyval.IntType, keyval.FloatType, keyval.TupleType}},
+	}
 
-	v, err = ParseVariable("{")
-	assert.Error(t, err)
-	assert.Nil(t, v)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseVariable(test.str)
+			assert.Equal(t, test.ast, ast)
+			assert.NoError(t, err)
 
-	v, err = ParseVariable("}")
-	assert.Error(t, err)
-	assert.Nil(t, v)
+			str := StringVariable(test.ast)
+			assert.Equal(t, test.str, str)
+		})
+	}
 
-	v, err = ParseVariable("{}")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Variable(nil), v)
+	fails := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "unclosed", str: "{"},
+		{name: "unopened", str: "}"},
+		{name: "invalid", str: "{invalid}"},
+	}
 
-	v, err = ParseVariable("{int}")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Variable{keyval.IntType}, v)
-
-	v, err = ParseVariable("{int|float|tuple}")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Variable{keyval.IntType, keyval.FloatType, keyval.TupleType}, v)
-
-	v, err = ParseVariable("{invalid}")
-	assert.Error(t, err)
-	assert.Nil(t, v)
+	for _, test := range fails {
+		t.Run(test.name, func(t *testing.T) {
+			v, err := ParseVariable(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, v)
+		})
+	}
 }
 
 func TestParseString(t *testing.T) {
