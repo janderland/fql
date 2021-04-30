@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/hex"
+	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"strconv"
 	"strings"
 
@@ -205,9 +206,9 @@ func ParseString(str string) (string, error) {
 	return str[1 : len(str)-1], nil
 }
 
-func ParseUUID(str string) (keyval.UUID, error) {
+func ParseUUID(str string) (tuple.UUID, error) {
 	if len(str) == 0 {
-		return keyval.UUID{}, errors.New("input is empty")
+		return tuple.UUID{}, errors.New("input is empty")
 	}
 
 	groups := strings.Split(str, "-")
@@ -218,25 +219,25 @@ func ParseUUID(str string) (keyval.UUID, error) {
 		return nil
 	}
 	if err := checkLen(0, 8); err != nil {
-		return keyval.UUID{}, err
+		return tuple.UUID{}, err
 	}
 	if err := checkLen(1, 4); err != nil {
-		return keyval.UUID{}, err
+		return tuple.UUID{}, err
 	}
 	if err := checkLen(2, 4); err != nil {
-		return keyval.UUID{}, err
+		return tuple.UUID{}, err
 	}
 	if err := checkLen(3, 4); err != nil {
-		return keyval.UUID{}, err
+		return tuple.UUID{}, err
 	}
 	if err := checkLen(4, 12); err != nil {
-		return keyval.UUID{}, err
+		return tuple.UUID{}, err
 	}
 
-	var uuid keyval.UUID
+	var uuid tuple.UUID
 	_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
 	if err != nil {
-		return keyval.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
+		return tuple.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
 	}
 	return uuid, nil
 }

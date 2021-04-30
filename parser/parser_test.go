@@ -1,6 +1,7 @@
 package parser
 
 import (
+	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"testing"
 
 	"github.com/janderland/fdbq/keyval"
@@ -182,7 +183,7 @@ func TestParseTuple(t *testing.T) {
 
 	tuple, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
 	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{keyval.Tuple{keyval.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
+	assert.Equal(t, keyval.Tuple{keyval.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
 
 	tuple, err = ParseTuple("(\"hello\",, -3)")
 	assert.Error(t, err)
@@ -220,7 +221,7 @@ func TestParseData(t *testing.T) {
 
 	data, err = ParseData("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.NoError(t, err)
-	assert.Equal(t, keyval.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
+	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
 
 	data, err = ParseData("123")
 	assert.NoError(t, err)
@@ -304,35 +305,35 @@ func TestParseString(t *testing.T) {
 func TestParseUUID(t *testing.T) {
 	id, err := ParseUUID("")
 	assert.Error(t, err)
-	assert.Equal(t, keyval.UUID{}, id)
+	assert.Equal(t, tup.UUID{}, id)
 
 	id, err = ParseUUID("cefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, keyval.UUID{}, id)
+	assert.Equal(t, tup.UUID{}, id)
 
 	id, err = ParseUUID("bcefd2ec-df5-43b6-8c79-81b70b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, keyval.UUID{}, id)
+	assert.Equal(t, tup.UUID{}, id)
 
 	id, err = ParseUUID("bcefd2ec-4df5-3b6-8c79-81b70b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, keyval.UUID{}, id)
+	assert.Equal(t, tup.UUID{}, id)
 
 	id, err = ParseUUID("bcefd2ec-4df5-43b6-c79-81b70b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, keyval.UUID{}, id)
+	assert.Equal(t, tup.UUID{}, id)
 
 	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-1b70b886af9")
 	assert.Error(t, err)
-	assert.Equal(t, keyval.UUID{}, id)
+	assert.Equal(t, tup.UUID{}, id)
 
 	id, err = ParseUUID("bcefdyec-4df5-43%6-8c79-81b70bg86af9")
 	assert.Error(t, err)
-	assert.Equal(t, keyval.UUID{}, id)
+	assert.Equal(t, tup.UUID{}, id)
 
 	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
 	assert.NoError(t, err)
-	assert.Equal(t, keyval.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
+	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
 }
 
 func TestParseNumber(t *testing.T) {
