@@ -35,10 +35,8 @@ type (
 	Value interface{}
 
 	// A Variable is used as a placeholder for any valid
-	// values within the contexts that allow it.
-	Variable struct {
-		Type []ValueType
-	}
+	// values within a type constraint.
+	Variable []ValueType
 
 	// A MaybeMore is a special kind of Tuple element. It
 	// may only appear as the last element of the Tuple.

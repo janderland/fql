@@ -137,7 +137,7 @@ func TestParseDirectory(t *testing.T) {
 
 	dir, err = ParseDirectory("/hello/{int}/thing")
 	assert.NoError(t, err)
-	assert.Equal(t, keyval.Directory{"hello", keyval.Variable{Type: []keyval.ValueType{keyval.IntType}}, "thing"}, dir)
+	assert.Equal(t, keyval.Directory{"hello", keyval.Variable{keyval.IntType}, "thing"}, dir)
 
 	dir, err = ParseDirectory("/hello/{/thing")
 	assert.Error(t, err)
@@ -213,7 +213,7 @@ func TestParseData(t *testing.T) {
 
 	data, err = ParseData("{int}")
 	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Variable{Type: []keyval.ValueType{keyval.IntType}}, data)
+	assert.Equal(t, keyval.Variable{keyval.IntType}, data)
 
 	data, err = ParseData("\"hello world\"")
 	assert.NoError(t, err)
@@ -255,33 +255,19 @@ func TestParseVariable(t *testing.T) {
 
 	v, err = ParseVariable("{}")
 	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Variable{}, v)
+	assert.Equal(t, keyval.Variable(nil), v)
 
-	v, err = ParseVariable("{int|float}")
+	v, err = ParseVariable("{int}")
 	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Variable{Type: []keyval.ValueType{keyval.IntType, keyval.FloatType}}, v)
+	assert.Equal(t, keyval.Variable{keyval.IntType}, v)
+
+	v, err = ParseVariable("{int|float|tuple}")
+	assert.NoError(t, err)
+	assert.Equal(t, keyval.Variable{keyval.IntType, keyval.FloatType, keyval.TupleType}, v)
 
 	v, err = ParseVariable("{invalid}")
 	assert.Error(t, err)
 	assert.Nil(t, v)
-}
-
-func TestParseVariableType(t *testing.T) {
-	types, err := ParseVariableType("")
-	assert.NoError(t, err)
-	assert.Equal(t, []keyval.ValueType{keyval.AnyType}, types)
-
-	types, err = ParseVariableType("int")
-	assert.NoError(t, err)
-	assert.Equal(t, []keyval.ValueType{keyval.IntType}, types)
-
-	types, err = ParseVariableType("int|float|tuple")
-	assert.NoError(t, err)
-	assert.Equal(t, []keyval.ValueType{keyval.IntType, keyval.FloatType, keyval.TupleType}, types)
-
-	types, err = ParseVariableType("invalid")
-	assert.Error(t, err)
-	assert.Nil(t, types)
 }
 
 func TestParseString(t *testing.T) {
