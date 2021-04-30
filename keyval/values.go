@@ -60,7 +60,7 @@ func PackValue(val Value) ([]byte, error) {
 		return val, nil
 
 	// UUID
-	case UUID:
+	case tuple.UUID:
 		uuid := val
 		return uuid[:], nil
 
@@ -114,7 +114,7 @@ func UnpackValue(typ ValueType, val []byte) (Value, error) {
 		return val, nil
 
 	case UUIDType:
-		var uuid UUID
+		var uuid tuple.UUID
 		if n := copy(uuid[:], val); n != 16 {
 			return nil, errors.New("not 16 bytes")
 		}

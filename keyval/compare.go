@@ -136,7 +136,7 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 				}
 
 			// UUID
-			case UUID:
+			case tuple.UUID:
 				if iter.UUID() != e {
 					index = []int{i}
 					return nil

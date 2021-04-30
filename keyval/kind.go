@@ -168,7 +168,7 @@ func tupSubKind(tup Tuple) (subKind, error) {
 			continue
 
 		// UUID
-		case UUID:
+		case tuple.UUID:
 			continue
 
 		// Tuple
@@ -234,7 +234,7 @@ func valSubKind(val Value) (subKind, error) {
 		return constantSubKind, nil
 
 	// UUID
-	case UUID:
+	case tuple.UUID:
 		return constantSubKind, nil
 
 	// Tuple

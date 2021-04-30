@@ -2,8 +2,6 @@
 // and functions for inspecting the key values.
 package keyval
 
-import "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
 type (
 	// A KeyValue is a query or result depending on the
 	// context. If the KeyValue is a result, it will not
@@ -33,12 +31,8 @@ type (
 
 	// A Value represents an FDB value stored alongside
 	// a key. This type may contain nil, bool, string,
-	// uint64, float64, UUID, Tuple, Variable, or Clear.
+	// uint64, float64, tuple.UUID, Tuple, Variable, or Clear.
 	Value interface{}
-
-	// A UUID is equivalent to a tuple.UUID.
-	// TODO: Remove this alias.
-	UUID = tuple.UUID
 
 	// A Variable is used as a placeholder for any valid
 	// values within the contexts that allow it.

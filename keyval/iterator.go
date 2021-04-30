@@ -222,9 +222,9 @@ func (i *TupleIterator) Bytes() (out []byte) {
 	})
 }
 
-func (i *TupleIterator) UUID() (out UUID) {
+func (i *TupleIterator) UUID() (out tuple.UUID) {
 	index := i.getIndex()
-	if val, ok := i.t[index].(UUID); ok {
+	if val, ok := i.t[index].(tuple.UUID); ok {
 		return val
 	}
 	panic(ConversionError{
