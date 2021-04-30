@@ -298,6 +298,9 @@ func TestParseString(t *testing.T) {
 	str, err = ParseString("\"hello world\"")
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", str)
+
+	str = StringString("hello world")
+	assert.Equal(t, "\"hello world\"", str)
 }
 
 func TestParseUUID(t *testing.T) {

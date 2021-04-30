@@ -3,9 +3,10 @@ package parser
 import (
 	"encoding/hex"
 	"fmt"
-	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"strconv"
 	"strings"
+
+	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 
 	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
@@ -144,13 +145,16 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 }
 
 const (
-	Nil = "nil"
-	True = "true"
+	Nil   = "nil"
+	True  = "true"
 	False = "false"
 
 	VarStart = '{'
-	VarSep = '|'
-	VarEnd = '}'
+	VarEnd   = '}'
+	VarSep   = '|'
+
+	StrStart = '"'
+	StrEnd   = '"'
 )
 
 func ParseData(str string) (interface{}, error) {
@@ -196,6 +200,9 @@ func StringData(in interface{}) string {
 
 	case keyval.Variable:
 		return StringVariable(in)
+
+	case string:
+		return StringString(in)
 
 	default:
 		var str strings.Builder
@@ -251,13 +258,21 @@ func ParseString(str string) (string, error) {
 	if len(str) == 0 {
 		return "", errors.New("input is empty")
 	}
-	if str[0] != '"' {
+	if str[0] != StrStart {
 		return "", errors.New("strings must start with double quotes")
 	}
-	if str[len(str)-1] != '"' {
+	if str[len(str)-1] != StrEnd {
 		return "", errors.New("strings must end with double quotes")
 	}
 	return str[1 : len(str)-1], nil
+}
+
+func StringString(in string) string {
+	var out strings.Builder
+	out.WriteRune(StrStart)
+	out.WriteString(in)
+	out.WriteRune(StrEnd)
+	return out.String()
 }
 
 func ParseUUID(str string) (tuple.UUID, error) {
