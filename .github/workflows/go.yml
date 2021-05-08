@@ -6,6 +6,7 @@ on:
     
 env:
   FDB_LIB_URL: https://www.foundationdb.org/downloads/6.3.12/ubuntu/installers/foundationdb-clients_6.3.12-1_amd64.deb
+  FDB_CLUSTER_FILE: ~/fdb.cluster
 
 jobs:
   build:
@@ -31,8 +32,7 @@ jobs:
 
     - name: Setup cluster file & configure DB
       run: |
-        sudo mkdir -p /etc/foundationdb
-        sudo echo "docker:docker@127.0.0.1:4500" > /etc/foundationdb/fdb.cluster
+        sudo echo "docker:docker@127.0.0.1:4500" > $FDB_CLUSTER_FILE
         fdbcli --exec "configure new single memory"
 
     - name: Build Go
