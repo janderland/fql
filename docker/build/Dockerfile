@@ -1,0 +1,12 @@
+FROM centos:7
+
+ARG FDB_LIB_URL="https://www.foundationdb.org/downloads/6.3.12/rhel7/installers/foundationdb-clients-6.3.12-1.el7.x86_64.rpm"
+RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
+    rpm -i ./fdb.rpm              &&\
+    rm ./fdb.rpm
+
+ARG GO_URL="https://golang.org/dl/go1.16.4.linux-amd64.tar.gz"
+RUN curl -Lo go.tar.gz $GO_URL         &&\
+    tar -C /usr/local -xzf ./go.tar.gz &&\
+    rm ./go.tar.gz
+ENV PATH="/usr/local/go/bin:${PATH}"
