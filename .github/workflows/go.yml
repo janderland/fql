@@ -16,14 +16,26 @@ jobs:
         ports:
           - 4500:4500
     steps:
-    - uses: actions/checkout@v2  
-    - uses: actions/setup-go@v2
+    - name: checkout source code
+      uses: actions/checkout@v2  
+
+    - name: setup go
+      uses: actions/setup-go@v2
       with:
         go-version: 1.16
-    - run: |
+
+    - name: install fdb client library
+      run: |
         wget -qO fdb.deb $FDB_LIB_URL
         sudo dpkg -i ./fdb.deb
+
+    - name: setup cluster file & configure db
+      run: |
         sudo echo "docker:docker@127.0.0.1:4500" > /etc/foundationdb/fdb.cluster
         fdbcli --exec "configure new single memory"
-    - run: go build -v ./...
-    - run: go test -v ./...
+
+    - name: go build
+      run: go build -v ./...
+
+    - name: go test
+      run: go test -v ./...
