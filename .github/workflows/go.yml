@@ -13,7 +13,8 @@ jobs:
     services:
       fdb:
         image: foundationdb/foundationdb:6.3.12
-        ports: 4500:4500
+        ports:
+          - 4500:4500
     steps:
     - uses: actions/checkout@v2  
     - uses: actions/setup-go@v2
