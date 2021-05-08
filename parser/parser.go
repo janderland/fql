@@ -121,7 +121,7 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 		return keyval.Tuple{}, nil
 	}
 
-	var tuple keyval.Tuple
+	var tup keyval.Tuple
 	for i, elementStr := range strings.Split(str, ",") {
 		var element interface{}
 		var err error
@@ -139,9 +139,9 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse %s element - %s", ordinal(i+1), elementStr)
 		}
-		tuple = append(tuple, element)
+		tup = append(tup, element)
 	}
-	return tuple, nil
+	return tup, nil
 }
 
 const (
@@ -155,6 +155,8 @@ const (
 
 	StrStart = '"'
 	StrEnd   = '"'
+
+	Invalid = '!'
 )
 
 func ParseData(str string) (interface{}, error) {
@@ -199,13 +201,13 @@ func StringData(in interface{}) string {
 		}
 
 	case keyval.Variable:
-		return StringVariable(in)
+		return FormatVariable(in)
 
 	case string:
-		return StringString(in)
+		return FormatString(in)
 
 	case tuple.UUID:
-		return StringUUID(in)
+		return FormatUUID(in)
 
 	default:
 		var str strings.Builder
@@ -244,7 +246,7 @@ func ParseVariable(str string) (keyval.Variable, error) {
 	return variable, nil
 }
 
-func StringVariable(in keyval.Variable) string {
+func FormatVariable(in keyval.Variable) string {
 	var str strings.Builder
 	str.WriteRune(VarStart)
 	for i, typ := range in {
@@ -270,7 +272,7 @@ func ParseString(str string) (string, error) {
 	return str[1 : len(str)-1], nil
 }
 
-func StringString(in string) string {
+func FormatString(in string) string {
 	var out strings.Builder
 	out.WriteRune(StrStart)
 	out.WriteString(in)
@@ -314,7 +316,7 @@ func ParseUUID(str string) (tuple.UUID, error) {
 	return uuid, nil
 }
 
-func StringUUID(in tuple.UUID) string {
+func FormatUUID(in tuple.UUID) string {
 	var out strings.Builder
 	out.WriteString(hex.EncodeToString(in[:4]))
 	out.WriteRune('-')
@@ -342,6 +344,19 @@ func ParseNumber(str string) (interface{}, error) {
 		return f, nil
 	}
 	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
+}
+
+func FormatNumber(in interface{}) (string, error) {
+	switch in := in.(type) {
+	case int64:
+		return strconv.FormatInt(in, 10), nil
+	case uint64:
+		return strconv.FormatUint(in, 10), nil
+	case float64:
+		return strconv.FormatFloat(in, 'g', 10, 64), nil
+	default:
+		return "", errors.Errorf("unexpected input %v (%T)", in, in)
+	}
 }
 
 func ParseValue(str string) (keyval.Value, error) {

@@ -258,7 +258,7 @@ func TestParseVariable(t *testing.T) {
 			assert.Equal(t, test.ast, ast)
 			assert.NoError(t, err)
 
-			str := StringVariable(test.ast)
+			str := FormatVariable(test.ast)
 			assert.Equal(t, test.str, str)
 		})
 	}
@@ -299,7 +299,7 @@ func TestParseString(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, "hello world", str)
 
-	str = StringString("hello world")
+	str = FormatString("hello world")
 	assert.Equal(t, "\"hello world\"", str)
 }
 
@@ -336,7 +336,7 @@ func TestParseUUID(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
 
-	str := StringUUID(tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9})
+	str := FormatUUID(tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9})
 	assert.Equal(t, "bcefd2ec-4df5-43b6-8c79-81b70b886af9", str)
 }
 
