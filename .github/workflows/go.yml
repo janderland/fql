@@ -23,7 +23,7 @@ jobs:
     - run: |
         wget -qO fdb.deb $FDB_LIB_URL
         sudo dpkg -i ./fdb.deb
-        echo "docker:docker@127.0.0.1:4500" > ./fdb.cluster
+        sudo echo "docker:docker@127.0.0.1:4500" > /etc/foundationdb/fdb.cluster
         fdbcli --exec "configure new single memory"
     - run: go build -v ./...
     - run: go test -v ./...
