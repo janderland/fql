@@ -17,6 +17,6 @@ jobs:
         go-version: 1.16
     - run: |
         wget -O fdb.deb $FDB_URL
-        dpkg -i ./fdb.deb
+        sudo dpkg -i ./fdb.deb
     - run: go build -v ./...
     - run: go test -v ./...
