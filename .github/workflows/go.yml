@@ -19,7 +19,7 @@ jobs:
 
     - name: Setup DB
       run: |
-        FDB_IP=$(getent hosts fdb | awk \'{print $1}\')
+        FDB_IP=$(getent hosts fdb | awk '{print $1}')
         echo "docker:docker@${FDB_IP}:4500" > /etc/foundationdb/fdb.cluster
         fdbcli --exec "configure new single memory"
 
