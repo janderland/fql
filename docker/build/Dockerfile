@@ -5,6 +5,8 @@ RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
     rpm -i ./fdb.rpm              &&\
     rm ./fdb.rpm
 
+RUN yum -y install gcc-c++
+
 ARG GO_URL="https://golang.org/dl/go1.16.4.linux-amd64.tar.gz"
 RUN curl -Lo go.tar.gz $GO_URL         &&\
     tar -C /usr/local -xzf ./go.tar.gz &&\
