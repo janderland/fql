@@ -31,6 +31,7 @@ jobs:
 
     - name: Setup cluster file & configure DB
       run: |
+        sudo mkdir -p /etc/foundationdb
         sudo echo "docker:docker@127.0.0.1:4500" > /etc/foundationdb/fdb.cluster
         fdbcli --exec "configure new single memory"
 
