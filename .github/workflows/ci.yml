@@ -11,22 +11,23 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Login
-        uses: docker/login-action@v1
+      - name: Cache
+        uses: actions/cache@v2
         with:
-          username: ${{ secrets.DOCKERHUB_USERNAME }}
-          password: ${{ secrets.DOCKERHUB_TOKEN }}
+          path: /tmp/.buildx-cache
+          key: buildx-${{ github.sha }}
+          restore-keys: buildx-
 
-      - name: Build and push
+      - name: Build
         uses: docker/build-push-action@v2
         with:
           context: ./docker/build
-          tags: janderland/fdbq-build:latest
-          push: true
+          tags: janderland/fdbq-build:${{ github.sha }}
 
   build-fdbq:
+    needs:
     runs-on: ubuntu-latest
-    container: janderland/fdbq-build:latest
+    container: janderland/fdbq-build:${{ github.sha }}
     services:
       fdb:
         image: foundationdb/foundationdb:6.3.12
