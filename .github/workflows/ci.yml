@@ -40,13 +40,6 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2  
 
-    - name: Login
-      uses: docker/login-action@v1
-      with:
-        registry: docker.pkg.github.com
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GITHUB_TOKEN }}
-
     - name: Cache
       uses: actions/cache@v2
       with:
