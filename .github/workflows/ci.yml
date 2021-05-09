@@ -17,6 +17,13 @@ jobs:
     - name: Checkout source code
       uses: actions/checkout@v2  
 
+    - name: Cache Go modules
+      uses: actions/cache@v2
+      with:
+        path: ~/go/pkg/mod
+        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
+        restore-keys: ${{ runner.os }}-go-
+
     - name: Setup DB
       run: |
         FDB_IP=$(getent hosts fdb | awk '{print $1}')
