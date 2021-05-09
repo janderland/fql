@@ -27,6 +27,8 @@ jobs:
 
   build-fdbq:
     needs: build-environment
+    permissions:
+      packages: read
     runs-on: ubuntu-latest
     container: docker.pkg.github.com/janderland/fdbq/build:${{ github.sha }}
     services:
