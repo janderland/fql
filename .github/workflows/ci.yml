@@ -4,13 +4,37 @@ on:
   pull_request:
     branches: [ main ]
 
+env:
+  HOST_MACHINE: ubuntu-latest
+  BUILD_IMAGE_TAG: janderland/fdbq-build:latest
+  FDB_IMAGE_TAG: foundationdb/foundationdb:6.3.12
+
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    container: janderland/fdbq-build:latest
+  build-environment:
+    runs-on: ${{ env.HOST_MACHINE }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+
+      - name: Login
+        uses: docker/login-action@v1
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v2
+        with:
+          context: ./docker/build
+          tags: ${{ env.BUILD_IMAGE_TAG }}
+          push: true
+
+  build-fdbq:
+    runs-on: ${{ env.HOST_MACHINE }}
+    container: ${{ env.BUILD_IMAGE_TAG }}
     services:
       fdb:
-        image: foundationdb/foundationdb:6.3.12
+        image: ${{ env.FDB_IMAGE_TAG }}
         ports:
           - 4500:4500
     steps:
@@ -21,8 +45,8 @@ jobs:
       uses: actions/cache@v2
       with:
         path: ~/go/pkg/mod
-        key: ${{ runner.os }}-go-${{ hashFiles('**/go.sum') }}
-        restore-keys: ${{ runner.os }}-go-
+        key: go-${{ hashFiles('**/go.sum') }}
+        restore-keys: go-
 
     - name: Setup DB
       run: |
