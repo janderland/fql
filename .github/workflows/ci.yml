@@ -11,33 +11,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v2
 
-      - name: Cache
-        uses: actions/cache@v2
-        with:
-          path: /tmp/.buildx-cache
-          key: buildx-${{ github.sha }}
-          restore-keys: buildx-
-
       - name: Build
         uses: docker/build-push-action@v2
         with:
           context: ./docker/build
-          tags: janderland/fdbq-build:${{ github.sha }}
-          cache-from: type=local,src=/tmp/.buildx-cache
-          cache-to: type=local,dest=/tmp/.buildx-cache-new
-
-      # Temp fix
-      # https://github.com/docker/build-push-action/issues/252
-      # https://github.com/moby/buildkit/issues/1896
-      - name: Fix
-        run: |
-          rm -rf /tmp/.buildx-cache
-          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
+          tags: ghcr.io/fdbq-build:${{ github.sha }}
+          push: true
 
   build-fdbq:
     needs: build-environment
     runs-on: ubuntu-latest
-    container: janderland/fdbq-build:${{ github.sha }}
+    container: ghcr.io/fdbq-build:${{ github.sha }}
     services:
       fdb:
         image: foundationdb/foundationdb:6.3.12
