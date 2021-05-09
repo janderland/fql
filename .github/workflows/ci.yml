@@ -15,13 +15,13 @@ jobs:
         uses: docker/build-push-action@v2
         with:
           context: ./docker/build
-          tags: ghcr.io/fdbq-build:${{ github.sha }}
+          tags: ghcr.io/janderland/fdbq-build:${{ github.sha }}
           push: true
 
   build-fdbq:
     needs: build-environment
     runs-on: ubuntu-latest
-    container: ghcr.io/fdbq-build:${{ github.sha }}
+    container: ghcr.io/janderland/fdbq-build:${{ github.sha }}
     services:
       fdb:
         image: foundationdb/foundationdb:6.3.12
