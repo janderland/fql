@@ -23,6 +23,16 @@ jobs:
         with:
           context: ./docker/build
           tags: janderland/fdbq-build:${{ github.sha }}
+          cache-from: type=local,src=/tmp/.buildx-cache
+          cache-to: type=local,dest=/tmp/.buildx-cache-new
+
+      # Temp fix
+      # https://github.com/docker/build-push-action/issues/252
+      # https://github.com/moby/buildkit/issues/1896
+      - name: Fix
+        run: |
+          rm -rf /tmp/.buildx-cache
+          mv /tmp/.buildx-cache-new /tmp/.buildx-cache
 
   build-fdbq:
     needs: build-environment
@@ -34,24 +44,24 @@ jobs:
         ports:
           - 4500:4500
     steps:
-    - name: Checkout source code
+    - name: Checkout
       uses: actions/checkout@v2  
 
-    - name: Cache Go modules
+    - name: Cache
       uses: actions/cache@v2
       with:
         path: ~/go/pkg/mod
         key: go-${{ hashFiles('**/go.sum') }}
         restore-keys: go-
 
-    - name: Setup DB
+    - name: DB
       run: |
         FDB_IP=$(getent hosts fdb | awk '{print $1}')
         echo "docker:docker@${FDB_IP}:4500" > /etc/foundationdb/fdb.cluster
         fdbcli --exec "configure new single memory"
 
-    - name: Build Go
+    - name: Build
       run: go build -v ./...
 
-    - name: Test Go
+    - name: Test
       run: go test -v ./...
