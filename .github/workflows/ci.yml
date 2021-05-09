@@ -10,27 +10,27 @@ jobs:
     permissions:
       packages: write
     steps:
-      - name: Checkout
-        uses: actions/checkout@v2
+    - name: Checkout
+      uses: actions/checkout@v2
 
-      - name: Login
-        uses: docker/login-action@v1
-        with:
-          registry: ghcr.io
-          username: ${{ github.repository_owner }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+    - name: Login
+      uses: docker/login-action@v1
+      with:
+        registry: ghcr.io
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Build
-        uses: docker/build-push-action@v2
-        with:
-          context: ./docker/build
-          tags: ghcr.io/janderland/fdbq-build:${{ github.sha }}
-          push: true
+    - name: Build
+      uses: docker/build-push-action@v2
+      with:
+        context: ./docker/build
+        tags: ghcr.io/janderland/fdbq/build:${{ github.sha }}
+        push: true
 
   build-fdbq:
     needs: build-environment
     runs-on: ubuntu-latest
-    container: ghcr.io/janderland/fdbq-build:${{ github.sha }}
+    container: ghcr.io/janderland/fdbq/build:${{ github.sha }}
     services:
       fdb:
         image: foundationdb/foundationdb:6.3.12
