@@ -25,7 +25,7 @@ jobs:
           tags: janderland/fdbq-build:${{ github.sha }}
 
   build-fdbq:
-    needs:
+    needs: build-environment
     runs-on: ubuntu-latest
     container: janderland/fdbq-build:${{ github.sha }}
     services:
