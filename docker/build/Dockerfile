@@ -11,7 +11,8 @@ ARG GO_URL="https://golang.org/dl/go1.16.4.linux-amd64.tar.gz"
 RUN curl -Lo go.tar.gz $GO_URL         &&\
     tar -C /usr/local -xzf ./go.tar.gz &&\
     rm ./go.tar.gz
-ENV PATH="/usr/local/go/bin:${PATH}"
+ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
+
 
 ARG GOLANGCI_LINT_URL="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 RUN curl -Lf $GOLANGCI_LINT_URL | sh -s -- -b $(go env GOPATH)/bin v1.39.0
