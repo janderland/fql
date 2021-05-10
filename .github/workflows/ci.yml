@@ -5,32 +5,10 @@ on:
     branches: [ main ]
 
 jobs:
-  build-environment:
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-    steps:
-    - name: Checkout
-      uses: actions/checkout@v2
-
-    - name: Login
-      uses: docker/login-action@v1
-      with:
-        registry: ghcr.io
-        username: ${{ github.repository_owner }}
-        password: ${{ secrets.GHCR_TOKEN }}
-
-    - name: Build
-      uses: docker/build-push-action@v2
-      with:
-        context: ./docker/build
-        tags: ghcr.io/janderland/fdbq-build:${{ github.sha }}
-        push: true
-
-  build-fdbq:
+  build:
     needs: build-environment
     runs-on: ubuntu-latest
-    container: ghcr.io/janderland/fdbq-build:${{ github.sha }}
+    container: ghcr.io/janderland/fdbq-build:latest
     services:
       fdb:
         image: foundationdb/foundationdb:6.3.12
@@ -52,6 +30,9 @@ jobs:
         FDB_IP=$(getent hosts fdb | awk '{print $1}')
         echo "docker:docker@${FDB_IP}:4500" > /etc/foundationdb/fdb.cluster
         fdbcli --exec "configure new single memory"
+
+    - name: Lint
+      run: golangci-lint run
 
     - name: Build
       run: go build -v ./...
