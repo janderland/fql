@@ -7,7 +7,7 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: ghcr.io/janderland/fdbq-build:latest
+    container: janderland/fdbq-build:latest
     services:
       fdb:
         image: foundationdb/foundationdb:6.3.12
