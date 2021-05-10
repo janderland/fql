@@ -6,7 +6,6 @@ on:
 
 jobs:
   build:
-    needs: build-environment
     runs-on: ubuntu-latest
     container: ghcr.io/janderland/fdbq-build:latest
     services:
