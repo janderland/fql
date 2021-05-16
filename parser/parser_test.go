@@ -20,13 +20,15 @@ func TestParseKeyValue(t *testing.T) {
 	}
 
 	for _, test := range roundTrips {
-		ast, err := ParseKeyValue(test.str)
-		assert.NoError(t, err)
-		assert.Equal(t, test.ast, *ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseKeyValue(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, *ast)
 
-		str, err := FormatKeyValue(test.ast)
-		assert.NoError(t, err)
-		assert.Equal(t, test.str, str)
+			str, err := FormatKeyValue(test.ast)
+			assert.NoError(t, err)
+			assert.Equal(t, test.str, str)
+		})
 	}
 
 	parseFailures := []struct {
@@ -41,9 +43,11 @@ func TestParseKeyValue(t *testing.T) {
 	}
 
 	for _, test := range parseFailures {
-		ast, err := ParseKeyValue(test.str)
-		assert.Error(t, err)
-		assert.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseKeyValue(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
 	}
 }
 
@@ -122,9 +126,11 @@ func TestParseValue(t *testing.T) {
 	}
 
 	for _, test := range parseFailures {
-		ast, err := ParseValue(test.str)
-		assert.Error(t, err)
-		assert.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseValue(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
 	}
 }
 
@@ -164,9 +170,11 @@ func TestParseDirectory(t *testing.T) {
 	}
 
 	for _, test := range parseFailures {
-		ast, err := ParseDirectory(test.str)
-		assert.Error(t, err)
-		assert.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseDirectory(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
 	}
 }
 
@@ -185,13 +193,15 @@ func TestParseTuple(t *testing.T) {
 	}
 
 	for _, test := range roundTrips {
-		ast, err := ParseTuple(test.str)
-		assert.NoError(t, err)
-		assert.Equal(t, test.ast, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseTuple(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
 
-		str, err := FormatTuple(test.ast)
-		assert.NoError(t, err)
-		assert.Equal(t, test.str, str)
+			str, err := FormatTuple(test.ast)
+			assert.NoError(t, err)
+			assert.Equal(t, test.str, str)
+		})
 	}
 
 	parseFailures := []struct {
@@ -206,9 +216,11 @@ func TestParseTuple(t *testing.T) {
 	}
 
 	for _, test := range parseFailures {
-		ast, err := ParseTuple(test.str)
-		assert.Error(t, err)
-		assert.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseTuple(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
 	}
 }
 
@@ -230,13 +242,15 @@ func TestParseData(t *testing.T) {
 	}
 
 	for _, test := range roundTrips {
-		ast, err := ParseData(test.str)
-		assert.NoError(t, err)
-		assert.Equal(t, test.ast, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseData(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
 
-		str, err := FormatData(test.ast)
-		assert.NoError(t, err)
-		assert.Equal(t, test.str, str)
+			str, err := FormatData(test.ast)
+			assert.NoError(t, err)
+			assert.Equal(t, test.str, str)
+		})
 	}
 
 	parseFailures := []struct {
@@ -248,9 +262,11 @@ func TestParseData(t *testing.T) {
 	}
 
 	for _, test := range parseFailures {
-		ast, err := ParseData(test.str)
-		assert.Error(t, err)
-		assert.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseData(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
 	}
 }
 
@@ -296,24 +312,39 @@ func TestParseVariable(t *testing.T) {
 }
 
 func TestParseString(t *testing.T) {
-	str, err := ParseString("")
-	assert.Error(t, err)
-	assert.Equal(t, "", str)
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  string
+	}{
+		{name: "regular", str: "\"hello world\"", ast: "hello world"},
+	}
 
-	str, err = ParseString("\"hello")
-	assert.Error(t, err)
-	assert.Equal(t, "", str)
+	for _, test := range roundTrips {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseString(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
+		})
+	}
 
-	str, err = ParseString("'hello")
-	assert.Error(t, err)
-	assert.Equal(t, "", str)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "no close", str: "\"hello"},
+		{name: "no open", str: "hello\""},
+		{name: "single quote", str: "'hello'"},
+	}
 
-	str, err = ParseString("\"hello world\"")
-	assert.NoError(t, err)
-	assert.Equal(t, "hello world", str)
-
-	str = FormatString("hello world")
-	assert.Equal(t, "\"hello world\"", str)
+	for _, test := range parseFailures {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseString(test.str)
+			assert.Error(t, err)
+			assert.Empty(t, ast)
+		})
+	}
 }
 
 func TestParseUUID(t *testing.T) {
