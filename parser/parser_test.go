@@ -129,35 +129,7 @@ func TestParseValue(t *testing.T) {
 }
 
 func TestParseDirectory(t *testing.T) {
-	dir, err := ParseDirectory("")
-	assert.Error(t, err)
-	assert.Nil(t, dir)
-
-	dir, err = ParseDirectory("/")
-	assert.Error(t, err)
-	assert.Nil(t, dir)
-
-	dir, err = ParseDirectory("hello")
-	assert.Error(t, err)
-	assert.Nil(t, dir)
-
-	dir, err = ParseDirectory("/ /empty-path")
-	assert.Error(t, err)
-	assert.Nil(t, dir)
-
-	dir, err = ParseDirectory("/hello/")
-	assert.Error(t, err)
-	assert.Nil(t, dir)
-
-	dir, err = ParseDirectory("/hello/world/")
-	assert.Error(t, err)
-	assert.Nil(t, dir)
-
-	dir, err = ParseDirectory("/hello/{/thing")
-	assert.Error(t, err)
-	assert.Nil(t, dir)
-
-	tests := []struct {
+	roundTrips := []struct {
 		name string
 		str  string
 		ast  keyval.Directory
@@ -167,7 +139,7 @@ func TestParseDirectory(t *testing.T) {
 		{name: "variable", str: "/hello/{int}/thing", ast: keyval.Directory{"hello", keyval.Variable{keyval.IntType}, "thing"}},
 	}
 
-	for _, test := range tests {
+	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseDirectory(test.str)
 			assert.NoError(t, err)
@@ -179,9 +151,23 @@ func TestParseDirectory(t *testing.T) {
 		})
 	}
 
-	dir, err = ParseDirectory("/hello\n/ world")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Directory{"hello", "world"}, dir)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "no paths", str: "/"},
+		{name: "no slash", str: "hello"},
+		{name: "empty path", str: "/ /path"},
+		{name: "trailing slash", str: "/hello/world/"},
+		{name: "invalid var", str: "/hello/{/thing"},
+	}
+
+	for _, test := range parseFailures {
+		ast, err := ParseDirectory(test.str)
+		assert.Error(t, err)
+		assert.Nil(t, ast)
+	}
 }
 
 func TestParseTuple(t *testing.T) {
