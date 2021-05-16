@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseKeyValue(t *testing.T) {
+func TestKeyValue(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -51,7 +51,7 @@ func TestParseKeyValue(t *testing.T) {
 	}
 }
 
-func TestParseKey(t *testing.T) {
+func TestKey(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -95,7 +95,7 @@ func TestParseKey(t *testing.T) {
 	}
 }
 
-func TestParseValue(t *testing.T) {
+func TestValue(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -134,7 +134,7 @@ func TestParseValue(t *testing.T) {
 	}
 }
 
-func TestParseDirectory(t *testing.T) {
+func TestDirectory(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -178,7 +178,7 @@ func TestParseDirectory(t *testing.T) {
 	}
 }
 
-func TestParseTuple(t *testing.T) {
+func TestTuple(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -224,7 +224,7 @@ func TestParseTuple(t *testing.T) {
 	}
 }
 
-func TestParseData(t *testing.T) {
+func TestData(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -270,7 +270,7 @@ func TestParseData(t *testing.T) {
 	}
 }
 
-func TestParseVariable(t *testing.T) {
+func TestVariable(t *testing.T) {
 	tests := []struct {
 		name string
 		str  string
@@ -311,7 +311,7 @@ func TestParseVariable(t *testing.T) {
 	}
 }
 
-func TestParseString(t *testing.T) {
+func TestString(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -347,7 +347,7 @@ func TestParseString(t *testing.T) {
 	}
 }
 
-func TestParseUUID(t *testing.T) {
+func TestUUID(t *testing.T) {
 	parseFailures := []struct {
 		name string
 		str  string
@@ -386,7 +386,7 @@ func TestParseUUID(t *testing.T) {
 	}
 }
 
-func TestParseNumber(t *testing.T) {
+func TestNumber(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
