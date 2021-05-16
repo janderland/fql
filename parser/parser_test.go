@@ -9,40 +9,47 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestParseQuery(t *testing.T) {
-	q, err := ParseQuery("")
+func TestParseKeyValue(t *testing.T) {
+	q, err := ParseKeyValue("")
 	assert.Error(t, err)
 	assert.Nil(t, q)
 
-	q, err = ParseQuery("()")
+	q, err = ParseKeyValue("()")
 	assert.Error(t, err)
 	assert.Nil(t, q)
 
-	q, err = ParseQuery("()=()=()")
+	q, err = ParseKeyValue("()=()=()")
 	assert.Error(t, err)
 	assert.Nil(t, q)
 
-	q, err = ParseQuery("badkey=()")
+	q, err = ParseKeyValue("badkey=()")
 	assert.Error(t, err)
 	assert.Nil(t, q)
 
-	q, err = ParseQuery("()=badvalue")
+	q, err = ParseKeyValue("()=badvalue")
 	assert.Error(t, err)
 	assert.Nil(t, q)
 
-	q, err = ParseQuery("()=()")
+	q, err = ParseKeyValue("()=()")
 	assert.NoError(t, err)
 	assert.Equal(t, &keyval.KeyValue{
 		Key:   keyval.Key{Tuple: keyval.Tuple{}},
 		Value: keyval.Tuple{},
 	}, q)
 
-	q, err = ParseQuery("() \t= \n()")
+	q, err = ParseKeyValue("() \t= \n()")
 	assert.NoError(t, err)
 	assert.Equal(t, &keyval.KeyValue{
 		Key:   keyval.Key{Tuple: keyval.Tuple{}},
 		Value: keyval.Tuple{},
 	}, q)
+
+	str, err := FormatKeyValue(keyval.KeyValue{
+		Key:   keyval.Key{Tuple: keyval.Tuple{}},
+		Value: keyval.Tuple{},
+	})
+	assert.NoError(t, err)
+	assert.Equal(t, "()=()", str)
 }
 
 func TestParseKey(t *testing.T) {

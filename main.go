@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	query, err := parser.ParseQuery(strings.Join(os.Args[1:], " "))
+	query, err := parser.ParseKeyValue(strings.Join(os.Args[1:], " "))
 	if err != nil {
 		fmt.Println(errors.Wrap(err, "failed to parse kv"))
 		os.Exit(1)
