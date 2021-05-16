@@ -213,49 +213,45 @@ func TestParseTuple(t *testing.T) {
 }
 
 func TestParseData(t *testing.T) {
-	data, err := ParseData("")
-	assert.Error(t, err)
-	assert.Nil(t, data)
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  interface{}
+	}{
+		{name: "nil", str: "nil", ast: nil},
+		{name: "true", str: "true", ast: true},
+		{name: "false", str: "false", ast: false},
+		{name: "variable", str: "{int}", ast: keyval.Variable{keyval.IntType}},
+		{name: "string", str: "\"hello world\"", ast: "hello world"},
+		{name: "uuid", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+		{name: "int", str: "123", ast: int64(123)},
+		{name: "float", str: "-94.2", ast: -94.2},
+		{name: "scientific", str: "3.47e-08", ast: 3.47e-8},
+	}
 
-	data, err = ParseData("nil")
-	assert.NoError(t, err)
-	assert.Nil(t, data)
+	for _, test := range roundTrips {
+		ast, err := ParseData(test.str)
+		assert.NoError(t, err)
+		assert.Equal(t, test.ast, ast)
 
-	data, err = ParseData("true")
-	assert.NoError(t, err)
-	assert.Equal(t, true, data)
+		str, err := FormatData(test.ast)
+		assert.NoError(t, err)
+		assert.Equal(t, test.str, str)
+	}
 
-	data, err = ParseData("false")
-	assert.NoError(t, err)
-	assert.Equal(t, false, data)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "invalid", str: "invalid"},
+	}
 
-	data, err = ParseData("{int}")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Variable{keyval.IntType}, data)
-
-	data, err = ParseData("\"hello world\"")
-	assert.NoError(t, err)
-	assert.Equal(t, "hello world", data)
-
-	data, err = ParseData("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
-	assert.NoError(t, err)
-	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, data)
-
-	data, err = ParseData("123")
-	assert.NoError(t, err)
-	assert.Equal(t, int64(123), data)
-
-	data, err = ParseData("-94.2")
-	assert.NoError(t, err)
-	assert.Equal(t, -94.2, data)
-
-	data, err = ParseData("3.47e-8")
-	assert.NoError(t, err)
-	assert.Equal(t, 3.47e-8, data)
-
-	data, err = ParseData("invalid")
-	assert.Error(t, err)
-	assert.Nil(t, data)
+	for _, test := range parseFailures {
+		ast, err := ParseData(test.str)
+		assert.Error(t, err)
+		assert.Nil(t, ast)
+	}
 }
 
 func TestParseVariable(t *testing.T) {
