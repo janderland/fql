@@ -2,7 +2,6 @@ package parser
 
 import (
 	"encoding/hex"
-	"fmt"
 	"strconv"
 	"strings"
 
@@ -12,12 +11,33 @@ import (
 	"github.com/pkg/errors"
 )
 
-func ParseQuery(str string) (*keyval.KeyValue, error) {
+const (
+	KVSep  = '='
+	DirSep = '/'
+
+	TupStart = '('
+	TupEnd   = ')'
+	TupSep   = ','
+
+	VarStart = '{'
+	VarEnd   = '}'
+	VarSep   = '|'
+
+	StrStart = '"'
+	StrEnd   = '"'
+
+	Nil   = "nil"
+	True  = "true"
+	False = "false"
+	Clear = "clear"
+)
+
+func ParseKeyValue(str string) (*keyval.KeyValue, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
 
-	parts := strings.Split(str, "=")
+	parts := strings.Split(str, string(KVSep))
 	if len(parts) == 1 {
 		return nil, errors.New("query missing '=' separator between key and value")
 	} else if len(parts) > 2 {
@@ -40,6 +60,18 @@ func ParseQuery(str string) (*keyval.KeyValue, error) {
 		Key:   *key,
 		Value: value,
 	}, nil
+}
+
+func FormatKeyValue(kv keyval.KeyValue) (string, error) {
+	key, err := FormatKey(kv.Key)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to format key")
+	}
+	val, err := FormatValue(kv.Value)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to format value")
+	}
+	return key + string(KVSep) + val, nil
 }
 
 func ParseKey(str string) (*keyval.Key, error) {
@@ -74,11 +106,26 @@ func ParseKey(str string) (*keyval.Key, error) {
 	return key, nil
 }
 
+func FormatKey(key keyval.Key) (string, error) {
+	dir, err := FormatDirectory(key.Directory)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to format directory")
+	}
+	if len(key.Tuple) == 0 {
+		return dir, nil
+	}
+	tup, err := FormatTuple(key.Tuple)
+	if err != nil {
+		return "", errors.Wrap(err, "failed to format tuple")
+	}
+	return dir + tup, nil
+}
+
 func ParseDirectory(str string) (keyval.Directory, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
-	if str[0] != '/' {
+	if str[0] != DirSep {
 		return nil, errors.New("directory path must start with a '/'")
 	}
 	if str[len(str)-1] == '/' {
@@ -104,6 +151,22 @@ func ParseDirectory(str string) (keyval.Directory, error) {
 	return directory, nil
 }
 
+func FormatDirectory(dir keyval.Directory) (string, error) {
+	var out strings.Builder
+	for i, d := range dir {
+		out.WriteRune(DirSep)
+		switch d := d.(type) {
+		case string:
+			out.WriteString(d)
+		case keyval.Variable:
+			out.WriteString(FormatVariable(d))
+		default:
+			return "", errors.Errorf("failed to format %s element - '%v' (%T)", ordinal(i), d, d)
+		}
+	}
+	return out.String(), nil
+}
+
 func ParseTuple(str string) (keyval.Tuple, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
@@ -121,7 +184,7 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 		return keyval.Tuple{}, nil
 	}
 
-	var tuple keyval.Tuple
+	var tup keyval.Tuple
 	for i, elementStr := range strings.Split(str, ",") {
 		var element interface{}
 		var err error
@@ -139,23 +202,36 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse %s element - %s", ordinal(i+1), elementStr)
 		}
-		tuple = append(tuple, element)
+		tup = append(tup, element)
 	}
-	return tuple, nil
+	return tup, nil
 }
 
-const (
-	Nil   = "nil"
-	True  = "true"
-	False = "false"
-
-	VarStart = '{'
-	VarEnd   = '}'
-	VarSep   = '|'
-
-	StrStart = '"'
-	StrEnd   = '"'
-)
+func FormatTuple(tup keyval.Tuple) (string, error) {
+	var out strings.Builder
+	out.WriteRune(TupStart)
+	for i, t := range tup {
+		if i != 0 {
+			out.WriteRune(TupSep)
+		}
+		switch t := t.(type) {
+		case keyval.Tuple:
+			str, err := FormatTuple(t)
+			if err != nil {
+				return "", errors.Wrapf(err, "failed to format tuple at %s element", ordinal(i))
+			}
+			out.WriteString(str)
+		default:
+			str, err := FormatData(t)
+			if err != nil {
+				return "", errors.Wrapf(err, "failed to format data at %s element", ordinal(i))
+			}
+			out.WriteString(str)
+		}
+	}
+	out.WriteRune(TupEnd)
+	return out.String(), nil
+}
 
 func ParseData(str string) (interface{}, error) {
 	if len(str) == 0 {
@@ -186,34 +262,25 @@ func ParseData(str string) (interface{}, error) {
 	return data, errors.Wrap(err, "failed to parse as number")
 }
 
-func StringData(in interface{}) string {
+func FormatData(in interface{}) (string, error) {
 	switch in := in.(type) {
 	case nil:
-		return Nil
-
+		return Nil, nil
 	case bool:
 		if in {
-			return True
+			return True, nil
 		} else {
-			return False
+			return False, nil
 		}
-
 	case keyval.Variable:
-		return StringVariable(in)
-
+		return FormatVariable(in), nil
 	case string:
-		return StringString(in)
-
+		return FormatString(in), nil
 	case tuple.UUID:
-		return StringUUID(in)
-
+		return FormatUUID(in), nil
 	default:
-		var str strings.Builder
-		str.WriteRune(VarStart)
-		str.WriteString("invalid:")
-		str.WriteString(fmt.Sprintf("%T(%v) ", in, in))
-		str.WriteRune(VarEnd)
-		return str.String()
+		str, err := FormatNumber(in)
+		return str, errors.Wrap(err, "failed to format as number")
 	}
 }
 
@@ -244,7 +311,7 @@ func ParseVariable(str string) (keyval.Variable, error) {
 	return variable, nil
 }
 
-func StringVariable(in keyval.Variable) string {
+func FormatVariable(in keyval.Variable) string {
 	var str strings.Builder
 	str.WriteRune(VarStart)
 	for i, typ := range in {
@@ -270,7 +337,7 @@ func ParseString(str string) (string, error) {
 	return str[1 : len(str)-1], nil
 }
 
-func StringString(in string) string {
+func FormatString(in string) string {
 	var out strings.Builder
 	out.WriteRune(StrStart)
 	out.WriteString(in)
@@ -314,7 +381,7 @@ func ParseUUID(str string) (tuple.UUID, error) {
 	return uuid, nil
 }
 
-func StringUUID(in tuple.UUID) string {
+func FormatUUID(in tuple.UUID) string {
 	var out strings.Builder
 	out.WriteString(hex.EncodeToString(in[:4]))
 	out.WriteRune('-')
@@ -344,17 +411,57 @@ func ParseNumber(str string) (interface{}, error) {
 	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
 }
 
-func ParseValue(str string) (keyval.Value, error) {
-	if len(str) == 0 {
+func FormatNumber(in interface{}) (string, error) {
+	switch in := in.(type) {
+	// Int
+	case int64:
+		return strconv.FormatInt(in, 10), nil
+	case int:
+		return strconv.FormatInt(int64(in), 10), nil
+
+	// Uint
+	case uint64:
+		return strconv.FormatUint(in, 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(in), 10), nil
+
+	// Float
+	case float64:
+		return strconv.FormatFloat(in, 'g', 10, 64), nil
+	case float32:
+		return strconv.FormatFloat(float64(in), 'g', 10, 64), nil
+
+	default:
+		return "", errors.Errorf("unexpected input %v (%T)", in, in)
+	}
+}
+
+func ParseValue(in string) (keyval.Value, error) {
+	if len(in) == 0 {
 		return nil, errors.New("input is empty")
 	}
-	if str == "clear" {
+	if in == Clear {
 		return keyval.Clear{}, nil
 	}
-	if str[0] == '(' {
-		return ParseTuple(str)
+	if in[0] == '(' {
+		out, err := ParseTuple(in)
+		return out, errors.Wrap(err, "failed to parse as tuple")
 	}
-	return ParseData(str)
+	out, err := ParseData(in)
+	return out, errors.Wrap(err, "failed to parse as data")
+}
+
+func FormatValue(in keyval.Value) (string, error) {
+	switch in := in.(type) {
+	case keyval.Clear:
+		return Clear, nil
+	case keyval.Tuple:
+		str, err := FormatTuple(in)
+		return str, errors.Wrap(err, "failed to format as tuple")
+	default:
+		str, err := FormatData(in)
+		return str, errors.Wrap(err, "failed to format as data")
+	}
 }
 
 func ordinal(x int) string {
