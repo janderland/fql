@@ -48,7 +48,7 @@ func TestParseKeyValue(t *testing.T) {
 }
 
 func TestParseKey(t *testing.T) {
-	tests := []struct {
+	roundTrips := []struct {
 		name string
 		str  string
 		ast  keyval.Key
@@ -61,7 +61,7 @@ func TestParseKey(t *testing.T) {
 			ast: keyval.Key{Directory: keyval.Directory{"my", "dir"}, Tuple: keyval.Tuple{"str", int64(-13), keyval.Tuple{1.2e13}}}},
 	}
 
-	for _, test := range tests {
+	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseKey(test.str)
 			assert.NoError(t, err)
@@ -73,7 +73,7 @@ func TestParseKey(t *testing.T) {
 		})
 	}
 
-	fails := []struct {
+	parseFailures := []struct {
 		name string
 		str  string
 	}{
@@ -82,7 +82,7 @@ func TestParseKey(t *testing.T) {
 		{name: "bad tup", str: "/dir(badtup"},
 	}
 
-	for _, fail := range fails {
+	for _, fail := range parseFailures {
 		t.Run(fail.name, func(t *testing.T) {
 			key, err := ParseKey(fail.str)
 			assert.Error(t, err)
