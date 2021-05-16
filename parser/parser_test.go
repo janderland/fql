@@ -171,49 +171,45 @@ func TestParseDirectory(t *testing.T) {
 }
 
 func TestParseTuple(t *testing.T) {
-	tuple, err := ParseTuple("")
-	assert.Error(t, err)
-	assert.Nil(t, tuple)
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  keyval.Tuple
+	}{
+		{name: "empty", str: "()", ast: keyval.Tuple{}},
+		{name: "one", str: "(17)", ast: keyval.Tuple{int64(17)}},
+		{name: "two", str: "(17,\"hello world\")", ast: keyval.Tuple{int64(17), "hello world"}},
+		{name: "sub tuple", str: "(\"hello\",23.3,(-3))", ast: keyval.Tuple{"hello", 23.3, keyval.Tuple{int64(-3)}}},
+		{name: "uuid", str: "((bcefd2ec-4df5-43b6-8c79-81b70b886af9))",
+			ast: keyval.Tuple{keyval.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
+	}
 
-	tuple, err = ParseTuple("(")
-	assert.Error(t, err)
-	assert.Nil(t, tuple)
+	for _, test := range roundTrips {
+		ast, err := ParseTuple(test.str)
+		assert.NoError(t, err)
+		assert.Equal(t, test.ast, ast)
 
-	tuple, err = ParseTuple(")")
-	assert.Error(t, err)
-	assert.Nil(t, tuple)
+		str, err := FormatTuple(test.ast)
+		assert.NoError(t, err)
+		assert.Equal(t, test.str, str)
+	}
 
-	tuple, err = ParseTuple("()")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{}, tuple)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "no close", str: "("},
+		{name: "no open", str: ")"},
+		{name: "bad element", str: "(bad)"},
+		{name: "empty element", str: "(\"hello\",, -3)"},
+	}
 
-	tuple, err = ParseTuple("(badelem)")
-	assert.Error(t, err)
-	assert.Nil(t, tuple)
-
-	tuple, err = ParseTuple("(17)")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{int64(17)}, tuple)
-
-	tuple, err = ParseTuple("(17, \"hello world\")")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{int64(17), "hello world"}, tuple)
-
-	tuple, err = ParseTuple("(\"hello\", 23.3, (-3))")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{"hello", 23.3, keyval.Tuple{int64(-3)}}, tuple)
-
-	tuple, err = ParseTuple("((bcefd2ec-4df5-43b6-8c79-81b70b886af9))")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{keyval.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, tuple)
-
-	tuple, err = ParseTuple("(\"hello\",, -3)")
-	assert.Error(t, err)
-	assert.Nil(t, tuple)
-
-	tuple, err = ParseTuple("(\n-15 \t, \n \"hello\"  )")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{int64(-15), "hello"}, tuple)
+	for _, test := range parseFailures {
+		ast, err := ParseTuple(test.str)
+		assert.Error(t, err)
+		assert.Nil(t, ast)
+	}
 }
 
 func TestParseData(t *testing.T) {

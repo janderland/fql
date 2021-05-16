@@ -111,6 +111,9 @@ func FormatKey(key keyval.Key) (string, error) {
 	if err != nil {
 		return "", errors.Wrap(err, "failed to format directory")
 	}
+	if len(key.Tuple) == 0 {
+		return dir, nil
+	}
 	tup, err := FormatTuple(key.Tuple)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to format tuple")
@@ -205,10 +208,6 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 }
 
 func FormatTuple(tup keyval.Tuple) (string, error) {
-	if len(tup) == 0 {
-		return "", nil
-	}
-
 	var out strings.Builder
 	out.WriteRune(TupStart)
 	for i, t := range tup {
