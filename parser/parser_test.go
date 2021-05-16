@@ -45,51 +45,57 @@ func TestParseKeyValue(t *testing.T) {
 	}, q)
 
 	str, err := FormatKeyValue(keyval.KeyValue{
-		Key:   keyval.Key{Tuple: keyval.Tuple{}},
-		Value: keyval.Tuple{},
+		Key: keyval.Key{
+			Directory: keyval.Directory{"hi", "there"},
+			Tuple:     keyval.Tuple{54, nil}},
+		Value: keyval.Tuple{33.8},
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, "()=()", str)
+	assert.Equal(t, "/hi/there(54,nil)=(33.8)", str)
 }
 
 func TestParseKey(t *testing.T) {
-	key, err := ParseKey("")
-	assert.Error(t, err)
-	assert.Nil(t, key)
+	tests := []struct {
+		name string
+		str  string
+		ast  keyval.Key
+	}{
+		{name: "dir", str: "/my/dir",
+			ast: keyval.Key{Directory: keyval.Directory{"my", "dir"}}},
+		{name: "tup", str: "(\"str\",-13,(1.2e+13))",
+			ast: keyval.Key{Tuple: keyval.Tuple{"str", int64(-13), keyval.Tuple{1.2e13}}}},
+		{name: "full", str: "/my/dir(\"str\",-13,(1.2e+13))",
+			ast: keyval.Key{Directory: keyval.Directory{"my", "dir"}, Tuple: keyval.Tuple{"str", int64(-13), keyval.Tuple{1.2e13}}}},
+	}
 
-	key, err = ParseKey("baddir")
-	assert.Error(t, err)
-	assert.Nil(t, key)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseKey(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, &test.ast, ast)
 
-	key, err = ParseKey("/dir(badtup")
-	assert.Error(t, err)
-	assert.Nil(t, key)
+			str, err := FormatKey(*ast)
+			assert.NoError(t, err)
+			assert.Equal(t, test.str, str)
+		})
+	}
 
-	key, err = ParseKey("/my/dir")
-	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Key{
-		Directory: keyval.Directory{"my", "dir"},
-	}, key)
+	fails := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "bad dir", str: "baddir"},
+		{name: "bad tup", str: "/dir(badtup"},
+	}
 
-	key, err = ParseKey("(\"str\", -13, (12e6))")
-	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Key{
-		Tuple: keyval.Tuple{"str", int64(-13), keyval.Tuple{12e6}},
-	}, key)
-
-	key, err = ParseKey("/my/dir(\"str\", -13, (12e6))")
-	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Key{
-		Directory: keyval.Directory{"my", "dir"},
-		Tuple:     keyval.Tuple{"str", int64(-13), keyval.Tuple{12e6}},
-	}, key)
-
-	key, err = ParseKey("/my/dir \n\t()")
-	assert.NoError(t, err)
-	assert.Equal(t, &keyval.Key{
-		Directory: keyval.Directory{"my", "dir"},
-		Tuple:     keyval.Tuple{},
-	}, key)
+	for _, fail := range fails {
+		t.Run(fail.name, func(t *testing.T) {
+			key, err := ParseKey(fail.str)
+			assert.Error(t, err)
+			assert.Nil(t, key)
+		})
+	}
 }
 
 func TestParseValue(t *testing.T) {

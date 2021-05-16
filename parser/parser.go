@@ -205,6 +205,10 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 }
 
 func FormatTuple(tup keyval.Tuple) (string, error) {
+	if len(tup) == 0 {
+		return "", nil
+	}
+
 	var out strings.Builder
 	out.WriteRune(TupStart)
 	for i, t := range tup {
@@ -213,7 +217,7 @@ func FormatTuple(tup keyval.Tuple) (string, error) {
 		}
 		switch t := t.(type) {
 		case keyval.Tuple:
-			str, err := FormatTuple(tup)
+			str, err := FormatTuple(t)
 			if err != nil {
 				return "", errors.Wrapf(err, "failed to format tuple at %s element", ordinal(i))
 			}
@@ -410,12 +414,24 @@ func ParseNumber(str string) (interface{}, error) {
 
 func FormatNumber(in interface{}) (string, error) {
 	switch in := in.(type) {
+	// Int
 	case int64:
 		return strconv.FormatInt(in, 10), nil
+	case int:
+		return strconv.FormatInt(int64(in), 10), nil
+
+	// Uint
 	case uint64:
 		return strconv.FormatUint(in, 10), nil
+	case uint:
+		return strconv.FormatUint(uint64(in), 10), nil
+
+	// Float
 	case float64:
 		return strconv.FormatFloat(in, 'g', 10, 64), nil
+	case float32:
+		return strconv.FormatFloat(float64(in), 'g', 10, 64), nil
+
 	default:
 		return "", errors.Errorf("unexpected input %v (%T)", in, in)
 	}
