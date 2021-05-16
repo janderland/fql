@@ -92,7 +92,7 @@ func TestParseKey(t *testing.T) {
 }
 
 func TestParseValue(t *testing.T) {
-	tests := []struct {
+	roundTrips := []struct {
 		name string
 		str  string
 		ast  keyval.Value
@@ -102,7 +102,7 @@ func TestParseValue(t *testing.T) {
 		{name: "raw", str: "-16", ast: int64(-16)},
 	}
 
-	for _, test := range tests {
+	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseValue(test.str)
 			assert.NoError(t, err)
@@ -114,9 +114,18 @@ func TestParseValue(t *testing.T) {
 		})
 	}
 
-	val, err := ParseValue("")
-	assert.Error(t, err)
-	assert.Nil(t, val)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+	}
+
+	for _, test := range parseFailures {
+		ast, err := ParseValue(test.str)
+		assert.Error(t, err)
+		assert.Nil(t, ast)
+	}
 }
 
 func TestParseDirectory(t *testing.T) {
