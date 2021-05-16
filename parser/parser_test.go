@@ -387,27 +387,37 @@ func TestParseUUID(t *testing.T) {
 }
 
 func TestParseNumber(t *testing.T) {
-	num, err := ParseNumber("")
-	assert.Error(t, err)
-	assert.Nil(t, num)
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  interface{}
+	}{
+		{name: "int", str: "-34000", ast: int64(-34000)},
+		{name: "uint", str: "18446744073709551610", ast: uint64(18446744073709551610)},
+		{name: "float", str: "94.33", ast: 94.33},
+		{name: "scientific", str: "1.254e-07", ast: 1.254e-7},
+	}
 
-	num, err = ParseNumber("-34000")
-	assert.NoError(t, err)
-	assert.Equal(t, int64(-34000), num)
+	for _, test := range roundTrips {
+		ast, err := ParseNumber(test.str)
+		assert.NoError(t, err)
+		assert.Equal(t, test.ast, ast)
 
-	num, err = ParseNumber("18446744073709551610")
-	assert.NoError(t, err)
-	assert.Equal(t, uint64(18446744073709551610), num)
+		str, err := FormatNumber(test.ast)
+		assert.NoError(t, err)
+		assert.Equal(t, test.str, str)
+	}
 
-	num, err = ParseNumber("94.33")
-	assert.NoError(t, err)
-	assert.Equal(t, 94.33, num)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+	}
 
-	num, err = ParseNumber("12.54e-8")
-	assert.NoError(t, err)
-	assert.Equal(t, 12.54e-8, num)
-
-	num, err = ParseNumber("hello")
-	assert.Error(t, err)
-	assert.Nil(t, num)
+	for _, test := range parseFailures {
+		ast, err := ParseNumber(test.str)
+		assert.Error(t, err)
+		assert.Nil(t, ast)
+	}
 }
