@@ -103,17 +103,27 @@ func TestParseValue(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, val)
 
-	val, err = ParseValue("clear")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Clear{}, val)
+	tests := []struct {
+		name string
+		str  string
+		ast  keyval.Value
+	}{
+		{name: "clear", str: "clear", ast: keyval.Clear{}},
+		{name: "tuple", str: "(-16,13.2,\"hi\")", ast: keyval.Tuple{int64(-16), 13.2, "hi"}},
+		{name: "raw", str: "-16", ast: int64(-16)},
+	}
 
-	val, err = ParseValue("(-16,13.2,\"hi\")")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Tuple{int64(-16), 13.2, "hi"}, val)
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseValue(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
 
-	val, err = ParseValue("-16")
-	assert.NoError(t, err)
-	assert.Equal(t, int64(-16), val)
+			str, err := FormatValue(test.ast)
+			assert.NoError(t, err)
+			assert.Equal(t, test.str, str)
+		})
+	}
 }
 
 func TestParseDirectory(t *testing.T) {
