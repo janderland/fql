@@ -10,48 +10,41 @@ import (
 )
 
 func TestParseKeyValue(t *testing.T) {
-	q, err := ParseKeyValue("")
-	assert.Error(t, err)
-	assert.Nil(t, q)
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  keyval.KeyValue
+	}{
+		{name: "full", str: "/hi/there(54,nil)=(33.8)",
+			ast: keyval.KeyValue{Key: keyval.Key{Directory: keyval.Directory{"hi", "there"}, Tuple: keyval.Tuple{int64(54), nil}}, Value: keyval.Tuple{33.8}}},
+	}
 
-	q, err = ParseKeyValue("()")
-	assert.Error(t, err)
-	assert.Nil(t, q)
+	for _, test := range roundTrips {
+		ast, err := ParseKeyValue(test.str)
+		assert.NoError(t, err)
+		assert.Equal(t, test.ast, *ast)
 
-	q, err = ParseKeyValue("()=()=()")
-	assert.Error(t, err)
-	assert.Nil(t, q)
+		str, err := FormatKeyValue(test.ast)
+		assert.NoError(t, err)
+		assert.Equal(t, test.str, str)
+	}
 
-	q, err = ParseKeyValue("badkey=()")
-	assert.Error(t, err)
-	assert.Nil(t, q)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "empty tup", str: "()"},
+		{name: "double sep", str: "()=()=()"},
+		{name: "bad key", str: "badkey=()"},
+		{name: "bad value", str: "()=badvalue"},
+	}
 
-	q, err = ParseKeyValue("()=badvalue")
-	assert.Error(t, err)
-	assert.Nil(t, q)
-
-	q, err = ParseKeyValue("()=()")
-	assert.NoError(t, err)
-	assert.Equal(t, &keyval.KeyValue{
-		Key:   keyval.Key{Tuple: keyval.Tuple{}},
-		Value: keyval.Tuple{},
-	}, q)
-
-	q, err = ParseKeyValue("() \t= \n()")
-	assert.NoError(t, err)
-	assert.Equal(t, &keyval.KeyValue{
-		Key:   keyval.Key{Tuple: keyval.Tuple{}},
-		Value: keyval.Tuple{},
-	}, q)
-
-	str, err := FormatKeyValue(keyval.KeyValue{
-		Key: keyval.Key{
-			Directory: keyval.Directory{"hi", "there"},
-			Tuple:     keyval.Tuple{54, nil}},
-		Value: keyval.Tuple{33.8},
-	})
-	assert.NoError(t, err)
-	assert.Equal(t, "/hi/there(54,nil)=(33.8)", str)
+	for _, test := range parseFailures {
+		ast, err := ParseKeyValue(test.str)
+		assert.Error(t, err)
+		assert.Nil(t, ast)
+	}
 }
 
 func TestParseKey(t *testing.T) {
