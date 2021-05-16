@@ -12,6 +12,10 @@ import (
 
 type Engine struct{ db fdb.Transactor }
 
+func New(db fdb.Transactor) Engine {
+	return Engine{db: db}
+}
+
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		return f(Engine{tr})
@@ -107,7 +111,11 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 			Value: value,
 		}, nil
 	}
-	return nil, nil
+
+	return &keyval.KeyValue{
+		Key:   query.Key,
+		Value: bytes,
+	}, nil
 }
 
 type KeyValErr struct {
