@@ -24,6 +24,7 @@ const (
 	VarSep   = '|'
 
 	StrStart = '"'
+	StrHex   = "\\x"
 	StrEnd   = '"'
 
 	Nil   = "nil"
@@ -275,7 +276,9 @@ func FormatData(in interface{}) (string, error) {
 	case keyval.Variable:
 		return FormatVariable(in), nil
 	case string:
-		return FormatString(in), nil
+		return FormatString(in)
+	case []byte:
+		return FormatString(in)
 	case tuple.UUID:
 		return FormatUUID(in), nil
 	default:
@@ -337,12 +340,20 @@ func ParseString(str string) (string, error) {
 	return str[1 : len(str)-1], nil
 }
 
-func FormatString(in string) string {
+func FormatString(in interface{}) (string, error) {
 	var out strings.Builder
 	out.WriteRune(StrStart)
-	out.WriteString(in)
+	switch in := in.(type) {
+	case string:
+		out.WriteString(in)
+	case []byte:
+		out.WriteString(StrHex)
+		out.WriteString(hex.EncodeToString(in))
+	default:
+		return "", errors.Errorf("failed to format '%v' (%T)", in, in)
+	}
 	out.WriteRune(StrEnd)
-	return out.String()
+	return out.String(), nil
 }
 
 func ParseUUID(str string) (tuple.UUID, error) {
