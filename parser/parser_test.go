@@ -348,40 +348,42 @@ func TestParseString(t *testing.T) {
 }
 
 func TestParseUUID(t *testing.T) {
-	id, err := ParseUUID("")
-	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "bad group 1", str: "cefd2ec-4df5-43b6-8c79-81b70b886af9"},
+		{name: "bad group 2", str: "bcefd2ec-df5-43b6-8c79-81b70b886af9"},
+		{name: "bad group 3", str: "bcefd2ec-4df5-3b6-8c79-81b70b886af9"},
+		{name: "bad group 4", str: "bcefd2ec-4df5-43b6-c79-81b70b886af9"},
+		{name: "bad group 5", str: "bcefd2ec-4df5-43b6-8c79-1b70b886af9"},
+		{name: "long", str: "bcefdyec-4df5-43%6-8c79-81b70bg86af9"},
+	}
 
-	id, err = ParseUUID("cefd2ec-4df5-43b6-8c79-81b70b886af9")
-	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
+	for _, test := range parseFailures {
+		ast, err := ParseUUID(test.str)
+		assert.Error(t, err)
+		assert.Equal(t, tup.UUID{}, ast)
+	}
 
-	id, err = ParseUUID("bcefd2ec-df5-43b6-8c79-81b70b886af9")
-	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  tup.UUID
+	}{
+		{name: "normal", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
+			ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+	}
 
-	id, err = ParseUUID("bcefd2ec-4df5-3b6-8c79-81b70b886af9")
-	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
+	for _, test := range roundTrips {
+		ast, err := ParseUUID(test.str)
+		assert.NoError(t, err)
+		assert.Equal(t, test.ast, ast)
 
-	id, err = ParseUUID("bcefd2ec-4df5-43b6-c79-81b70b886af9")
-	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
-
-	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-1b70b886af9")
-	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
-
-	id, err = ParseUUID("bcefdyec-4df5-43%6-8c79-81b70bg86af9")
-	assert.Error(t, err)
-	assert.Equal(t, tup.UUID{}, id)
-
-	id, err = ParseUUID("bcefd2ec-4df5-43b6-8c79-81b70b886af9")
-	assert.NoError(t, err)
-	assert.Equal(t, tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, id)
-
-	str := FormatUUID(tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9})
-	assert.Equal(t, "bcefd2ec-4df5-43b6-8c79-81b70b886af9", str)
+		str := FormatUUID(test.ast)
+		assert.Equal(t, test.str, str)
+	}
 }
 
 func TestParseNumber(t *testing.T) {
