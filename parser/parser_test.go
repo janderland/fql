@@ -99,10 +99,6 @@ func TestParseKey(t *testing.T) {
 }
 
 func TestParseValue(t *testing.T) {
-	val, err := ParseValue("")
-	assert.Error(t, err)
-	assert.Nil(t, val)
-
 	tests := []struct {
 		name string
 		str  string
@@ -124,6 +120,10 @@ func TestParseValue(t *testing.T) {
 			assert.Equal(t, test.str, str)
 		})
 	}
+
+	val, err := ParseValue("")
+	assert.Error(t, err)
+	assert.Nil(t, val)
 }
 
 func TestParseDirectory(t *testing.T) {
@@ -143,29 +143,39 @@ func TestParseDirectory(t *testing.T) {
 	assert.Error(t, err)
 	assert.Nil(t, dir)
 
-	dir, err = ParseDirectory("/hello")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Directory{"hello"}, dir)
-
 	dir, err = ParseDirectory("/hello/")
 	assert.Error(t, err)
 	assert.Nil(t, dir)
-
-	dir, err = ParseDirectory("/hello/world")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Directory{"hello", "world"}, dir)
 
 	dir, err = ParseDirectory("/hello/world/")
 	assert.Error(t, err)
 	assert.Nil(t, dir)
 
-	dir, err = ParseDirectory("/hello/{int}/thing")
-	assert.NoError(t, err)
-	assert.Equal(t, keyval.Directory{"hello", keyval.Variable{keyval.IntType}, "thing"}, dir)
-
 	dir, err = ParseDirectory("/hello/{/thing")
 	assert.Error(t, err)
 	assert.Nil(t, dir)
+
+	tests := []struct {
+		name string
+		str  string
+		ast  keyval.Directory
+	}{
+		{name: "single", str: "/hello", ast: keyval.Directory{"hello"}},
+		{name: "multi", str: "/hello/world", ast: keyval.Directory{"hello", "world"}},
+		{name: "variable", str: "/hello/{int}/thing", ast: keyval.Directory{"hello", keyval.Variable{keyval.IntType}, "thing"}},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseDirectory(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
+
+			str, err := FormatDirectory(test.ast)
+			assert.NoError(t, err)
+			assert.Equal(t, test.str, str)
+		})
+	}
 
 	dir, err = ParseDirectory("/hello\n/ world")
 	assert.NoError(t, err)
