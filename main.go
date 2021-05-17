@@ -20,24 +20,42 @@ import (
 var write = flag.Bool("write", false, "allow write queries")
 
 func main() {
-	query, err := parser.ParseKeyValue(strings.Join(os.Args[1:], " "))
+	flag.Parse()
+
+	query, err := parser.ParseKeyValue(strings.Join(flag.Args(), " "))
 	if err != nil {
 		fail(errors.Wrap(err, "failed to parse query"))
 	}
-	queryStr, err := parser.FormatKeyValue(*query)
-	if err != nil {
-		fail(errors.Wrap(err, "failed to format query"))
-	}
-	fmt.Println(queryStr)
-
 	kind, err := query.Kind()
 	if err != nil {
 		fail(errors.Wrap(err, "failed to get kind of query"))
 	}
-	if kind == keyval.InvalidKind {
-		fail(errors.New("query is invalid"))
-	}
 
+	switch kind {
+	case keyval.ConstantKind:
+		if err := set(engine.New(setupDB()), *query); err != nil {
+			fail(errors.Wrap(err, "failed to execute as set query"))
+		}
+	case keyval.ClearKind:
+		if err := clear(engine.New(setupDB()), *query); err != nil {
+			fail(errors.Wrap(err, "failed to execute as clear query"))
+		}
+	case keyval.SingleReadKind:
+		if err := singleRead(engine.New(setupDB()), *query); err != nil {
+			fail(errors.Wrap(err, "failed to execute as single read query"))
+		}
+	case keyval.RangeReadKind:
+		if err := rangeRead(engine.New(setupDB()), *query); err != nil {
+			fail(errors.Wrap(err, "failed to execute as range read query"))
+		}
+	case keyval.InvalidKind:
+		fail(errors.New("query is invalid"))
+	default:
+		fail(errors.Errorf("unexpected query kind '%v'", kind))
+	}
+}
+
+func setupDB() fdb.Database {
 	if err := fdb.APIVersion(620); err != nil {
 		fail(errors.Wrap(err, "failed to specify FDB API version"))
 	}
@@ -45,49 +63,48 @@ func main() {
 	if err != nil {
 		fail(errors.Wrap(err, "failed to open FDB connection"))
 	}
+	return db
+}
 
-	e := engine.New(db)
-	switch kind {
-	case keyval.ConstantKind:
-		if !*write {
-			fail(errors.New("writing isn't enabled"))
-		}
-		if err := e.Set(*query); err != nil {
-			fail(errors.Wrap(err, "failed to execute as set query"))
-		}
+func set(e engine.Engine, query keyval.KeyValue) error {
+	if !*write {
+		return errors.New("writing isn't enabled")
+	}
+	return e.Set(query)
+}
 
-	case keyval.ClearKind:
-		if !*write {
-			fail(errors.New("writing isn't enabled"))
-		}
-		if err := e.Clear(*query); err != nil {
-			fail(errors.Wrap(err, "failed to execute as clear query"))
-		}
+func clear(e engine.Engine, query keyval.KeyValue) error {
+	if !*write {
+		return errors.New("writing isn't enabled")
+	}
+	return e.Clear(query)
+}
 
-	case keyval.SingleReadKind:
-		kv, err := e.SingleRead(*query)
+func singleRead(e engine.Engine, query keyval.KeyValue) error {
+	kv, err := e.SingleRead(query)
+	if err != nil {
+		return err
+	}
+	str, err := parser.FormatKeyValue(*kv)
+	if err != nil {
+		return errors.Wrap(err, "failed to format result")
+	}
+	fmt.Println(str)
+	return nil
+}
+
+func rangeRead(e engine.Engine, query keyval.KeyValue) error {
+	for kv := range e.RangeRead(context.Background(), query) {
+		if kv.Err != nil {
+			return kv.Err
+		}
+		str, err := parser.FormatKeyValue(kv.KV)
 		if err != nil {
-			fail(errors.Wrap(err, "failed to execute as single read query"))
-		}
-
-		str, err := parser.FormatKeyValue(*kv)
-		if err != nil {
-			fail(errors.Wrap(err, "failed to format result"))
+			return errors.Wrap(err, "failed to format result")
 		}
 		fmt.Println(str)
-
-	case keyval.RangeReadKind:
-		for kv := range e.RangeRead(context.Background(), *query) {
-			if kv.Err != nil {
-				fail(errors.Wrap(err, "failed to execute as range read query"))
-			}
-			str, err := parser.FormatKeyValue(kv.KV)
-			if err != nil {
-				fail(errors.Wrap(err, "failed to format result"))
-			}
-			fmt.Println(str)
-		}
 	}
+	return nil
 }
 
 func fail(err error) {
