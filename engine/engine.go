@@ -118,15 +118,10 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 	}, nil
 }
 
-type KeyValErr struct {
-	KV  keyval.KeyValue
-	Err error
-}
+func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan reader.KeyValErr {
+	out := make(chan reader.KeyValErr)
 
-func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan KeyValErr {
-	out := make(chan KeyValErr)
-
-	send := func(msg KeyValErr) {
+	send := func(msg reader.KeyValErr) {
 		select {
 		case <-ctx.Done():
 		case out <- msg:
@@ -138,36 +133,27 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan KeyV
 
 		kind, err := query.Kind()
 		if err != nil {
-			send(KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
+			send(reader.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
 			return
 		}
 		if kind != keyval.RangeReadKind {
-			send(KeyValErr{Err: errors.Wrap(err, "query not clear kind")})
+			send(reader.KeyValErr{Err: errors.Wrap(err, "query not clear kind")})
 			return
 		}
 
+		s := reader.New(ctx)
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-			r := reader.New(ctx, tr)
-			kvCh, errCh := r.Read(query)
-
-			for {
-				select {
-				case err, open := <-errCh:
-					if !open {
-						return nil, nil
-					}
-					return nil, err
-
-				case kv, open := <-kvCh:
-					if !open {
-						return nil, nil
-					}
-					send(KeyValErr{KV: kv})
-				}
+			stage1 := s.OpenDirectories(tr, query)
+			stage2 := s.ReadRange(tr, query, stage1)
+			stage3 := s.FilterKeys(query, stage2)
+			stage4 := s.UnpackValues(query, stage3)
+			for kve := range s.WithErrors(stage4) {
+				out <- kve
 			}
+			return nil, nil
 		})
 		if err != nil {
-			send(KeyValErr{Err: err})
+			send(reader.KeyValErr{Err: err})
 		}
 	}()
 
