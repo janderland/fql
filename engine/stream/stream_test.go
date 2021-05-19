@@ -30,7 +30,7 @@ func init() {
 	db = fdb.MustOpenDefault()
 }
 
-func TestReader_openDirectories(t *testing.T) {
+func TestStream_openDirectories(t *testing.T) {
 	var test = []struct {
 		name     string           // name of tests
 		query    keyval.Directory // query to execute
@@ -74,7 +74,7 @@ func TestReader_openDirectories(t *testing.T) {
 
 	for _, tests := range test {
 		t.Run(tests.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Stream) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				// Set up initial state of directories.
 				for _, path := range tests.initial {
 					_, err := rootDir.Create(tr, path, nil)
@@ -84,7 +84,7 @@ func TestReader_openDirectories(t *testing.T) {
 				}
 
 				// Execute the query.
-				out := r.OpenDirectories(tr, keyval.KeyValue{
+				out := s.OpenDirectories(tr, keyval.KeyValue{
 					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), tests.query...)},
 				})
 				waitForDirs := collectDirs(t, out)
@@ -92,9 +92,9 @@ func TestReader_openDirectories(t *testing.T) {
 				// Wait for the query to complete
 				// and check for errors.
 				if tests.error {
-					assert.Error(t, waitForErr(r))
+					assert.Error(t, waitForErr(s))
 				} else {
-					assert.NoError(t, waitForErr(r))
+					assert.NoError(t, waitForErr(s))
 				}
 
 				// Collect the query output and assert it's as expected.
@@ -112,7 +112,7 @@ func TestReader_openDirectories(t *testing.T) {
 	}
 }
 
-func TestReader_readRange(t *testing.T) {
+func TestStream_readRange(t *testing.T) {
 	var tests = []struct {
 		name     string            // name of test
 		query    keyval.Tuple      // query to execute
@@ -165,7 +165,7 @@ func TestReader_readRange(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Stream) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				paths := make(map[string]struct{})
 				var dirs []directory.DirectorySubspace
 
@@ -194,12 +194,12 @@ func TestReader_readRange(t *testing.T) {
 				defer cancel()
 
 				// Execute query.
-				out := r.ReadRange(tr, keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
+				out := s.ReadRange(tr, keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
 				waitForKVs := collectKVs(t, out)
 
 				// Wait for the query to complete
 				// and check for errors.
-				assert.NoError(t, waitForErr(r))
+				assert.NoError(t, waitForErr(s))
 
 				// Ensure the read key-values are as expected.
 				kvs := waitForKVs()
@@ -216,7 +216,7 @@ func TestReader_readRange(t *testing.T) {
 	}
 }
 
-func TestReader_filterKeys(t *testing.T) {
+func TestStream_filterKeys(t *testing.T) {
 	var tests = []struct {
 		name     string            // name of test
 		query    keyval.Tuple      // query to execute
@@ -264,18 +264,18 @@ func TestReader_filterKeys(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Stream) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				// ctx ensures sendKVs() returns when the test exits.
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
 				// Execute query.
-				out := r.FilterKeys(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendKVs(ctx, t, test.initial))
+				out := s.FilterKeys(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendKVs(ctx, t, test.initial))
 				waitForKVs := collectKVs(t, out)
 
 				// Wait for the query to complete
 				// and check for errors.
-				assert.NoError(t, waitForErr(r))
+				assert.NoError(t, waitForErr(s))
 
 				// Ensure the read key-values are as expected.
 				kvs := waitForKVs()
@@ -290,7 +290,7 @@ func TestReader_filterKeys(t *testing.T) {
 	}
 }
 
-func TestReader_unpackValues(t *testing.T) {
+func TestStream_unpackValues(t *testing.T) {
 	var tests = []struct {
 		name     string            // name of test
 		query    keyval.Value      // query to execute
@@ -328,18 +328,18 @@ func TestReader_unpackValues(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Stream) {
+			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				// ctx ensures sendKVs() returns when the test exits.
 				ctx, cancel := context.WithCancel(context.Background())
 				defer cancel()
 
 				// Execute query.
-				out := r.UnpackValues(keyval.KeyValue{Value: test.query}, sendKVs(ctx, t, test.initial))
+				out := s.UnpackValues(keyval.KeyValue{Value: test.query}, sendKVs(ctx, t, test.initial))
 				waitForKVs := collectKVs(t, out)
 
 				// Wait for the query to complete
 				// and check for errors.
-				assert.NoError(t, waitForErr(r))
+				assert.NoError(t, waitForErr(s))
 
 				// Ensure the read key-values are as expected.
 				kvs := waitForKVs()
@@ -483,11 +483,11 @@ func sendKVs(ctx context.Context, t *testing.T, in []keyval.KeyValue) chan keyva
 	return out
 }
 
-func waitForErr(r Stream) error {
+func waitForErr(s Stream) error {
 	go func() {
-		r.wg.Wait()
-		close(r.errCh)
+		s.wg.Wait()
+		close(s.errCh)
 	}()
 
-	return <-r.errCh
+	return <-s.errCh
 }
