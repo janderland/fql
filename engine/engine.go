@@ -5,7 +5,7 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	"github.com/janderland/fdbq/engine/reader"
+	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
@@ -118,10 +118,10 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 	}, nil
 }
 
-func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan reader.KeyValErr {
-	out := make(chan reader.KeyValErr)
+func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stream.KeyValErr {
+	out := make(chan stream.KeyValErr)
 
-	send := func(msg reader.KeyValErr) {
+	send := func(msg stream.KeyValErr) {
 		select {
 		case <-ctx.Done():
 		case out <- msg:
@@ -133,15 +133,15 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan read
 
 		kind, err := query.Kind()
 		if err != nil {
-			send(reader.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
+			send(stream.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
 			return
 		}
 		if kind != keyval.RangeReadKind {
-			send(reader.KeyValErr{Err: errors.Wrap(err, "query not clear kind")})
+			send(stream.KeyValErr{Err: errors.Wrap(err, "query not clear kind")})
 			return
 		}
 
-		s := reader.New(ctx)
+		s := stream.New(ctx)
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query)
 			stage2 := s.ReadRange(tr, query, stage1)
@@ -153,7 +153,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan read
 			return nil, nil
 		})
 		if err != nil {
-			send(reader.KeyValErr{Err: err})
+			send(stream.KeyValErr{Err: err})
 		}
 	}()
 
