@@ -32,7 +32,7 @@ func init() {
 
 func TestReader_openDirectories(t *testing.T) {
 	var test = []struct {
-		name     string           // name of test
+		name     string           // name of tests
 		query    keyval.Directory // query to execute
 		initial  [][]string       // initial state
 		expected [][]string       // expected results
@@ -72,11 +72,11 @@ func TestReader_openDirectories(t *testing.T) {
 		},
 	}
 
-	for _, test := range test {
-		t.Run(test.name, func(t *testing.T) {
+	for _, tests := range test {
+		t.Run(tests.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, r Reader) {
 				// Set up initial state of directories.
-				for _, path := range test.initial {
+				for _, path := range tests.initial {
 					_, err := rootDir.Create(tr, path, nil)
 					if !assert.NoError(t, err) {
 						t.FailNow()
@@ -85,13 +85,13 @@ func TestReader_openDirectories(t *testing.T) {
 
 				// Execute the query.
 				out := r.openDirectories(keyval.KeyValue{
-					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), test.query...)},
+					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), tests.query...)},
 				})
 				waitForDirs := collectDirs(t, out)
 
 				// Wait for the query to complete
 				// and check for errors.
-				if test.error {
+				if tests.error {
 					assert.Error(t, waitForErr(r))
 				} else {
 					assert.NoError(t, waitForErr(r))
@@ -99,8 +99,8 @@ func TestReader_openDirectories(t *testing.T) {
 
 				// Collect the query output and assert it's as expected.
 				directories := waitForDirs()
-				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
-					for i, expected := range test.expected {
+				if assert.Equalf(t, len(tests.expected), len(directories), "unexpected number of directories") {
+					for i, expected := range tests.expected {
 						expected = append(rootDir.GetPath(), expected...)
 						if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i) {
 							t.FailNow()
