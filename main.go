@@ -31,27 +31,33 @@ func main() {
 		fail(errors.Wrap(err, "failed to get kind of query"))
 	}
 
+	eg := engine.New(setupDB())
+
+	if onlyDir(*query) {
+
+	}
+
 	switch kind {
 	case keyval.ConstantKind:
-		if err := set(engine.New(setupDB()), *query); err != nil {
+		if err := set(eg, *query); err != nil {
 			fail(errors.Wrap(err, "failed to execute as set query"))
 		}
 	case keyval.ClearKind:
-		if err := clear(engine.New(setupDB()), *query); err != nil {
+		if err := clear(eg, *query); err != nil {
 			fail(errors.Wrap(err, "failed to execute as clear query"))
 		}
 	case keyval.SingleReadKind:
-		if err := singleRead(engine.New(setupDB()), *query); err != nil {
+		if err := singleRead(eg, *query); err != nil {
 			fail(errors.Wrap(err, "failed to execute as single read query"))
 		}
 	case keyval.RangeReadKind:
-		if err := rangeRead(engine.New(setupDB()), *query); err != nil {
+		if err := rangeRead(eg, *query); err != nil {
 			fail(errors.Wrap(err, "failed to execute as range read query"))
 		}
 	case keyval.InvalidKind:
 		fail(errors.New("query is invalid"))
 	default:
-		fail(errors.Errorf("unexpected query kind '%v'", kind))
+		panic(errors.Errorf("unexpected query kind '%v'", kind))
 	}
 }
 
@@ -64,6 +70,19 @@ func setupDB() fdb.Database {
 		fail(errors.Wrap(err, "failed to open FDB connection"))
 	}
 	return db
+}
+
+func onlyDir(query keyval.KeyValue) bool {
+	if len(query.Key.Tuple) > 0 {
+		return false
+	}
+	if query.Value != nil {
+		if tup, ok := query.Value.(keyval.Tuple); ok {
+			return len(tup) == 0
+		}
+		return false
+	}
+	return true
 }
 
 func set(e engine.Engine, query keyval.KeyValue) error {

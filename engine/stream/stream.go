@@ -25,6 +25,11 @@ type KeyValErr struct {
 	Err error
 }
 
+type DirErr struct {
+	Dir directory.DirectorySubspace
+	Err error
+}
+
 func New(ctx context.Context) Stream {
 	ctx, cancel := context.WithCancel(ctx)
 
@@ -37,7 +42,7 @@ func New(ctx context.Context) Stream {
 	}
 }
 
-func (r *Stream) WithErrors(kvCh chan keyval.KeyValue) chan KeyValErr {
+func (r *Stream) KeyValErrs(inCh chan keyval.KeyValue) chan KeyValErr {
 	outCh := make(chan KeyValErr)
 
 	go func() {
@@ -55,9 +60,9 @@ func (r *Stream) WithErrors(kvCh chan keyval.KeyValue) chan KeyValErr {
 				}
 				outCh <- KeyValErr{Err: err}
 
-			case kv, open := <-kvCh:
+			case kv, open := <-inCh:
 				if !open {
-					kvCh = nil
+					inCh = nil
 					continue
 				}
 				outCh <- KeyValErr{KV: kv}
@@ -66,6 +71,37 @@ func (r *Stream) WithErrors(kvCh chan keyval.KeyValue) chan KeyValErr {
 	}()
 
 	return outCh
+}
+
+func (r *Stream) DirErrs(in chan directory.DirectorySubspace) chan DirErr {
+	out := make(chan DirErr)
+
+	go func() {
+		r.wg.Wait()
+		close(r.errCh)
+	}()
+
+	go func() {
+		defer close(out)
+		for {
+			select {
+			case err, open := <-r.errCh:
+				if !open {
+					return
+				}
+				out <- DirErr{Err: err}
+
+			case dir, open := <-in:
+				if !open {
+					in = nil
+					continue
+				}
+				out <- DirErr{Dir: dir}
+			}
+		}
+	}()
+
+	return out
 }
 
 func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query keyval.KeyValue) chan directory.DirectorySubspace {

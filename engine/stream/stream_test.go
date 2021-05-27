@@ -23,11 +23,19 @@ const root = "root"
 
 var (
 	db fdb.Database
+
+	flags struct {
+		force bool
+		level string
+	}
 )
 
 func init() {
 	fdb.MustAPIVersion(620)
 	db = fdb.MustOpenDefault()
+
+	flag.BoolVar(&flags.force, "force", false, "remove test directory if it exists")
+	flag.StringVar(&flags.level, "level", "debug", "logging level")
 }
 
 func TestStream_openDirectories(t *testing.T) {
@@ -354,15 +362,13 @@ func TestStream_unpackValues(t *testing.T) {
 	}
 }
 
-var allowedToDelete = flag.Bool("force", false, "remove test directory if it exists")
-
 func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, Stream)) {
 	exists, err := directory.Exists(db, []string{root})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
 	}
 	if exists {
-		if !*allowedToDelete {
+		if !flags.force {
 			t.Fatal(errors.New("test directory already exists, use '-force' flag to remove"))
 		}
 		if _, err := directory.Root().Remove(db, []string{root}); err != nil {
@@ -381,7 +387,11 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 		}
 	}()
 
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
+	level, err := zerolog.ParseLevel(flags.level)
+	if err != nil {
+		t.Fatal(errors.Wrap(err, "failed to parse logging level"))
+	}
+	zerolog.SetGlobalLevel(level)
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
 
 	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
