@@ -43,7 +43,7 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 	}
 
 	if onlyDir {
-		if err := app.dirRange(query.Key.Directory); err != nil {
+		if err := app.directories(query.Key.Directory); err != nil {
 			return errors.Wrap(err, "failed to execute as directory query")
 		}
 		return nil

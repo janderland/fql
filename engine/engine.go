@@ -160,7 +160,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 	return out
 }
 
-func (e *Engine) DirRange(ctx context.Context, query keyval.Directory) chan stream.DirErr {
+func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan stream.DirErr {
 	out := make(chan stream.DirErr)
 
 	send := func(msg stream.DirErr) {

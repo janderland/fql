@@ -62,8 +62,8 @@ func (h *headless) rangeRead(query keyval.KeyValue) error {
 	return nil
 }
 
-func (h *headless) dirRange(query keyval.Directory) error {
-	for msg := range h.eg.DirRange(context.Background(), query) {
+func (h *headless) directories(query keyval.Directory) error {
+	for msg := range h.eg.Directories(context.Background(), query) {
 		if msg.Err != nil {
 			return msg.Err
 		}
