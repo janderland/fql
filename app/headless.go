@@ -3,11 +3,12 @@ package app
 import (
 	"context"
 	"fmt"
+	"io"
+
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser"
 	"github.com/pkg/errors"
-	"io"
 )
 
 type headless struct {
@@ -51,6 +52,22 @@ func (h *headless) rangeRead(query keyval.KeyValue) error {
 			return kv.Err
 		}
 		str, err := parser.FormatKeyValue(kv.KV)
+		if err != nil {
+			return errors.Wrap(err, "failed to format result")
+		}
+		if _, err := fmt.Fprintln(h.out, str); err != nil {
+			return errors.Wrap(err, "failed to print output")
+		}
+	}
+	return nil
+}
+
+func (h *headless) dirRange(query keyval.Directory) error {
+	for msg := range h.eg.DirRange(context.Background(), query) {
+		if msg.Err != nil {
+			return msg.Err
+		}
+		str, err := parser.FormatDirectory(keyval.FromStringArray(msg.Dir.GetPath()))
 		if err != nil {
 			return errors.Wrap(err, "failed to format result")
 		}

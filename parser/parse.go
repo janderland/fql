@@ -24,7 +24,7 @@ func ParseQuery(str string) (*keyval.KeyValue, bool, error) {
 		if err != nil {
 			return nil, false, errors.Wrap(err, "failed to parse as key")
 		}
-		return &keyval.KeyValue{Key: *key}, false, nil
+		return &keyval.KeyValue{Key: *key, Value: keyval.Variable{}}, false, nil
 	}
 	dir, err := ParseDirectory(str)
 	if err != nil {

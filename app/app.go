@@ -26,7 +26,7 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 		return errors.Wrap(err, "failed to parse args")
 	}
 
-	query, _, err := parser.ParseQuery(queryStr)
+	query, onlyDir, err := parser.ParseQuery(queryStr)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse query")
 	}
@@ -42,6 +42,13 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 		eg:    engine.New(db),
 	}
 
+	if onlyDir {
+		if err := app.dirRange(query.Key.Directory); err != nil {
+			return errors.Wrap(err, "failed to execute as directory query")
+		}
+		return nil
+	}
+
 	kind, err := query.Kind()
 	if err != nil {
 		return errors.Wrap(err, "failed to get kind of query")
@@ -52,25 +59,32 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 		if err := app.set(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as set query")
 		}
+		return nil
+
 	case keyval.ClearKind:
 		if err := app.clear(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as clear query")
 		}
+		return nil
+
 	case keyval.SingleReadKind:
 		if err := app.singleRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as single read query")
 		}
+		return nil
+
 	case keyval.RangeReadKind:
 		if err := app.rangeRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as range read query")
 		}
+		return nil
+
 	case keyval.InvalidKind:
 		return errors.New("query is invalid")
+
 	default:
 		return errors.Errorf("unexpected query kind '%v'", kind)
 	}
-
-	return nil
 }
 
 func parseArgs(args []string, stderr *os.File) (flags, string, error) {

@@ -159,3 +159,31 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 
 	return out
 }
+
+func (e *Engine) DirRange(ctx context.Context, query keyval.Directory) chan stream.DirErr {
+	out := make(chan stream.DirErr)
+
+	send := func(msg stream.DirErr) {
+		select {
+		case <-ctx.Done():
+		case out <- msg:
+		}
+	}
+
+	go func() {
+		defer close(out)
+
+		s := stream.New(ctx)
+		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+			for dir := range s.OpenDirectories(tr, keyval.KeyValue{Key: keyval.Key{Directory: query}}) {
+				send(dir)
+			}
+			return nil, nil
+		})
+		if err != nil {
+			send(stream.DirErr{Err: err})
+		}
+	}()
+
+	return out
+}
