@@ -1,10 +1,7 @@
 package app
 
 import (
-	"context"
 	"flag"
-	"fmt"
-	"io"
 	"os"
 	"strings"
 
@@ -14,6 +11,10 @@ import (
 	"github.com/janderland/fdbq/parser"
 	"github.com/pkg/errors"
 )
+
+type flags struct {
+	write bool
+}
 
 func Run(args []string, stdout *os.File, stderr *os.File) error {
 	flags, queryStr, err := parseArgs(args, stderr)
@@ -38,7 +39,7 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 		return errors.Wrap(err, "failed to connect to DB")
 	}
 
-	app := app{
+	app := headless{
 		flags: flags,
 		out:   stdout,
 		eg:    engine.New(db),
@@ -70,10 +71,6 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 	return nil
 }
 
-type flags struct {
-	write bool
-}
-
 func parseArgs(args []string, stderr *os.File) (flags, string, error) {
 	var flags flags
 
@@ -97,55 +94,4 @@ func connectToDB() (fdb.Database, error) {
 		return fdb.Database{}, errors.Wrap(err, "failed to open FDB connection")
 	}
 	return db, nil
-}
-
-type app struct {
-	flags flags
-	out   io.Writer
-	eg    engine.Engine
-}
-
-func (a *app) set(query keyval.KeyValue) error {
-	if !a.flags.write {
-		return errors.New("writing isn't enabled")
-	}
-	return a.eg.Set(query)
-}
-
-func (a *app) clear(query keyval.KeyValue) error {
-	if !a.flags.write {
-		return errors.New("writing isn't enabled")
-	}
-	return a.eg.Clear(query)
-}
-
-func (a *app) singleRead(query keyval.KeyValue) error {
-	kv, err := a.eg.SingleRead(query)
-	if err != nil {
-		return err
-	}
-	str, err := parser.FormatKeyValue(*kv)
-	if err != nil {
-		return errors.Wrap(err, "failed to format result")
-	}
-	if _, err := fmt.Fprintln(a.out, str); err != nil {
-		return errors.Wrap(err, "failed to print output")
-	}
-	return nil
-}
-
-func (a *app) rangeRead(query keyval.KeyValue) error {
-	for kv := range a.eg.RangeRead(context.Background(), query) {
-		if kv.Err != nil {
-			return kv.Err
-		}
-		str, err := parser.FormatKeyValue(kv.KV)
-		if err != nil {
-			return errors.Wrap(err, "failed to format result")
-		}
-		if _, err := fmt.Fprintln(a.out, str); err != nil {
-			return errors.Wrap(err, "failed to print output")
-		}
-	}
-	return nil
 }
