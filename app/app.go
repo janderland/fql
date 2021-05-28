@@ -2,7 +2,10 @@ package app
 
 import (
 	"context"
+	"flag"
 	"fmt"
+	"io"
+	"os"
 	"strings"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -12,12 +15,16 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Flags struct {
-	Write bool
-}
+func Run(args []string, stdout *os.File, stderr *os.File) error {
+	flags, queryStr, err := parseArgs(args, stderr)
+	if err != nil {
+		if errors.Is(err, flag.ErrHelp) {
+			return nil
+		}
+		return errors.Wrap(err, "failed to parse args")
+	}
 
-func Run(flags Flags, args []string) error {
-	query, err := parser.ParseKeyValue(strings.Join(args, " "))
+	query, err := parser.ParseKeyValue(queryStr)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse query")
 	}
@@ -31,7 +38,11 @@ func Run(flags Flags, args []string) error {
 		return errors.Wrap(err, "failed to connect to DB")
 	}
 
-	app := app{flags: flags, eg: engine.New(db)}
+	app := app{
+		flags: flags,
+		out:   stdout,
+		eg:    engine.New(db),
+	}
 
 	if onlyDir(*query) {
 		// TODO: Implement.
@@ -63,6 +74,24 @@ func Run(flags Flags, args []string) error {
 	return nil
 }
 
+type flags struct {
+	write bool
+}
+
+func parseArgs(args []string, stderr *os.File) (flags, string, error) {
+	var flags flags
+
+	flagSet := flag.NewFlagSet(args[0], flag.ContinueOnError)
+	flagSet.SetOutput(stderr)
+
+	flagSet.BoolVar(&flags.write, "write", false, "allow write queries")
+
+	if err := flagSet.Parse(args[1:]); err != nil {
+		return flags, "", errors.Wrap(err, "failed to parse flags")
+	}
+	return flags, strings.Join(flagSet.Args(), " "), nil
+}
+
 func connectToDB() (fdb.Database, error) {
 	if err := fdb.APIVersion(620); err != nil {
 		return fdb.Database{}, errors.Wrap(err, "failed to specify FDB API version")
@@ -88,19 +117,20 @@ func onlyDir(query keyval.KeyValue) bool {
 }
 
 type app struct {
-	flags Flags
+	flags flags
+	out   io.Writer
 	eg    engine.Engine
 }
 
 func (a *app) set(query keyval.KeyValue) error {
-	if !a.flags.Write {
+	if !a.flags.write {
 		return errors.New("writing isn't enabled")
 	}
 	return a.eg.Set(query)
 }
 
 func (a *app) clear(query keyval.KeyValue) error {
-	if !a.flags.Write {
+	if !a.flags.write {
 		return errors.New("writing isn't enabled")
 	}
 	return a.eg.Clear(query)
@@ -115,7 +145,9 @@ func (a *app) singleRead(query keyval.KeyValue) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to format result")
 	}
-	fmt.Println(str)
+	if _, err := fmt.Fprintln(a.out, str); err != nil {
+		return errors.Wrap(err, "failed to print output")
+	}
 	return nil
 }
 
@@ -128,7 +160,9 @@ func (a *app) rangeRead(query keyval.KeyValue) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to format result")
 		}
-		fmt.Println(str)
+		if _, err := fmt.Fprintln(a.out, str); err != nil {
+			return errors.Wrap(err, "failed to print output")
+		}
 	}
 	return nil
 }

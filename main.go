@@ -1,23 +1,19 @@
 package main
 
 import (
-	"flag"
 	"fmt"
 	"os"
+
+	"github.com/pkg/errors"
 
 	"github.com/janderland/fdbq/app"
 )
 
-var flags app.Flags
-
-func init() {
-	flag.BoolVar(&flags.Write, "write", false, "allow write queries")
-	flag.Parse()
-}
-
 func main() {
-	if err := app.Run(flags, flag.Args()); err != nil {
-		fmt.Println(err)
+	if err := app.Run(os.Args, os.Stdout, os.Stderr); err != nil {
+		if _, err := fmt.Fprintf(os.Stderr, "%v\n", err); err != nil {
+			panic(errors.Wrap(err, "failed to display error"))
+		}
 		os.Exit(1)
 	}
 }
