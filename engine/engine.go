@@ -147,8 +147,8 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 			stage2 := s.ReadRange(tr, query, stage1)
 			stage3 := s.FilterKeys(query, stage2)
 			stage4 := s.UnpackValues(query, stage3)
-			for kve := range s.KeyValErrs(stage4) {
-				out <- kve
+			for kve := range stage4 {
+				send(kve)
 			}
 			return nil, nil
 		})

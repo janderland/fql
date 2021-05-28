@@ -6,7 +6,6 @@ import (
 	"math/big"
 	"os"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/rs/zerolog"
@@ -39,7 +38,7 @@ func init() {
 }
 
 func TestStream_openDirectories(t *testing.T) {
-	var test = []struct {
+	var tests = []struct {
 		name     string           // name of tests
 		query    keyval.Directory // query to execute
 		initial  [][]string       // initial state
@@ -80,11 +79,11 @@ func TestStream_openDirectories(t *testing.T) {
 		},
 	}
 
-	for _, tests := range test {
-		t.Run(tests.name, func(t *testing.T) {
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				// Set up initial state of directories.
-				for _, path := range tests.initial {
+				for _, path := range test.initial {
 					_, err := rootDir.Create(tr, path, nil)
 					if !assert.NoError(t, err) {
 						t.FailNow()
@@ -93,22 +92,18 @@ func TestStream_openDirectories(t *testing.T) {
 
 				// Execute the query.
 				out := s.OpenDirectories(tr, keyval.KeyValue{
-					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), tests.query...)},
+					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), test.query...)},
 				})
-				waitForDirs := collectDirs(t, out)
 
-				// Wait for the query to complete
-				// and check for errors.
-				if tests.error {
-					assert.Error(t, waitForErr(s))
+				directories, err := collectDirs(out)
+				if test.error {
+					assert.Error(t, err)
 				} else {
-					assert.NoError(t, waitForErr(s))
+					assert.NoError(t, err)
 				}
 
-				// Collect the query output and assert it's as expected.
-				directories := waitForDirs()
-				if assert.Equalf(t, len(tests.expected), len(directories), "unexpected number of directories") {
-					for i, expected := range tests.expected {
+				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
+					for i, expected := range test.expected {
 						expected = append(rootDir.GetPath(), expected...)
 						if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i) {
 							t.FailNow()
@@ -203,14 +198,10 @@ func TestStream_readRange(t *testing.T) {
 
 				// Execute query.
 				out := s.ReadRange(tr, keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
-				waitForKVs := collectKVs(t, out)
 
-				// Wait for the query to complete
-				// and check for errors.
-				assert.NoError(t, waitForErr(s))
+				kvs, err := collectKVs(out)
+				assert.NoError(t, err)
 
-				// Ensure the read key-values are as expected.
-				kvs := waitForKVs()
 				rootPath := keyval.FromStringArray(rootDir.GetPath())
 				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
@@ -279,14 +270,10 @@ func TestStream_filterKeys(t *testing.T) {
 
 				// Execute query.
 				out := s.FilterKeys(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendKVs(ctx, t, test.initial))
-				waitForKVs := collectKVs(t, out)
 
-				// Wait for the query to complete
-				// and check for errors.
-				assert.NoError(t, waitForErr(s))
+				kvs, err := collectKVs(out)
+				assert.NoError(t, err)
 
-				// Ensure the read key-values are as expected.
-				kvs := waitForKVs()
 				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
 					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
@@ -343,14 +330,10 @@ func TestStream_unpackValues(t *testing.T) {
 
 				// Execute query.
 				out := s.UnpackValues(keyval.KeyValue{Value: test.query}, sendKVs(ctx, t, test.initial))
-				waitForKVs := collectKVs(t, out)
 
-				// Wait for the query to complete
-				// and check for errors.
-				assert.NoError(t, waitForErr(s))
+				kvs, err := collectKVs(out)
+				assert.NoError(t, err)
 
-				// Ensure the read key-values are as expected.
-				kvs := waitForKVs()
 				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
 					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
@@ -419,46 +402,30 @@ func unpackWithPanic(typ keyval.ValueType, bytes []byte) keyval.Value {
 	return unpacked
 }
 
-func collectDirs(t *testing.T, in chan directory.DirectorySubspace) func() []directory.DirectorySubspace {
+func collectDirs(in chan DirErr) ([]directory.DirectorySubspace, error) {
 	var out []directory.DirectorySubspace
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for dir := range in {
-			t.Logf("received directory: %s", dir.GetPath())
-			out = append(out, dir)
+	for msg := range in {
+		if msg.Err != nil {
+			return nil, msg.Err
 		}
-	}()
-
-	return func() []directory.DirectorySubspace {
-		wg.Wait()
-		return out
+		out = append(out, msg.Dir)
 	}
+	return out, nil
 }
 
-func collectKVs(t *testing.T, in chan keyval.KeyValue) func() []keyval.KeyValue {
+func collectKVs(in chan KeyValErr) ([]keyval.KeyValue, error) {
 	var out []keyval.KeyValue
-	var wg sync.WaitGroup
-
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
-		for kv := range in {
-			t.Logf("received kv: %+v", kv)
-			out = append(out, kv)
+	for msg := range in {
+		if msg.Err != nil {
+			return nil, msg.Err
 		}
-	}()
-
-	return func() []keyval.KeyValue {
-		wg.Wait()
-		return out
+		out = append(out, msg.KV)
 	}
+	return out, nil
 }
 
-func sendDirs(ctx context.Context, t *testing.T, in []directory.DirectorySubspace) chan directory.DirectorySubspace {
-	out := make(chan directory.DirectorySubspace)
+func sendDirs(ctx context.Context, t *testing.T, in []directory.DirectorySubspace) chan DirErr {
+	out := make(chan DirErr)
 
 	go func() {
 		defer close(out)
@@ -466,7 +433,7 @@ func sendDirs(ctx context.Context, t *testing.T, in []directory.DirectorySubspac
 			select {
 			case <-ctx.Done():
 				return
-			case out <- dir:
+			case out <- DirErr{Dir: dir}:
 				t.Logf("sent dir: %s", dir.GetPath())
 			}
 		}
@@ -475,8 +442,8 @@ func sendDirs(ctx context.Context, t *testing.T, in []directory.DirectorySubspac
 	return out
 }
 
-func sendKVs(ctx context.Context, t *testing.T, in []keyval.KeyValue) chan keyval.KeyValue {
-	out := make(chan keyval.KeyValue)
+func sendKVs(ctx context.Context, t *testing.T, in []keyval.KeyValue) chan KeyValErr {
+	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
@@ -484,20 +451,11 @@ func sendKVs(ctx context.Context, t *testing.T, in []keyval.KeyValue) chan keyva
 			select {
 			case <-ctx.Done():
 				return
-			case out <- kv:
+			case out <- KeyValErr{KV: kv}:
 				t.Logf("sent kv: %+v", kv)
 			}
 		}
 	}()
 
 	return out
-}
-
-func waitForErr(s Stream) error {
-	go func() {
-		s.wg.Wait()
-		close(s.errCh)
-	}()
-
-	return <-s.errCh
 }
