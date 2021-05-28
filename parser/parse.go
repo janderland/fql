@@ -11,6 +11,28 @@ import (
 	"github.com/pkg/errors"
 )
 
+func ParseQuery(str string) (*keyval.KeyValue, bool, error) {
+	if strings.Contains(str, string(KVSep)) {
+		kv, err := ParseKeyValue(str)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "failed to parse as key-value")
+		}
+		return kv, false, nil
+	}
+	if strings.Contains(str, string(TupStart)) {
+		key, err := ParseKey(str)
+		if err != nil {
+			return nil, false, errors.Wrap(err, "failed to parse as key")
+		}
+		return &keyval.KeyValue{Key: *key}, false, nil
+	}
+	dir, err := ParseDirectory(str)
+	if err != nil {
+		return nil, false, errors.Wrap(err, "failed to parse as directory")
+	}
+	return &keyval.KeyValue{Key: keyval.Key{Directory: dir}}, true, nil
+}
+
 func ParseKeyValue(str string) (*keyval.KeyValue, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
@@ -28,11 +50,11 @@ func ParseKeyValue(str string) (*keyval.KeyValue, error) {
 
 	key, err := ParseKey(keyStr)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse key - %s", keyStr)
+		return nil, errors.Wrap(err, "failed to parse key")
 	}
 	value, err := ParseValue(valueStr)
 	if err != nil {
-		return nil, errors.Wrapf(err, "failed to parse value - %s", valueStr)
+		return nil, errors.Wrap(err, "failed to parse value")
 	}
 
 	return &keyval.KeyValue{
@@ -61,13 +83,13 @@ func ParseKey(str string) (*keyval.Key, error) {
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse directory - %s", directoryStr)
+			return nil, errors.Wrap(err, "failed to parse directory")
 		}
 	}
 	if len(tupleStr) > 0 {
 		key.Tuple, err = ParseTuple(tupleStr)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse tuple - %s", tupleStr)
+			return nil, errors.Wrap(err, "failed to parse tuple")
 		}
 	}
 	return key, nil

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
+
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser"
@@ -25,13 +26,9 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 		return errors.Wrap(err, "failed to parse args")
 	}
 
-	query, err := parser.ParseKeyValue(queryStr)
+	query, _, err := parser.ParseQuery(queryStr)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse query")
-	}
-	kind, err := query.Kind()
-	if err != nil {
-		return errors.Wrap(err, "failed to get kind of query")
 	}
 
 	db, err := connectToDB()
@@ -43,6 +40,11 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 		flags: flags,
 		out:   stdout,
 		eg:    engine.New(db),
+	}
+
+	kind, err := query.Kind()
+	if err != nil {
+		return errors.Wrap(err, "failed to get kind of query")
 	}
 
 	switch kind {
