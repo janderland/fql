@@ -44,10 +44,6 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 		eg:    engine.New(db),
 	}
 
-	if onlyDir(*query) {
-		// TODO: Implement.
-	}
-
 	switch kind {
 	case keyval.ConstantKind:
 		if err := app.set(*query); err != nil {
@@ -101,19 +97,6 @@ func connectToDB() (fdb.Database, error) {
 		return fdb.Database{}, errors.Wrap(err, "failed to open FDB connection")
 	}
 	return db, nil
-}
-
-func onlyDir(query keyval.KeyValue) bool {
-	if len(query.Key.Tuple) > 0 {
-		return false
-	}
-	if query.Value != nil {
-		if tup, ok := query.Value.(keyval.Tuple); ok {
-			return len(tup) == 0
-		}
-		return false
-	}
-	return true
 }
 
 type app struct {
