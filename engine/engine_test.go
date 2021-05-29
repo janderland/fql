@@ -83,6 +83,14 @@ func TestEngine_Clear(t *testing.T) {
 		assert.NoError(t, err)
 		assert.Nil(t, result)
 	})
+
+	testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+		err := e.Clear(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33, kv.Variable{}}}, Value: kv.Clear{}})
+		assert.Error(t, err)
+
+		err = e.Clear(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33}}, Value: nil})
+		assert.Error(t, err)
+	})
 }
 
 func testEnv(t *testing.T, f func(directory.DirectorySubspace, Engine)) {

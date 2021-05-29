@@ -70,7 +70,7 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to get query kind")
 	}
 	if kind != keyval.ClearKind {
-		return errors.Wrap(err, "query not clear kind")
+		return errors.New("query not clear kind")
 	}
 
 	path, err := keyval.ToStringArray(query.Key.Directory)
@@ -98,7 +98,7 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 		return nil, errors.Wrap(err, "failed to get query kind")
 	}
 	if kind != keyval.SingleReadKind {
-		return nil, errors.Wrap(err, "query not clear kind")
+		return nil, errors.New("query not single-read kind")
 	}
 
 	path, err := keyval.ToStringArray(query.Key.Directory)
@@ -163,7 +163,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 			return
 		}
 		if kind != keyval.RangeReadKind {
-			send(stream.KeyValErr{Err: errors.Wrap(err, "query not clear kind")})
+			send(stream.KeyValErr{Err: errors.New("query not range-read kind")})
 			return
 		}
 
