@@ -9,7 +9,6 @@ import (
 	"github.com/stretchr/testify/assert"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	"github.com/janderland/fdbq/keyval"
 	kv "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -48,6 +47,7 @@ func TestEngine_Set(t *testing.T) {
 		query.Value = kv.Variable{kv.IntType}
 
 		result, err := e.SingleRead(query)
+		assert.NoError(t, err)
 		assert.Equal(t, &expected, result)
 	})
 
@@ -94,20 +94,4 @@ func testEnv(t *testing.T, f func(directory.DirectorySubspace, Engine)) {
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
 
 	f(dir, New(log.WithContext(context.Background()), db))
-}
-
-func packWithPanic(val keyval.Value) []byte {
-	packed, err := keyval.PackValue(val)
-	if err != nil {
-		panic(err)
-	}
-	return packed
-}
-
-func unpackWithPanic(typ keyval.ValueType, bytes []byte) keyval.Value {
-	unpacked, err := keyval.UnpackValue(typ, bytes)
-	if err != nil {
-		panic(err)
-	}
-	return unpacked
 }
