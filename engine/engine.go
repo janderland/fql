@@ -83,6 +83,9 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
+
+		e.log.Debug().Interface("query", query).Msg("clearing")
+
 		tr.Clear(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple)))
 		return nil, nil
 	})
@@ -103,31 +106,41 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	bytes, err := e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	result, err := e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		dir, err := directory.CreateOrOpen(tr, path, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
+
+		e.log.Debug().Interface("query", query).Msg("single reading")
+
 		return tr.Get(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple))).Get()
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "transaction failed")
 	}
 
-	for _, typ := range query.Value.(keyval.Variable) {
-		value, err := keyval.UnpackValue(typ, bytes.([]byte))
-		if err != nil {
-			continue
+	bytes := result.([]byte)
+	if bytes == nil {
+		return nil, nil
+	}
+
+	if len(bytes) > 0 {
+		for _, typ := range query.Value.(keyval.Variable) {
+			value, err := keyval.UnpackValue(typ, bytes)
+			if err != nil {
+				continue
+			}
+			return &keyval.KeyValue{
+				Key:   query.Key,
+				Value: value,
+			}, nil
 		}
-		return &keyval.KeyValue{
-			Key:   query.Key,
-			Value: value,
-		}, nil
 	}
 
 	return &keyval.KeyValue{
 		Key:   query.Key,
-		Value: bytes,
+		Value: result,
 	}, nil
 }
 
