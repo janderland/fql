@@ -1,33 +1,39 @@
-<query> ::= <key> '=' <value> | <key>
+; TODO: Use ABNF - https://datatracker.ietf.org/doc/html/rfc5234
 
-<key> ::= <path> | <tuple> | <path> <tuple>
+query ::= <keyval> | <key> | <dirpath>
 
-<value> ::= <tuple> | <data> | 'clear'
+keyval ::= <key> <ws> '=' <ws> <value>
 
-<path> ::= '/' <directory> <path> | '/' <directory>
+key ::= <path> <ws> <tuple>
 
-<tuple> ::= '(' <elements> ')'
+value ::= <tuple> | <data> | 'clear'
 
-<elements> ::= <data> ',' <elements> | <tuple> ',' <elements> | <data> | <tuple>
+dirpath ::= '/' <ws> <directory> <ws> <dirpath> | '/' <directory>
 
-<data> ::= 'nil' | <bool> | <int> | <float> | <scientific> | <string> | <uuid> | <base64>
+tuple ::= '(' <ws> <elements> <ws> ')'
 
-<bool> ::= 'true' | 'false'
+elements ::= <data> <ws> ',' <ws> <elements> | <tuple> <ws> ',' <ws> <elements> | <data> | <tuple>
 
-; Whitespace after the '-' is not allowed.
-<int> ::= <number> | '-'<number>
+data ::= 'nil' | <bool> | <int> | <float> | <scientific> | <string> | <uuid> | <base64>
 
-; Whitespace around the '.' is not allowed.
-<float> ::= <int>'.'<number>
+bool ::= 'true' | 'false'
 
-; Whitespace around the 'e' is not allowed.
-<scientific> ::= <int>'e'<int> | <float>'e'<int>
+int ::= <number> | '-' <number>
 
-<string> ::= '"'<words>'"'
+float ::= <int> '.' <number>
 
-<number> ::= <digit> | <digit><number>
+scientific ::= <int> 'e' <int> | <float> 'e' <int>
 
-<words> ::= <character><words> | <character>
+string ::= '"' <words> '"'
 
-; <digit> includes all single digit numbers 0-9.
-; <character> includes all ASCII characters.
+uuid ::= 8 * <digit> '-' 4 * <digit> '-' 4 * <digit> '-' 4 * <digit> '-' 12 * <digit>
+
+number ::= <digit> <number> | <digit>
+
+words ::= <character> <words> | <character>
+
+ws ::= ' ' <ws> | ' ' | ''
+
+; <digit> is all single digit numbers 0-9.
+; <character> is all ASCII characters.
+
