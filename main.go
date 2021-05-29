@@ -1,26 +1,23 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
 	"os"
-	"strings"
+
+	"github.com/apple/foundationdb/bindings/go/src/fdb"
 
 	"github.com/pkg/errors"
 
-	"github.com/janderland/fdbq/parser"
+	"github.com/janderland/fdbq/app"
 )
 
 func main() {
-	query, err := parser.ParseKeyValue(strings.Join(os.Args[1:], " "))
-	if err != nil {
-		fmt.Println(errors.Wrap(err, "failed to parse kv"))
+	fdb.MustAPIVersion(620)
+
+	if err := app.Run(os.Args, os.Stdout, os.Stderr); err != nil {
+		if _, err := fmt.Fprintf(os.Stderr, "%v\n", err); err != nil {
+			panic(errors.Wrap(err, "failed to display error"))
+		}
 		os.Exit(1)
 	}
-	str, err := json.MarshalIndent(query, "", "  ")
-	if err != nil {
-		fmt.Println(errors.Wrap(err, "failed to marshal JSON"))
-		os.Exit(1)
-	}
-	fmt.Println(string(str))
 }

@@ -5,12 +5,16 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	"github.com/janderland/fdbq/engine/reader"
+	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
 
 type Engine struct{ db fdb.Transactor }
+
+func New(db fdb.Transactor) Engine {
+	return Engine{db: db}
+}
 
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
@@ -107,18 +111,17 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 			Value: value,
 		}, nil
 	}
-	return nil, nil
+
+	return &keyval.KeyValue{
+		Key:   query.Key,
+		Value: bytes,
+	}, nil
 }
 
-type KeyValErr struct {
-	KV  keyval.KeyValue
-	Err error
-}
+func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stream.KeyValErr {
+	out := make(chan stream.KeyValErr)
 
-func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan KeyValErr {
-	out := make(chan KeyValErr)
-
-	send := func(msg KeyValErr) {
+	send := func(msg stream.KeyValErr) {
 		select {
 		case <-ctx.Done():
 		case out <- msg:
@@ -130,36 +133,55 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan KeyV
 
 		kind, err := query.Kind()
 		if err != nil {
-			send(KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
+			send(stream.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
 			return
 		}
 		if kind != keyval.RangeReadKind {
-			send(KeyValErr{Err: errors.Wrap(err, "query not clear kind")})
+			send(stream.KeyValErr{Err: errors.Wrap(err, "query not clear kind")})
 			return
 		}
 
+		s := stream.New(ctx)
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-			r := reader.New(ctx, tr)
-			kvCh, errCh := r.Read(query)
-
-			for {
-				select {
-				case err, open := <-errCh:
-					if !open {
-						return nil, nil
-					}
-					return nil, err
-
-				case kv, open := <-kvCh:
-					if !open {
-						return nil, nil
-					}
-					send(KeyValErr{KV: kv})
-				}
+			stage1 := s.OpenDirectories(tr, query)
+			stage2 := s.ReadRange(tr, query, stage1)
+			stage3 := s.FilterKeys(query, stage2)
+			stage4 := s.UnpackValues(query, stage3)
+			for kve := range stage4 {
+				send(kve)
 			}
+			return nil, nil
 		})
 		if err != nil {
-			send(KeyValErr{Err: err})
+			send(stream.KeyValErr{Err: err})
+		}
+	}()
+
+	return out
+}
+
+func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan stream.DirErr {
+	out := make(chan stream.DirErr)
+
+	send := func(msg stream.DirErr) {
+		select {
+		case <-ctx.Done():
+		case out <- msg:
+		}
+	}
+
+	go func() {
+		defer close(out)
+
+		s := stream.New(ctx)
+		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+			for dir := range s.OpenDirectories(tr, keyval.KeyValue{Key: keyval.Key{Directory: query}}) {
+				send(dir)
+			}
+			return nil, nil
+		})
+		if err != nil {
+			send(stream.DirErr{Err: err})
 		}
 	}()
 
