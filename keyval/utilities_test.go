@@ -39,4 +39,11 @@ func TestFromFDBTuple(t *testing.T) {
 	assert.Equal(t, Tuple{true, Tuple{32.8, "hi"}}, tup)
 }
 
-// TODO: TestSplitAtFirstVariable
+func TestSplitAtFirstVariable(t *testing.T) {
+	prefix, variable, suffix := SplitAtFirstVariable([]interface{}{
+		"one", int64(55), Variable{FloatType}, Tuple{-39.9},
+	})
+	assert.Equal(t, []interface{}{"one", int64(55)}, prefix)
+	assert.Equal(t, &Variable{FloatType}, variable)
+	assert.Equal(t, []interface{}{Tuple{-39.9}}, suffix)
+}

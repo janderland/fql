@@ -55,6 +55,16 @@ func TestKeyValue_Kind(t *testing.T) {
 			kind: RangeReadKind,
 			kv: KeyValue{
 				Key: Key{
+					Directory: Directory{"my", "dir"},
+					Tuple:     Tuple{123, Variable{}, "wow"},
+				},
+				Value: nil,
+			},
+		},
+		{
+			kind: RangeReadKind,
+			kv: KeyValue{
+				Key: Key{
 					Directory: Directory{Variable{}, "dir"},
 					Tuple:     Tuple{123, -55.8, "wow"},
 				},

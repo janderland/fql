@@ -22,7 +22,7 @@ type Headless struct {
 }
 
 func New(flags flag.Flags, out io.Writer, db fdb.Transactor) Headless {
-	return Headless{flags: flags, out: out, eg: engine.New(db)}
+	return Headless{flags: flags, out: out, eg: engine.New(context.Background(), db)}
 }
 
 func (h *Headless) Query(str string) error {
