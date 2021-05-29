@@ -131,7 +131,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 	prefix, _, _ := keyval.SplitAtFirstVariable(query)
 	fdbPrefix := keyval.ToFDBTuple(prefix)
 
-	for msg := r.recvDir(in); msg != nil; msg = r.recvDir(in) {
+	for msg := range in {
 		if msg.Err != nil {
 			r.sendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "read range input closed")})
 			return
@@ -178,7 +178,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 func (r *Stream) doFilterKeys(query keyval.Tuple, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "filter keys").Interface("query", query).Logger()
 
-	for msg := r.recvKV(in); msg != nil; msg = r.recvKV(in) {
+	for msg := range in {
 		if msg.Err != nil {
 			r.sendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "filter keys input closed")})
 			return
@@ -199,7 +199,7 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
 	if variable, isVar := query.(keyval.Variable); isVar {
-		for msg := r.recvKV(in); msg != nil; msg = r.recvKV(in) {
+		for msg := range in {
 			if msg.Err != nil {
 				r.sendKV(out, KeyValErr{Err: msg.Err})
 				return
@@ -233,7 +233,7 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 			return
 		}
 
-		for msg := r.recvKV(in); msg != nil; msg = r.recvKV(in) {
+		for msg := range in {
 			if msg.Err != nil {
 				r.sendKV(out, KeyValErr{Err: msg.Err})
 				return
@@ -270,20 +270,4 @@ func (r *Stream) sendKV(ch chan<- KeyValErr, kv KeyValErr) {
 	if kv.Err != nil {
 		r.cancel()
 	}
-}
-
-func (r *Stream) recvDir(ch <-chan DirErr) *DirErr {
-	dir, open := <-ch
-	if open {
-		return &dir
-	}
-	return nil
-}
-
-func (r *Stream) recvKV(ch <-chan KeyValErr) *KeyValErr {
-	kv, open := <-ch
-	if open {
-		return &kv
-	}
-	return nil
 }
