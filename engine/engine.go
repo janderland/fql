@@ -147,39 +147,33 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
-	send := func(msg stream.KeyValErr) {
-		select {
-		case <-ctx.Done():
-		case out <- msg:
-		}
-	}
-
 	go func() {
 		defer close(out)
 
+		s := stream.New(ctx)
+
 		kind, err := query.Kind()
 		if err != nil {
-			send(stream.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
+			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
 			return
 		}
 		if kind != keyval.RangeReadKind {
-			send(stream.KeyValErr{Err: errors.New("query not range-read kind")})
+			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read kind")})
 			return
 		}
 
-		s := stream.New(ctx)
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query)
 			stage2 := s.ReadRange(tr, query, stage1)
 			stage3 := s.FilterKeys(query, stage2)
 			stage4 := s.UnpackValues(query, stage3)
 			for kve := range stage4 {
-				send(kve)
+				s.SendKV(out, kve)
 			}
 			return nil, nil
 		})
 		if err != nil {
-			send(stream.KeyValErr{Err: err})
+			s.SendKV(out, stream.KeyValErr{Err: err})
 		}
 	}()
 
@@ -189,25 +183,18 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan stream.DirErr {
 	out := make(chan stream.DirErr)
 
-	send := func(msg stream.DirErr) {
-		select {
-		case <-ctx.Done():
-		case out <- msg:
-		}
-	}
-
 	go func() {
 		defer close(out)
 
 		s := stream.New(ctx)
 		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, keyval.KeyValue{Key: keyval.Key{Directory: query}}) {
-				send(dir)
+				s.SendDir(out, dir)
 			}
 			return nil, nil
 		})
 		if err != nil {
-			send(stream.DirErr{Err: err})
+			s.SendDir(out, stream.DirErr{Err: err})
 		}
 	}()
 

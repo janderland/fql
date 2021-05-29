@@ -89,18 +89,18 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query keyval.Directory
 	prefix, variable, suffix := keyval.SplitAtFirstVariable(query)
 	prefixStr, err := keyval.ToStringArray(prefix)
 	if err != nil {
-		r.sendDir(out, DirErr{Err: errors.Wrapf(err, "failed to convert directory prefix to string array")})
+		r.SendDir(out, DirErr{Err: errors.Wrapf(err, "failed to convert directory prefix to string array")})
 		return
 	}
 
 	if variable != nil {
 		subDirs, err := directory.List(tr, prefixStr)
 		if err != nil {
-			r.sendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
+			r.SendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
 			return
 		}
 		if len(subDirs) == 0 {
-			r.sendDir(out, DirErr{Err: errors.Errorf("no subdirectories for %v", prefixStr)})
+			r.SendDir(out, DirErr{Err: errors.Errorf("no subdirectories for %v", prefixStr)})
 			return
 		}
 
@@ -116,12 +116,12 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query keyval.Directory
 	} else {
 		dir, err := directory.Open(tr, prefixStr, nil)
 		if err != nil {
-			r.sendDir(out, DirErr{Err: errors.Wrapf(err, "failed to open directory %v", prefixStr)})
+			r.SendDir(out, DirErr{Err: errors.Wrapf(err, "failed to open directory %v", prefixStr)})
 			return
 		}
 
 		log.Debug().Strs("dir", dir.GetPath()).Msg("sending directory")
-		r.sendDir(out, DirErr{Dir: dir})
+		r.SendDir(out, DirErr{Dir: dir})
 	}
 }
 
@@ -133,7 +133,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 
 	for msg := range in {
 		if msg.Err != nil {
-			r.sendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "read range input closed")})
+			r.SendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "read range input closed")})
 			return
 		}
 
@@ -143,7 +143,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 
 		rng, err := fdb.PrefixRange(dir.Pack(fdbPrefix))
 		if err != nil {
-			r.sendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to create prefix range")})
+			r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to create prefix range")})
 			return
 		}
 
@@ -151,13 +151,13 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 		for iter.Advance() {
 			fromDB, err := iter.Get()
 			if err != nil {
-				r.sendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to get key-value")})
+				r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to get key-value")})
 				return
 			}
 
 			tup, err := dir.Unpack(fromDB.Key)
 			if err != nil {
-				r.sendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to unpack key")})
+				r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to unpack key")})
 				return
 			}
 
@@ -170,7 +170,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 			}
 
 			log.Debug().Interface("kv", kv).Msg("sending key-value")
-			r.sendKV(out, KeyValErr{KV: kv})
+			r.SendKV(out, KeyValErr{KV: kv})
 		}
 	}
 }
@@ -180,7 +180,7 @@ func (r *Stream) doFilterKeys(query keyval.Tuple, in chan KeyValErr, out chan Ke
 
 	for msg := range in {
 		if msg.Err != nil {
-			r.sendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "filter keys input closed")})
+			r.SendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "filter keys input closed")})
 			return
 		}
 
@@ -190,7 +190,7 @@ func (r *Stream) doFilterKeys(query keyval.Tuple, in chan KeyValErr, out chan Ke
 
 		if keyval.CompareTuples(query, kv.Key.Tuple) == nil {
 			log.Debug().Msg("sending key-value")
-			r.sendKV(out, KeyValErr{KV: kv})
+			r.SendKV(out, KeyValErr{KV: kv})
 		}
 	}
 }
@@ -201,7 +201,7 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 	if variable, isVar := query.(keyval.Variable); isVar {
 		for msg := range in {
 			if msg.Err != nil {
-				r.sendKV(out, KeyValErr{Err: msg.Err})
+				r.SendKV(out, KeyValErr{Err: msg.Err})
 				return
 			}
 
@@ -210,7 +210,7 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 			log.Debug().Msg("received key-value")
 
 			if len(variable) == 0 {
-				r.sendKV(out, KeyValErr{KV: kv})
+				r.SendKV(out, KeyValErr{KV: kv})
 				continue
 			}
 
@@ -222,20 +222,20 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 
 				kv.Value = outVal
 				log.Debug().Interface("kv", kv).Msg("sending key-value")
-				r.sendKV(out, KeyValErr{KV: kv})
+				r.SendKV(out, KeyValErr{KV: kv})
 				break
 			}
 		}
 	} else {
 		queryBytes, err := keyval.PackValue(query)
 		if err != nil {
-			r.sendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to pack query value")})
+			r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to pack query value")})
 			return
 		}
 
 		for msg := range in {
 			if msg.Err != nil {
-				r.sendKV(out, KeyValErr{Err: msg.Err})
+				r.SendKV(out, KeyValErr{Err: msg.Err})
 				return
 			}
 
@@ -246,13 +246,13 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 			if bytes.Equal(queryBytes, kv.Value.([]byte)) {
 				kv.Value = query
 				log.Debug().Interface("kv", kv).Msg("sending key-value")
-				r.sendKV(out, KeyValErr{KV: kv})
+				r.SendKV(out, KeyValErr{KV: kv})
 			}
 		}
 	}
 }
 
-func (r *Stream) sendDir(ch chan<- DirErr, dir DirErr) {
+func (r *Stream) SendDir(ch chan<- DirErr, dir DirErr) {
 	select {
 	case <-r.ctx.Done():
 	case ch <- dir:
@@ -262,7 +262,7 @@ func (r *Stream) sendDir(ch chan<- DirErr, dir DirErr) {
 	}
 }
 
-func (r *Stream) sendKV(ch chan<- KeyValErr, kv KeyValErr) {
+func (r *Stream) SendKV(ch chan<- KeyValErr, kv KeyValErr) {
 	select {
 	case <-r.ctx.Done():
 	case ch <- kv:
