@@ -37,7 +37,12 @@ func FromStringArray(in []string) Directory {
 func ToFDBTuple(in Tuple) tup.Tuple {
 	out := make(tup.Tuple, len(in))
 	for i := range in {
-		out[i] = tup.TupleElement(in[i])
+		switch e := in[i].(type) {
+		case Tuple:
+			out[i] = ToFDBTuple(e)
+		default:
+			out[i] = tup.TupleElement(in[i])
+		}
 	}
 	return out
 }
@@ -46,7 +51,12 @@ func ToFDBTuple(in Tuple) tup.Tuple {
 func FromFDBTuple(in tup.Tuple) Tuple {
 	out := make(Tuple, len(in))
 	for i := range in {
-		out[i] = in[i]
+		switch e := in[i].(type) {
+		case tup.Tuple:
+			out[i] = FromFDBTuple(e)
+		default:
+			out[i] = in[i]
+		}
 	}
 	return out
 }

@@ -26,11 +26,17 @@ func TestFromStringArray(t *testing.T) {
 func TestToFDBTuple(t *testing.T) {
 	tup := ToFDBTuple(Tuple{nil, int64(22), false})
 	assert.Equal(t, tuple.Tuple{nil, int64(22), false}, tup)
+
+	tup = ToFDBTuple(Tuple{true, Tuple{32.8, "hi"}})
+	assert.Equal(t, tuple.Tuple{true, tuple.Tuple{32.8, "hi"}}, tup)
 }
 
 func TestFromFDBTuple(t *testing.T) {
 	tup := FromFDBTuple(tuple.Tuple{nil, int64(22), false})
 	assert.Equal(t, Tuple{nil, int64(22), false}, tup)
+
+	tup = FromFDBTuple(tuple.Tuple{true, Tuple{32.8, "hi"}})
+	assert.Equal(t, Tuple{true, Tuple{32.8, "hi"}}, tup)
 }
 
 // TODO: TestSplitAtFirstVariable
