@@ -37,7 +37,7 @@ func init() {
 	flag.StringVar(&flags.level, "level", "debug", "logging level")
 }
 
-func TestStream_openDirectories(t *testing.T) {
+func TestStream_OpenDirectories(t *testing.T) {
 	var tests = []struct {
 		name     string           // name of tests
 		query    keyval.Directory // query to execute
@@ -115,7 +115,7 @@ func TestStream_openDirectories(t *testing.T) {
 	}
 }
 
-func TestStream_readRange(t *testing.T) {
+func TestStream_ReadRange(t *testing.T) {
 	var tests = []struct {
 		name     string            // name of test
 		query    keyval.Tuple      // query to execute
@@ -215,7 +215,7 @@ func TestStream_readRange(t *testing.T) {
 	}
 }
 
-func TestStream_filterKeys(t *testing.T) {
+func TestStream_FilterKeys(t *testing.T) {
 	var tests = []struct {
 		name     string            // name of test
 		query    keyval.Tuple      // query to execute
@@ -285,7 +285,7 @@ func TestStream_filterKeys(t *testing.T) {
 	}
 }
 
-func TestStream_unpackValues(t *testing.T) {
+func TestStream_UnpackValues(t *testing.T) {
 	var tests = []struct {
 		name     string            // name of test
 		query    keyval.Value      // query to execute

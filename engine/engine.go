@@ -3,6 +3,8 @@ package engine
 import (
 	"context"
 
+	"github.com/rs/zerolog"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/stream"
@@ -10,15 +12,23 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Engine struct{ db fdb.Transactor }
+type Engine struct {
+	db  fdb.Transactor
+	ctx context.Context
+	log *zerolog.Logger
+}
 
-func New(db fdb.Transactor) Engine {
-	return Engine{db: db}
+func New(ctx context.Context, db fdb.Transactor) Engine {
+	return Engine{
+		db:  db,
+		ctx: ctx,
+		log: zerolog.Ctx(ctx),
+	}
 }
 
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		return f(Engine{tr})
+		return f(New(e.ctx, tr))
 	})
 }
 
@@ -28,7 +38,7 @@ func (e *Engine) Set(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to get query kind")
 	}
 	if kind != keyval.ConstantKind {
-		return errors.Wrap(err, "query not constant kind")
+		return errors.New("query not constant kind")
 	}
 
 	path, err := keyval.ToStringArray(query.Key.Directory)
@@ -45,6 +55,9 @@ func (e *Engine) Set(query keyval.KeyValue) error {
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
+
+		e.log.Debug().Interface("query", query).Msg("setting")
+
 		tr.Set(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple)), valueBytes)
 		return nil, nil
 	})
