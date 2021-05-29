@@ -35,61 +35,124 @@ func init() {
 	flag.StringVar(&flags.level, "level", "debug", "logging level")
 }
 
-func TestEngine_Set(t *testing.T) {
-	testEnv(t, func(root directory.DirectorySubspace, e Engine) {
-		query := kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi", "there"}, Tuple: kv.Tuple{33.3}}, Value: int64(33)}
-		query.Key.Directory = append(kv.FromStringArray(root.GetPath()), query.Key.Directory...)
+func TestEngine_SetSingleRead(t *testing.T) {
+	t.Run("set and get", func(t *testing.T) {
+		testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+			query := kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi", "there"}, Tuple: kv.Tuple{33.3}}, Value: int64(33)}
+			query.Key.Directory = append(kv.FromStringArray(root.GetPath()), query.Key.Directory...)
 
-		err := e.Set(query)
-		assert.NoError(t, err)
+			err := e.Set(query)
+			assert.NoError(t, err)
 
-		expected := query
-		query.Value = kv.Variable{kv.IntType}
+			expected := query
+			query.Value = kv.Variable{kv.IntType}
 
-		result, err := e.SingleRead(query)
-		assert.NoError(t, err)
-		assert.Equal(t, &expected, result)
+			result, err := e.SingleRead(query)
+			assert.NoError(t, err)
+			assert.Equal(t, &expected, result)
+		})
 	})
 
-	testEnv(t, func(root directory.DirectorySubspace, e Engine) {
-		err := e.Set(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33, kv.Variable{}}}, Value: nil})
-		assert.Error(t, err)
+	t.Run("set errors", func(t *testing.T) {
+		testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+			err := e.Set(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33, kv.Variable{}}}, Value: nil})
+			assert.Error(t, err)
 
-		err = e.Set(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33}}, Value: kv.Clear{}})
-		assert.Error(t, err)
+			err = e.Set(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33}}, Value: kv.Clear{}})
+			assert.Error(t, err)
+		})
+	})
+
+	t.Run("get errors", func(t *testing.T) {
+		testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+			result, err := e.SingleRead(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33, kv.Variable{}}}, Value: nil})
+			assert.Error(t, err)
+			assert.Nil(t, result)
+
+			result, err = e.SingleRead(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33}}, Value: kv.Clear{}})
+			assert.Error(t, err)
+			assert.Nil(t, result)
+		})
 	})
 }
 
-// query := kv.KeyValue{Key: kv.Key{Directory: kv.Directory{}, Tuple: kv.Tuple{}}, Value: nil}
-
 func TestEngine_Clear(t *testing.T) {
-	testEnv(t, func(root directory.DirectorySubspace, e Engine) {
-		set := kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"this", "place"}, Tuple: kv.Tuple{32.33}}, Value: []byte{}}
-		err := e.Set(set)
-		assert.NoError(t, err)
+	t.Run("set clear get", func(t *testing.T) {
+		testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+			set := kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"this", "place"}, Tuple: kv.Tuple{32.33}}, Value: []byte{}}
+			err := e.Set(set)
+			assert.NoError(t, err)
 
-		get := set
-		get.Value = kv.Variable{}
-		result, err := e.SingleRead(get)
-		assert.NoError(t, err)
-		assert.Equal(t, &set, result)
+			get := set
+			get.Value = kv.Variable{}
+			result, err := e.SingleRead(get)
+			assert.NoError(t, err)
+			assert.Equal(t, &set, result)
 
-		clear := set
-		clear.Value = kv.Clear{}
-		err = e.Clear(clear)
-		assert.NoError(t, err)
+			clear := set
+			clear.Value = kv.Clear{}
+			err = e.Clear(clear)
+			assert.NoError(t, err)
 
-		result, err = e.SingleRead(get)
-		assert.NoError(t, err)
-		assert.Nil(t, result)
+			result, err = e.SingleRead(get)
+			assert.NoError(t, err)
+			assert.Nil(t, result)
+		})
 	})
 
-	testEnv(t, func(root directory.DirectorySubspace, e Engine) {
-		err := e.Clear(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33, kv.Variable{}}}, Value: kv.Clear{}})
-		assert.Error(t, err)
+	t.Run("errors", func(t *testing.T) {
+		testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+			err := e.Clear(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33, kv.Variable{}}}, Value: kv.Clear{}})
+			assert.Error(t, err)
 
-		err = e.Clear(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33}}, Value: nil})
-		assert.Error(t, err)
+			err = e.Clear(kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33}}, Value: nil})
+			assert.Error(t, err)
+		})
+	})
+}
+
+func TestEngine_RangeRead(t *testing.T) {
+	t.Run("set and get", func(t *testing.T) {
+		testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+			var expected []kv.KeyValue
+
+			query := kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"place"}, Tuple: kv.Tuple{"hi you"}}, Value: nil}
+			expected = append(expected, query)
+			err := e.Set(query)
+			assert.NoError(t, err)
+
+			query.Key.Tuple = kv.Tuple{11.3}
+			expected = append(expected, query)
+			err = e.Set(query)
+			assert.NoError(t, err)
+
+			query.Key.Tuple = kv.Tuple{55.3}
+			expected = append(expected, query)
+			err = e.Set(query)
+			assert.NoError(t, err)
+
+			var results []kv.KeyValue
+			query.Key.Tuple = kv.Tuple{kv.Variable{}}
+			for kve := range e.RangeRead(context.Background(), query) {
+				if !assert.NoError(t, kve.Err) {
+					t.FailNow()
+				}
+				results = append(results, kve.KV)
+			}
+			assert.Equal(t, expected, results)
+		})
+	})
+
+	t.Run("errors", func(t *testing.T) {
+		testEnv(t, func(root directory.DirectorySubspace, e Engine) {
+			query := kv.KeyValue{Key: kv.Key{Directory: kv.Directory{"hi"}, Tuple: kv.Tuple{32.33}}, Value: kv.Clear{}}
+			out := e.RangeRead(context.Background(), query)
+
+			msg := <-out
+			assert.Error(t, msg.Err)
+			_, open := <-out
+			assert.False(t, open)
+		})
 	})
 }
 
