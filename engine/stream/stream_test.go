@@ -319,6 +319,20 @@ func TestStream_unpackValues(t *testing.T) {
 				{Value: keyval.Tuple{"there we go", nil}},
 			},
 		},
+		{
+			name:  "empty variable",
+			query: keyval.Variable{},
+			initial: []keyval.KeyValue{
+				{Value: packWithPanic(55)},
+				{Value: packWithPanic(23.9)},
+				{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
+			},
+			expected: []keyval.KeyValue{
+				{Value: packWithPanic(55)},
+				{Value: packWithPanic(23.9)},
+				{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
+			},
+		},
 	}
 
 	for _, test := range tests {

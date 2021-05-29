@@ -209,6 +209,11 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 			log := log.With().Interface("kv", kv).Logger()
 			log.Debug().Msg("received key-value")
 
+			if len(variable) == 0 {
+				r.sendKV(out, KeyValErr{KV: kv})
+				continue
+			}
+
 			for _, typ := range variable {
 				outVal, err := keyval.UnpackValue(typ, kv.Value.([]byte))
 				if err != nil {
