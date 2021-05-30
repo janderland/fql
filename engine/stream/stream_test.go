@@ -39,11 +39,11 @@ func init() {
 
 func TestStream_OpenDirectories(t *testing.T) {
 	var tests = []struct {
-		name     string           // name of tests
-		query    keyval.Directory // query to execute
-		initial  [][]string       // initial state
-		expected [][]string       // expected results
-		error    bool             // expect error?
+		name     string
+		query    keyval.Directory
+		initial  [][]string
+		expected [][]string
+		error    bool
 	}{
 		{
 			name:  "no exist one",
@@ -82,7 +82,6 @@ func TestStream_OpenDirectories(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				// Set up initial state of directories.
 				for _, path := range test.initial {
 					_, err := rootDir.Create(tr, path, nil)
 					if !assert.NoError(t, err) {
@@ -90,7 +89,6 @@ func TestStream_OpenDirectories(t *testing.T) {
 					}
 				}
 
-				// Execute the query.
 				out := s.OpenDirectories(tr, keyval.KeyValue{
 					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), test.query...)},
 				})
@@ -117,10 +115,10 @@ func TestStream_OpenDirectories(t *testing.T) {
 
 func TestStream_ReadRange(t *testing.T) {
 	var tests = []struct {
-		name     string            // name of test
-		query    keyval.Tuple      // query to execute
-		initial  []keyval.KeyValue // initial state
-		expected []keyval.KeyValue // expected results
+		name     string
+		query    keyval.Tuple
+		initial  []keyval.KeyValue
+		expected []keyval.KeyValue
 	}{
 		{
 			name:  "no variable",
@@ -172,7 +170,6 @@ func TestStream_ReadRange(t *testing.T) {
 				paths := make(map[string]struct{})
 				var dirs []directory.DirectorySubspace
 
-				// Setup initial key-values.
 				for _, kv := range test.initial {
 					path, err := keyval.ToStringArray(kv.Key.Directory)
 					if !assert.NoError(t, err) {
@@ -192,12 +189,7 @@ func TestStream_ReadRange(t *testing.T) {
 					}
 				}
 
-				// ctx ensures sendDirs() returns when the test exits.
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
-				// Execute query.
-				out := s.ReadRange(tr, keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(ctx, t, dirs))
+				out := s.ReadRange(tr, keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(t, s, dirs))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
@@ -217,10 +209,10 @@ func TestStream_ReadRange(t *testing.T) {
 
 func TestStream_FilterKeys(t *testing.T) {
 	var tests = []struct {
-		name     string            // name of test
-		query    keyval.Tuple      // query to execute
-		initial  []keyval.KeyValue // initial state
-		expected []keyval.KeyValue // expected results
+		name     string
+		query    keyval.Tuple
+		initial  []keyval.KeyValue
+		expected []keyval.KeyValue
 	}{
 		{
 			name:  "no variable",
@@ -264,12 +256,7 @@ func TestStream_FilterKeys(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				// ctx ensures sendKVs() returns when the test exits.
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
-				// Execute query.
-				out := s.FilterKeys(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendKVs(ctx, t, test.initial))
+				out := s.FilterKeys(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendKVs(t, s, test.initial))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
@@ -287,10 +274,10 @@ func TestStream_FilterKeys(t *testing.T) {
 
 func TestStream_UnpackValues(t *testing.T) {
 	var tests = []struct {
-		name     string            // name of test
-		query    keyval.Value      // query to execute
-		initial  []keyval.KeyValue // initial state
-		expected []keyval.KeyValue // expected results
+		name     string
+		query    keyval.Value
+		initial  []keyval.KeyValue
+		expected []keyval.KeyValue
 	}{
 		{
 			name:  "no variable",
@@ -338,12 +325,7 @@ func TestStream_UnpackValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				// ctx ensures sendKVs() returns when the test exits.
-				ctx, cancel := context.WithCancel(context.Background())
-				defer cancel()
-
-				// Execute query.
-				out := s.UnpackValues(keyval.KeyValue{Value: test.query}, sendKVs(ctx, t, test.initial))
+				out := s.UnpackValues(keyval.KeyValue{Value: test.query}, sendKVs(t, s, test.initial))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
@@ -441,36 +423,32 @@ func collectKVs(in chan KeyValErr) ([]keyval.KeyValue, error) {
 	return out, nil
 }
 
-func sendDirs(ctx context.Context, t *testing.T, in []directory.DirectorySubspace) chan DirErr {
+func sendDirs(t *testing.T, s Stream, in []directory.DirectorySubspace) chan DirErr {
 	out := make(chan DirErr)
 
 	go func() {
 		defer close(out)
 		for _, dir := range in {
-			select {
-			case <-ctx.Done():
+			if !s.SendDir(out, DirErr{Dir: dir}) {
 				return
-			case out <- DirErr{Dir: dir}:
-				t.Logf("sent dir: %s", dir.GetPath())
 			}
+			t.Logf("sent dir: %s", dir.GetPath())
 		}
 	}()
 
 	return out
 }
 
-func sendKVs(ctx context.Context, t *testing.T, in []keyval.KeyValue) chan KeyValErr {
+func sendKVs(t *testing.T, s Stream, in []keyval.KeyValue) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
 		for _, kv := range in {
-			select {
-			case <-ctx.Done():
+			if !s.SendKV(out, KeyValErr{KV: kv}) {
 				return
-			case out <- KeyValErr{KV: kv}:
-				t.Logf("sent kv: %+v", kv)
 			}
+			t.Logf("sent kv: %+v", kv)
 		}
 	}()
 

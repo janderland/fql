@@ -37,17 +37,21 @@ func New(ctx context.Context) (Stream, func()) {
 	}, cancel
 }
 
-func (r *Stream) SendDir(ch chan<- DirErr, dir DirErr) {
+func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 	select {
 	case <-r.ctx.Done():
-	case ch <- dir:
+		return false
+	case out <- in:
+		return true
 	}
 }
 
-func (r *Stream) SendKV(ch chan<- KeyValErr, kv KeyValErr) {
+func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	select {
 	case <-r.ctx.Done():
-	case ch <- kv:
+		return false
+	case out <- in:
+		return true
 	}
 }
 
@@ -119,6 +123,13 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query keyval.Directory
 		log.Trace().Strs("sub dirs", subDirs).Msg("found subdirectories")
 
 		for _, subDir := range subDirs {
+			// Between each interaction with the DB, give
+			// this goroutine a chance to exit early.
+			if err := r.ctx.Err(); err != nil {
+				r.SendDir(out, DirErr{Err: err})
+				return
+			}
+
 			var dir keyval.Directory
 			dir = append(dir, prefix...)
 			dir = append(dir, subDir)
@@ -133,7 +144,9 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query keyval.Directory
 		}
 
 		log.Debug().Strs("dir", dir.GetPath()).Msg("sending directory")
-		r.SendDir(out, DirErr{Dir: dir})
+		if !r.SendDir(out, DirErr{Dir: dir}) {
+			return
+		}
 	}
 }
 
@@ -182,7 +195,9 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 			}
 
 			log.Debug().Interface("kv", kv).Msg("sending key-value")
-			r.SendKV(out, KeyValErr{KV: kv})
+			if !r.SendKV(out, KeyValErr{KV: kv}) {
+				return
+			}
 		}
 	}
 }
@@ -202,7 +217,9 @@ func (r *Stream) doFilterKeys(query keyval.Tuple, in chan KeyValErr, out chan Ke
 
 		if keyval.CompareTuples(query, kv.Key.Tuple) == nil {
 			log.Debug().Msg("sending key-value")
-			r.SendKV(out, KeyValErr{KV: kv})
+			if !r.SendKV(out, KeyValErr{KV: kv}) {
+				return
+			}
 		}
 	}
 }
@@ -222,7 +239,9 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 			log.Debug().Msg("received key-value")
 
 			if len(variable) == 0 {
-				r.SendKV(out, KeyValErr{KV: kv})
+				if !r.SendKV(out, KeyValErr{KV: kv}) {
+					return
+				}
 				continue
 			}
 
@@ -234,7 +253,9 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 
 				kv.Value = outVal
 				log.Debug().Interface("kv", kv).Msg("sending key-value")
-				r.SendKV(out, KeyValErr{KV: kv})
+				if !r.SendKV(out, KeyValErr{KV: kv}) {
+					return
+				}
 				break
 			}
 		}
@@ -258,7 +279,9 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 			if bytes.Equal(queryBytes, kv.Value.([]byte)) {
 				kv.Value = query
 				log.Debug().Interface("kv", kv).Msg("sending key-value")
-				r.SendKV(out, KeyValErr{KV: kv})
+				if !r.SendKV(out, KeyValErr{KV: kv}) {
+					return
+				}
 			}
 		}
 	}
