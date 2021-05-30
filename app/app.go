@@ -32,6 +32,9 @@ func Run(args []string, stdout *os.File, stderr *os.File) error {
 	}
 
 	log.Log().Str("cluster file", flags.Cluster).Msg("connecting to DB")
+	if err := fdb.APIVersion(620); err != nil {
+		return errors.Wrap(err, "failed to set FDB API version")
+	}
 	db, err := fdb.OpenDatabase(flags.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to connect to DB")
