@@ -2,6 +2,7 @@ package flag
 
 import (
 	"flag"
+	"fmt"
 	"os"
 
 	"github.com/pkg/errors"
@@ -18,6 +19,10 @@ func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
 
 	flagSet := flag.NewFlagSet(args[0], flag.ContinueOnError)
 	flagSet.SetOutput(stderr)
+	flagSet.Usage = func() {
+		_, _ = fmt.Fprint(flagSet.Output(), "fdbq [flags] query1 [query2...]\n\n")
+		flagSet.PrintDefaults()
+	}
 
 	flagSet.StringVar(&flags.Cluster, "cluster", "", "path to cluster file")
 	flagSet.BoolVar(&flags.Write, "write", false, "allow write queries")
