@@ -392,7 +392,10 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
 
 	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		f(tr, dir, New(log.WithContext(context.Background())))
+		s, stop := New(log.WithContext(context.Background()))
+		defer stop()
+
+		f(tr, dir, s)
 		return nil, nil
 	})
 	if err != nil {

@@ -85,7 +85,6 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 		}
 
 		e.log.Debug().Interface("query", query).Msg("clearing")
-
 		tr.Clear(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple)))
 		return nil, nil
 	})
@@ -113,7 +112,6 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 		}
 
 		e.log.Debug().Interface("query", query).Msg("single reading")
-
 		return tr.Get(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple))).Get()
 	})
 	if err != nil {
@@ -150,7 +148,8 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 	go func() {
 		defer close(out)
 
-		s := stream.New(ctx)
+		s, stop := stream.New(ctx)
+		defer stop()
 
 		kind, err := query.Kind()
 		if err != nil {
@@ -186,7 +185,9 @@ func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan s
 	go func() {
 		defer close(out)
 
-		s := stream.New(ctx)
+		s, stop := stream.New(ctx)
+		defer stop()
+
 		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, keyval.KeyValue{Key: keyval.Key{Directory: query}}) {
 				s.SendDir(out, dir)

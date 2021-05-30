@@ -13,9 +13,8 @@ import (
 
 type (
 	Stream struct {
-		ctx    context.Context
-		cancel context.CancelFunc
-		log    *zerolog.Logger
+		ctx context.Context
+		log *zerolog.Logger
 	}
 
 	DirErr struct {
@@ -29,13 +28,26 @@ type (
 	}
 )
 
-func New(ctx context.Context) Stream {
+func New(ctx context.Context) (Stream, func()) {
 	ctx, cancel := context.WithCancel(ctx)
 
 	return Stream{
-		ctx:    ctx,
-		cancel: cancel,
-		log:    zerolog.Ctx(ctx),
+		ctx: ctx,
+		log: zerolog.Ctx(ctx),
+	}, cancel
+}
+
+func (r *Stream) SendDir(ch chan<- DirErr, dir DirErr) {
+	select {
+	case <-r.ctx.Done():
+	case ch <- dir:
+	}
+}
+
+func (r *Stream) SendKV(ch chan<- KeyValErr, kv KeyValErr) {
+	select {
+	case <-r.ctx.Done():
+	case ch <- kv:
 	}
 }
 
@@ -249,25 +261,5 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 				r.SendKV(out, KeyValErr{KV: kv})
 			}
 		}
-	}
-}
-
-func (r *Stream) SendDir(ch chan<- DirErr, dir DirErr) {
-	select {
-	case <-r.ctx.Done():
-	case ch <- dir:
-	}
-	if dir.Err != nil {
-		r.cancel()
-	}
-}
-
-func (r *Stream) SendKV(ch chan<- KeyValErr, kv KeyValErr) {
-	select {
-	case <-r.ctx.Done():
-	case ch <- kv:
-	}
-	if kv.Err != nil {
-		r.cancel()
 	}
 }
