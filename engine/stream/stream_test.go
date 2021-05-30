@@ -25,7 +25,6 @@ var (
 
 	flags struct {
 		force bool
-		level string
 	}
 )
 
@@ -34,7 +33,6 @@ func init() {
 	db = fdb.MustOpenDefault()
 
 	flag.BoolVar(&flags.force, "force", false, "remove test directory if it exists")
-	flag.StringVar(&flags.level, "level", "debug", "logging level")
 }
 
 func TestStream_OpenDirectories(t *testing.T) {
@@ -366,12 +364,10 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 		}
 	}()
 
-	level, err := zerolog.ParseLevel(flags.level)
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to parse logging level"))
-	}
-	zerolog.SetGlobalLevel(level)
-	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
+	writer := zerolog.ConsoleWriter{Out: os.Stdout}
+	writer.FormatLevel = func(_ interface{}) string { return "" }
+	writer.FormatTimestamp = func(i interface{}) string { return "" }
+	log := zerolog.New(writer)
 
 	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		s, stop := New(log.WithContext(context.Background()))

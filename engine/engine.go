@@ -56,7 +56,7 @@ func (e *Engine) Set(query keyval.KeyValue) error {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
 
-		e.log.Debug().Interface("query", query).Msg("setting")
+		e.log.Log().Interface("query", query).Msg("setting")
 
 		tr.Set(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple)), valueBytes)
 		return nil, nil
@@ -84,7 +84,7 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
 
-		e.log.Debug().Interface("query", query).Msg("clearing")
+		e.log.Log().Interface("query", query).Msg("clearing")
 		tr.Clear(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple)))
 		return nil, nil
 	})
@@ -111,7 +111,7 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
 
-		e.log.Debug().Interface("query", query).Msg("single reading")
+		e.log.Log().Interface("query", query).Msg("single reading")
 		return tr.Get(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple))).Get()
 	})
 	if err != nil {
