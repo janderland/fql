@@ -33,7 +33,7 @@ func New(ctx context.Context, flags flag.Flags, out io.Writer, db fdb.Transactor
 func (h *Headless) Query(str string) error {
 	query, onlyDir, err := parser.ParseQuery(str)
 	if err != nil {
-		return errors.Wrap(err, "failed to parse query")
+		return err
 	}
 
 	if onlyDir {
