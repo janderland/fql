@@ -8,13 +8,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/rs/zerolog"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-	"github.com/janderland/fdbq/keyval"
+	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -38,30 +37,30 @@ func init() {
 func TestStream_OpenDirectories(t *testing.T) {
 	var tests = []struct {
 		name     string
-		query    keyval.Directory
+		query    q.Directory
 		initial  [][]string
 		expected [][]string
 		error    bool
 	}{
 		{
 			name:  "no exist one",
-			query: keyval.Directory{"hello"},
+			query: q.Directory{"hello"},
 			error: true,
 		},
 		{
 			name:     "exist one",
-			query:    keyval.Directory{"hello"},
+			query:    q.Directory{"hello"},
 			initial:  [][]string{{"hello"}},
 			expected: [][]string{{"hello"}},
 		},
 		{
 			name:  "no exist many",
-			query: keyval.Directory{"people", keyval.Variable{}},
+			query: q.Directory{"people", q.Variable{}},
 			error: true,
 		},
 		{
 			name:  "exist many",
-			query: keyval.Directory{"people", keyval.Variable{}, "job", keyval.Variable{}},
+			query: q.Directory{"people", q.Variable{}, "job", q.Variable{}},
 			initial: [][]string{
 				{"people", "billy", "job", "dancer"},
 				{"people", "billy", "job", "tailor"},
@@ -87,8 +86,8 @@ func TestStream_OpenDirectories(t *testing.T) {
 					}
 				}
 
-				out := s.OpenDirectories(tr, keyval.KeyValue{
-					Key: keyval.Key{Directory: append(keyval.FromStringArray(rootDir.GetPath()), test.query...)},
+				out := s.OpenDirectories(tr, q.KeyValue{
+					Key: q.Key{Directory: append(q.FromStringArray(rootDir.GetPath()), test.query...)},
 				})
 
 				directories, err := collectDirs(out)
@@ -114,49 +113,49 @@ func TestStream_OpenDirectories(t *testing.T) {
 func TestStream_ReadRange(t *testing.T) {
 	var tests = []struct {
 		name     string
-		query    keyval.Tuple
-		initial  []keyval.KeyValue
-		expected []keyval.KeyValue
+		query    q.Tuple
+		initial  []q.KeyValue
+		expected []q.KeyValue
 	}{
 		{
 			name:  "no variable",
-			query: keyval.Tuple{123, "hello", -50.6},
-			initial: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"first"}, Tuple: keyval.Tuple{123, "hello", -50.6}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"first"}, Tuple: keyval.Tuple{321, "goodbye", 50.6}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"second"}, Tuple: keyval.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}}}},
+			query: q.Tuple{123, "hello", -50.6},
+			initial: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"first"}, Tuple: q.Tuple{123, "hello", -50.6}}},
+				{Key: q.Key{Directory: q.Directory{"first"}, Tuple: q.Tuple{321, "goodbye", 50.6}}},
+				{Key: q.Key{Directory: q.Directory{"second"}, Tuple: q.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}}}},
 			},
-			expected: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"first"}, Tuple: keyval.Tuple{int64(123), "hello", -50.6}}, Value: []byte{}},
+			expected: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"first"}, Tuple: q.Tuple{int64(123), "hello", -50.6}}, Value: []byte{}},
 			},
 		},
 		{
 			name:  "variable",
-			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
-			initial: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"this", "thing"}, Tuple: keyval.Tuple{123, "song", "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"that", "there"}, Tuple: keyval.Tuple{123, 13.45, "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"iam"}, Tuple: keyval.Tuple{tuple.UUID{
+			query: q.Tuple{123, q.Variable{}, "sing"},
+			initial: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"this", "thing"}, Tuple: q.Tuple{123, "song", "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"that", "there"}, Tuple: q.Tuple{123, 13.45, "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"iam"}, Tuple: q.Tuple{tuple.UUID{
 					0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 			},
-			expected: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"this", "thing"}, Tuple: keyval.Tuple{int64(123), "song", "sing"}}, Value: []byte{}},
-				{Key: keyval.Key{Directory: keyval.Directory{"that", "there"}, Tuple: keyval.Tuple{int64(123), 13.45, "sing"}}, Value: []byte{}},
+			expected: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"this", "thing"}, Tuple: q.Tuple{int64(123), "song", "sing"}}, Value: []byte{}},
+				{Key: q.Key{Directory: q.Directory{"that", "there"}, Tuple: q.Tuple{int64(123), 13.45, "sing"}}, Value: []byte{}},
 			},
 		},
 		{
 			name:  "read everything",
-			query: keyval.Tuple{},
-			initial: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"this", "thing"}, Tuple: keyval.Tuple{123, "song", "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"that", "there"}, Tuple: keyval.Tuple{123, 13.45, "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"iam"}, Tuple: keyval.Tuple{
+			query: q.Tuple{},
+			initial: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"this", "thing"}, Tuple: q.Tuple{123, "song", "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"that", "there"}, Tuple: q.Tuple{123, 13.45, "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"iam"}, Tuple: q.Tuple{
 					tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 			},
-			expected: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"this", "thing"}, Tuple: keyval.Tuple{int64(123), "song", "sing"}}, Value: []byte{}},
-				{Key: keyval.Key{Directory: keyval.Directory{"that", "there"}, Tuple: keyval.Tuple{int64(123), 13.45, "sing"}}, Value: []byte{}},
-				{Key: keyval.Key{Directory: keyval.Directory{"iam"}, Tuple: keyval.Tuple{
+			expected: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"this", "thing"}, Tuple: q.Tuple{int64(123), "song", "sing"}}, Value: []byte{}},
+				{Key: q.Key{Directory: q.Directory{"that", "there"}, Tuple: q.Tuple{int64(123), 13.45, "sing"}}, Value: []byte{}},
+				{Key: q.Key{Directory: q.Directory{"iam"}, Tuple: q.Tuple{
 					tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}, Value: []byte{}},
 			},
 		},
@@ -169,7 +168,7 @@ func TestStream_ReadRange(t *testing.T) {
 				var dirs []directory.DirectorySubspace
 
 				for _, kv := range test.initial {
-					path, err := keyval.ToStringArray(kv.Key.Directory)
+					path, err := q.ToStringArray(kv.Key.Directory)
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
@@ -177,7 +176,7 @@ func TestStream_ReadRange(t *testing.T) {
 					if !assert.NoError(t, err) {
 						t.FailNow()
 					}
-					tr.Set(dir.Pack(keyval.ToFDBTuple(kv.Key.Tuple)), nil)
+					tr.Set(dir.Pack(q.ToFDBTuple(kv.Key.Tuple)), nil)
 
 					pathStr := strings.Join(path, "/")
 					if _, exists := paths[pathStr]; !exists {
@@ -187,12 +186,12 @@ func TestStream_ReadRange(t *testing.T) {
 					}
 				}
 
-				out := s.ReadRange(tr, keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendDirs(t, s, dirs))
+				out := s.ReadRange(tr, q.KeyValue{Key: q.Key{Tuple: test.query}}, sendDirs(t, s, dirs))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 
-				rootPath := keyval.FromStringArray(rootDir.GetPath())
+				rootPath := q.FromStringArray(rootDir.GetPath())
 				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
 					expected.Key.Directory = append(rootPath, expected.Key.Directory...)
@@ -208,43 +207,43 @@ func TestStream_ReadRange(t *testing.T) {
 func TestStream_FilterKeys(t *testing.T) {
 	var tests = []struct {
 		name     string
-		query    keyval.Tuple
-		initial  []keyval.KeyValue
-		expected []keyval.KeyValue
+		query    q.Tuple
+		initial  []q.KeyValue
+		expected []q.KeyValue
 	}{
 		{
 			name:  "no variable",
-			query: keyval.Tuple{123, "hello", -50.6},
-			initial: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"first"}, Tuple: keyval.Tuple{123, "hello", -50.6}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"first"}, Tuple: keyval.Tuple{321, "goodbye", 50.6}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"second"}, Tuple: keyval.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}}}},
+			query: q.Tuple{123, "hello", -50.6},
+			initial: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"first"}, Tuple: q.Tuple{123, "hello", -50.6}}},
+				{Key: q.Key{Directory: q.Directory{"first"}, Tuple: q.Tuple{321, "goodbye", 50.6}}},
+				{Key: q.Key{Directory: q.Directory{"second"}, Tuple: q.Tuple{-69, big.NewInt(-55), tuple.Tuple{"world"}}}},
 			},
-			expected: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"first"}, Tuple: keyval.Tuple{123, "hello", -50.6}}},
+			expected: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"first"}, Tuple: q.Tuple{123, "hello", -50.6}}},
 			},
 		},
 		{
 			name:  "variable",
-			query: keyval.Tuple{123, keyval.Variable{}, "sing"},
-			initial: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"this", "thing"}, Tuple: keyval.Tuple{123, "song", "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"that", "there"}, Tuple: keyval.Tuple{123, 13.45, "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"iam"}, Tuple: keyval.Tuple{tuple.UUID{
+			query: q.Tuple{123, q.Variable{}, "sing"},
+			initial: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"this", "thing"}, Tuple: q.Tuple{123, "song", "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"that", "there"}, Tuple: q.Tuple{123, 13.45, "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"iam"}, Tuple: q.Tuple{tuple.UUID{
 					0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 			},
-			expected: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"this", "thing"}, Tuple: keyval.Tuple{123, "song", "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"that", "there"}, Tuple: keyval.Tuple{123, 13.45, "sing"}}},
+			expected: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"this", "thing"}, Tuple: q.Tuple{123, "song", "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"that", "there"}, Tuple: q.Tuple{123, 13.45, "sing"}}},
 			},
 		},
 		{
 			name:  "read everything",
-			query: keyval.Tuple{},
-			initial: []keyval.KeyValue{
-				{Key: keyval.Key{Directory: keyval.Directory{"this", "thing"}, Tuple: keyval.Tuple{123, "song", "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"that", "there"}, Tuple: keyval.Tuple{123, 13.45, "sing"}}},
-				{Key: keyval.Key{Directory: keyval.Directory{"iam"}, Tuple: keyval.Tuple{
+			query: q.Tuple{},
+			initial: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{"this", "thing"}, Tuple: q.Tuple{123, "song", "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"that", "there"}, Tuple: q.Tuple{123, 13.45, "sing"}}},
+				{Key: q.Key{Directory: q.Directory{"iam"}, Tuple: q.Tuple{
 					tuple.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 			},
 			expected: nil,
@@ -254,7 +253,7 @@ func TestStream_FilterKeys(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.FilterKeys(keyval.KeyValue{Key: keyval.Key{Tuple: test.query}}, sendKVs(t, s, test.initial))
+				out := s.FilterKeys(q.KeyValue{Key: q.Key{Tuple: test.query}}, sendKVs(t, s, test.initial))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
@@ -273,49 +272,49 @@ func TestStream_FilterKeys(t *testing.T) {
 func TestStream_UnpackValues(t *testing.T) {
 	var tests = []struct {
 		name     string
-		query    keyval.Value
-		initial  []keyval.KeyValue
-		expected []keyval.KeyValue
+		query    q.Value
+		initial  []q.KeyValue
+		expected []q.KeyValue
 	}{
 		{
 			name:  "no variable",
 			query: 123,
-			initial: []keyval.KeyValue{
+			initial: []q.KeyValue{
 				{Value: packWithPanic(123)},
 				{Value: packWithPanic("hello world")},
 				{Value: []byte{}},
 			},
-			expected: []keyval.KeyValue{
+			expected: []q.KeyValue{
 				{Value: 123},
 			},
 		},
 		{
 			name:  "variable",
-			query: keyval.Variable{keyval.IntType, keyval.BigIntType, keyval.TupleType},
-			initial: []keyval.KeyValue{
+			query: q.Variable{q.IntType, q.BigIntType, q.TupleType},
+			initial: []q.KeyValue{
 				{Value: packWithPanic("hello world")},
 				{Value: packWithPanic(55)},
 				{Value: packWithPanic(23.9)},
-				{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
+				{Value: packWithPanic(q.Tuple{"there we go", nil})},
 			},
-			expected: []keyval.KeyValue{
+			expected: []q.KeyValue{
 				{Value: int64(55)},
-				{Value: unpackWithPanic(keyval.IntType, packWithPanic(23.9))},
-				{Value: keyval.Tuple{"there we go", nil}},
+				{Value: unpackWithPanic(q.IntType, packWithPanic(23.9))},
+				{Value: q.Tuple{"there we go", nil}},
 			},
 		},
 		{
 			name:  "empty variable",
-			query: keyval.Variable{},
-			initial: []keyval.KeyValue{
+			query: q.Variable{},
+			initial: []q.KeyValue{
 				{Value: packWithPanic(55)},
 				{Value: packWithPanic(23.9)},
-				{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
+				{Value: packWithPanic(q.Tuple{"there we go", nil})},
 			},
-			expected: []keyval.KeyValue{
+			expected: []q.KeyValue{
 				{Value: packWithPanic(55)},
 				{Value: packWithPanic(23.9)},
-				{Value: packWithPanic(keyval.Tuple{"there we go", nil})},
+				{Value: packWithPanic(q.Tuple{"there we go", nil})},
 			},
 		},
 	}
@@ -323,7 +322,7 @@ func TestStream_UnpackValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.UnpackValues(keyval.KeyValue{Value: test.query}, sendKVs(t, s, test.initial))
+				out := s.UnpackValues(q.KeyValue{Value: test.query}, sendKVs(t, s, test.initial))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
@@ -381,16 +380,16 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 	}
 }
 
-func packWithPanic(val keyval.Value) []byte {
-	packed, err := keyval.PackValue(val)
+func packWithPanic(val q.Value) []byte {
+	packed, err := q.PackValue(val)
 	if err != nil {
 		panic(err)
 	}
 	return packed
 }
 
-func unpackWithPanic(typ keyval.ValueType, bytes []byte) keyval.Value {
-	unpacked, err := keyval.UnpackValue(typ, bytes)
+func unpackWithPanic(typ q.ValueType, bytes []byte) q.Value {
+	unpacked, err := q.UnpackValue(typ, bytes)
 	if err != nil {
 		panic(err)
 	}
@@ -408,8 +407,8 @@ func collectDirs(in chan DirErr) ([]directory.DirectorySubspace, error) {
 	return out, nil
 }
 
-func collectKVs(in chan KeyValErr) ([]keyval.KeyValue, error) {
-	var out []keyval.KeyValue
+func collectKVs(in chan KeyValErr) ([]q.KeyValue, error) {
+	var out []q.KeyValue
 	for msg := range in {
 		if msg.Err != nil {
 			return nil, msg.Err
@@ -435,7 +434,7 @@ func sendDirs(t *testing.T, s Stream, in []directory.DirectorySubspace) chan Dir
 	return out
 }
 
-func sendKVs(t *testing.T, s Stream, in []keyval.KeyValue) chan KeyValErr {
+func sendKVs(t *testing.T, s Stream, in []q.KeyValue) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {

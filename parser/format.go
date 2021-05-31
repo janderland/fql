@@ -6,11 +6,11 @@ import (
 	"strings"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-	"github.com/janderland/fdbq/keyval"
+	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
 
-func FormatKeyValue(kv keyval.KeyValue) (string, error) {
+func FormatKeyValue(kv q.KeyValue) (string, error) {
 	key, err := FormatKey(kv.Key)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to format key")
@@ -22,7 +22,7 @@ func FormatKeyValue(kv keyval.KeyValue) (string, error) {
 	return key + string(KVSep) + val, nil
 }
 
-func FormatKey(key keyval.Key) (string, error) {
+func FormatKey(key q.Key) (string, error) {
 	dir, err := FormatDirectory(key.Directory)
 	if err != nil {
 		return "", errors.Wrap(err, "failed to format directory")
@@ -37,14 +37,14 @@ func FormatKey(key keyval.Key) (string, error) {
 	return dir + tup, nil
 }
 
-func FormatDirectory(dir keyval.Directory) (string, error) {
+func FormatDirectory(dir q.Directory) (string, error) {
 	var out strings.Builder
 	for i, d := range dir {
 		out.WriteRune(DirSep)
 		switch d := d.(type) {
 		case string:
 			out.WriteString(d)
-		case keyval.Variable:
+		case q.Variable:
 			out.WriteString(FormatVariable(d))
 		default:
 			return "", errors.Errorf("failed to format %s element - '%v' (%T)", ordinal(i), d, d)
@@ -53,7 +53,7 @@ func FormatDirectory(dir keyval.Directory) (string, error) {
 	return out.String(), nil
 }
 
-func FormatTuple(tup keyval.Tuple) (string, error) {
+func FormatTuple(tup q.Tuple) (string, error) {
 	var out strings.Builder
 	out.WriteRune(TupStart)
 	for i, t := range tup {
@@ -61,7 +61,7 @@ func FormatTuple(tup keyval.Tuple) (string, error) {
 			out.WriteRune(TupSep)
 		}
 		switch t := t.(type) {
-		case keyval.Tuple:
+		case q.Tuple:
 			str, err := FormatTuple(t)
 			if err != nil {
 				return "", errors.Wrapf(err, "failed to format tuple at %s element", ordinal(i))
@@ -89,7 +89,7 @@ func FormatData(in interface{}) (string, error) {
 		} else {
 			return False, nil
 		}
-	case keyval.Variable:
+	case q.Variable:
 		return FormatVariable(in), nil
 	case string:
 		return FormatString(in)
@@ -103,7 +103,7 @@ func FormatData(in interface{}) (string, error) {
 	}
 }
 
-func FormatVariable(in keyval.Variable) string {
+func FormatVariable(in q.Variable) string {
 	var str strings.Builder
 	str.WriteRune(VarStart)
 	for i, typ := range in {
@@ -171,11 +171,11 @@ func FormatNumber(in interface{}) (string, error) {
 	}
 }
 
-func FormatValue(in keyval.Value) (string, error) {
+func FormatValue(in q.Value) (string, error) {
 	switch in := in.(type) {
-	case keyval.Clear:
+	case q.Clear:
 		return Clear, nil
-	case keyval.Tuple:
+	case q.Tuple:
 		str, err := FormatTuple(in)
 		return str, errors.Wrap(err, "failed to format as tuple")
 	default:

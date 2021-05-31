@@ -8,7 +8,7 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/stream"
-	"github.com/janderland/fdbq/keyval"
+	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
 
@@ -32,20 +32,20 @@ func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 	})
 }
 
-func (e *Engine) Set(query keyval.KeyValue) error {
+func (e *Engine) Set(query q.KeyValue) error {
 	kind, err := query.Kind()
 	if err != nil {
 		return errors.Wrap(err, "failed to get query kind")
 	}
-	if kind != keyval.ConstantKind {
+	if kind != q.ConstantKind {
 		return errors.New("query not constant kind")
 	}
 
-	path, err := keyval.ToStringArray(query.Key.Directory)
+	path, err := q.ToStringArray(query.Key.Directory)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
-	valueBytes, err := keyval.PackValue(query.Value)
+	valueBytes, err := q.PackValue(query.Value)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
 	}
@@ -58,22 +58,22 @@ func (e *Engine) Set(query keyval.KeyValue) error {
 
 		e.log.Log().Interface("query", query).Msg("setting")
 
-		tr.Set(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple)), valueBytes)
+		tr.Set(dir.Pack(q.ToFDBTuple(query.Key.Tuple)), valueBytes)
 		return nil, nil
 	})
 	return errors.Wrap(err, "transaction failed")
 }
 
-func (e *Engine) Clear(query keyval.KeyValue) error {
+func (e *Engine) Clear(query q.KeyValue) error {
 	kind, err := query.Kind()
 	if err != nil {
 		return errors.Wrap(err, "failed to get query kind")
 	}
-	if kind != keyval.ClearKind {
+	if kind != q.ClearKind {
 		return errors.New("query not clear kind")
 	}
 
-	path, err := keyval.ToStringArray(query.Key.Directory)
+	path, err := q.ToStringArray(query.Key.Directory)
 	if err != nil {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
@@ -85,22 +85,22 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 		}
 
 		e.log.Log().Interface("query", query).Msg("clearing")
-		tr.Clear(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple)))
+		tr.Clear(dir.Pack(q.ToFDBTuple(query.Key.Tuple)))
 		return nil, nil
 	})
 	return errors.Wrap(err, "transaction failed")
 }
 
-func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
+func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	kind, err := query.Kind()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get query kind")
 	}
-	if kind != keyval.SingleReadKind {
+	if kind != q.SingleReadKind {
 		return nil, errors.New("query not single-read kind")
 	}
 
-	path, err := keyval.ToStringArray(query.Key.Directory)
+	path, err := q.ToStringArray(query.Key.Directory)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
@@ -112,7 +112,7 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 		}
 
 		e.log.Log().Interface("query", query).Msg("single reading")
-		return tr.Get(dir.Pack(keyval.ToFDBTuple(query.Key.Tuple))).Get()
+		return tr.Get(dir.Pack(q.ToFDBTuple(query.Key.Tuple))).Get()
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "transaction failed")
@@ -124,25 +124,25 @@ func (e *Engine) SingleRead(query keyval.KeyValue) (*keyval.KeyValue, error) {
 	}
 
 	if len(bytes) > 0 {
-		for _, typ := range query.Value.(keyval.Variable) {
-			value, err := keyval.UnpackValue(typ, bytes)
+		for _, typ := range query.Value.(q.Variable) {
+			value, err := q.UnpackValue(typ, bytes)
 			if err != nil {
 				continue
 			}
-			return &keyval.KeyValue{
+			return &q.KeyValue{
 				Key:   query.Key,
 				Value: value,
 			}, nil
 		}
 	}
 
-	return &keyval.KeyValue{
+	return &q.KeyValue{
 		Key:   query.Key,
 		Value: result,
 	}, nil
 }
 
-func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stream.KeyValErr {
+func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
 	go func() {
@@ -156,7 +156,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
 			return
 		}
-		if kind != keyval.RangeReadKind {
+		if kind != q.RangeReadKind {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read kind")})
 			return
 		}
@@ -179,7 +179,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue) chan stre
 	return out
 }
 
-func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan stream.DirErr {
+func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream.DirErr {
 	out := make(chan stream.DirErr)
 
 	go func() {
@@ -189,7 +189,7 @@ func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan s
 		defer stop()
 
 		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-			for dir := range s.OpenDirectories(tr, keyval.KeyValue{Key: keyval.Key{Directory: query}}) {
+			for dir := range s.OpenDirectories(tr, q.KeyValue{Key: q.Key{Directory: query}}) {
 				s.SendDir(out, dir)
 			}
 			return nil, nil

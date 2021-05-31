@@ -6,12 +6,11 @@ import (
 	"strings"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
-	"github.com/janderland/fdbq/keyval"
+	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
 
-func ParseQuery(str string) (*keyval.KeyValue, bool, error) {
+func ParseQuery(str string) (*q.KeyValue, bool, error) {
 	if strings.Contains(str, string(KVSep)) {
 		kv, err := ParseKeyValue(str)
 		if err != nil {
@@ -24,16 +23,16 @@ func ParseQuery(str string) (*keyval.KeyValue, bool, error) {
 		if err != nil {
 			return nil, false, errors.Wrap(err, "failed to parse as key")
 		}
-		return &keyval.KeyValue{Key: *key, Value: keyval.Variable{}}, false, nil
+		return &q.KeyValue{Key: *key, Value: q.Variable{}}, false, nil
 	}
 	dir, err := ParseDirectory(str)
 	if err != nil {
 		return nil, false, errors.Wrap(err, "failed to parse as directory")
 	}
-	return &keyval.KeyValue{Key: keyval.Key{Directory: dir}}, true, nil
+	return &q.KeyValue{Key: q.Key{Directory: dir}}, true, nil
 }
 
-func ParseKeyValue(str string) (*keyval.KeyValue, error) {
+func ParseKeyValue(str string) (*q.KeyValue, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -57,13 +56,13 @@ func ParseKeyValue(str string) (*keyval.KeyValue, error) {
 		return nil, errors.Wrap(err, "failed to parse value")
 	}
 
-	return &keyval.KeyValue{
+	return &q.KeyValue{
 		Key:   *key,
 		Value: value,
 	}, nil
 }
 
-func ParseKey(str string) (*keyval.Key, error) {
+func ParseKey(str string) (*q.Key, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -78,7 +77,7 @@ func ParseKey(str string) (*keyval.Key, error) {
 	directoryStr := strings.TrimSpace(parts[0])
 	tupleStr := strings.TrimSpace(parts[1])
 
-	key := &keyval.Key{}
+	key := &q.Key{}
 	var err error
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
@@ -95,7 +94,7 @@ func ParseKey(str string) (*keyval.Key, error) {
 	return key, nil
 }
 
-func ParseDirectory(str string) (keyval.Directory, error) {
+func ParseDirectory(str string) (q.Directory, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -106,7 +105,7 @@ func ParseDirectory(str string) (keyval.Directory, error) {
 		return nil, errors.New("directory path shouldn't have a trailing '/'")
 	}
 
-	var directory keyval.Directory
+	var directory q.Directory
 	for i, part := range strings.Split(str[1:], "/") {
 		part = strings.TrimSpace(part)
 		if len(part) == 0 {
@@ -125,7 +124,7 @@ func ParseDirectory(str string) (keyval.Directory, error) {
 	return directory, nil
 }
 
-func ParseTuple(str string) (keyval.Tuple, error) {
+func ParseTuple(str string) (q.Tuple, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -139,10 +138,10 @@ func ParseTuple(str string) (keyval.Tuple, error) {
 
 	str = str[1 : len(str)-1]
 	if len(str) == 0 {
-		return keyval.Tuple{}, nil
+		return q.Tuple{}, nil
 	}
 
-	var tup keyval.Tuple
+	var tup q.Tuple
 	for i, elementStr := range strings.Split(str, ",") {
 		var element interface{}
 		var err error
@@ -194,7 +193,7 @@ func ParseData(str string) (interface{}, error) {
 	return data, errors.Wrap(err, "failed to parse as number")
 }
 
-func ParseVariable(str string) (keyval.Variable, error) {
+func ParseVariable(str string) (q.Variable, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -205,14 +204,14 @@ func ParseVariable(str string) (keyval.Variable, error) {
 		return nil, errors.New("variable must end with '}'")
 	}
 
-	var variable keyval.Variable
+	var variable q.Variable
 	if typeStr := str[1 : len(str)-1]; len(typeStr) > 0 {
 	loop:
 		for i, typeStr := range strings.Split(typeStr, string(VarSep)) {
 			typeStr = strings.TrimSpace(typeStr)
-			for _, v := range keyval.AllTypes() {
+			for _, v := range q.AllTypes() {
 				if string(v) == typeStr {
-					variable = append(variable, keyval.ValueType(typeStr))
+					variable = append(variable, q.ValueType(typeStr))
 					continue loop
 				}
 			}
@@ -287,12 +286,12 @@ func ParseNumber(str string) (interface{}, error) {
 	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
 }
 
-func ParseValue(in string) (keyval.Value, error) {
+func ParseValue(in string) (q.Value, error) {
 	if len(in) == 0 {
 		return nil, errors.New("input is empty")
 	}
 	if in == Clear {
-		return keyval.Clear{}, nil
+		return q.Clear{}, nil
 	}
 	if in[0] == '(' {
 		out, err := ParseTuple(in)
