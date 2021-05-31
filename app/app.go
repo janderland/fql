@@ -4,15 +4,11 @@ import (
 	"context"
 	"os"
 
-	"github.com/rs/zerolog"
-
-	"github.com/janderland/fdbq/app/flag"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-
+	"github.com/janderland/fdbq/app/flag"
 	"github.com/janderland/fdbq/app/headless"
-
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 )
 
 func Run(args []string, stdout *os.File, stderr *os.File) error {

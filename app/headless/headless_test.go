@@ -5,15 +5,11 @@ import (
 	"os"
 	"testing"
 
-	"github.com/stretchr/testify/assert"
-
-	"github.com/pkg/errors"
-
-	"github.com/janderland/fdbq/app/flag"
-
-	"github.com/rs/zerolog"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
+	"github.com/janderland/fdbq/app/flag"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestHeadless_Query(t *testing.T) {

@@ -5,16 +5,13 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/rs/zerolog"
-
-	"github.com/janderland/fdbq/app/flag"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-
+	"github.com/janderland/fdbq/app/flag"
 	"github.com/janderland/fdbq/engine"
-	"github.com/janderland/fdbq/keyval"
+	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 )
 
 type Headless struct {
@@ -52,31 +49,31 @@ func (h *Headless) Query(str string) error {
 	}
 
 	switch kind {
-	case keyval.ConstantKind:
+	case q.ConstantKind:
 		if err := h.set(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as set query")
 		}
 		return nil
 
-	case keyval.ClearKind:
+	case q.ClearKind:
 		if err := h.clear(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as clear query")
 		}
 		return nil
 
-	case keyval.SingleReadKind:
+	case q.SingleReadKind:
 		if err := h.singleRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as single read query")
 		}
 		return nil
 
-	case keyval.RangeReadKind:
+	case q.RangeReadKind:
 		if err := h.rangeRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as range read query")
 		}
 		return nil
 
-	case keyval.InvalidKind:
+	case q.InvalidKind:
 		return errors.New("query is invalid")
 
 	default:
@@ -84,7 +81,7 @@ func (h *Headless) Query(str string) error {
 	}
 }
 
-func (h *Headless) set(query keyval.KeyValue) error {
+func (h *Headless) set(query q.KeyValue) error {
 	if !h.flags.Write {
 		return errors.New("writing isn't enabled")
 	}
@@ -92,7 +89,7 @@ func (h *Headless) set(query keyval.KeyValue) error {
 	return h.eg.Set(query)
 }
 
-func (h *Headless) clear(query keyval.KeyValue) error {
+func (h *Headless) clear(query q.KeyValue) error {
 	if !h.flags.Write {
 		return errors.New("writing isn't enabled")
 	}
@@ -100,7 +97,7 @@ func (h *Headless) clear(query keyval.KeyValue) error {
 	return h.eg.Clear(query)
 }
 
-func (h *Headless) singleRead(query keyval.KeyValue) error {
+func (h *Headless) singleRead(query q.KeyValue) error {
 	h.log.Log().Interface("query", query).Msg("executing single-read query")
 	kv, err := h.eg.SingleRead(query)
 	if err != nil {
@@ -116,7 +113,7 @@ func (h *Headless) singleRead(query keyval.KeyValue) error {
 	return nil
 }
 
-func (h *Headless) rangeRead(query keyval.KeyValue) error {
+func (h *Headless) rangeRead(query q.KeyValue) error {
 	h.log.Log().Interface("query", query).Msg("executing range-read query")
 	for kv := range h.eg.RangeRead(context.Background(), query) {
 		if kv.Err != nil {
@@ -133,13 +130,13 @@ func (h *Headless) rangeRead(query keyval.KeyValue) error {
 	return nil
 }
 
-func (h *Headless) directories(query keyval.Directory) error {
+func (h *Headless) directories(query q.Directory) error {
 	h.log.Log().Interface("query", query).Msg("executing directory query")
 	for msg := range h.eg.Directories(context.Background(), query) {
 		if msg.Err != nil {
 			return msg.Err
 		}
-		str, err := parser.FormatDirectory(keyval.FromStringArray(msg.Dir.GetPath()))
+		str, err := parser.FormatDirectory(q.FromStringArray(msg.Dir.GetPath()))
 		if err != nil {
 			return errors.Wrap(err, "failed to format output")
 		}
