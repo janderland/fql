@@ -143,7 +143,7 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query keyval.Directory
 			return
 		}
 
-		log.Debug().Strs("dir", dir.GetPath()).Msg("sending directory")
+		log.Log().Strs("dir", dir.GetPath()).Msg("sending directory")
 		if !r.SendDir(out, DirErr{Dir: dir}) {
 			return
 		}
@@ -164,7 +164,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 
 		dir := msg.Dir
 		log := log.With().Strs("dir", dir.GetPath()).Logger()
-		log.Debug().Msg("received directory")
+		log.Log().Msg("received directory")
 
 		rng, err := fdb.PrefixRange(dir.Pack(fdbPrefix))
 		if err != nil {
@@ -194,7 +194,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query keyval.Tuple, in chan
 				Value: fromDB.Value,
 			}
 
-			log.Debug().Interface("kv", kv).Msg("sending key-value")
+			log.Log().Interface("kv", kv).Msg("sending key-value")
 			if !r.SendKV(out, KeyValErr{KV: kv}) {
 				return
 			}
@@ -213,10 +213,10 @@ func (r *Stream) doFilterKeys(query keyval.Tuple, in chan KeyValErr, out chan Ke
 
 		kv := msg.KV
 		log := log.With().Interface("kv", kv).Logger()
-		log.Debug().Msg("received key-value")
+		log.Log().Msg("received key-value")
 
 		if keyval.CompareTuples(query, kv.Key.Tuple) == nil {
-			log.Debug().Msg("sending key-value")
+			log.Log().Msg("sending key-value")
 			if !r.SendKV(out, KeyValErr{KV: kv}) {
 				return
 			}
@@ -236,7 +236,7 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 
 			kv := msg.KV
 			log := log.With().Interface("kv", kv).Logger()
-			log.Debug().Msg("received key-value")
+			log.Log().Msg("received key-value")
 
 			if len(variable) == 0 {
 				if !r.SendKV(out, KeyValErr{KV: kv}) {
@@ -252,7 +252,7 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 				}
 
 				kv.Value = outVal
-				log.Debug().Interface("kv", kv).Msg("sending key-value")
+				log.Log().Interface("kv", kv).Msg("sending key-value")
 				if !r.SendKV(out, KeyValErr{KV: kv}) {
 					return
 				}
@@ -274,11 +274,11 @@ func (r *Stream) doUnpackValues(query keyval.Value, in chan KeyValErr, out chan 
 
 			kv := msg.KV
 			log := log.With().Interface("kv", kv).Logger()
-			log.Debug().Msg("received key-value")
+			log.Log().Msg("received key-value")
 
 			if bytes.Equal(queryBytes, kv.Value.([]byte)) {
 				kv.Value = query
-				log.Debug().Interface("kv", kv).Msg("sending key-value")
+				log.Log().Interface("kv", kv).Msg("sending key-value")
 				if !r.SendKV(out, KeyValErr{KV: kv}) {
 					return
 				}

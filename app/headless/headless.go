@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/rs/zerolog"
+
 	"github.com/janderland/fdbq/app/flag"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -17,12 +19,18 @@ import (
 
 type Headless struct {
 	flags flag.Flags
+	log   *zerolog.Logger
 	out   io.Writer
 	eg    engine.Engine
 }
 
-func New(flags flag.Flags, out io.Writer, db fdb.Transactor) Headless {
-	return Headless{flags: flags, out: out, eg: engine.New(context.Background(), db)}
+func New(ctx context.Context, flags flag.Flags, out io.Writer, db fdb.Transactor) Headless {
+	return Headless{
+		flags: flags,
+		log:   zerolog.Ctx(ctx),
+		out:   out,
+		eg:    engine.New(ctx, db),
+	}
 }
 
 func (h *Headless) Query(str string) error {
@@ -80,6 +88,7 @@ func (h *Headless) set(query keyval.KeyValue) error {
 	if !h.flags.Write {
 		return errors.New("writing isn't enabled")
 	}
+	h.log.Log().Interface("query", query).Msg("executing set query")
 	return h.eg.Set(query)
 }
 
@@ -87,10 +96,12 @@ func (h *Headless) clear(query keyval.KeyValue) error {
 	if !h.flags.Write {
 		return errors.New("writing isn't enabled")
 	}
+	h.log.Log().Interface("query", query).Msg("executing clear query")
 	return h.eg.Clear(query)
 }
 
 func (h *Headless) singleRead(query keyval.KeyValue) error {
+	h.log.Log().Interface("query", query).Msg("executing single-read query")
 	kv, err := h.eg.SingleRead(query)
 	if err != nil {
 		return err
@@ -106,6 +117,7 @@ func (h *Headless) singleRead(query keyval.KeyValue) error {
 }
 
 func (h *Headless) rangeRead(query keyval.KeyValue) error {
+	h.log.Log().Interface("query", query).Msg("executing range-read query")
 	for kv := range h.eg.RangeRead(context.Background(), query) {
 		if kv.Err != nil {
 			return kv.Err
@@ -122,6 +134,7 @@ func (h *Headless) rangeRead(query keyval.KeyValue) error {
 }
 
 func (h *Headless) directories(query keyval.Directory) error {
+	h.log.Log().Interface("query", query).Msg("executing directory query")
 	for msg := range h.eg.Directories(context.Background(), query) {
 		if msg.Err != nil {
 			return msg.Err
