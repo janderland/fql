@@ -34,7 +34,11 @@ func ParseQuery(str string) (*q.KeyValue, bool, error) {
 }
 
 func ParseKeyValue(str string) (*q.KeyValue, error) {
+<<<<<<< HEAD
 	wrapErr := newErrWrapper("key-value", str)
+
+=======
+>>>>>>> f16e10accbe5749b56c8f051b771df00a7d09a3d
 	if len(str) == 0 {
 		return nil, wrapErr(errors.New("input is empty"))
 	}
@@ -65,8 +69,11 @@ func ParseKeyValue(str string) (*q.KeyValue, error) {
 }
 
 func ParseKey(str string) (*q.Key, error) {
+<<<<<<< HEAD
 	wrapErr := newErrWrapper("key", str)
 
+=======
+>>>>>>> f16e10accbe5749b56c8f051b771df00a7d09a3d
 	if len(str) == 0 {
 		return nil, wrapErr(errors.New("input is empty"))
 	}
@@ -99,8 +106,11 @@ func ParseKey(str string) (*q.Key, error) {
 }
 
 func ParseDirectory(str string) (q.Directory, error) {
+<<<<<<< HEAD
 	wrapErr := newErrWrapper("directory", str)
 
+=======
+>>>>>>> f16e10accbe5749b56c8f051b771df00a7d09a3d
 	if len(str) == 0 {
 		return nil, wrapErr(errors.New("input is empty"))
 	}
@@ -122,6 +132,7 @@ func ParseDirectory(str string) (q.Directory, error) {
 	return directory, nil
 }
 
+<<<<<<< HEAD
 func ParsePathElement(i int, str string) (interface{}, error) {
 	wrapErr := newErrWrapper(fmt.Sprintf("%s element", ordinal(i+1)), str)
 
@@ -143,6 +154,9 @@ func ParsePathElement(i int, str string) (interface{}, error) {
 func ParseTuple(str string) (q.Tuple, error) {
 	wrapErr := newErrWrapper("tuple", str)
 
+=======
+func ParseTuple(str string) (q.Tuple, error) {
+>>>>>>> f16e10accbe5749b56c8f051b771df00a7d09a3d
 	if len(str) == 0 {
 		return nil, wrapErr(errors.New("input is empty"))
 	}
@@ -158,9 +172,16 @@ func ParseTuple(str string) (q.Tuple, error) {
 
 	str = str[1 : len(str)-1]
 	if len(str) == 0 {
+<<<<<<< HEAD
 		return tup, nil
 	}
 
+=======
+		return q.Tuple{}, nil
+	}
+
+	var tup q.Tuple
+>>>>>>> f16e10accbe5749b56c8f051b771df00a7d09a3d
 	for i, elementStr := range strings.Split(str, ",") {
 		element, err := ParseTupleElement(i, elementStr)
 		if err != nil {
@@ -222,8 +243,11 @@ func ParseData(str string) (interface{}, error) {
 }
 
 func ParseVariable(str string) (q.Variable, error) {
+<<<<<<< HEAD
 	wrapErr := newErrWrapper("variable", str)
 
+=======
+>>>>>>> f16e10accbe5749b56c8f051b771df00a7d09a3d
 	if len(str) == 0 {
 		return nil, wrapErr(errors.New("input is empty"))
 	}
@@ -323,12 +347,20 @@ func ParseNumber(str string) (interface{}, error) {
 	return nil, wrapErr(errors.New("invalid syntax"))
 }
 
+<<<<<<< HEAD
 func ParseValue(str string) (q.Value, error) {
 	wrapErr := newErrWrapper("value", str)
 	if len(str) == 0 {
 		return nil, wrapErr(errors.New("input is empty"))
 	}
 	if str == Clear {
+=======
+func ParseValue(in string) (q.Value, error) {
+	if len(in) == 0 {
+		return nil, errors.New("input is empty")
+	}
+	if in == Clear {
+>>>>>>> f16e10accbe5749b56c8f051b771df00a7d09a3d
 		return q.Clear{}, nil
 	}
 	if str[0] == '(' {
