@@ -4,8 +4,7 @@ import (
 	"testing"
 
 	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-
-	"github.com/janderland/fdbq/keyval"
+	q "github.com/janderland/fdbq/keyval"
 	"github.com/stretchr/testify/assert"
 )
 
@@ -13,10 +12,10 @@ func TestKeyValue(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  keyval.KeyValue
+		ast  q.KeyValue
 	}{
 		{name: "full", str: "/hi/there(54,nil)=(33.8)",
-			ast: keyval.KeyValue{Key: keyval.Key{Directory: keyval.Directory{"hi", "there"}, Tuple: keyval.Tuple{int64(54), nil}}, Value: keyval.Tuple{33.8}}},
+			ast: q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{int64(54), nil}}, Value: q.Tuple{33.8}}},
 	}
 
 	for _, test := range roundTrips {
@@ -55,14 +54,14 @@ func TestKey(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  keyval.Key
+		ast  q.Key
 	}{
 		{name: "dir", str: "/my/dir",
-			ast: keyval.Key{Directory: keyval.Directory{"my", "dir"}}},
+			ast: q.Key{Directory: q.Directory{"my", "dir"}}},
 		{name: "tup", str: "(\"str\",-13,(1.2e+13))",
-			ast: keyval.Key{Tuple: keyval.Tuple{"str", int64(-13), keyval.Tuple{1.2e13}}}},
+			ast: q.Key{Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
 		{name: "full", str: "/my/dir(\"str\",-13,(1.2e+13))",
-			ast: keyval.Key{Directory: keyval.Directory{"my", "dir"}, Tuple: keyval.Tuple{"str", int64(-13), keyval.Tuple{1.2e13}}}},
+			ast: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
 	}
 
 	for _, test := range roundTrips {
@@ -99,10 +98,10 @@ func TestValue(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  keyval.Value
+		ast  q.Value
 	}{
-		{name: "clear", str: "clear", ast: keyval.Clear{}},
-		{name: "tuple", str: "(-16,13.2,\"hi\")", ast: keyval.Tuple{int64(-16), 13.2, "hi"}},
+		{name: "clear", str: "clear", ast: q.Clear{}},
+		{name: "tuple", str: "(-16,13.2,\"hi\")", ast: q.Tuple{int64(-16), 13.2, "hi"}},
 		{name: "raw", str: "-16", ast: int64(-16)},
 	}
 
@@ -138,11 +137,11 @@ func TestDirectory(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  keyval.Directory
+		ast  q.Directory
 	}{
-		{name: "single", str: "/hello", ast: keyval.Directory{"hello"}},
-		{name: "multi", str: "/hello/world", ast: keyval.Directory{"hello", "world"}},
-		{name: "variable", str: "/hello/{int}/thing", ast: keyval.Directory{"hello", keyval.Variable{keyval.IntType}, "thing"}},
+		{name: "single", str: "/hello", ast: q.Directory{"hello"}},
+		{name: "multi", str: "/hello/world", ast: q.Directory{"hello", "world"}},
+		{name: "variable", str: "/hello/{int}/thing", ast: q.Directory{"hello", q.Variable{q.IntType}, "thing"}},
 	}
 
 	for _, test := range roundTrips {
@@ -182,14 +181,14 @@ func TestTuple(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  keyval.Tuple
+		ast  q.Tuple
 	}{
-		{name: "empty", str: "()", ast: keyval.Tuple{}},
-		{name: "one", str: "(17)", ast: keyval.Tuple{int64(17)}},
-		{name: "two", str: "(17,\"hello world\")", ast: keyval.Tuple{int64(17), "hello world"}},
-		{name: "sub tuple", str: "(\"hello\",23.3,(-3))", ast: keyval.Tuple{"hello", 23.3, keyval.Tuple{int64(-3)}}},
+		{name: "empty", str: "()", ast: q.Tuple{}},
+		{name: "one", str: "(17)", ast: q.Tuple{int64(17)}},
+		{name: "two", str: "(17,\"hello world\")", ast: q.Tuple{int64(17), "hello world"}},
+		{name: "sub tuple", str: "(\"hello\",23.3,(-3))", ast: q.Tuple{"hello", 23.3, q.Tuple{int64(-3)}}},
 		{name: "uuid", str: "((bcefd2ec-4df5-43b6-8c79-81b70b886af9))",
-			ast: keyval.Tuple{keyval.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
+			ast: q.Tuple{q.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 	}
 
 	for _, test := range roundTrips {
@@ -233,7 +232,7 @@ func TestData(t *testing.T) {
 		{name: "nil", str: "nil", ast: nil},
 		{name: "true", str: "true", ast: true},
 		{name: "false", str: "false", ast: false},
-		{name: "variable", str: "{int}", ast: keyval.Variable{keyval.IntType}},
+		{name: "variable", str: "{int}", ast: q.Variable{q.IntType}},
 		{name: "string", str: "\"hello world\"", ast: "hello world"},
 		{name: "uuid", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
 		{name: "int", str: "123", ast: int64(123)},
@@ -274,11 +273,11 @@ func TestVariable(t *testing.T) {
 	tests := []struct {
 		name string
 		str  string
-		ast  keyval.Variable
+		ast  q.Variable
 	}{
 		{name: "empty", str: "{}", ast: nil},
-		{name: "single", str: "{int}", ast: keyval.Variable{keyval.IntType}},
-		{name: "multiple", str: "{int|float|tuple}", ast: keyval.Variable{keyval.IntType, keyval.FloatType, keyval.TupleType}},
+		{name: "single", str: "{int}", ast: q.Variable{q.IntType}},
+		{name: "multiple", str: "{int|float|tuple}", ast: q.Variable{q.IntType, q.FloatType, q.TupleType}},
 	}
 
 	for _, test := range tests {
