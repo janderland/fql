@@ -10,8 +10,8 @@ const (
 	TupEnd   = '}'
 	TupSep   = ','
 
-	VarStart = '('
-	VarEnd   = ')'
+	VarStart = '<'
+	VarEnd   = '>'
 	VarSep   = '|'
 
 	StrStart = '"'
