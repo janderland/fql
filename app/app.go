@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/janderland/fdbq/parser"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/janderland/fdbq/app/flag"
 	"github.com/janderland/fdbq/app/headless"
@@ -49,11 +47,6 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 	app := headless.New(log.WithContext(context.Background()), *flags, stdout, db)
 	for _, query := range queries {
 		if err := app.Query(query); err != nil {
-			switch err := err.(type) {
-			case parser.Error:
-				_, _ = fmt.Fprint(stderr, err.SPrint())
-				return errors.New("")
-			}
 			return errors.Wrapf(err, "failed to execute '%s'", query)
 		}
 	}
