@@ -39,9 +39,9 @@ func ParseKeyValue(str string) (*q.KeyValue, error) {
 
 	parts := strings.Split(str, string(KVSep))
 	if len(parts) == 1 {
-		return nil, errors.New("query missing '=' separator between key and value")
+		return nil, errors.Errorf("missing '%c' separator between key and value", KVSep)
 	} else if len(parts) > 2 {
-		return nil, errors.New("query should only contain a single '='")
+		return nil, errors.Errorf("contains multiple '%c'", KVSep)
 	}
 
 	keyStr := strings.TrimSpace(parts[0])
@@ -49,11 +49,11 @@ func ParseKeyValue(str string) (*q.KeyValue, error) {
 
 	key, err := ParseKey(keyStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse key")
+		return nil, errors.Wrapf(err, "failed to parse key - '%s'", keyStr)
 	}
 	value, err := ParseValue(valueStr)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to parse value")
+		return nil, errors.Wrapf(err, "failed to parse value - '%s'", valueStr)
 	}
 
 	return &q.KeyValue{
@@ -68,7 +68,7 @@ func ParseKey(str string) (*q.Key, error) {
 	}
 
 	var parts []string
-	if i := strings.Index(str, "("); i == -1 {
+	if i := strings.Index(str, string(TupStart)); i == -1 {
 		parts = []string{str, ""}
 	} else {
 		parts = []string{str[:i], str[i:]}
@@ -82,13 +82,13 @@ func ParseKey(str string) (*q.Key, error) {
 	if len(directoryStr) > 0 {
 		key.Directory, err = ParseDirectory(directoryStr)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse directory")
+			return nil, errors.Wrapf(err, "failed to parse directory - '%s'", directoryStr)
 		}
 	}
 	if len(tupleStr) > 0 {
 		key.Tuple, err = ParseTuple(tupleStr)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to parse tuple")
+			return nil, errors.Wrapf(err, "failed to parse tuple - '%s'", tupleStr)
 		}
 	}
 	return key, nil
@@ -99,29 +99,37 @@ func ParseDirectory(str string) (q.Directory, error) {
 		return nil, errors.New("input is empty")
 	}
 	if str[0] != DirSep {
-		return nil, errors.New("directory path must start with a '/'")
+		return nil, errors.Errorf("directory path must start with a '%c'", DirSep)
 	}
-	if str[len(str)-1] == '/' {
-		return nil, errors.New("directory path shouldn't have a trailing '/'")
+	if str[len(str)-1] == DirSep {
+		return nil, errors.Errorf("directory path shouldn't have a trailing '%c'", DirSep)
 	}
 
 	var directory q.Directory
-	for i, part := range strings.Split(str[1:], "/") {
+	for i, part := range strings.Split(str[1:], string(DirSep)) {
 		part = strings.TrimSpace(part)
-		if len(part) == 0 {
-			return nil, errors.Errorf("%s part of directory path is empty", ordinal(i+1))
+		element, err := ParsePathElement(part)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to parse %s element - '%s", ordinal(i+1), part)
 		}
-		if part[0] == '{' {
-			variable, err := ParseVariable(part)
-			if err != nil {
-				return nil, errors.Wrapf(err, "failed to parse %s part of directory path as a variable - %s", ordinal(i+1), part)
-			}
-			directory = append(directory, variable)
-		} else {
-			directory = append(directory, part)
-		}
+		directory = append(directory, element)
 	}
 	return directory, nil
+}
+
+func ParsePathElement(str string) (interface{}, error) {
+	if len(str) == 0 {
+		return nil, errors.New("input is empty")
+	}
+	if str[0] == VarStart {
+		variable, err := ParseVariable(str)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse as variable")
+		}
+		return variable, nil
+	} else {
+		return str, nil
+	}
 }
 
 func ParseTuple(str string) (q.Tuple, error) {
@@ -129,39 +137,48 @@ func ParseTuple(str string) (q.Tuple, error) {
 		return nil, errors.New("input is empty")
 	}
 
-	if str[0] != '(' {
-		return nil, errors.New("tuple must start with a '('")
+	if str[0] != TupStart {
+		return nil, errors.Errorf("must start with a '%c'", TupStart)
 	}
-	if str[len(str)-1] != ')' {
-		return nil, errors.New("tuple must end with a ')")
+	if str[len(str)-1] != TupEnd {
+		return nil, errors.Errorf("must end with a '%c'", TupEnd)
 	}
+
+	tup := q.Tuple{}
 
 	str = str[1 : len(str)-1]
 	if len(str) == 0 {
-		return q.Tuple{}, nil
+		return tup, nil
 	}
 
-	var tup q.Tuple
-	for i, elementStr := range strings.Split(str, ",") {
-		var element interface{}
-		var err error
-
-		elementStr = strings.TrimSpace(elementStr)
-		if len(elementStr) == 0 {
-			return nil, errors.Errorf("%s element is empty", ordinal(i+1))
-		}
-
-		if elementStr[0] == '(' {
-			element, err = ParseTuple(elementStr)
-		} else {
-			element, err = ParseData(elementStr)
-		}
+	for i, part := range strings.Split(str, string(TupSep)) {
+		part = strings.TrimSpace(part)
+		element, err := ParseTupleElement(part)
 		if err != nil {
-			return nil, errors.Wrapf(err, "failed to parse %s element - %s", ordinal(i+1), elementStr)
+			return nil, errors.Wrapf(err, "failed to parse %s element - '%s'", ordinal(i+1), part)
 		}
 		tup = append(tup, element)
 	}
 	return tup, nil
+}
+
+func ParseTupleElement(str string) (interface{}, error) {
+	if len(str) == 0 {
+		return nil, errors.New("element is empty")
+	}
+
+	if str[0] == TupStart {
+		tup, err := ParseTuple(str)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to parse as tuple")
+		}
+		return tup, nil
+	}
+	data, err := ParseData(str)
+	if err != nil {
+		return nil, err
+	}
+	return data, nil
 }
 
 func ParseData(str string) (interface{}, error) {
@@ -181,7 +198,7 @@ func ParseData(str string) (interface{}, error) {
 		data, err := ParseVariable(str)
 		return data, errors.Wrap(err, "failed to parse as variable")
 	}
-	if str[0] == '"' {
+	if str[0] == StrStart {
 		data, err := ParseString(str)
 		return data, errors.Wrap(err, "failed to parse as string")
 	}
@@ -197,17 +214,17 @@ func ParseVariable(str string) (q.Variable, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
-	if str[0] != '{' {
-		return nil, errors.New("variable must start with '{'")
+	if str[0] != VarStart {
+		return nil, errors.Errorf("must start with '%c'", VarStart)
 	}
-	if str[len(str)-1] != '}' {
-		return nil, errors.New("variable must end with '}'")
+	if str[len(str)-1] != VarEnd {
+		return nil, errors.Errorf("must end with '%c'", VarEnd)
 	}
 
 	var variable q.Variable
-	if typeStr := str[1 : len(str)-1]; len(typeStr) > 0 {
+	if typeUnionStr := str[1 : len(str)-1]; len(typeUnionStr) > 0 {
 	loop:
-		for i, typeStr := range strings.Split(typeStr, string(VarSep)) {
+		for i, typeStr := range strings.Split(typeUnionStr, string(VarSep)) {
 			typeStr = strings.TrimSpace(typeStr)
 			for _, v := range q.AllTypes() {
 				if string(v) == typeStr {
@@ -215,7 +232,7 @@ func ParseVariable(str string) (q.Variable, error) {
 					continue loop
 				}
 			}
-			return nil, errors.Errorf("failed to parse %s type - %s", ordinal(i+1), typeStr)
+			return nil, errors.Errorf("failed to parse %s type - '%s': invalid type", ordinal(i+1), typeStr)
 		}
 	}
 	return variable, nil
@@ -226,10 +243,10 @@ func ParseString(str string) (string, error) {
 		return "", errors.New("input is empty")
 	}
 	if str[0] != StrStart {
-		return "", errors.New("strings must start with double quotes")
+		return "", errors.New("must start with double quotes")
 	}
 	if str[len(str)-1] != StrEnd {
-		return "", errors.New("strings must end with double quotes")
+		return "", errors.New("must end with double quotes")
 	}
 	return str[1 : len(str)-1], nil
 }
@@ -265,7 +282,7 @@ func ParseUUID(str string) (tuple.UUID, error) {
 	var uuid tuple.UUID
 	_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
 	if err != nil {
-		return tuple.UUID{}, errors.Wrap(err, "failed to decode hexadecimal string")
+		return tuple.UUID{}, err
 	}
 	return uuid, nil
 }
@@ -283,20 +300,19 @@ func ParseNumber(str string) (interface{}, error) {
 	if fErr == nil {
 		return f, nil
 	}
-	return nil, errors.Errorf("%v, %v, %v", iErr.Error(), uErr.Error(), fErr.Error())
+	return nil, errors.New("invalid syntax")
 }
 
-func ParseValue(in string) (q.Value, error) {
-	if len(in) == 0 {
+func ParseValue(str string) (q.Value, error) {
+	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
-	if in == Clear {
+	if str == Clear {
 		return q.Clear{}, nil
 	}
-	if in[0] == '(' {
-		out, err := ParseTuple(in)
+	if str[0] == TupStart {
+		out, err := ParseTuple(str)
 		return out, errors.Wrap(err, "failed to parse as tuple")
 	}
-	out, err := ParseData(in)
-	return out, errors.Wrap(err, "failed to parse as data")
+	return ParseData(str)
 }

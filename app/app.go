@@ -2,6 +2,7 @@ package app
 
 import (
 	"context"
+	"fmt"
 	"os"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -11,7 +12,14 @@ import (
 	"github.com/rs/zerolog"
 )
 
-func Run(args []string, stdout *os.File, stderr *os.File) error {
+func Run() {
+	if err := run(os.Args, os.Stdout, os.Stderr); err != nil {
+		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
+		os.Exit(1)
+	}
+}
+
+func run(args []string, stdout *os.File, stderr *os.File) error {
 	flags, queries, err := flag.Parse(args, stderr)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse args")
