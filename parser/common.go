@@ -6,12 +6,12 @@ const (
 	KVSep  = '='
 	DirSep = '/'
 
-	TupStart = '('
-	TupEnd   = ')'
+	TupStart = '{'
+	TupEnd   = '}'
 	TupSep   = ','
 
-	VarStart = '{'
-	VarEnd   = '}'
+	VarStart = '<'
+	VarEnd   = '>'
 	VarSep   = '|'
 
 	StrStart = '"'
