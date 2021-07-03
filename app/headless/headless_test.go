@@ -43,6 +43,12 @@ func TestHeadless_Query(t *testing.T) {
 			query: "/my/dir(\"hi\",\"there\")=clear",
 			err:   true,
 		},
+		{
+			name:  "get nothing",
+			flags: flag.Flags{},
+			query: "/nothing/is/here{\"wont\",\"match\"}=<>",
+			err:   false,
+		},
 	}
 
 	for _, test := range tests {
