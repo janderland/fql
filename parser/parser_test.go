@@ -14,7 +14,7 @@ func TestKeyValue(t *testing.T) {
 		str  string
 		ast  q.KeyValue
 	}{
-		{name: "full", str: "/hi/there(54,nil)=(33.8)",
+		{name: "full", str: "/hi/there{54,nil}={33.8}",
 			ast: q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{int64(54), nil}}, Value: q.Tuple{33.8}}},
 	}
 
@@ -35,10 +35,10 @@ func TestKeyValue(t *testing.T) {
 		str  string
 	}{
 		{name: "empty", str: ""},
-		{name: "empty tup", str: "()"},
-		{name: "double sep", str: "()=()=()"},
-		{name: "bad key", str: "badkey=()"},
-		{name: "bad value", str: "()=badvalue"},
+		{name: "empty tup", str: "{}"},
+		{name: "double sep", str: "{}={}={}"},
+		{name: "bad key", str: "badkey={}"},
+		{name: "bad value", str: "{}=badvalue"},
 	}
 
 	for _, test := range parseFailures {
@@ -58,9 +58,9 @@ func TestKey(t *testing.T) {
 	}{
 		{name: "dir", str: "/my/dir",
 			ast: q.Key{Directory: q.Directory{"my", "dir"}}},
-		{name: "tup", str: "(\"str\",-13,(1.2e+13))",
+		{name: "tup", str: "{\"str\",-13,{1.2e+13}}",
 			ast: q.Key{Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
-		{name: "full", str: "/my/dir(\"str\",-13,(1.2e+13))",
+		{name: "full", str: "/my/dir{\"str\",-13,{1.2e+13}}",
 			ast: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
 	}
 
@@ -82,7 +82,7 @@ func TestKey(t *testing.T) {
 	}{
 		{name: "empty", str: ""},
 		{name: "bad dir", str: "baddir"},
-		{name: "bad tup", str: "/dir(badtup"},
+		{name: "bad tup", str: "/dir{badtup"},
 	}
 
 	for _, fail := range parseFailures {
@@ -101,7 +101,7 @@ func TestValue(t *testing.T) {
 		ast  q.Value
 	}{
 		{name: "clear", str: "clear", ast: q.Clear{}},
-		{name: "tuple", str: "(-16,13.2,\"hi\")", ast: q.Tuple{int64(-16), 13.2, "hi"}},
+		{name: "tuple", str: "{-16,13.2,\"hi\"}", ast: q.Tuple{int64(-16), 13.2, "hi"}},
 		{name: "raw", str: "-16", ast: int64(-16)},
 	}
 
@@ -141,7 +141,7 @@ func TestDirectory(t *testing.T) {
 	}{
 		{name: "single", str: "/hello", ast: q.Directory{"hello"}},
 		{name: "multi", str: "/hello/world", ast: q.Directory{"hello", "world"}},
-		{name: "variable", str: "/hello/{int}/thing", ast: q.Directory{"hello", q.Variable{q.IntType}, "thing"}},
+		{name: "variable", str: "/hello/<int>/thing", ast: q.Directory{"hello", q.Variable{q.IntType}, "thing"}},
 	}
 
 	for _, test := range roundTrips {
@@ -165,7 +165,7 @@ func TestDirectory(t *testing.T) {
 		{name: "no slash", str: "hello"},
 		{name: "empty path", str: "/ /path"},
 		{name: "trailing slash", str: "/hello/world/"},
-		{name: "invalid var", str: "/hello/{/thing"},
+		{name: "invalid var", str: "/hello/</thing"},
 	}
 
 	for _, test := range parseFailures {
@@ -183,11 +183,11 @@ func TestTuple(t *testing.T) {
 		str  string
 		ast  q.Tuple
 	}{
-		{name: "empty", str: "()", ast: q.Tuple{}},
-		{name: "one", str: "(17)", ast: q.Tuple{int64(17)}},
-		{name: "two", str: "(17,\"hello world\")", ast: q.Tuple{int64(17), "hello world"}},
-		{name: "sub tuple", str: "(\"hello\",23.3,(-3))", ast: q.Tuple{"hello", 23.3, q.Tuple{int64(-3)}}},
-		{name: "uuid", str: "((bcefd2ec-4df5-43b6-8c79-81b70b886af9))",
+		{name: "empty", str: "{}", ast: q.Tuple{}},
+		{name: "one", str: "{17}", ast: q.Tuple{int64(17)}},
+		{name: "two", str: "{17,\"hello world\"}", ast: q.Tuple{int64(17), "hello world"}},
+		{name: "sub tuple", str: "{\"hello\",23.3,{-3}}", ast: q.Tuple{"hello", 23.3, q.Tuple{int64(-3)}}},
+		{name: "uuid", str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}",
 			ast: q.Tuple{q.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 	}
 
@@ -208,10 +208,10 @@ func TestTuple(t *testing.T) {
 		str  string
 	}{
 		{name: "empty", str: ""},
-		{name: "no close", str: "("},
-		{name: "no open", str: ")"},
-		{name: "bad element", str: "(bad)"},
-		{name: "empty element", str: "(\"hello\",, -3)"},
+		{name: "no close", str: "{"},
+		{name: "no open", str: "}"},
+		{name: "bad element", str: "{bad}"},
+		{name: "empty element", str: "{\"hello\",, -3}"},
 	}
 
 	for _, test := range parseFailures {
@@ -232,7 +232,7 @@ func TestData(t *testing.T) {
 		{name: "nil", str: "nil", ast: nil},
 		{name: "true", str: "true", ast: true},
 		{name: "false", str: "false", ast: false},
-		{name: "variable", str: "{int}", ast: q.Variable{q.IntType}},
+		{name: "variable", str: "<int>", ast: q.Variable{q.IntType}},
 		{name: "string", str: "\"hello world\"", ast: "hello world"},
 		{name: "uuid", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
 		{name: "int", str: "123", ast: int64(123)},
@@ -275,9 +275,9 @@ func TestVariable(t *testing.T) {
 		str  string
 		ast  q.Variable
 	}{
-		{name: "empty", str: "{}", ast: nil},
-		{name: "single", str: "{int}", ast: q.Variable{q.IntType}},
-		{name: "multiple", str: "{int|float|tuple}", ast: q.Variable{q.IntType, q.FloatType, q.TupleType}},
+		{name: "empty", str: "<>", ast: nil},
+		{name: "single", str: "<int>", ast: q.Variable{q.IntType}},
+		{name: "multiple", str: "<int|float|tuple>", ast: q.Variable{q.IntType, q.FloatType, q.TupleType}},
 	}
 
 	for _, test := range tests {
@@ -296,9 +296,9 @@ func TestVariable(t *testing.T) {
 		str  string
 	}{
 		{name: "empty", str: ""},
-		{name: "unclosed", str: "{"},
-		{name: "unopened", str: "}"},
-		{name: "invalid", str: "{invalid}"},
+		{name: "unclosed", str: "<"},
+		{name: "unopened", str: ">"},
+		{name: "invalid", str: "<invalid>"},
 	}
 
 	for _, test := range fails {
