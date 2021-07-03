@@ -51,13 +51,12 @@ func (e *Engine) Set(query q.KeyValue) error {
 	}
 
 	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+		e.log.Log().Interface("query", query).Msg("setting")
+
 		dir, err := directory.CreateOrOpen(tr, path, nil)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
-
-		e.log.Log().Interface("query", query).Msg("setting")
-
 		tr.Set(dir.Pack(q.ToFDBTuple(query.Key.Tuple)), valueBytes)
 		return nil, nil
 	})
@@ -79,12 +78,15 @@ func (e *Engine) Clear(query q.KeyValue) error {
 	}
 
 	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		dir, err := directory.CreateOrOpen(tr, path, nil)
+		e.log.Log().Interface("query", query).Msg("clearing")
+
+		dir, err := directory.Open(tr, path, nil)
 		if err != nil {
+			if errors.Is(err, directory.ErrDirNotExists) {
+				return nil, nil
+			}
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
-
-		e.log.Log().Interface("query", query).Msg("clearing")
 		tr.Clear(dir.Pack(q.ToFDBTuple(query.Key.Tuple)))
 		return nil, nil
 	})
@@ -106,12 +108,15 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	}
 
 	result, err := e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		dir, err := directory.CreateOrOpen(tr, path, nil)
+		e.log.Log().Interface("query", query).Msg("single reading")
+
+		dir, err := directory.Open(tr, path, nil)
 		if err != nil {
+			if errors.Is(err, directory.ErrDirNotExists) {
+				return nil, nil
+			}
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
-
-		e.log.Log().Interface("query", query).Msg("single reading")
 		return tr.Get(dir.Pack(q.ToFDBTuple(query.Key.Tuple))).Get()
 	})
 	if err != nil {
