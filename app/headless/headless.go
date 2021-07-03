@@ -103,6 +103,9 @@ func (h *Headless) singleRead(query q.KeyValue) error {
 	if err != nil {
 		return err
 	}
+	if kv == nil {
+		return nil
+	}
 	str, err := parser.FormatKeyValue(*kv)
 	if err != nil {
 		return errors.Wrap(err, "failed to format output")
