@@ -122,6 +122,9 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "transaction failed")
 	}
+	if result == nil {
+		return nil, nil
+	}
 
 	bytes := result.([]byte)
 	if bytes == nil {

@@ -48,6 +48,15 @@ func TestEngine_SetSingleRead(t *testing.T) {
 		})
 	})
 
+	t.Run("get nothing", func(t *testing.T) {
+		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"nothing", "here"}}, Value: q.Variable{}})
+			result, err := e.SingleRead(query)
+			assert.NoError(t, err)
+			assert.Nil(t, result)
+		})
+	})
+
 	t.Run("set errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33, q.Variable{}}}, Value: nil})
