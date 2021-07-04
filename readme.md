@@ -16,3 +16,5 @@ acheive are:
   - [ ] Gracefully handle multi-transaction range-reads.
   - [ ] Gracefully handle transient errors.
 
+Here is the [syntax definiton](syntax.ebnf) for the query
+language.
