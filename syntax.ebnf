@@ -1,24 +1,29 @@
 (*
- This document defines the syntax of the FDBQ query
- language. The meta language used is extended Backus-Naur
- form as defined in ISO/IEC 14977.
+ This document defines the syntax of the FDBQ query language. The meta language
+ used is extended Backus-Naur form as defined in ISO/IEC 14977.
 *)
 
 query = keyval | key | directory ;
 
 keyval = key, ws, '=', ws, value ;
 
-key = directory, ws, tuple ;
+key = directory, tuple ;
 
-value = tuple | data | 'clear' ;
+value = data | 'clear' ;
 
 directory = { '/', ws, words, ws } ;
 
 tuple = '{', ws, elements, ws, '}' ;
 
-elements = ( data | tuple ), ws, ',', ws, elements | data | tuple ;
+elements = data, ws, ',', ws, elements | data ;
 
-data = 'nil' | bool | int | float | scientific | string | uuid | base64 ;
+data = 'nil' | int | bool | float | scientific | string | bytes | uuid | tuple | variable;
+
+variable = '<', ws, types, ws, '>' ;
+
+types = primitive, ws, '|', ws, types | primitive ;
+
+primitive = 'int' | 'uint' | 'bool' | 'float' | 'bigint' | 'string' | 'bytes' | 'uuid' | 'tuple' ;
 
 bool = 'true' | 'false' ;
 
@@ -31,6 +36,8 @@ scientific = int, 'e', int | float, 'e', int ;
 string = '"', words, '"' ;
 
 uuid = 8 * hex, '-', 4 * hex, '-', 4 * hex, '-', 4 * hex, '-', 12 * hex ;
+
+bytes = '0x', { 2 * hex } ;
 
 number = { digit } ;
 
