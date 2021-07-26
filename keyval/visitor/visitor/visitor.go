@@ -1,43 +1,37 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"strings"
+	"text/template"
 
 	g "github.com/janderland/fdbq/generate"
 )
 
 func main() {
 	var gen VisitorGen
-	g.Generate(gen, []g.Input{
-		{Type: g.Flag, Dst: &gen.Visitor, Key: "visitor"},
-		{Type: g.Flag, Dst: &gen.Acceptor, Key: "acceptor"},
+	g.Generate(&gen, []g.Input{
+		{Type: g.Flag, Dst: &gen.visitor, Key: "visitor"},
+		{Type: g.Flag, Dst: &gen.acceptor, Key: "acceptor"},
 		{Type: g.Flag, Dst: &gen.types, Key: "types"},
-		{Type: g.EnvVar, Dst: &gen.Package, Key: "GOPACKAGE"},
-		{Type: g.EnvVar, Dst: &gen.file, Key: "GOFILE"},
 	})
 }
 
 type VisitorGen struct {
-	Visitor  string
-	Acceptor string
+	visitor  string
+	acceptor string
 	types    string
-	Package  string
-	file     string
 }
 
-func (x VisitorGen) Filename() string {
-	noExt := x.file[0 : len(x.file)-len(filepath.Ext(x.file))]
-	return fmt.Sprintf("%s_%s.gen.go", noExt, strings.ToLower(x.Visitor))
+func (x VisitorGen) Name() string {
+	return x.visitor
 }
 
-func (x VisitorGen) Template() string {
-	return `
-// Code generated with args "{{.Args}}". DO NOT EDIT.
-package {{.Package}}
+func (x VisitorGen) Data() interface{} {
+	return x
+}
 
+func (x VisitorGen) Template() *template.Template {
+	return template.Must(template.New("").Parse(`
 type (
 	{{.Visitor}} interface {
 		{{range $i, $type := .Types -}}
@@ -67,11 +61,15 @@ func (x *{{$type}}) {{$.AcceptorMethod}}(v {{$.Visitor}}) {
 	v.{{$.VisitorMethod $type}}(*x)
 }
 {{end}}
-`
+`))
 }
 
-func (x VisitorGen) Args() string {
-	return strings.Join(os.Args[1:], " ")
+func (x VisitorGen) Visitor() string {
+	return x.visitor
+}
+
+func (x VisitorGen) Acceptor() string {
+	return x.acceptor
 }
 
 func (x VisitorGen) Types() []string {
@@ -83,5 +81,5 @@ func (x VisitorGen) VisitorMethod(typ string) string {
 }
 
 func (x VisitorGen) AcceptorMethod() string {
-	return strings.Title(x.Acceptor)
+	return strings.Title(x.acceptor)
 }
