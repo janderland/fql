@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-	"github.com/janderland/fdbq/app/flag"
-	"github.com/janderland/fdbq/app/headless"
+	"github.com/janderland/fdbq/internal/app/flag"
+	"github.com/janderland/fdbq/internal/app/headless"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )

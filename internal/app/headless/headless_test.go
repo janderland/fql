@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-	"github.com/janderland/fdbq/app/flag"
+	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
