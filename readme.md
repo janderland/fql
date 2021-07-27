@@ -1,40 +1,20 @@
-# Value Expressions
+# FDBQ
 
-```
-nil
-true
-false
-12
--10
-33.29
--12e6
-"this is a string"
-7a78b9b7-7b04-4e5c-a57c-b17895667fd9
-```
+FDBQ is a protype
+[layer](https://apple.github.io/foundationdb/layer-concept.html)
+for FoundationDB. Some of the things this project aims to
+acheive are:
+- [x] Provide a textual description of key-value schemas.
+- [x] Provide an intuitive query language for FDB.
+- [x] Provide a Go API which is structurally equivalent to
+  the query language.
+- [ ] Improve the ergonomics of the FoundationDB API.
+  - [x] Merge the directory & tuple layers with the core FDB
+    API.
+  - [ ] Standardize the encoding of primitives (int, float,
+    bool) as an FDB value.
+  - [ ] Gracefully handle multi-transaction range-reads.
+  - [ ] Gracefully handle transient errors.
 
-
-# Set Syntax
-
-```
-/dir/path(-10,false,(nil,12)) = "hello"
-
-/deep/dir/path("years",true,10e3) = nil
-
-/dir(12,"lives") = (true,false,false)
-```
-
-
-# Get Syntax
-
-```
-/dir/{}(1,2,3) = nil
-
-/deep/dir/path({},true,10e3) = {}
-```
-
-
-# Clear Syntax
-
-```
-/dir/path(-10,false,(nil,12)) = clear
-```
+Here is the [syntax definiton](syntax.ebnf) for the query
+language.
