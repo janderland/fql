@@ -6,8 +6,8 @@ import (
 	"io"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
-	"github.com/janderland/fdbq/app/flag"
 	"github.com/janderland/fdbq/engine"
+	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser"
 	"github.com/pkg/errors"
