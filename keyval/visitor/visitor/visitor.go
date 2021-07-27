@@ -4,7 +4,7 @@ import (
 	"strings"
 	"text/template"
 
-	g "github.com/janderland/fdbq/generate"
+	g "github.com/janderland/fdbq/internal/generate"
 )
 
 func main() {
