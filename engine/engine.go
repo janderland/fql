@@ -117,6 +117,9 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 			}
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
+		if len(query.Key.Tuple) == 0 {
+			return tr.Get(fdb.Key(dir.Bytes())).Get()
+		}
 		return tr.Get(dir.Pack(q.ToFDBTuple(query.Key.Tuple))).Get()
 	})
 	if err != nil {
@@ -127,10 +130,6 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	}
 
 	bytes := result.([]byte)
-	if bytes == nil {
-		return nil, nil
-	}
-
 	if len(bytes) > 0 {
 		for _, typ := range query.Value.(q.Variable) {
 			value, err := q.UnpackValue(typ, bytes)
