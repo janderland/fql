@@ -122,11 +122,15 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "transaction failed")
 	}
+
 	if result == nil {
 		return nil, nil
 	}
-
 	bytes := result.([]byte)
+	if bytes == nil {
+		return nil, nil
+	}
+
 	if len(bytes) > 0 {
 		for _, typ := range query.Value.(q.Variable) {
 			value, err := q.UnpackValue(typ, bytes)
@@ -142,7 +146,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 
 	return &q.KeyValue{
 		Key:   query.Key,
-		Value: result,
+		Value: bytes,
 	}, nil
 }
 
