@@ -15,8 +15,9 @@ const (
 	VarSep   = '|'
 
 	StrStart = '"'
-	StrHex   = "\\x"
 	StrEnd   = '"'
+
+	HexStart = "0x"
 
 	Nil   = "nil"
 	True  = "true"

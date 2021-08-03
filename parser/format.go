@@ -92,9 +92,9 @@ func FormatData(in interface{}) (string, error) {
 	case q.Variable:
 		return FormatVariable(in), nil
 	case string:
-		return FormatString(in)
+		return FormatString(in), nil
 	case []byte:
-		return FormatString(in)
+		return FormatHex(in), nil
 	case tuple.UUID:
 		return FormatUUID(in), nil
 	default:
@@ -116,20 +116,19 @@ func FormatVariable(in q.Variable) string {
 	return str.String()
 }
 
-func FormatString(in interface{}) (string, error) {
+func FormatHex(in []byte) string {
+	var out strings.Builder
+	out.WriteString(HexStart)
+	out.WriteString(hex.EncodeToString(in))
+	return out.String()
+}
+
+func FormatString(in string) string {
 	var out strings.Builder
 	out.WriteRune(StrStart)
-	switch in := in.(type) {
-	case string:
-		out.WriteString(in)
-	case []byte:
-		out.WriteString(StrHex)
-		out.WriteString(hex.EncodeToString(in))
-	default:
-		return "", errors.Errorf("failed to format '%v' (%T)", in, in)
-	}
+	out.WriteString(in)
 	out.WriteRune(StrEnd)
-	return out.String(), nil
+	return out.String()
 }
 
 func FormatUUID(in tuple.UUID) string {
