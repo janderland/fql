@@ -314,7 +314,7 @@ func TestString(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  interface{}
+		ast  string
 	}{
 		{name: "regular", str: "\"hello world\"", ast: "hello world"},
 	}
@@ -325,8 +325,7 @@ func TestString(t *testing.T) {
 			assert.NoError(t, err)
 			assert.Equal(t, test.ast, ast)
 
-			str, err := FormatString(test.ast)
-			assert.NoError(t, err)
+			str := FormatString(test.ast)
 			assert.Equal(t, test.str, str)
 		})
 	}
