@@ -349,6 +349,44 @@ func TestString(t *testing.T) {
 	}
 }
 
+func TestHex(t *testing.T) {
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "odd digits", str: "0xa23"},
+	}
+
+	for _, test := range parseFailures {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseHex(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
+	}
+
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  []byte
+	}{
+		{name: "trailing zero", str: "0xffa4b230", ast: []byte{0xFF, 0xA4, 0xB2, 0x30}},
+		{name: "leading zero", str: "0x0a4b12", ast: []byte{0x0A, 0x4B, 0x12}},
+	}
+
+	for _, test := range roundTrips {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseHex(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
+
+			str := FormatHex(test.ast)
+			assert.Equal(t, test.str, str)
+		})
+	}
+}
+
 func TestUUID(t *testing.T) {
 	parseFailures := []struct {
 		name string

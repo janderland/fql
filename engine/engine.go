@@ -3,13 +3,12 @@ package engine
 import (
 	"context"
 
-	"github.com/rs/zerolog"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/stream"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 )
 
 type Engine struct {
