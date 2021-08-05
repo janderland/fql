@@ -8,6 +8,37 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
+func TestParseQuery(t *testing.T) {
+	tests := []struct {
+		name    string
+		str     string
+		ast     q.KeyValue
+		onlyDir bool
+	}{
+		{name: "full", str: "/my/dir{0.8, 22.8}=nil", ast: q.KeyValue{
+			Key:   q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}},
+			Value: nil,
+		}, onlyDir: false},
+		{name: "only key", str: "/my/dir{0.8, 22.8}", ast: q.KeyValue{
+			Key:   q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}},
+			Value: q.Variable{},
+		}, onlyDir: false},
+		{name: "only dir", str: "/my/dir", ast: q.KeyValue{
+			Key:   q.Key{Directory: q.Directory{"my", "dir"}},
+			Value: nil,
+		}, onlyDir: true},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			ast, onlyDir, err := ParseQuery(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, *ast)
+			assert.Equal(t, test.onlyDir, onlyDir)
+		})
+	}
+}
+
 func TestKeyValue(t *testing.T) {
 	roundTrips := []struct {
 		name string
