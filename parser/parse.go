@@ -202,6 +202,10 @@ func ParseData(str string) (interface{}, error) {
 		data, err := ParseString(str)
 		return data, errors.Wrap(err, "failed to parse as string")
 	}
+	if strings.HasPrefix(str, HexStart) {
+		data, err := ParseHex(str)
+		return data, errors.Wrap(err, "failed to parse as hex string")
+	}
 	if strings.Count(str, "-") == 4 {
 		data, err := ParseUUID(str)
 		return data, errors.Wrap(err, "failed to parse as UUID")
@@ -249,6 +253,17 @@ func ParseString(str string) (string, error) {
 		return "", errors.New("must end with double quotes")
 	}
 	return str[1 : len(str)-1], nil
+}
+
+func ParseHex(str string) ([]byte, error) {
+	if !strings.HasPrefix(str, HexStart) {
+		return nil, errors.Errorf("expected '%s' prefix", HexStart)
+	}
+	str = str[len(HexStart):]
+	if len(str)%2 != 0 {
+		return nil, errors.New("expected even number of hex digits")
+	}
+	return hex.DecodeString(str)
 }
 
 func ParseUUID(str string) (tuple.UUID, error) {
