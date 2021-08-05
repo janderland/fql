@@ -234,6 +234,7 @@ func TestData(t *testing.T) {
 		{name: "false", str: "false", ast: false},
 		{name: "variable", str: "<int>", ast: q.Variable{q.IntType}},
 		{name: "string", str: "\"hello world\"", ast: "hello world"},
+		{name: "hex", str: "0xabc032", ast: []byte{0xab, 0xc0, 0x32}},
 		{name: "uuid", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
 		{name: "int", str: "123", ast: int64(123)},
 		{name: "float", str: "-94.2", ast: -94.2},
