@@ -116,7 +116,7 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 			return
 		}
 		if len(subDirs) == 0 {
-			r.SendDir(out, DirErr{Err: errors.Errorf("no subdirectories for %v", prefixStr)})
+			log.Trace().Msg("no subdirectories")
 			return
 		}
 
