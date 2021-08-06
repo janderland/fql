@@ -13,7 +13,5 @@ RUN curl -Lo go.tar.gz $GO_URL         &&\
     rm ./go.tar.gz
 ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
 
-
 ARG GOLANGCI_LINT_URL="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 RUN curl -Lf $GOLANGCI_LINT_URL | sh -s -- -b $(go env GOPATH)/bin v1.39.0
-
