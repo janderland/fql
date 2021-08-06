@@ -87,7 +87,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Read & Filter a Range of Keys
+### Read & Filter Range of Keys
 
 ```fdbq
 /people{3392, <string|int>, <>}={<uint>, ...}
@@ -108,7 +108,7 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
     return nil, err
   }
 
-  var results []tuple.Tuple
+  var results []fdb.KeyValue
   iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
   for iter.Advance() {
     kv := iter.MustGet()
@@ -139,13 +139,13 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
       continue
     }
 
-    results = append(results, tup)
+    results = append(results, kv)
   }
   return results, nil
 })
 ```
 
-### Read & Filter Directory Names
+### Read & Filter Directory Paths
 
 ```fdbq
 /root/<>/items/<>
@@ -174,7 +174,7 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
     }
 
     for _, dir2 := range twoDeep {
-      results = append(results, []string{root, dir1, dir2})
+      results = append(results, []string{"root", dir1, dir2})
     }
   }
   return results, nil

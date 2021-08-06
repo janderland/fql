@@ -6,5 +6,4 @@ RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
     rm ./fdb.rpm
 
 COPY fdbq /fdbq
-
 ENTRYPOINT ["/fdbq"]
