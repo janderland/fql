@@ -28,7 +28,7 @@ equivalent FDB API calls implemented in Go.
 ### Set
 
 ```fdbq
-/my/dir{"hello", "world"}=nil
+/my/dir{"hello", "world"}=42
 ```
 
 ```Go
@@ -38,7 +38,9 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
     return nil, err
   }
 
-  tr.Set(dir.Pack(tuple.Tuple{"hello", "world"}), nil)
+  val := make([]byte, 8)
+  binary.LittleEndian.PutUint64(val, 42)
+  tr.Set(dir.Pack(tuple.Tuple{"hello", "world"}), val)
   return nil, nil
 })
 ```
@@ -64,7 +66,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Get
+### Get Single Key
 
 ```fdbq
 /my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}
@@ -85,10 +87,10 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Range
+### Read & Filter a Range of Keys
 
 ```fdbq
-/people{3392, <string|int>, <>}=nil
+/people{3392, <string|int>, <>}={<uint>, ...}
 ```
 
 ```Go
@@ -126,7 +128,14 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
     case string | int64:
     }
 
-    if len(kv.Value) != 0 {
+    val, err := tuple.Unpack(kv.Value)
+    if err != nil {
+      continue
+    }
+    if len(val) == 0 {
+      continue
+    }
+    if _, isInt := val[0].(uint64); !isInt {
       continue
     }
 
@@ -136,16 +145,19 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-### Directories
+### Read & Filter Directory Names
 
 ```fdbq
-/root/<>/<>
+/root/<>/items/<>
 ```
 
 ```Go
 db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   root, err := directory.Open(tr, []string{"root"}, nil)
   if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
     return nil, err
   }
 
@@ -156,7 +168,7 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 
   var results [][]string
   for _, dir1 := range oneDeep {
-    twoDeep, err := root.List(tr, []string{dir1})
+    twoDeep, err := root.List(tr, []string{dir1, "items"})
     if err != nil {
       return nil, err
     }
