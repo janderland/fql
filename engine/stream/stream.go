@@ -289,9 +289,11 @@ func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyVa
 }
 
 func removeMaybeMore(tuple []interface{}) []interface{} {
-	last := len(tuple) - 1
-	if _, hasMaybeMore := tuple[last].(q.MaybeMore); hasMaybeMore {
-		tuple = tuple[:last]
+	if len(tuple) > 0 {
+		last := len(tuple) - 1
+		if _, hasMaybeMore := tuple[last].(q.MaybeMore); hasMaybeMore {
+			tuple = tuple[:last]
+		}
 	}
 	return tuple
 }
