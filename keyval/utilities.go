@@ -71,3 +71,14 @@ func SplitAtFirstVariable(list []interface{}) ([]interface{}, *Variable, []inter
 	}
 	return list, nil, nil
 }
+
+// RemoveMaybeMore removes a MaybeMore if it exists as the last element of the given Tuple.
+func RemoveMaybeMore(tuple Tuple) []interface{} {
+	if len(tuple) > 0 {
+		last := len(tuple) - 1
+		if _, hasMaybeMore := tuple[last].(MaybeMore); hasMaybeMore {
+			tuple = tuple[:last]
+		}
+	}
+	return tuple
+}

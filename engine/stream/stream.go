@@ -154,7 +154,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirE
 	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix, _, _ := q.SplitAtFirstVariable(query)
-	prefix = removeMaybeMore(prefix)
+	prefix = q.RemoveMaybeMore(prefix)
 	fdbPrefix := q.ToFDBTuple(prefix)
 
 	for msg := range in {
@@ -286,14 +286,4 @@ func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyVa
 			}
 		}
 	}
-}
-
-func removeMaybeMore(tuple []interface{}) []interface{} {
-	if len(tuple) > 0 {
-		last := len(tuple) - 1
-		if _, hasMaybeMore := tuple[last].(q.MaybeMore); hasMaybeMore {
-			tuple = tuple[:last]
-		}
-	}
-	return tuple
 }
