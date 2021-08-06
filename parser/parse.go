@@ -151,11 +151,15 @@ func ParseTuple(str string) (q.Tuple, error) {
 		return tup, nil
 	}
 
-	for i, part := range strings.Split(str, string(TupSep)) {
+	parts := strings.Split(str, string(TupSep))
+	for i, part := range parts {
 		part = strings.TrimSpace(part)
 		element, err := ParseTupleElement(part)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to parse %s element - '%s'", ordinal(i+1), part)
+		}
+		if _, isMaybeMore := element.(q.MaybeMore); isMaybeMore && i != len(parts)-1 {
+			return nil, errors.New("'...' should only appear as the last element of a tuple")
 		}
 		tup = append(tup, element)
 	}
@@ -173,6 +177,9 @@ func ParseTupleElement(str string) (interface{}, error) {
 			return nil, errors.Wrap(err, "failed to parse as tuple")
 		}
 		return tup, nil
+	}
+	if str == MaybeMore {
+		return q.MaybeMore{}, nil
 	}
 	data, err := ParseData(str)
 	if err != nil {

@@ -14,7 +14,7 @@ value = tuple | data | 'clear' ;
 
 directory = { '/', ws, words, ws } ;
 
-tuple = '{', ws, elements, ws, '}' ;
+tuple = '{', ws, elements, ws, [ '...' ], ws, '}' ;
 
 elements = ( data | tuple ), ws, ',', ws, ( elements | data | tuple ) ;
 

@@ -67,6 +67,8 @@ func FormatTuple(tup q.Tuple) (string, error) {
 				return "", errors.Wrapf(err, "failed to format tuple at %s element", ordinal(i))
 			}
 			out.WriteString(str)
+		case q.MaybeMore:
+			out.WriteString(MaybeMore)
 		default:
 			str, err := FormatData(t)
 			if err != nil {
