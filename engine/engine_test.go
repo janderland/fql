@@ -141,7 +141,7 @@ func TestEngine_RangeRead(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			var expected []q.KeyValue
 
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"place"}, Tuple: q.Tuple{"hi you"}}, Value: nil})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"place"}, Tuple: q.Tuple{"hi you"}}, Value: []byte{}})
 			expected = append(expected, query)
 			err := e.Set(query)
 			assert.NoError(t, err)

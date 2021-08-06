@@ -1,12 +1,55 @@
 package keyval
 
 import (
+	"bytes"
 	"encoding/binary"
 	"math"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/pkg/errors"
 )
+
+type Unpacker struct {
+	isVar    bool
+	variable Variable
+	unpacked Value
+	packed   []byte
+}
+
+func NewUnpacker(query Value) (*Unpacker, error) {
+	x := Unpacker{}
+	var err error
+
+	if x.variable, x.isVar = query.(Variable); !x.isVar {
+		x.unpacked = query
+		x.packed, err = PackValue(query)
+		if err != nil {
+			return nil, err
+		}
+	}
+	return &x, nil
+}
+
+func (x *Unpacker) Unpack(val []byte) Value {
+	if x.isVar {
+		if len(x.variable) == 0 {
+			return val
+		}
+		for _, typ := range x.variable {
+			out, err := UnpackValue(typ, val)
+			if err != nil {
+				continue
+			}
+			return out
+		}
+		return nil
+	} else {
+		if bytes.Equal(x.packed, val) {
+			return x.unpacked
+		}
+		return nil
+	}
+}
 
 func PackValue(val Value) ([]byte, error) {
 	switch val := val.(type) {

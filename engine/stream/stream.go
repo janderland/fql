@@ -1,7 +1,6 @@
 package stream
 
 import (
-	"bytes"
 	"context"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -228,61 +227,28 @@ func (r *Stream) doFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
-	if variable, isVar := query.(q.Variable); isVar {
-		for msg := range in {
-			if msg.Err != nil {
-				r.SendKV(out, KeyValErr{Err: msg.Err})
-				return
-			}
+	unpacker, err := q.NewUnpacker(query)
+	if err != nil {
+		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
+		return
+	}
 
-			kv := msg.KV
-			log := log.With().Interface("kv", kv).Logger()
-			log.Log().Msg("received key-value")
-
-			if len(variable) == 0 {
-				if !r.SendKV(out, KeyValErr{KV: kv}) {
-					return
-				}
-				continue
-			}
-
-			for _, typ := range variable {
-				outVal, err := q.UnpackValue(typ, kv.Value.([]byte))
-				if err != nil {
-					continue
-				}
-
-				kv.Value = outVal
-				log.Log().Interface("kv", kv).Msg("sending key-value")
-				if !r.SendKV(out, KeyValErr{KV: kv}) {
-					return
-				}
-				break
-			}
-		}
-	} else {
-		queryBytes, err := q.PackValue(query)
-		if err != nil {
-			r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to pack query value")})
+	for msg := range in {
+		if msg.Err != nil {
+			r.SendKV(out, KeyValErr{Err: msg.Err})
 			return
 		}
 
-		for msg := range in {
-			if msg.Err != nil {
-				r.SendKV(out, KeyValErr{Err: msg.Err})
+		kv := msg.KV
+		log := log.With().Interface("kv", kv).Logger()
+		log.Log().Msg("received key-value")
+
+		kv.Value = unpacker.Unpack(kv.Value.([]byte))
+
+		if kv.Value != nil {
+			log.Log().Interface("kv", kv).Msg("sending key-value")
+			if !r.SendKV(out, KeyValErr{KV: kv}) {
 				return
-			}
-
-			kv := msg.KV
-			log := log.With().Interface("kv", kv).Logger()
-			log.Log().Msg("received key-value")
-
-			if bytes.Equal(queryBytes, kv.Value.([]byte)) {
-				kv.Value = query
-				log.Log().Interface("kv", kv).Msg("sending key-value")
-				if !r.SendKV(out, KeyValErr{KV: kv}) {
-					return
-				}
 			}
 		}
 	}
