@@ -19,6 +19,8 @@ const (
 
 	HexStart = "0x"
 
+	MaybeMore = "..."
+
 	Nil   = "nil"
 	True  = "true"
 	False = "false"

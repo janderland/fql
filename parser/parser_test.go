@@ -15,18 +15,20 @@ func TestParseQuery(t *testing.T) {
 		ast     q.KeyValue
 		onlyDir bool
 	}{
-		{name: "full", str: "/my/dir{0.8, 22.8}=nil", ast: q.KeyValue{
-			Key:   q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}},
-			Value: nil,
-		}, onlyDir: false},
-		{name: "only key", str: "/my/dir{0.8, 22.8}", ast: q.KeyValue{
-			Key:   q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}},
-			Value: q.Variable{},
-		}, onlyDir: false},
-		{name: "only dir", str: "/my/dir", ast: q.KeyValue{
-			Key:   q.Key{Directory: q.Directory{"my", "dir"}},
-			Value: nil,
-		}, onlyDir: true},
+		{name: "full",
+			str:     "/my/dir{0.8, 22.8}=nil",
+			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}}, Value: nil},
+			onlyDir: false},
+
+		{name: "only key",
+			str:     "/my/dir{0.8, 22.8}",
+			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}}, Value: q.Variable{}},
+			onlyDir: false},
+
+		{name: "only dir",
+			str:     "/my/dir",
+			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{"my", "dir"}}, Value: nil},
+			onlyDir: true},
 	}
 
 	for _, test := range tests {
@@ -45,7 +47,8 @@ func TestKeyValue(t *testing.T) {
 		str  string
 		ast  q.KeyValue
 	}{
-		{name: "full", str: "/hi/there{54,nil}={33.8}",
+		{name: "full",
+			str: "/hi/there{54,nil}={33.8}",
 			ast: q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{int64(54), nil}}, Value: q.Tuple{33.8}}},
 	}
 
@@ -87,11 +90,16 @@ func TestKey(t *testing.T) {
 		str  string
 		ast  q.Key
 	}{
-		{name: "dir", str: "/my/dir",
+		{name: "dir",
+			str: "/my/dir",
 			ast: q.Key{Directory: q.Directory{"my", "dir"}}},
-		{name: "tup", str: "{\"str\",-13,{1.2e+13}}",
+
+		{name: "tup",
+			str: "{\"str\",-13,{1.2e+13}}",
 			ast: q.Key{Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
-		{name: "full", str: "/my/dir{\"str\",-13,{1.2e+13}}",
+
+		{name: "full",
+			str: "/my/dir{\"str\",-13,{1.2e+13}}",
 			ast: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
 	}
 
@@ -214,12 +222,29 @@ func TestTuple(t *testing.T) {
 		str  string
 		ast  q.Tuple
 	}{
-		{name: "empty", str: "{}", ast: q.Tuple{}},
-		{name: "one", str: "{17}", ast: q.Tuple{int64(17)}},
-		{name: "two", str: "{17,\"hello world\"}", ast: q.Tuple{int64(17), "hello world"}},
-		{name: "sub tuple", str: "{\"hello\",23.3,{-3}}", ast: q.Tuple{"hello", 23.3, q.Tuple{int64(-3)}}},
-		{name: "uuid", str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}",
+		{name: "empty",
+			str: "{}",
+			ast: q.Tuple{}},
+
+		{name: "one",
+			str: "{17}",
+			ast: q.Tuple{int64(17)}},
+
+		{name: "two",
+			str: "{17,\"hello world\"}",
+			ast: q.Tuple{int64(17), "hello world"}},
+
+		{name: "sub tuple",
+			str: "{\"hello\",23.3,{-3}}",
+			ast: q.Tuple{"hello", 23.3, q.Tuple{int64(-3)}}},
+
+		{name: "uuid",
+			str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}",
 			ast: q.Tuple{q.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
+
+		{name: "maybe more",
+			str: "{18.2,0xffaa,...}",
+			ast: q.Tuple{18.2, []byte{0xFF, 0xAA}, q.MaybeMore{}}},
 	}
 
 	for _, test := range roundTrips {
@@ -260,16 +285,45 @@ func TestData(t *testing.T) {
 		str  string
 		ast  interface{}
 	}{
-		{name: "nil", str: "nil", ast: nil},
-		{name: "true", str: "true", ast: true},
-		{name: "false", str: "false", ast: false},
-		{name: "variable", str: "<int>", ast: q.Variable{q.IntType}},
-		{name: "string", str: "\"hello world\"", ast: "hello world"},
-		{name: "hex", str: "0xabc032", ast: []byte{0xab, 0xc0, 0x32}},
-		{name: "uuid", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
-		{name: "int", str: "123", ast: int64(123)},
-		{name: "float", str: "-94.2", ast: -94.2},
-		{name: "scientific", str: "3.47e-08", ast: 3.47e-8},
+		{name: "nil",
+			str: "nil",
+			ast: nil},
+
+		{name: "true",
+			str: "true",
+			ast: true},
+
+		{name: "false",
+			str: "false",
+			ast: false},
+
+		{name: "variable",
+			str: "<int>",
+			ast: q.Variable{q.IntType}},
+
+		{name: "string",
+			str: "\"hello world\"",
+			ast: "hello world"},
+
+		{name: "hex",
+			str: "0xabc032",
+			ast: []byte{0xab, 0xc0, 0x32}},
+
+		{name: "uuid",
+			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
+			ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+
+		{name: "int",
+			str: "123",
+			ast: int64(123)},
+
+		{name: "float",
+			str: "-94.2",
+			ast: -94.2},
+
+		{name: "scientific",
+			str: "3.47e-08",
+			ast: 3.47e-8},
 	}
 
 	for _, test := range roundTrips {
@@ -444,17 +498,20 @@ func TestUUID(t *testing.T) {
 		str  string
 		ast  tup.UUID
 	}{
-		{name: "normal", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
+		{name: "normal",
+			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
 			ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
 	}
 
 	for _, test := range roundTrips {
-		ast, err := ParseUUID(test.str)
-		assert.NoError(t, err)
-		assert.Equal(t, test.ast, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseUUID(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
 
-		str := FormatUUID(test.ast)
-		assert.Equal(t, test.str, str)
+			str := FormatUUID(test.ast)
+			assert.Equal(t, test.str, str)
+		})
 	}
 }
 
@@ -471,13 +528,15 @@ func TestNumber(t *testing.T) {
 	}
 
 	for _, test := range roundTrips {
-		ast, err := ParseNumber(test.str)
-		assert.NoError(t, err)
-		assert.Equal(t, test.ast, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseNumber(test.str)
+			assert.NoError(t, err)
+			assert.Equal(t, test.ast, ast)
 
-		str, err := FormatNumber(test.ast)
-		assert.NoError(t, err)
-		assert.Equal(t, test.str, str)
+			str, err := FormatNumber(test.ast)
+			assert.NoError(t, err)
+			assert.Equal(t, test.str, str)
+		})
 	}
 
 	parseFailures := []struct {
@@ -488,8 +547,10 @@ func TestNumber(t *testing.T) {
 	}
 
 	for _, test := range parseFailures {
-		ast, err := ParseNumber(test.str)
-		assert.Error(t, err)
-		assert.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseNumber(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
 	}
 }
