@@ -55,7 +55,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 			assert.NoError(t, err)
 
 			expected := query
-			query.Value = q.Variable{q.IntType}
+			query.Value = q.Variable{}
 			result, err := e.SingleRead(query)
 			assert.NoError(t, err)
 			assert.Equal(t, &expected, result)

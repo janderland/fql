@@ -105,6 +105,10 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
+	unpacker, err := q.NewUnpacker(query.Value)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to init unpacker")
+	}
 
 	result, err := e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 		e.log.Log().Interface("query", query).Msg("single reading")
@@ -129,23 +133,14 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if bytes == nil {
 		return nil, nil
 	}
-
-	if len(bytes) > 0 {
-		for _, typ := range query.Value.(q.Variable) {
-			value, err := q.UnpackValue(typ, bytes)
-			if err != nil {
-				continue
-			}
-			return &q.KeyValue{
-				Key:   query.Key,
-				Value: value,
-			}, nil
-		}
+	value := unpacker.Unpack(bytes)
+	if value == nil {
+		return nil, nil
 	}
 
 	return &q.KeyValue{
 		Key:   query.Key,
-		Value: bytes,
+		Value: value,
 	}, nil
 }
 
