@@ -4,7 +4,8 @@ set -exuo pipefail
 DIR="${0%/*}"
 TAG="janderland/fdbq:$(git rev-parse --short HEAD)"
 ROOT="$(cd "$DIR"/../..; pwd)"
+WORKDIR="/fdbq"
 
-docker run -v "$ROOT":"$ROOT" -w "$ROOT" janderland/fdbq-build:latest go build "$ROOT"
+docker run -v "$ROOT":$WORKDIR -w $WORKDIR janderland/fdbq-build:latest go build $WORKDIR
 docker build -t "$TAG" -f "$DIR"/Dockerfile "$ROOT"
 docker push "$TAG"
