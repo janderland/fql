@@ -26,13 +26,13 @@ const (
 	ClearKind Kind = "clear"
 
 	// SingleReadKind specifies that the KeyValue has a Variable
-	// Value and doesn't have a Variable in it's Key. This kind
+	// Value and doesn't have a Variable in its Key. This kind
 	// of KeyValue can be used to perform a get operation that
 	// returns a single KeyValue.
 	SingleReadKind Kind = "single"
 
 	// RangeReadKind specifies that the KeyValue has a Variable
-	// in it's Key and doesn't have a Clear Value. This kind of
+	// in its Key and doesn't have a Clear Value. This kind of
 	// KeyValue can be used to perform a get operation that
 	// returns multiple KeyValue.
 	RangeReadKind Kind = "range"
