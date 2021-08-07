@@ -164,10 +164,10 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.Ke
 		}
 
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-			stage1 := s.OpenDirectories(tr, query)
-			stage2 := s.ReadRange(tr, query, stage1)
-			stage3 := s.FilterKeys(query, stage2)
-			stage4 := s.UnpackValues(query, stage3)
+			stage1 := s.OpenDirectories(tr, query.Key.Directory)
+			stage2 := s.ReadRange(tr, query.Key.Tuple, stage1)
+			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
+			stage4 := s.UnpackValues(query.Value, stage3)
 			for kve := range stage4 {
 				s.SendKV(out, kve)
 			}
@@ -191,7 +191,7 @@ func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream
 		defer stop()
 
 		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-			for dir := range s.OpenDirectories(tr, q.KeyValue{Key: q.Key{Directory: query}}) {
+			for dir := range s.OpenDirectories(tr, query) {
 				s.SendDir(out, dir)
 			}
 			return nil, nil

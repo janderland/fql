@@ -86,9 +86,7 @@ func TestStream_OpenDirectories(t *testing.T) {
 					}
 				}
 
-				out := s.OpenDirectories(tr, q.KeyValue{
-					Key: q.Key{Directory: append(q.FromStringArray(rootDir.GetPath()), test.query...)},
-				})
+				out := s.OpenDirectories(tr, append(q.FromStringArray(rootDir.GetPath()), test.query...))
 
 				directories, err := collectDirs(out)
 				if test.error {
@@ -186,7 +184,7 @@ func TestStream_ReadRange(t *testing.T) {
 					}
 				}
 
-				out := s.ReadRange(tr, q.KeyValue{Key: q.Key{Tuple: test.query}}, sendDirs(t, s, dirs))
+				out := s.ReadRange(tr, test.query, sendDirs(t, s, dirs))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
@@ -253,7 +251,7 @@ func TestStream_FilterKeys(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.FilterKeys(q.KeyValue{Key: q.Key{Tuple: test.query}}, sendKVs(t, s, test.initial))
+				out := s.FilterKeys(test.query, sendKVs(t, s, test.initial))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
@@ -322,7 +320,7 @@ func TestStream_UnpackValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.UnpackValues(q.KeyValue{Value: test.query}, sendKVs(t, s, test.initial))
+				out := s.UnpackValues(test.query, sendKVs(t, s, test.initial))
 
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
