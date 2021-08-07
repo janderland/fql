@@ -10,6 +10,7 @@ import (
 
 type Flags struct {
 	Cluster string
+	Little  bool
 	Write   bool
 	Log     bool
 }
@@ -25,6 +26,7 @@ func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
 	}
 
 	flagSet.StringVar(&flags.Cluster, "cluster", "", "path to cluster file")
+	flagSet.BoolVar(&flags.Little, "little", false, "little endian value encoding")
 	flagSet.BoolVar(&flags.Write, "write", false, "allow write queries")
 	flagSet.BoolVar(&flags.Log, "log", false, "perform logging")
 

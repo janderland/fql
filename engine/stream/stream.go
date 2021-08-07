@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -87,12 +88,12 @@ func (r *Stream) FilterKeys(query q.Tuple, in chan KeyValErr) chan KeyValErr {
 	return out
 }
 
-func (r *Stream) UnpackValues(query q.Value, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) UnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.doUnpackValues(query, in, out)
+		r.doUnpackValues(query, order, in, out)
 	}()
 
 	return out
@@ -224,10 +225,10 @@ func (r *Stream) doFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 	}
 }
 
-func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) doUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
-	unpack, err := q.NewUnpack(query)
+	unpack, err := q.NewUnpack(query, order)
 	if err != nil {
 		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
 		return

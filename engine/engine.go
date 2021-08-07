@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -12,22 +13,24 @@ import (
 )
 
 type Engine struct {
-	db  fdb.Transactor
-	ctx context.Context
-	log *zerolog.Logger
+	db    fdb.Transactor
+	ctx   context.Context
+	log   *zerolog.Logger
+	order binary.ByteOrder
 }
 
-func New(ctx context.Context, db fdb.Transactor) Engine {
+func New(ctx context.Context, db fdb.Transactor, order binary.ByteOrder) Engine {
 	return Engine{
-		db:  db,
-		ctx: ctx,
-		log: zerolog.Ctx(ctx),
+		db:    db,
+		ctx:   ctx,
+		log:   zerolog.Ctx(ctx),
+		order: order,
 	}
 }
 
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		return f(New(e.ctx, tr))
+		return f(New(e.ctx, tr, e.order))
 	})
 }
 
@@ -44,7 +47,7 @@ func (e *Engine) Set(query q.KeyValue) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
-	valueBytes, err := q.PackValue(query.Value)
+	valueBytes, err := q.PackValue(e.order, query.Value)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
 	}
@@ -105,7 +108,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
-	unpack, err := q.NewUnpack(query.Value)
+	unpack, err := q.NewUnpack(query.Value, e.order)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}
@@ -166,8 +169,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.Ke
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
-			stage4 := s.UnpackValues(query.Value, stage3)
-			for kve := range stage4 {
+			for kve := range s.UnpackValues(query.Value, e.order, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil

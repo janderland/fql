@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"encoding/binary"
 	"flag"
 	"math/big"
 	"os"
@@ -20,7 +21,8 @@ import (
 const root = "root"
 
 var (
-	db fdb.Database
+	db    fdb.Database
+	order binary.ByteOrder
 
 	flags struct {
 		force bool
@@ -30,6 +32,7 @@ var (
 func init() {
 	fdb.MustAPIVersion(620)
 	db = fdb.MustOpenDefault()
+	order = binary.BigEndian
 
 	flag.BoolVar(&flags.force, "force", false, "remove test directory if it exists")
 }
@@ -322,7 +325,7 @@ func TestStream_UnpackValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.UnpackValues(test.query, sendKVs(t, s, test.initial))
+				out := s.UnpackValues(test.query, order, sendKVs(t, s, test.initial))
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 
@@ -382,7 +385,7 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 }
 
 func packWithPanic(val q.Value) []byte {
-	packed, err := q.PackValue(val)
+	packed, err := q.PackValue(order, val)
 	if err != nil {
 		panic(err)
 	}
@@ -390,7 +393,7 @@ func packWithPanic(val q.Value) []byte {
 }
 
 func unpackWithPanic(typ q.ValueType, bytes []byte) q.Value {
-	unpacked, err := q.UnpackValue(typ, bytes)
+	unpacked, err := q.UnpackValue(order, typ, bytes)
 	if err != nil {
 		panic(err)
 	}

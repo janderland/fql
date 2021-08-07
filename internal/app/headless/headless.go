@@ -2,6 +2,7 @@ package headless
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -22,11 +23,16 @@ type Headless struct {
 }
 
 func New(ctx context.Context, flags flag.Flags, out io.Writer, db fdb.Transactor) Headless {
+	var order binary.ByteOrder = binary.BigEndian
+	if flags.Little {
+		order = binary.LittleEndian
+	}
+
 	return Headless{
 		flags: flags,
 		log:   zerolog.Ctx(ctx),
 		out:   out,
-		eg:    engine.New(ctx, db),
+		eg:    engine.New(ctx, db, order),
 	}
 }
 

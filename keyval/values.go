@@ -11,7 +11,7 @@ import (
 
 type Unpack func(val []byte) Value
 
-func NewUnpack(order binary.ByteOrder, query Value) (Unpack, error) {
+func NewUnpack(query Value, order binary.ByteOrder) (Unpack, error) {
 	if variable, isVar := query.(Variable); isVar {
 		if len(variable) == 0 {
 			return func(val []byte) Value {

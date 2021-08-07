@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/binary"
 	"flag"
 	"os"
 	"testing"
@@ -241,7 +242,7 @@ func testEnv(t *testing.T, f func(fdb.Transactor, directory.DirectorySubspace, E
 	zerolog.SetGlobalLevel(level)
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
 
-	f(db, dir, New(log.WithContext(context.Background()), db))
+	f(db, dir, New(log.WithContext(context.Background()), db, binary.BigEndian))
 }
 
 func prefixDir(root directory.DirectorySubspace, query q.KeyValue) q.KeyValue {
