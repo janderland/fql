@@ -137,7 +137,6 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if value == nil {
 		return nil, nil
 	}
-
 	return &q.KeyValue{
 		Key:   query.Key,
 		Value: value,
@@ -174,7 +173,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.Ke
 			return nil, nil
 		})
 		if err != nil {
-			s.SendKV(out, stream.KeyValErr{Err: err})
+			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "transaction failed")})
 		}
 	}()
 
@@ -197,7 +196,7 @@ func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream
 			return nil, nil
 		})
 		if err != nil {
-			s.SendDir(out, stream.DirErr{Err: err})
+			s.SendDir(out, stream.DirErr{Err: errors.Wrap(err, "transaction failed")})
 		}
 	}()
 
