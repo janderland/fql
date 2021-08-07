@@ -87,7 +87,6 @@ func TestStream_OpenDirectories(t *testing.T) {
 				}
 
 				out := s.OpenDirectories(tr, append(q.FromStringArray(rootDir.GetPath()), test.query...))
-
 				directories, err := collectDirs(out)
 				if test.error {
 					assert.Error(t, err)
@@ -95,12 +94,13 @@ func TestStream_OpenDirectories(t *testing.T) {
 					assert.NoError(t, err)
 				}
 
-				if assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
-					for i, expected := range test.expected {
-						expected = append(rootDir.GetPath(), expected...)
-						if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory (index %d)", i) {
-							t.FailNow()
-						}
+				if !assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
+					t.FailNow()
+				}
+				for i, expected := range test.expected {
+					expected = append(rootDir.GetPath(), expected...)
+					if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory at index %d", i) {
+						t.FailNow()
 					}
 				}
 			})
@@ -162,8 +162,8 @@ func TestStream_ReadRange(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				paths := make(map[string]struct{})
 				var dirs []directory.DirectorySubspace
+				paths := make(map[string]struct{})
 
 				for _, kv := range test.initial {
 					path, err := q.ToStringArray(kv.Key.Directory)
@@ -178,22 +178,23 @@ func TestStream_ReadRange(t *testing.T) {
 
 					pathStr := strings.Join(path, "/")
 					if _, exists := paths[pathStr]; !exists {
-						t.Logf("adding to dir list: %v", dir.GetPath())
+						t.Logf("adding to dir list: %v", path)
 						paths[pathStr] = struct{}{}
 						dirs = append(dirs, dir)
 					}
 				}
 
 				out := s.ReadRange(tr, test.query, sendDirs(t, s, dirs))
-
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 
 				rootPath := q.FromStringArray(rootDir.GetPath())
-				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
+				if !assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values") {
+					t.FailNow()
+				}
 				for i, expected := range test.expected {
 					expected.Key.Directory = append(rootPath, expected.Key.Directory...)
-					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
+					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i) {
 						t.FailNow()
 					}
 				}
@@ -252,13 +253,14 @@ func TestStream_FilterKeys(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				out := s.FilterKeys(test.query, sendKVs(t, s, test.initial))
-
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 
-				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
+				if !assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values") {
+					t.FailNow()
+				}
 				for i, expected := range test.expected {
-					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
+					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i) {
 						t.FailNow()
 					}
 				}
@@ -321,11 +323,12 @@ func TestStream_UnpackValues(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				out := s.UnpackValues(test.query, sendKVs(t, s, test.initial))
-
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 
-				assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
+				if !assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values") {
+					t.FailNow()
+				}
 				for i, expected := range test.expected {
 					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
 						t.FailNow()
@@ -396,23 +399,27 @@ func unpackWithPanic(typ q.ValueType, bytes []byte) q.Value {
 
 func collectDirs(in chan DirErr) ([]directory.DirectorySubspace, error) {
 	var out []directory.DirectorySubspace
+
 	for msg := range in {
 		if msg.Err != nil {
 			return nil, msg.Err
 		}
 		out = append(out, msg.Dir)
 	}
+
 	return out, nil
 }
 
 func collectKVs(in chan KeyValErr) ([]q.KeyValue, error) {
 	var out []q.KeyValue
+
 	for msg := range in {
 		if msg.Err != nil {
 			return nil, msg.Err
 		}
 		out = append(out, msg.KV)
 	}
+
 	return out, nil
 }
 
