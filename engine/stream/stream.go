@@ -227,7 +227,7 @@ func (r *Stream) doFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
-	unpacker, err := q.NewUnpacker(query)
+	unpack, err := q.NewUnpack(query)
 	if err != nil {
 		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
 		return
@@ -243,9 +243,7 @@ func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyVa
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
-		kv.Value = unpacker.Unpack(kv.Value.([]byte))
-
-		if kv.Value != nil {
+		if kv.Value = unpack(kv.Value.([]byte)); kv.Value != nil {
 			log.Log().Interface("kv", kv).Msg("sending key-value")
 			if !r.SendKV(out, KeyValErr{KV: kv}) {
 				return

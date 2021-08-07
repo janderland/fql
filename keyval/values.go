@@ -9,45 +9,38 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Unpacker struct {
-	isVar    bool
-	variable Variable
-	unpacked Value
-	packed   []byte
-}
+type Unpack func(val []byte) Value
 
-func NewUnpacker(query Value) (*Unpacker, error) {
-	x := Unpacker{}
-	var err error
+func NewUnpack(query Value) (Unpack, error) {
+	if variable, isVar := query.(Variable); isVar {
+		if len(variable) == 0 {
+			return func(val []byte) Value {
+				return val
+			}, nil
+		}
 
-	if x.variable, x.isVar = query.(Variable); !x.isVar {
-		x.unpacked = query
-		x.packed, err = PackValue(query)
+		return func(val []byte) Value {
+			for _, typ := range variable {
+				out, err := UnpackValue(typ, val)
+				if err != nil {
+					continue
+				}
+				return out
+			}
+			return nil
+		}, nil
+	} else {
+		packed, err := PackValue(query)
 		if err != nil {
 			return nil, err
 		}
-	}
-	return &x, nil
-}
 
-func (x *Unpacker) Unpack(val []byte) Value {
-	if x.isVar {
-		if len(x.variable) == 0 {
-			return val
-		}
-		for _, typ := range x.variable {
-			out, err := UnpackValue(typ, val)
-			if err != nil {
-				continue
+		return func(val []byte) Value {
+			if bytes.Equal(packed, val) {
+				return query
 			}
-			return out
-		}
-		return nil
-	} else {
-		if bytes.Equal(x.packed, val) {
-			return x.unpacked
-		}
-		return nil
+			return nil
+		}, nil
 	}
 }
 

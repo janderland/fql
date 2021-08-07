@@ -105,7 +105,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
-	unpacker, err := q.NewUnpacker(query.Value)
+	unpack, err := q.NewUnpack(query.Value)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}
@@ -133,7 +133,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if bytes == nil {
 		return nil, nil
 	}
-	value := unpacker.Unpack(bytes)
+	value := unpack(bytes)
 	if value == nil {
 		return nil, nil
 	}
