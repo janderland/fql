@@ -330,7 +330,7 @@ func TestStream_UnpackValues(t *testing.T) {
 					t.FailNow()
 				}
 				for i, expected := range test.expected {
-					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value (index %d)", i) {
+					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i) {
 						t.FailNow()
 					}
 				}
