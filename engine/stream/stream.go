@@ -66,12 +66,12 @@ func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.Directory) chan 
 	return out
 }
 
-func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirErr) chan KeyValErr {
+func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, opts fdb.RangeOptions, in chan DirErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.doReadRange(tr, query, in, out)
+		r.doReadRange(tr, query, opts, in, out)
 	}()
 
 	return out
@@ -150,7 +150,7 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 	}
 }
 
-func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirErr, out chan KeyValErr) {
+func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, opts fdb.RangeOptions, in chan DirErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix, _, _ := q.SplitAtFirstVariable(query)
@@ -173,7 +173,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirE
 			return
 		}
 
-		iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
+		iter := tr.GetRange(rng, opts).Iterator()
 		for iter.Advance() {
 			fromDB, err := iter.Get()
 			if err != nil {

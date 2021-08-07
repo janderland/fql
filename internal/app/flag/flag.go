@@ -1,18 +1,24 @@
 package flag
 
 import (
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"os"
+
+	"github.com/apple/foundationdb/bindings/go/src/fdb"
 
 	"github.com/pkg/errors"
 )
 
 type Flags struct {
 	Cluster string
-	Little  bool
 	Write   bool
 	Log     bool
+
+	Reverse bool
+	Little  bool
+	Limit   int
 }
 
 func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
@@ -26,9 +32,12 @@ func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
 	}
 
 	flagSet.StringVar(&flags.Cluster, "cluster", "", "path to cluster file")
-	flagSet.BoolVar(&flags.Little, "little", false, "little endian value encoding")
 	flagSet.BoolVar(&flags.Write, "write", false, "allow write queries")
 	flagSet.BoolVar(&flags.Log, "log", false, "perform logging")
+
+	flagSet.BoolVar(&flags.Reverse, "reverse", false, "reverse range reads")
+	flagSet.BoolVar(&flags.Little, "little", false, "little endian value encoding")
+	flagSet.IntVar(&flags.Limit, "limit", 0, "range read limit")
 
 	if err := flagSet.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
@@ -37,4 +46,18 @@ func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
 		return nil, nil, errors.Wrap(err, "failed to parse flags")
 	}
 	return &flags, flagSet.Args(), nil
+}
+
+func (x *Flags) RangeOptions() fdb.RangeOptions {
+	return fdb.RangeOptions{
+		Reverse: x.Reverse,
+		Limit:   x.Limit,
+	}
+}
+
+func (x *Flags) ByteOrder() binary.ByteOrder {
+	if x.Little {
+		return binary.LittleEndian
+	}
+	return binary.BigEndian
 }

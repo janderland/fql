@@ -187,7 +187,7 @@ func TestStream_ReadRange(t *testing.T) {
 					}
 				}
 
-				out := s.ReadRange(tr, test.query, sendDirs(t, s, dirs))
+				out := s.ReadRange(tr, test.query, fdb.RangeOptions{}, sendDirs(t, s, dirs))
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 

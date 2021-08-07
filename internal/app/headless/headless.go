@@ -2,7 +2,6 @@ package headless
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"io"
 
@@ -23,16 +22,11 @@ type Headless struct {
 }
 
 func New(ctx context.Context, flags flag.Flags, out io.Writer, db fdb.Transactor) Headless {
-	var order binary.ByteOrder = binary.BigEndian
-	if flags.Little {
-		order = binary.LittleEndian
-	}
-
 	return Headless{
 		flags: flags,
 		log:   zerolog.Ctx(ctx),
 		out:   out,
-		eg:    engine.New(ctx, db, order),
+		eg:    engine.New(ctx, db, flags.ByteOrder()),
 	}
 }
 
@@ -124,7 +118,7 @@ func (h *Headless) singleRead(query q.KeyValue) error {
 
 func (h *Headless) rangeRead(query q.KeyValue) error {
 	h.log.Log().Interface("query", query).Msg("executing range-read query")
-	for kv := range h.eg.RangeRead(context.Background(), query) {
+	for kv := range h.eg.RangeRead(context.Background(), query, h.flags.RangeOptions()) {
 		if kv.Err != nil {
 			return kv.Err
 		}

@@ -146,7 +146,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	}, nil
 }
 
-func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.KeyValErr {
+func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts fdb.RangeOptions) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
 	go func() {
@@ -167,7 +167,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.Ke
 
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
-			stage2 := s.ReadRange(tr, query.Key.Tuple, stage1)
+			stage2 := s.ReadRange(tr, query.Key.Tuple, opts, stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
 			for kve := range s.UnpackValues(query.Value, e.order, stage3) {
 				s.SendKV(out, kve)
