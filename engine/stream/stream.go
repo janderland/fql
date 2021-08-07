@@ -54,45 +54,45 @@ func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	}
 }
 
-func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.KeyValue) chan DirErr {
+func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.Directory) chan DirErr {
 	out := make(chan DirErr)
 
 	go func() {
 		defer close(out)
-		r.doOpenDirectories(tr, query.Key.Directory, out)
+		r.doOpenDirectories(tr, query, out)
 	}()
 
 	return out
 }
 
-func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.KeyValue, in chan DirErr) chan KeyValErr {
+func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.doReadRange(tr, query.Key.Tuple, in, out)
+		r.doReadRange(tr, query, in, out)
 	}()
 
 	return out
 }
 
-func (r *Stream) FilterKeys(query q.KeyValue, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) FilterKeys(query q.Tuple, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.doFilterKeys(query.Key.Tuple, in, out)
+		r.doFilterKeys(query, in, out)
 	}()
 
 	return out
 }
 
-func (r *Stream) UnpackValues(query q.KeyValue, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) UnpackValues(query q.Value, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.doUnpackValues(query.Value, in, out)
+		r.doUnpackValues(query, in, out)
 	}()
 
 	return out
