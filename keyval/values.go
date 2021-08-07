@@ -11,7 +11,7 @@ import (
 
 type Unpack func(val []byte) Value
 
-func NewUnpack(query Value) (Unpack, error) {
+func NewUnpack(order binary.ByteOrder, query Value) (Unpack, error) {
 	if variable, isVar := query.(Variable); isVar {
 		if len(variable) == 0 {
 			return func(val []byte) Value {
@@ -21,7 +21,7 @@ func NewUnpack(query Value) (Unpack, error) {
 
 		return func(val []byte) Value {
 			for _, typ := range variable {
-				out, err := UnpackValue(typ, val)
+				out, err := UnpackValue(order, typ, val)
 				if err != nil {
 					continue
 				}
@@ -30,7 +30,7 @@ func NewUnpack(query Value) (Unpack, error) {
 			return nil
 		}, nil
 	} else {
-		packed, err := PackValue(query)
+		packed, err := PackValue(order, query)
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +44,7 @@ func NewUnpack(query Value) (Unpack, error) {
 	}
 }
 
-func PackValue(val Value) ([]byte, error) {
+func PackValue(order binary.ByteOrder, val Value) ([]byte, error) {
 	switch val := val.(type) {
 	// Nil
 	case nil:
@@ -60,31 +60,31 @@ func PackValue(val Value) ([]byte, error) {
 	// Int
 	case int64:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, uint64(val))
+		order.PutUint64(b, uint64(val))
 		return b, nil
 	case int:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, uint64(val))
+		order.PutUint64(b, uint64(val))
 		return b, nil
 
 	// Uint
 	case uint64:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, val)
+		order.PutUint64(b, val)
 		return b, nil
 	case uint:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, uint64(val))
+		order.PutUint64(b, uint64(val))
 		return b, nil
 
 	// Float
 	case float64:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, math.Float64bits(val))
+		order.PutUint64(b, math.Float64bits(val))
 		return b, nil
 	case float32:
 		b := make([]byte, 8)
-		binary.LittleEndian.PutUint64(b, math.Float64bits(float64(val)))
+		order.PutUint64(b, math.Float64bits(float64(val)))
 		return b, nil
 
 	// String
@@ -111,7 +111,7 @@ func PackValue(val Value) ([]byte, error) {
 	}
 }
 
-func UnpackValue(typ ValueType, val []byte) (Value, error) {
+func UnpackValue(order binary.ByteOrder, typ ValueType, val []byte) (Value, error) {
 	switch typ {
 	case AnyType:
 		return val, nil
@@ -129,19 +129,19 @@ func UnpackValue(typ ValueType, val []byte) (Value, error) {
 		if len(val) != 8 {
 			return nil, errors.New("not 8 bytes")
 		}
-		return int64(binary.LittleEndian.Uint64(val)), nil
+		return int64(order.Uint64(val)), nil
 
 	case UintType:
 		if len(val) != 8 {
 			return nil, errors.New("not 8 bytes")
 		}
-		return binary.LittleEndian.Uint64(val), nil
+		return order.Uint64(val), nil
 
 	case FloatType:
 		if len(val) != 8 {
 			return nil, errors.New("not 8 bytes")
 		}
-		return math.Float64frombits(binary.LittleEndian.Uint64(val)), nil
+		return math.Float64frombits(order.Uint64(val)), nil
 
 	case StringType:
 		return string(val), nil
