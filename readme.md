@@ -14,8 +14,6 @@ acheive are:
   - [ ] Gracefully handle transient errors.
 - [ ] Standardize the encoding of primitives (int, float,
   bool) as FDB values.
-- [ ] Provide a CLI for exploring & downloading/uploading
-  large amounts of data to an FDB cluster.
 
 Here is the [syntax definiton](syntax.ebnf) for the query
 language.
