@@ -24,7 +24,7 @@ type CodeGenerator interface {
 	// output file. A Go `package` expression for the package
 	// of the file invoking `//go:generate` will automatically
 	// be prepended to the template's output along with a
-	// a comment identifying the file as generated.
+	// comment identifying the file as generated.
 	Template() *template.Template
 
 	// Data returns the value passed as the `data` param into
