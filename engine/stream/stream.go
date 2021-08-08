@@ -12,6 +12,12 @@ import (
 )
 
 type (
+	RangeOpts struct {
+		ByteOrder binary.ByteOrder
+		Reverse   bool
+		Limit     int
+	}
+
 	Stream struct {
 		ctx context.Context
 		log *zerolog.Logger
@@ -66,7 +72,7 @@ func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.Directory) chan 
 	return out
 }
 
-func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, opts fdb.RangeOptions, in chan DirErr) chan KeyValErr {
+func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
@@ -150,7 +156,7 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 	}
 }
 
-func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, opts fdb.RangeOptions, in chan DirErr, out chan KeyValErr) {
+func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix, _, _ := q.SplitAtFirstVariable(query)
@@ -173,7 +179,11 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, opts fdb.Ran
 			return
 		}
 
-		iter := tr.GetRange(rng, opts).Iterator()
+		iter := tr.GetRange(rng, fdb.RangeOptions{
+			Reverse: opts.Reverse,
+			Limit:   opts.Limit,
+		}).Iterator()
+
 		for iter.Advance() {
 			fromDB, err := iter.Get()
 			if err != nil {

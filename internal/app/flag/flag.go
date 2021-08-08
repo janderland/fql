@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb"
+	"github.com/janderland/fdbq/engine/stream"
 
 	"github.com/pkg/errors"
 )
@@ -48,16 +48,17 @@ func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
 	return &flags, flagSet.Args(), nil
 }
 
-func (x *Flags) RangeOptions() fdb.RangeOptions {
-	return fdb.RangeOptions{
-		Reverse: x.Reverse,
-		Limit:   x.Limit,
-	}
-}
-
 func (x *Flags) ByteOrder() binary.ByteOrder {
 	if x.Little {
 		return binary.LittleEndian
 	}
 	return binary.BigEndian
+}
+
+func (x *Flags) RangeOpts() stream.RangeOpts {
+	return stream.RangeOpts{
+		ByteOrder: x.ByteOrder(),
+		Reverse:   x.Reverse,
+		Limit:     x.Limit,
+	}
 }

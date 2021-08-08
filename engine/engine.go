@@ -13,28 +13,26 @@ import (
 )
 
 type Engine struct {
-	db    fdb.Transactor
-	ctx   context.Context
-	log   *zerolog.Logger
-	order binary.ByteOrder
+	db  fdb.Transactor
+	ctx context.Context
+	log *zerolog.Logger
 }
 
-func New(ctx context.Context, db fdb.Transactor, order binary.ByteOrder) Engine {
+func New(ctx context.Context, db fdb.Transactor) Engine {
 	return Engine{
-		db:    db,
-		ctx:   ctx,
-		log:   zerolog.Ctx(ctx),
-		order: order,
+		db:  db,
+		ctx: ctx,
+		log: zerolog.Ctx(ctx),
 	}
 }
 
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		return f(New(e.ctx, tr, e.order))
+		return f(New(e.ctx, tr))
 	})
 }
 
-func (e *Engine) Set(query q.KeyValue) error {
+func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 	kind, err := query.Kind()
 	if err != nil {
 		return errors.Wrap(err, "failed to get query kind")
@@ -47,7 +45,7 @@ func (e *Engine) Set(query q.KeyValue) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
-	valueBytes, err := q.PackValue(e.order, query.Value)
+	valueBytes, err := q.PackValue(query.Value, byteOrder)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
 	}
@@ -95,7 +93,7 @@ func (e *Engine) Clear(query q.KeyValue) error {
 	return errors.Wrap(err, "transaction failed")
 }
 
-func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
+func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.KeyValue, error) {
 	kind, err := query.Kind()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get query kind")
@@ -108,7 +106,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
-	unpack, err := q.NewUnpack(query.Value, e.order)
+	unpack, err := q.NewUnpack(query.Value, byteOrder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}
@@ -146,7 +144,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	}, nil
 }
 
-func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts fdb.RangeOptions) chan stream.KeyValErr {
+func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts stream.RangeOpts) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
 	go func() {
@@ -169,7 +167,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts fdb.Range
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts, stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
-			for kve := range s.UnpackValues(query.Value, e.order, stage3) {
+			for kve := range s.UnpackValues(query.Value, opts.ByteOrder, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil

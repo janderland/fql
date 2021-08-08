@@ -9,6 +9,7 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/janderland/fdbq/engine/stream"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -18,7 +19,8 @@ import (
 const root = "engine"
 
 var (
-	db fdb.Database
+	db        fdb.Database
+	byteOrder binary.ByteOrder
 
 	flags struct {
 		force bool
@@ -29,6 +31,7 @@ var (
 func init() {
 	fdb.MustAPIVersion(620)
 	db = fdb.MustOpenDefault()
+	byteOrder = binary.BigEndian
 
 	flag.BoolVar(&flags.force, "force", false, "remove test directory if it exists")
 	flag.StringVar(&flags.level, "level", "debug", "logging level")
@@ -38,12 +41,12 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("set and get", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{33.3}}, Value: int64(33)})
-			err := e.Set(query)
+			err := e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
 			expected := query
 			query.Value = q.Variable{q.IntType}
-			result, err := e.SingleRead(query)
+			result, err := e.SingleRead(query, byteOrder)
 			assert.NoError(t, err)
 			assert.Equal(t, &expected, result)
 		})
@@ -52,12 +55,12 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("set and get empty value", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{33.3}}, Value: []byte{}})
-			err := e.Set(query)
+			err := e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
 			expected := query
 			query.Value = q.Variable{}
-			result, err := e.SingleRead(query)
+			result, err := e.SingleRead(query, byteOrder)
 			assert.NoError(t, err)
 			assert.Equal(t, &expected, result)
 		})
@@ -66,7 +69,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("get nothing", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"nothing", "here"}}, Value: q.Variable{}})
-			result, err := e.SingleRead(query)
+			result, err := e.SingleRead(query, byteOrder)
 			assert.NoError(t, err)
 			assert.Nil(t, result)
 		})
@@ -75,11 +78,11 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("set errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33, q.Variable{}}}, Value: nil})
-			err := e.Set(query)
+			err := e.Set(query, byteOrder)
 			assert.Error(t, err)
 
 			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: q.Clear{}})
-			err = e.Set(query)
+			err = e.Set(query, byteOrder)
 			assert.Error(t, err)
 		})
 	})
@@ -87,12 +90,12 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("get errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33, q.Variable{}}}, Value: nil})
-			result, err := e.SingleRead(query)
+			result, err := e.SingleRead(query, byteOrder)
 			assert.Error(t, err)
 			assert.Nil(t, result)
 
 			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: q.Clear{}})
-			result, err = e.SingleRead(query)
+			result, err = e.SingleRead(query, byteOrder)
 			assert.Error(t, err)
 			assert.Nil(t, result)
 		})
@@ -103,12 +106,12 @@ func TestEngine_Clear(t *testing.T) {
 	t.Run("set clear get", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			set := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"this", "place"}, Tuple: q.Tuple{32.33}}, Value: []byte{}})
-			err := e.Set(set)
+			err := e.Set(set, byteOrder)
 			assert.NoError(t, err)
 
 			get := set
 			get.Value = q.Variable{}
-			result, err := e.SingleRead(get)
+			result, err := e.SingleRead(get, byteOrder)
 			assert.NoError(t, err)
 			assert.Equal(t, &set, result)
 
@@ -117,7 +120,7 @@ func TestEngine_Clear(t *testing.T) {
 			err = e.Clear(clear)
 			assert.NoError(t, err)
 
-			result, err = e.SingleRead(get)
+			result, err = e.SingleRead(get, byteOrder)
 			assert.NoError(t, err)
 			assert.Nil(t, result)
 		})
@@ -144,22 +147,22 @@ func TestEngine_RangeRead(t *testing.T) {
 
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"place"}, Tuple: q.Tuple{"hi you"}}, Value: []byte{}})
 			expected = append(expected, query)
-			err := e.Set(query)
+			err := e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
 			query.Key.Tuple = q.Tuple{11.3}
 			expected = append(expected, query)
-			err = e.Set(query)
+			err = e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
 			query.Key.Tuple = q.Tuple{55.3}
 			expected = append(expected, query)
-			err = e.Set(query)
+			err = e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
 			var results []q.KeyValue
 			query.Key.Tuple = q.Tuple{q.Variable{}}
-			for kve := range e.RangeRead(context.Background(), query, fdb.RangeOptions{}) {
+			for kve := range e.RangeRead(context.Background(), query, stream.RangeOpts{}) {
 				if !assert.NoError(t, kve.Err) {
 					t.FailNow()
 				}
@@ -172,7 +175,7 @@ func TestEngine_RangeRead(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: q.Clear{}})
-			out := e.RangeRead(context.Background(), query, fdb.RangeOptions{})
+			out := e.RangeRead(context.Background(), query, stream.RangeOpts{ByteOrder: byteOrder})
 
 			msg := <-out
 			assert.Error(t, msg.Err)
@@ -242,7 +245,7 @@ func testEnv(t *testing.T, f func(fdb.Transactor, directory.DirectorySubspace, E
 	zerolog.SetGlobalLevel(level)
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
 
-	f(db, dir, New(log.WithContext(context.Background()), db, binary.BigEndian))
+	f(db, dir, New(log.WithContext(context.Background()), db))
 }
 
 func prefixDir(root directory.DirectorySubspace, query q.KeyValue) q.KeyValue {

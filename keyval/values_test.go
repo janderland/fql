@@ -27,11 +27,11 @@ func TestPackUnpackValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			v, err := PackValue(order, test.val)
+			v, err := PackValue(test.val, order)
 			assert.NoError(t, err)
 			assert.NotNil(t, v)
 
-			out, err := UnpackValue(order, test.typ, v)
+			out, err := UnpackValue(v, test.typ, order)
 			assert.NoError(t, err)
 			assert.Equal(t, test.val, out)
 		})
@@ -39,20 +39,20 @@ func TestPackUnpackValue(t *testing.T) {
 }
 
 func TestPackUnpackNil(t *testing.T) {
-	v, err := PackValue(order, nil)
+	v, err := PackValue(nil, order)
 	assert.NoError(t, err)
 	assert.Nil(t, v)
 
-	out, err := UnpackValue(order, AnyType, v)
+	out, err := UnpackValue(v, AnyType, order)
 	assert.NoError(t, err)
 	assert.Nil(t, out)
 }
 
 func TestInvalidPackValue(t *testing.T) {
-	out, err := PackValue(order, struct {
+	out, err := PackValue(struct {
 		f1 string
 		f2 float32
-	}{})
+	}{}, order)
 	assert.Error(t, err)
 	assert.Nil(t, out)
 }
@@ -71,7 +71,7 @@ func TestInvalidUnpackValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			out, err := UnpackValue(order, test.typ, test.val)
+			out, err := UnpackValue(test.val, test.typ, order)
 			assert.Error(t, err)
 			assert.Nil(t, out)
 		})

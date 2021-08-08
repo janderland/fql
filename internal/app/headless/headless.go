@@ -26,7 +26,7 @@ func New(ctx context.Context, flags flag.Flags, out io.Writer, db fdb.Transactor
 		flags: flags,
 		log:   zerolog.Ctx(ctx),
 		out:   out,
-		eg:    engine.New(ctx, db, flags.ByteOrder()),
+		eg:    engine.New(ctx, db),
 	}
 }
 
@@ -86,7 +86,7 @@ func (h *Headless) set(query q.KeyValue) error {
 		return errors.New("writing isn't enabled")
 	}
 	h.log.Log().Interface("query", query).Msg("executing set query")
-	return h.eg.Set(query)
+	return h.eg.Set(query, h.flags.ByteOrder())
 }
 
 func (h *Headless) clear(query q.KeyValue) error {
@@ -99,7 +99,7 @@ func (h *Headless) clear(query q.KeyValue) error {
 
 func (h *Headless) singleRead(query q.KeyValue) error {
 	h.log.Log().Interface("query", query).Msg("executing single-read query")
-	kv, err := h.eg.SingleRead(query)
+	kv, err := h.eg.SingleRead(query, h.flags.ByteOrder())
 	if err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (h *Headless) singleRead(query q.KeyValue) error {
 
 func (h *Headless) rangeRead(query q.KeyValue) error {
 	h.log.Log().Interface("query", query).Msg("executing range-read query")
-	for kv := range h.eg.RangeRead(context.Background(), query, h.flags.RangeOptions()) {
+	for kv := range h.eg.RangeRead(context.Background(), query, h.flags.RangeOpts()) {
 		if kv.Err != nil {
 			return kv.Err
 		}

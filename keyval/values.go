@@ -21,7 +21,7 @@ func NewUnpack(query Value, order binary.ByteOrder) (Unpack, error) {
 
 		return func(val []byte) Value {
 			for _, typ := range variable {
-				out, err := UnpackValue(order, typ, val)
+				out, err := UnpackValue(val, typ, order)
 				if err != nil {
 					continue
 				}
@@ -30,7 +30,7 @@ func NewUnpack(query Value, order binary.ByteOrder) (Unpack, error) {
 			return nil
 		}, nil
 	} else {
-		packed, err := PackValue(order, query)
+		packed, err := PackValue(query, order)
 		if err != nil {
 			return nil, err
 		}
@@ -44,7 +44,7 @@ func NewUnpack(query Value, order binary.ByteOrder) (Unpack, error) {
 	}
 }
 
-func PackValue(order binary.ByteOrder, val Value) ([]byte, error) {
+func PackValue(val Value, order binary.ByteOrder) ([]byte, error) {
 	switch val := val.(type) {
 	// Nil
 	case nil:
@@ -111,7 +111,7 @@ func PackValue(order binary.ByteOrder, val Value) ([]byte, error) {
 	}
 }
 
-func UnpackValue(order binary.ByteOrder, typ ValueType, val []byte) (Value, error) {
+func UnpackValue(val []byte, typ ValueType, order binary.ByteOrder) (Value, error) {
 	switch typ {
 	case AnyType:
 		return val, nil
