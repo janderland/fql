@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/janderland/fdbq/engine/stream"
-
 	"github.com/pkg/errors"
 )
 
