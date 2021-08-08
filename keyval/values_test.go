@@ -1,11 +1,14 @@
 package keyval
 
 import (
+	"encoding/binary"
 	"testing"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	"github.com/stretchr/testify/assert"
 )
+
+var order = binary.BigEndian
 
 func TestPackUnpackValue(t *testing.T) {
 	tests := []struct {
@@ -24,11 +27,11 @@ func TestPackUnpackValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			v, err := PackValue(test.val)
+			v, err := PackValue(test.val, order)
 			assert.NoError(t, err)
 			assert.NotNil(t, v)
 
-			out, err := UnpackValue(test.typ, v)
+			out, err := UnpackValue(v, test.typ, order)
 			assert.NoError(t, err)
 			assert.Equal(t, test.val, out)
 		})
@@ -36,11 +39,11 @@ func TestPackUnpackValue(t *testing.T) {
 }
 
 func TestPackUnpackNil(t *testing.T) {
-	v, err := PackValue(nil)
+	v, err := PackValue(nil, order)
 	assert.NoError(t, err)
 	assert.Nil(t, v)
 
-	out, err := UnpackValue(AnyType, v)
+	out, err := UnpackValue(v, AnyType, order)
 	assert.NoError(t, err)
 	assert.Nil(t, out)
 }
@@ -49,7 +52,7 @@ func TestInvalidPackValue(t *testing.T) {
 	out, err := PackValue(struct {
 		f1 string
 		f2 float32
-	}{})
+	}{}, order)
 	assert.Error(t, err)
 	assert.Nil(t, out)
 }
@@ -68,7 +71,7 @@ func TestInvalidUnpackValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			out, err := UnpackValue(test.typ, test.val)
+			out, err := UnpackValue(test.val, test.typ, order)
 			assert.Error(t, err)
 			assert.Nil(t, out)
 		})

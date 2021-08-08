@@ -2,6 +2,7 @@ package stream
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -11,6 +12,12 @@ import (
 )
 
 type (
+	RangeOpts struct {
+		ByteOrder binary.ByteOrder
+		Reverse   bool
+		Limit     int
+	}
+
 	Stream struct {
 		ctx context.Context
 		log *zerolog.Logger
@@ -65,12 +72,12 @@ func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.Directory) chan 
 	return out
 }
 
-func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirErr) chan KeyValErr {
+func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.doReadRange(tr, query, in, out)
+		r.doReadRange(tr, query, opts, in, out)
 	}()
 
 	return out
@@ -87,12 +94,12 @@ func (r *Stream) FilterKeys(query q.Tuple, in chan KeyValErr) chan KeyValErr {
 	return out
 }
 
-func (r *Stream) UnpackValues(query q.Value, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) UnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.doUnpackValues(query, in, out)
+		r.doUnpackValues(query, order, in, out)
 	}()
 
 	return out
@@ -149,7 +156,7 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 	}
 }
 
-func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirErr, out chan KeyValErr) {
+func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix, _, _ := q.SplitAtFirstVariable(query)
@@ -172,7 +179,11 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, in chan DirE
 			return
 		}
 
-		iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
+		iter := tr.GetRange(rng, fdb.RangeOptions{
+			Reverse: opts.Reverse,
+			Limit:   opts.Limit,
+		}).Iterator()
+
 		for iter.Advance() {
 			fromDB, err := iter.Get()
 			if err != nil {
@@ -224,10 +235,10 @@ func (r *Stream) doFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 	}
 }
 
-func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) doUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
-	unpacker, err := q.NewUnpacker(query)
+	unpack, err := q.NewUnpack(query, order)
 	if err != nil {
 		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
 		return
@@ -243,9 +254,7 @@ func (r *Stream) doUnpackValues(query q.Value, in chan KeyValErr, out chan KeyVa
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
-		kv.Value = unpacker.Unpack(kv.Value.([]byte))
-
-		if kv.Value != nil {
+		if kv.Value = unpack(kv.Value.([]byte)); kv.Value != nil {
 			log.Log().Interface("kv", kv).Msg("sending key-value")
 			if !r.SendKV(out, KeyValErr{KV: kv}) {
 				return

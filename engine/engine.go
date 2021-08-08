@@ -2,6 +2,7 @@ package engine
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -31,7 +32,7 @@ func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 	})
 }
 
-func (e *Engine) Set(query q.KeyValue) error {
+func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 	kind, err := query.Kind()
 	if err != nil {
 		return errors.Wrap(err, "failed to get query kind")
@@ -44,7 +45,7 @@ func (e *Engine) Set(query q.KeyValue) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
-	valueBytes, err := q.PackValue(query.Value)
+	valueBytes, err := q.PackValue(query.Value, byteOrder)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
 	}
@@ -92,7 +93,7 @@ func (e *Engine) Clear(query q.KeyValue) error {
 	return errors.Wrap(err, "transaction failed")
 }
 
-func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
+func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.KeyValue, error) {
 	kind, err := query.Kind()
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to get query kind")
@@ -105,7 +106,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
-	unpacker, err := q.NewUnpacker(query.Value)
+	unpack, err := q.NewUnpack(query.Value, byteOrder)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}
@@ -133,7 +134,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	if bytes == nil {
 		return nil, nil
 	}
-	value := unpacker.Unpack(bytes)
+	value := unpack(bytes)
 	if value == nil {
 		return nil, nil
 	}
@@ -143,7 +144,7 @@ func (e *Engine) SingleRead(query q.KeyValue) (*q.KeyValue, error) {
 	}, nil
 }
 
-func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.KeyValErr {
+func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts stream.RangeOpts) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
 	go func() {
@@ -164,10 +165,9 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue) chan stream.Ke
 
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
-			stage2 := s.ReadRange(tr, query.Key.Tuple, stage1)
+			stage2 := s.ReadRange(tr, query.Key.Tuple, opts, stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
-			stage4 := s.UnpackValues(query.Value, stage3)
-			for kve := range stage4 {
+			for kve := range s.UnpackValues(query.Value, opts.ByteOrder, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil
