@@ -22,11 +22,11 @@ func _() {
 	)
 }
 
-func (x *String) DirElement(v DirectoryVisitor) {
-	v.VisitString(*x)
+func (x String) DirElement(v DirectoryVisitor) {
+	v.VisitString(x)
 }
 
-func (x *Variable) DirElement(v DirectoryVisitor) {
-	v.VisitVariable(*x)
+func (x Variable) DirElement(v DirectoryVisitor) {
+	v.VisitVariable(x)
 }
 

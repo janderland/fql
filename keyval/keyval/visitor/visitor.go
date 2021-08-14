@@ -57,8 +57,8 @@ func _() {
 }
 
 {{range $i, $type := .Types}}
-func (x *{{$type}}) {{$.AcceptorMethod}}(v {{$.Visitor}}) {
-	v.{{$.VisitorMethod $type}}(*x)
+func (x {{$type}}) {{$.AcceptorMethod}}(v {{$.Visitor}}) {
+	v.{{$.VisitorMethod $type}}(x)
 }
 {{end}}
 `))

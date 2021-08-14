@@ -49,47 +49,47 @@ func _() {
 	)
 }
 
-func (x *Tuple) TupElement(v TupleVisitor) {
-	v.VisitTuple(*x)
+func (x Tuple) TupElement(v TupleVisitor) {
+	v.VisitTuple(x)
 }
 
-func (x *Int) TupElement(v TupleVisitor) {
-	v.VisitInt(*x)
+func (x Int) TupElement(v TupleVisitor) {
+	v.VisitInt(x)
 }
 
-func (x *Uint) TupElement(v TupleVisitor) {
-	v.VisitUint(*x)
+func (x Uint) TupElement(v TupleVisitor) {
+	v.VisitUint(x)
 }
 
-func (x *Bool) TupElement(v TupleVisitor) {
-	v.VisitBool(*x)
+func (x Bool) TupElement(v TupleVisitor) {
+	v.VisitBool(x)
 }
 
-func (x *Float) TupElement(v TupleVisitor) {
-	v.VisitFloat(*x)
+func (x Float) TupElement(v TupleVisitor) {
+	v.VisitFloat(x)
 }
 
-func (x *BigInt) TupElement(v TupleVisitor) {
-	v.VisitBigInt(*x)
+func (x BigInt) TupElement(v TupleVisitor) {
+	v.VisitBigInt(x)
 }
 
-func (x *String) TupElement(v TupleVisitor) {
-	v.VisitString(*x)
+func (x String) TupElement(v TupleVisitor) {
+	v.VisitString(x)
 }
 
-func (x *UUID) TupElement(v TupleVisitor) {
-	v.VisitUUID(*x)
+func (x UUID) TupElement(v TupleVisitor) {
+	v.VisitUUID(x)
 }
 
-func (x *Bytes) TupElement(v TupleVisitor) {
-	v.VisitBytes(*x)
+func (x Bytes) TupElement(v TupleVisitor) {
+	v.VisitBytes(x)
 }
 
-func (x *Variable) TupElement(v TupleVisitor) {
-	v.VisitVariable(*x)
+func (x Variable) TupElement(v TupleVisitor) {
+	v.VisitVariable(x)
 }
 
-func (x *MaybeMore) TupElement(v TupleVisitor) {
-	v.VisitMaybeMore(*x)
+func (x MaybeMore) TupElement(v TupleVisitor) {
+	v.VisitMaybeMore(x)
 }
 
