@@ -9,7 +9,6 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	"github.com/janderland/fdbq/engine/stream"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -162,7 +161,7 @@ func TestEngine_RangeRead(t *testing.T) {
 
 			var results []q.KeyValue
 			query.Key.Tuple = q.Tuple{q.Variable{}}
-			for kve := range e.RangeRead(context.Background(), query, stream.RangeOpts{}) {
+			for kve := range e.RangeRead(context.Background(), query, RangeOpts{}) {
 				if !assert.NoError(t, kve.Err) {
 					t.FailNow()
 				}
@@ -175,7 +174,7 @@ func TestEngine_RangeRead(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: q.Clear{}})
-			out := e.RangeRead(context.Background(), query, stream.RangeOpts{ByteOrder: byteOrder})
+			out := e.RangeRead(context.Background(), query, RangeOpts{ByteOrder: byteOrder})
 
 			msg := <-out
 			assert.Error(t, msg.Err)

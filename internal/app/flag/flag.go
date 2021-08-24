@@ -6,7 +6,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/janderland/fdbq/engine/stream"
+	"github.com/janderland/fdbq/engine"
+
 	"github.com/pkg/errors"
 )
 
@@ -54,8 +55,8 @@ func (x *Flags) ByteOrder() binary.ByteOrder {
 	return binary.BigEndian
 }
 
-func (x *Flags) RangeOpts() stream.RangeOpts {
-	return stream.RangeOpts{
+func (x *Flags) RangeOpts() engine.RangeOpts {
+	return engine.RangeOpts{
 		ByteOrder: x.ByteOrder(),
 		Reverse:   x.Reverse,
 		Limit:     x.Limit,
