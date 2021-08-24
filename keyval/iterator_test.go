@@ -26,15 +26,15 @@ func TestReadTuple(t *testing.T) {
 	var out Tuple
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		out = append(out, iter.Any())
-		out = append(out, iter.Bool())
-		out = append(out, iter.String())
-		out = append(out, iter.Int())
-		out = append(out, iter.Uint())
-		out = append(out, iter.BigInt())
-		out = append(out, iter.Float())
-		out = append(out, iter.UUID())
-		out = append(out, iter.Bytes())
-		out = append(out, iter.Tuple())
+		out = append(out, iter.MustBool())
+		out = append(out, iter.MustString())
+		out = append(out, iter.MustInt())
+		out = append(out, iter.MustUint())
+		out = append(out, iter.MustBigInt())
+		out = append(out, iter.MustFloat())
+		out = append(out, iter.MustUUID())
+		out = append(out, iter.MustBytes())
+		out = append(out, iter.MustTuple())
 		return nil
 	})
 
@@ -47,7 +47,7 @@ func TestTupleIterator_Bool(t *testing.T) {
 	var out []bool
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
-			out = append(out, iter.Bool())
+			out = append(out, iter.MustBool())
 		}
 		return nil
 	})
@@ -60,7 +60,7 @@ func TestTupleIterator_String(t *testing.T) {
 	var out []string
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
-			out = append(out, iter.String())
+			out = append(out, iter.MustString())
 		}
 		return nil
 	})
@@ -73,7 +73,7 @@ func TestTupleIterator_Int(t *testing.T) {
 	var out []int64
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
-			out = append(out, iter.Int())
+			out = append(out, iter.MustInt())
 		}
 		return nil
 	})
@@ -91,7 +91,7 @@ func TestTupleIterator_Uint(t *testing.T) {
 	var out []uint64
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
-			out = append(out, iter.Uint())
+			out = append(out, iter.MustUint())
 		}
 		return nil
 	})
@@ -108,7 +108,7 @@ func TestTupleIterator_BigInt(t *testing.T) {
 	var out []*big.Int
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
-			out = append(out, iter.BigInt())
+			out = append(out, iter.MustBigInt())
 		}
 		return nil
 	})
@@ -124,7 +124,7 @@ func TestTupleIterator_Float(t *testing.T) {
 	var out []float64
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
-			out = append(out, iter.Float())
+			out = append(out, iter.MustFloat())
 		}
 		return nil
 	})

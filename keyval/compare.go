@@ -68,89 +68,89 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 
 			// Bool
 			case bool:
-				if iter.Bool() != e {
+				if iter.MustBool() != e {
 					index = []int{i}
 					return nil
 				}
 
 			// Int
 			case int64:
-				if iter.Int() != e {
+				if iter.MustInt() != e {
 					index = []int{i}
 					return nil
 				}
 			case int:
-				if iter.Int() != int64(e) {
+				if iter.MustInt() != int64(e) {
 					index = []int{i}
 					return nil
 				}
 
 			// Uint
 			case uint64:
-				if iter.Uint() != e {
+				if iter.MustUint() != e {
 					index = []int{i}
 					return nil
 				}
 			case uint:
-				if iter.Uint() != uint64(e) {
+				if iter.MustUint() != uint64(e) {
 					index = []int{i}
 					return nil
 				}
 
 			// Float
 			case float64:
-				if iter.Float() != e {
+				if iter.MustFloat() != e {
 					index = []int{i}
 					return nil
 				}
 			case float32:
-				if iter.Float() != float64(e) {
+				if iter.MustFloat() != float64(e) {
 					index = []int{i}
 					return nil
 				}
 
 			// big.Int
 			case big.Int:
-				if iter.BigInt().Cmp(&e) != 0 {
+				if iter.MustBigInt().Cmp(&e) != 0 {
 					index = []int{i}
 					return nil
 				}
 			case *big.Int:
-				if iter.BigInt().Cmp(e) != 0 {
+				if iter.MustBigInt().Cmp(e) != 0 {
 					index = []int{i}
 					return nil
 				}
 
 			// String
 			case string:
-				if iter.String() != e {
+				if iter.MustString() != e {
 					index = []int{i}
 					return nil
 				}
 
 			// Bytes
 			case []byte:
-				if !bytes.Equal(iter.Bytes(), e) {
+				if !bytes.Equal(iter.MustBytes(), e) {
 					index = []int{i}
 					return nil
 				}
 
 			// UUID
 			case tuple.UUID:
-				if iter.UUID() != e {
+				if iter.MustUUID() != e {
 					index = []int{i}
 					return nil
 				}
 
 			// Tuple
 			case Tuple:
-				subIndex := CompareTuples(e, iter.Tuple())
+				subIndex := CompareTuples(e, iter.MustTuple())
 				if len(subIndex) > 0 {
 					index = append([]int{i}, subIndex...)
 					return nil
 				}
 			case tuple.Tuple:
-				subIndex := CompareTuples(FromFDBTuple(e), iter.Tuple())
+				subIndex := CompareTuples(FromFDBTuple(e), iter.MustTuple())
 				if len(subIndex) > 0 {
 					index = append([]int{i}, subIndex...)
 					return nil
@@ -173,23 +173,23 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 					case AnyType:
 						_ = iter.Any()
 					case IntType:
-						_, err = iter.IntErr()
+						_, err = iter.Int()
 					case UintType:
-						_, err = iter.UintErr()
+						_, err = iter.Uint()
 					case BoolType:
-						_, err = iter.BoolErr()
+						_, err = iter.Bool()
 					case FloatType:
-						_, err = iter.FloatErr()
+						_, err = iter.Float()
 					case BigIntType:
-						_, err = iter.BigIntErr()
+						_, err = iter.BigInt()
 					case StringType:
-						_, err = iter.StringErr()
+						_, err = iter.String()
 					case BytesType:
-						_, err = iter.BytesErr()
+						_, err = iter.Bytes()
 					case UUIDType:
-						_, err = iter.UUIDErr()
+						_, err = iter.UUID()
 					case TupleType:
-						_, err = iter.TupleErr()
+						_, err = iter.Tuple()
 					default:
 						panic(errors.Errorf("unrecognized variable type '%v'", vType))
 					}
