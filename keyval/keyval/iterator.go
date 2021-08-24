@@ -21,9 +21,9 @@ const (
 	AllowLong
 )
 
-// A ConversionError is returned by ReadTuple when
-// the TupleIterator fails to convert a Tuple element
-// to the requested type.
+// A ConversionError is returned by ReadTuple when the
+// TupleIterator fails to convert a Tuple element to
+// the requested type.
 type ConversionError struct {
 	InValue interface{}
 	OutType interface{}
