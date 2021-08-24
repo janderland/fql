@@ -58,131 +58,8 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 	var index []int
 	err := q.ReadTuple(candidate, q.AllowLong, func(iter *q.TupleIterator) error {
 		for i, e := range pattern {
-			switch e := e.(type) {
-			// Nil
-			case q.Nil:
-				if e != iter.Any() {
-					index = []int{i}
-					return nil
-				}
-
-			// Bool
-			case q.Bool:
-				if iter.MustBool() != e {
-					index = []int{i}
-					return nil
-				}
-
-			// Int
-			case q.Int:
-				if iter.MustInt() != e {
-					index = []int{i}
-					return nil
-				}
-
-			// Uint
-			case q.Uint:
-				if iter.MustUint() != e {
-					index = []int{i}
-					return nil
-				}
-
-			// Float
-			case q.Float:
-				if iter.MustFloat() != e {
-					index = []int{i}
-					return nil
-				}
-
-			// big.Int
-			case q.BigInt:
-				i1 := big.Int(iter.MustBigInt())
-				i2 := big.Int(e)
-				if i1.Cmp(&i2) != 0 {
-					index = []int{i}
-					return nil
-				}
-
-			// String
-			case q.String:
-				if iter.MustString() != e {
-					index = []int{i}
-					return nil
-				}
-
-			// Bytes
-			case q.Bytes:
-				if !bytes.Equal(iter.MustBytes(), e) {
-					index = []int{i}
-					return nil
-				}
-
-			// UUID
-			case q.UUID:
-				if iter.MustUUID() != e {
-					index = []int{i}
-					return nil
-				}
-
-			// Tuple
-			case q.Tuple:
-				subIndex := Tuples(e, iter.MustTuple())
-				if len(subIndex) > 0 {
-					index = append([]int{i}, subIndex...)
-					return nil
-				}
-
-			// Variable
-			case q.Variable:
-				// An empty variable is equivalent
-				// to an AnyType variable.
-				if len(e) == 0 {
-					_ = iter.Any()
-					break
-				}
-
-				found := false
-				for _, vType := range e {
-					var err error
-
-					switch vType {
-					case q.AnyType:
-						_ = iter.Any()
-					case q.IntType:
-						_, err = iter.Int()
-					case q.UintType:
-						_, err = iter.Uint()
-					case q.BoolType:
-						_, err = iter.Bool()
-					case q.FloatType:
-						_, err = iter.Float()
-					case q.BigIntType:
-						_, err = iter.BigInt()
-					case q.StringType:
-						_, err = iter.String()
-					case q.BytesType:
-						_, err = iter.Bytes()
-					case q.UUIDType:
-						_, err = iter.UUID()
-					case q.TupleType:
-						_, err = iter.Tuple()
-					default:
-						panic(errors.Errorf("unrecognized variable type '%v'", vType))
-					}
-
-					if err == nil {
-						found = true
-						break
-					}
-				}
-				if !found {
-					index = []int{i}
-					return nil
-				}
-
-			// Unknown
-			default:
-				index = []int{i}
+			v := newVisitor(iter, i)
+			if index = v.Visit(e); index != nil {
 				return nil
 			}
 		}
@@ -195,4 +72,133 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 		panic(errors.Wrap(err, "unexpected error"))
 	}
 	return index
+}
+
+type visitor struct {
+	iter  *q.TupleIterator
+	i     int
+	index []int
+}
+
+func newVisitor(iter *q.TupleIterator, i int) visitor {
+	return visitor{iter: iter, i: i}
+}
+
+func (x *visitor) Visit(e q.TupElement) []int {
+	e.TupElement(x)
+	return x.index
+}
+
+func (x *visitor) VisitNil(e q.Nil) {
+	if e != x.iter.Any() {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitBool(e q.Bool) {
+	if x.iter.MustBool() != e {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitInt(e q.Int) {
+	if x.iter.MustInt() != e {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitUint(e q.Uint) {
+	if x.iter.MustUint() != e {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitFloat(e q.Float) {
+	if x.iter.MustFloat() != e {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitBigInt(e q.BigInt) {
+	i1 := big.Int(x.iter.MustBigInt())
+	i2 := big.Int(e)
+	if i1.Cmp(&i2) != 0 {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitString(e q.String) {
+	if x.iter.MustString() != e {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitBytes(e q.Bytes) {
+	if !bytes.Equal(x.iter.MustBytes(), e) {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitUUID(e q.UUID) {
+	if x.iter.MustUUID() != e {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitTuple(e q.Tuple) {
+	subIndex := Tuples(e, x.iter.MustTuple())
+	if len(subIndex) > 0 {
+		x.index = append([]int{x.i}, subIndex...)
+	}
+}
+
+func (x *visitor) VisitVariable(e q.Variable) {
+	// An empty variable is equivalent
+	// to an AnyType variable.
+	if len(e) == 0 {
+		_ = x.iter.Any()
+		return
+	}
+
+	found := false
+	for _, vType := range e {
+		var err error
+
+		switch vType {
+		case q.AnyType:
+			_ = x.iter.Any()
+		case q.IntType:
+			_, err = x.iter.Int()
+		case q.UintType:
+			_, err = x.iter.Uint()
+		case q.BoolType:
+			_, err = x.iter.Bool()
+		case q.FloatType:
+			_, err = x.iter.Float()
+		case q.BigIntType:
+			_, err = x.iter.BigInt()
+		case q.StringType:
+			_, err = x.iter.String()
+		case q.BytesType:
+			_, err = x.iter.Bytes()
+		case q.UUIDType:
+			_, err = x.iter.UUID()
+		case q.TupleType:
+			_, err = x.iter.Tuple()
+		default:
+			panic(errors.Errorf("unrecognized variable type '%v'", vType))
+		}
+
+		if err == nil {
+			found = true
+			break
+		}
+	}
+	if !found {
+		x.index = []int{x.i}
+	}
+}
+
+func (x *visitor) VisitMaybeMore(_ q.MaybeMore) {
+	x.index = []int{x.i}
 }
