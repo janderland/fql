@@ -5,8 +5,9 @@ package keyval
 import "math/big"
 
 //go:generate go run ./visitor -visitor DirectoryVisitor -acceptor DirElement -types String,Variable
-//go:generate go run ./visitor -visitor TupleVisitor -acceptor TupElement -types Tuple,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
+//go:generate go run ./visitor -visitor TupleVisitor -acceptor TupElement -types Tuple,Nil,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
 //go:generate go run ./visitor -visitor ValueVisitor -acceptor value -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
+
 type (
 	// A KeyValue is a query or result depending on the
 	// context. If the KeyValue is a result, it will not
@@ -44,9 +45,6 @@ type (
 	// values within a type constraint.
 	Variable []ValueType
 
-	// ValueType specifies the variable's expected type.
-	ValueType string
-
 	// A MaybeMore is a special kind of TupElement. It
 	// may only appear as the last element of the Tuple.
 	// It designates that the Tuple will match all Tuples
@@ -67,3 +65,34 @@ type (
 	UUID   [16]byte
 	Bytes  []byte
 )
+
+// ValueType specifies the variable's expected type.
+type ValueType string
+
+const (
+	AnyType    ValueType = ""
+	IntType    ValueType = "int"
+	UintType   ValueType = "uint"
+	BoolType   ValueType = "bool"
+	FloatType  ValueType = "float"
+	BigIntType ValueType = "bigint"
+	StringType ValueType = "string"
+	BytesType  ValueType = "bytes"
+	UUIDType   ValueType = "uuid"
+	TupleType  ValueType = "tuple"
+)
+
+func AllTypes() []ValueType {
+	return []ValueType{
+		AnyType,
+		IntType,
+		UintType,
+		BoolType,
+		FloatType,
+		BigIntType,
+		StringType,
+		BytesType,
+		UUIDType,
+		TupleType,
+	}
+}

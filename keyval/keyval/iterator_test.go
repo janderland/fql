@@ -10,7 +10,7 @@ import (
 
 func TestReadTuple(t *testing.T) {
 	in := Tuple{
-		nil,
+		Nil{},
 		Bool(true),
 		String("hello world"),
 		Int(math.MaxInt64),
