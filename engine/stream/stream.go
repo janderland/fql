@@ -36,11 +36,15 @@ type (
 
 func New(ctx context.Context) (Stream, func()) {
 	ctx, cancel := context.WithCancel(ctx)
+	log := zerolog.Ctx(ctx)
 
 	return Stream{
-		ctx: ctx,
-		log: zerolog.Ctx(ctx),
-	}, cancel
+			ctx: ctx,
+			log: log,
+		}, func() {
+			log.Log().Msg("closing stream")
+			cancel()
+		}
 }
 
 func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
