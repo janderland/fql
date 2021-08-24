@@ -140,9 +140,15 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 		return nil, errors.Wrap(err, "transaction failed")
 	}
 
+	// Before asserting the result is a []byte, we need
+	// to check if it's an untyped nil. This check could
+	// be avoided if we ensured the transaction callback
+	// always returned a []byte, but having this check
+	// here is less fragile.
 	if result == nil {
 		return nil, nil
 	}
+
 	bytes := result.([]byte)
 	if bytes == nil {
 		return nil, nil
