@@ -66,7 +66,7 @@ func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.Directory) chan 
 
 	go func() {
 		defer close(out)
-		r.doOpenDirectories(tr, query, out)
+		r.goOpenDirectories(tr, query, out)
 	}()
 
 	return out
@@ -77,7 +77,7 @@ func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts
 
 	go func() {
 		defer close(out)
-		r.doReadRange(tr, query, opts, in, out)
+		r.goReadRange(tr, query, opts, in, out)
 	}()
 
 	return out
@@ -88,7 +88,7 @@ func (r *Stream) FilterKeys(query q.Tuple, in chan KeyValErr) chan KeyValErr {
 
 	go func() {
 		defer close(out)
-		r.doFilterKeys(query, in, out)
+		r.goFilterKeys(query, in, out)
 	}()
 
 	return out
@@ -99,13 +99,13 @@ func (r *Stream) UnpackValues(query q.Value, order binary.ByteOrder, in chan Key
 
 	go func() {
 		defer close(out)
-		r.doUnpackValues(query, order, in, out)
+		r.goUnpackValues(query, order, in, out)
 	}()
 
 	return out
 }
 
-func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out chan DirErr) {
+func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out chan DirErr) {
 	log := r.log.With().Str("stage", "open directories").Interface("query", query).Logger()
 
 	prefix, variable, suffix := q.SplitAtFirstVariable(query)
@@ -122,11 +122,11 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 			return
 		}
 		if len(subDirs) == 0 {
-			log.Trace().Msg("no subdirectories")
+			log.Log().Msg("no subdirectories")
 			return
 		}
 
-		log.Trace().Strs("sub dirs", subDirs).Msg("found subdirectories")
+		log.Log().Strs("sub dirs", subDirs).Msg("found subdirectories")
 
 		for _, subDir := range subDirs {
 			// Between each interaction with the DB, give
@@ -140,7 +140,7 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 			dir = append(dir, prefix...)
 			dir = append(dir, subDir)
 			dir = append(dir, suffix...)
-			r.doOpenDirectories(tr, dir, out)
+			r.goOpenDirectories(tr, dir, out)
 		}
 	} else {
 		dir, err := directory.Open(tr, prefixStr, nil)
@@ -156,7 +156,7 @@ func (r *Stream) doOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 	}
 }
 
-func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
+func (r *Stream) goReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix, _, _ := q.SplitAtFirstVariable(query)
@@ -213,7 +213,7 @@ func (r *Stream) doReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOp
 	}
 }
 
-func (r *Stream) doFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "filter keys").Interface("query", query).Logger()
 
 	for msg := range in {
@@ -235,7 +235,7 @@ func (r *Stream) doFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 	}
 }
 
-func (r *Stream) doUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
 	unpack, err := q.NewUnpack(query, order)
