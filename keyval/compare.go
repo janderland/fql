@@ -158,8 +158,51 @@ func CompareTuples(pattern Tuple, candidate Tuple) []int {
 
 			// Variable
 			case Variable:
-				// TODO: Check variable constraints.
-				_ = iter.Any()
+				// An empty variable is equivalent
+				// to an AnyType variable.
+				if len(e) == 0 {
+					_ = iter.Any()
+					break
+				}
+
+				found := false
+				for _, vType := range e {
+					var err error
+
+					switch vType {
+					case AnyType:
+						_ = iter.Any()
+					case IntType:
+						_, err = iter.IntErr()
+					case UintType:
+						_, err = iter.UintErr()
+					case BoolType:
+						_, err = iter.BoolErr()
+					case FloatType:
+						_, err = iter.FloatErr()
+					case BigIntType:
+						_, err = iter.BigIntErr()
+					case StringType:
+						_, err = iter.StringErr()
+					case BytesType:
+						_, err = iter.BytesErr()
+					case UUIDType:
+						_, err = iter.UUIDErr()
+					case TupleType:
+						_, err = iter.TupleErr()
+					default:
+						panic(errors.Errorf("unrecognized variable type '%v'", vType))
+					}
+
+					if err == nil {
+						found = true
+						break
+					}
+				}
+				if !found {
+					index = []int{i}
+					return nil
+				}
 
 			// Unknown
 			default:
