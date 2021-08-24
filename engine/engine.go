@@ -12,6 +12,19 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type RangeOpts struct {
+	ByteOrder binary.ByteOrder
+	Reverse   bool
+	Limit     int
+}
+
+func (x RangeOpts) forStream() stream.RangeOpts {
+	return stream.RangeOpts{
+		Reverse: x.Reverse,
+		Limit:   x.Limit,
+	}
+}
+
 type Engine struct {
 	db  fdb.Transactor
 	ctx context.Context
@@ -144,7 +157,7 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 	}, nil
 }
 
-func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts stream.RangeOpts) chan stream.KeyValErr {
+func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
 	go func() {
@@ -165,7 +178,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts stream.Ra
 
 		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
-			stage2 := s.ReadRange(tr, query.Key.Tuple, opts, stage1)
+			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
 			for kve := range s.UnpackValues(query.Value, opts.ByteOrder, stage3) {
 				s.SendKV(out, kve)

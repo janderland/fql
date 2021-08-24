@@ -13,9 +13,8 @@ import (
 
 type (
 	RangeOpts struct {
-		ByteOrder binary.ByteOrder
-		Reverse   bool
-		Limit     int
+		Reverse bool
+		Limit   int
 	}
 
 	Stream struct {
