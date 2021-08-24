@@ -12,6 +12,21 @@ import (
 	"github.com/rs/zerolog"
 )
 
+const (
+	KindErr              = "failed to get query kind"
+	KindNotConstantErr   = "query not constant kind"
+	KindNotClearErr      = "query not clear kind"
+	KindNotSingleReadErr = "query not single-read kind"
+	KindNotRangeReadErr  = "query not range-read kind"
+
+	StringArrayErr   = "failed to convert directory to string array"
+	OpenDirectoryErr = "failed to open directory"
+	TransactionErr   = "transaction failed"
+
+	PackValueErr   = "failed to pack value"
+	NewUnpackerErr = "failed to init unpacker"
+)
+
 type RangeOpts struct {
 	ByteOrder binary.ByteOrder
 	Reverse   bool
@@ -48,19 +63,19 @@ func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 	kind, err := query.Kind()
 	if err != nil {
-		return errors.Wrap(err, "failed to get query kind")
+		return errors.Wrap(err, KindErr)
 	}
 	if kind != q.ConstantKind {
-		return errors.New("query not constant kind")
+		return errors.New(KindNotConstantErr)
 	}
 
 	path, err := q.ToStringArray(query.Key.Directory)
 	if err != nil {
-		return errors.Wrap(err, "failed to convert directory to string array")
+		return errors.Wrap(err, StringArrayErr)
 	}
 	valueBytes, err := q.PackValue(query.Value, byteOrder)
 	if err != nil {
-		return errors.Wrap(err, "failed to pack value")
+		return errors.Wrap(err, PackValueErr)
 	}
 
 	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
@@ -68,26 +83,26 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 
 		dir, err := directory.CreateOrOpen(tr, path, nil)
 		if err != nil {
-			return nil, errors.Wrap(err, "failed to open directory")
+			return nil, errors.Wrap(err, OpenDirectoryErr)
 		}
 		tr.Set(dir.Pack(q.ToFDBTuple(query.Key.Tuple)), valueBytes)
 		return nil, nil
 	})
-	return errors.Wrap(err, "transaction failed")
+	return errors.Wrap(err, TransactionErr)
 }
 
 func (e *Engine) Clear(query q.KeyValue) error {
 	kind, err := query.Kind()
 	if err != nil {
-		return errors.Wrap(err, "failed to get query kind")
+		return errors.Wrap(err, KindErr)
 	}
 	if kind != q.ClearKind {
-		return errors.New("query not clear kind")
+		return errors.New(KindNotClearErr)
 	}
 
 	path, err := q.ToStringArray(query.Key.Directory)
 	if err != nil {
-		return errors.Wrap(err, "failed to convert directory to string array")
+		return errors.Wrap(err, StringArrayErr)
 	}
 
 	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
@@ -98,30 +113,30 @@ func (e *Engine) Clear(query q.KeyValue) error {
 			if errors.Is(err, directory.ErrDirNotExists) {
 				return nil, nil
 			}
-			return nil, errors.Wrap(err, "failed to open directory")
+			return nil, errors.Wrap(err, OpenDirectoryErr)
 		}
 		tr.Clear(dir.Pack(q.ToFDBTuple(query.Key.Tuple)))
 		return nil, nil
 	})
-	return errors.Wrap(err, "transaction failed")
+	return errors.Wrap(err, TransactionErr)
 }
 
 func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.KeyValue, error) {
 	kind, err := query.Kind()
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to get query kind")
+		return nil, errors.Wrap(err, KindErr)
 	}
 	if kind != q.SingleReadKind {
-		return nil, errors.New("query not single-read kind")
+		return nil, errors.New(KindNotSingleReadErr)
 	}
 
 	path, err := q.ToStringArray(query.Key.Directory)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to convert directory to string array")
+		return nil, errors.Wrap(err, StringArrayErr)
 	}
 	unpack, err := q.NewUnpack(query.Value, byteOrder)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to init unpacker")
+		return nil, errors.Wrap(err, NewUnpackerErr)
 	}
 
 	result, err := e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
@@ -132,12 +147,12 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 			if errors.Is(err, directory.ErrDirNotExists) {
 				return nil, nil
 			}
-			return nil, errors.Wrap(err, "failed to open directory")
+			return nil, errors.Wrap(err, OpenDirectoryErr)
 		}
 		return tr.Get(dir.Pack(q.ToFDBTuple(query.Key.Tuple))).Get()
 	})
 	if err != nil {
-		return nil, errors.Wrap(err, "transaction failed")
+		return nil, errors.Wrap(err, TransactionErr)
 	}
 
 	// Before asserting the result is a []byte, we need
@@ -174,11 +189,11 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 
 		kind, err := query.Kind()
 		if err != nil {
-			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to get query kind")})
+			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, KindErr)})
 			return
 		}
 		if kind != q.RangeReadKind {
-			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read kind")})
+			s.SendKV(out, stream.KeyValErr{Err: errors.New(KindNotRangeReadErr)})
 			return
 		}
 
@@ -192,7 +207,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 			return nil, nil
 		})
 		if err != nil {
-			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "transaction failed")})
+			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, TransactionErr)})
 		}
 	}()
 
@@ -215,7 +230,7 @@ func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream
 			return nil, nil
 		})
 		if err != nil {
-			s.SendDir(out, stream.DirErr{Err: errors.Wrap(err, "transaction failed")})
+			s.SendDir(out, stream.DirErr{Err: errors.Wrap(err, TransactionErr)})
 		}
 	}()
 
