@@ -54,6 +54,14 @@ func TestCompareTuples(t *testing.T) {
 		assert.Empty(t, mismatch)
 	})
 
+	t.Run("multi type", func(t *testing.T) {
+		candidate := q.Tuple{q.String("where am i?")}
+		pattern := q.Tuple{q.Variable{q.IntType, q.TupleType, q.StringType}}
+
+		mismatch := Tuples(pattern, candidate)
+		assert.Empty(t, mismatch)
+	})
+
 	t.Run("too long", func(t *testing.T) {
 		candidate := q.Tuple{
 			q.Int(-8742),

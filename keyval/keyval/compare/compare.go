@@ -19,12 +19,12 @@ import (
 //
 //   Tuple{55, Tuple{"hello", "world", Tuple{67}}}
 //
-// ...if the element with value "67" didn't match then the returned array
-// would be []int{1,2,0}. If the Tuples aren't the same length, then the
-// length of the shorter Tuple is returned as the sole element of the array.
+// ...if the element with value `67` didn't match then the returned array
+// would be `[]int{1,2,0}`. If the Tuples aren't the same length, then the
+// length of the shorter Tuple is used as the mismatching index.
 func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 	// Guards against invalid indexes in the
-	// MaybeMore type switch.
+	// MaybeMore type switch below.
 	if len(pattern) == 0 {
 		return []int{0}
 	}
@@ -49,25 +49,24 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 		return []int{len(candidate)}
 	}
 
-	// Loop over both tuples, comparing their elements. If a pair of elements
-	// don't match, place the current index in the array. If the comparison
-	// happened within a sub-tuple, the index of the sub-tuple will be prepended
-	// before the int of the mismatch within the tuple.
-	var index []int
+	// Loop over both tuples, comparing their elements using the visitor.
+	var mismatchIndexPath []int
 	err := iter.ReadTuple(candidate, iter.AllowLong, func(iter *iter.TupleIterator) error {
 		for i, e := range pattern {
 			v := newVisitor(iter, i)
-			if index = v.Visit(e); index != nil {
+			if mismatchIndexPath = v.Visit(e); mismatchIndexPath != nil {
 				return nil
 			}
 		}
 		return nil
 	})
 	if err != nil {
+		// Because the ReadTuple handler function doesn't return an error,
+		// this error should always be a ConversionError.
 		if c, ok := err.(iter.ConversionError); ok {
 			return []int{c.Index}
 		}
 		panic(errors.Wrap(err, "unexpected error"))
 	}
-	return index
+	return mismatchIndexPath
 }

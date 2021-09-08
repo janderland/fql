@@ -10,47 +10,54 @@ import (
 )
 
 type visitor struct {
-	iter  *iter.TupleIterator
-	i     int
-	index []int
+	q.TupleVisitor
+
+	// The iterator wrapping the candidate tuple.
+	iter *iter.TupleIterator
+
+	// The index of the tuple element being compared.
+	index int
+
+	// The index path of the first mismatching element.
+	mismatchIndexPath []int
 }
 
-func newVisitor(iter *iter.TupleIterator, i int) visitor {
-	return visitor{iter: iter, i: i}
+func newVisitor(iter *iter.TupleIterator, index int) visitor {
+	return visitor{iter: iter, index: index}
 }
 
 func (x *visitor) Visit(e q.TupElement) []int {
 	e.TupElement(x)
-	return x.index
+	return x.mismatchIndexPath
 }
 
 func (x *visitor) VisitNil(e q.Nil) {
 	if e != x.iter.Any() {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitBool(e q.Bool) {
 	if x.iter.MustBool() != e {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitInt(e q.Int) {
 	if x.iter.MustInt() != e {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitUint(e q.Uint) {
 	if x.iter.MustUint() != e {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitFloat(e q.Float) {
 	if x.iter.MustFloat() != e {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
@@ -58,32 +65,32 @@ func (x *visitor) VisitBigInt(e q.BigInt) {
 	i1 := big.Int(x.iter.MustBigInt())
 	i2 := big.Int(e)
 	if i1.Cmp(&i2) != 0 {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitString(e q.String) {
 	if x.iter.MustString() != e {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitBytes(e q.Bytes) {
 	if !bytes.Equal(x.iter.MustBytes(), e) {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitUUID(e q.UUID) {
 	if x.iter.MustUUID() != e {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitTuple(e q.Tuple) {
 	subIndex := Tuples(e, x.iter.MustTuple())
 	if len(subIndex) > 0 {
-		x.index = append([]int{x.i}, subIndex...)
+		x.mismatchIndexPath = append([]int{x.index}, subIndex...)
 	}
 }
 
@@ -95,6 +102,10 @@ func (x *visitor) VisitVariable(e q.Variable) {
 		return
 	}
 
+	// TODO: This shouldn't work.
+	// If we try the wrong kind of type first,
+	// we'll increase the current index which
+	// would break the comparison.
 	found := false
 	for _, vType := range e {
 		var err error
@@ -130,10 +141,13 @@ func (x *visitor) VisitVariable(e q.Variable) {
 		}
 	}
 	if !found {
-		x.index = []int{x.i}
+		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
 func (x *visitor) VisitMaybeMore(_ q.MaybeMore) {
-	x.index = []int{x.i}
+	// By the time the visitor is used, the Tuples function
+	// should have removed the trailing MaybeMore. So, any
+	// MaybeMore we encounter here is invalid.
+	x.mismatchIndexPath = []int{x.index}
 }
