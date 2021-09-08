@@ -47,11 +47,11 @@ type (
 func _() {
 	var (
 		{{range .Types -}}
-		{{.}}_ {{.}}
+		{{.}} {{.}}
 		{{end}}
 
 		{{range .Types -}}
-		_ {{$.Acceptor}} = &{{.}}_
+		_ {{$.Acceptor}} = &{{.}}
 		{{end}}
 	)
 }

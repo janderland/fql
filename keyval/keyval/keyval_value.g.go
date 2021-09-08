@@ -23,29 +23,29 @@ type (
 
 func _() {
 	var (
-		Tuple_    Tuple
-		Nil_      Nil
-		Int_      Int
-		Uint_     Uint
-		Bool_     Bool
-		Float_    Float
-		String_   String
-		UUID_     UUID
-		Bytes_    Bytes
-		Variable_ Variable
-		Clear_    Clear
+		Tuple    Tuple
+		Nil      Nil
+		Int      Int
+		Uint     Uint
+		Bool     Bool
+		Float    Float
+		String   String
+		UUID     UUID
+		Bytes    Bytes
+		Variable Variable
+		Clear    Clear
 
-		_ value = &Tuple_
-		_ value = &Nil_
-		_ value = &Int_
-		_ value = &Uint_
-		_ value = &Bool_
-		_ value = &Float_
-		_ value = &String_
-		_ value = &UUID_
-		_ value = &Bytes_
-		_ value = &Variable_
-		_ value = &Clear_
+		_ value = &Tuple
+		_ value = &Nil
+		_ value = &Int
+		_ value = &Uint
+		_ value = &Bool
+		_ value = &Float
+		_ value = &String
+		_ value = &UUID
+		_ value = &Bytes
+		_ value = &Variable
+		_ value = &Clear
 	)
 }
 

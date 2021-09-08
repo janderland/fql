@@ -14,11 +14,11 @@ type (
 
 func _() {
 	var (
-		String_   String
-		Variable_ Variable
+		String   String
+		Variable Variable
 
-		_ DirElement = &String_
-		_ DirElement = &Variable_
+		_ DirElement = &String
+		_ DirElement = &Variable
 	)
 }
 
