@@ -103,7 +103,7 @@ func write(filename, output string) {
 
 func filename(name string) string {
 	noExt := file[0 : len(file)-len(filepath.Ext(file))]
-	return fmt.Sprintf("%s_%s.gen.go", noExt, strings.ToLower(name))
+	return fmt.Sprintf("%s_%s.g.go", noExt, strings.ToLower(name))
 }
 
 func prefix() []byte {
