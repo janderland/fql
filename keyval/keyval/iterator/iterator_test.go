@@ -1,28 +1,29 @@
-package keyval
+package iterator
 
 import (
 	"math"
 	"math/big"
 	"testing"
 
+	q "github.com/janderland/fdbq/keyval/keyval"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestReadTuple(t *testing.T) {
-	in := Tuple{
-		Nil{},
-		Bool(true),
-		String("hello world"),
-		Int(math.MaxInt64),
-		Uint(math.MaxUint64),
-		BigInt(*big.NewInt(math.MaxInt64)),
-		Float(math.MaxFloat64),
-		UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9},
-		Bytes{0xFF, 0xAA, 0x00},
-		Tuple{Bool(true), Int(10)},
+	in := q.Tuple{
+		q.Nil{},
+		q.Bool(true),
+		q.String("hello world"),
+		q.Int(math.MaxInt64),
+		q.Uint(math.MaxUint64),
+		q.BigInt(*big.NewInt(math.MaxInt64)),
+		q.Float(math.MaxFloat64),
+		q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9},
+		q.Bytes{0xFF, 0xAA, 0x00},
+		q.Tuple{q.Bool(true), q.Int(10)},
 	}
 
-	var out Tuple
+	var out q.Tuple
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		out = append(out, iter.Any())
 		out = append(out, iter.MustBool())
@@ -42,8 +43,8 @@ func TestReadTuple(t *testing.T) {
 }
 
 func TestTupleIterator_Bool(t *testing.T) {
-	in := Tuple{Bool(true), Bool(false)}
-	var out []Bool
+	in := q.Tuple{q.Bool(true), q.Bool(false)}
+	var out []q.Bool
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
 			out = append(out, iter.MustBool())
@@ -51,12 +52,12 @@ func TestTupleIterator_Bool(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, []Bool{true, false}, out)
+	assert.Equal(t, []q.Bool{true, false}, out)
 }
 
 func TestTupleIterator_String(t *testing.T) {
-	in := Tuple{String("hello"), String("goodbye"), String("world")}
-	var out []String
+	in := q.Tuple{q.String("hello"), q.String("goodbye"), q.String("world")}
+	var out []q.String
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
 			out = append(out, iter.MustString())
@@ -64,12 +65,12 @@ func TestTupleIterator_String(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, []String{"hello", "goodbye", "world"}, out)
+	assert.Equal(t, []q.String{"hello", "goodbye", "world"}, out)
 }
 
 func TestTupleIterator_Int(t *testing.T) {
-	in := Tuple{Int(23), Int(-32)}
-	var out []Int
+	in := q.Tuple{q.Int(23), q.Int(-32)}
+	var out []q.Int
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
 			out = append(out, iter.MustInt())
@@ -77,12 +78,12 @@ func TestTupleIterator_Int(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, []Int{23, -32}, out)
+	assert.Equal(t, []q.Int{23, -32}, out)
 }
 
 func TestTupleIterator_Uint(t *testing.T) {
-	in := Tuple{Uint(23), Uint(32)}
-	var out []Uint
+	in := q.Tuple{q.Uint(23), q.Uint(32)}
+	var out []q.Uint
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
 			out = append(out, iter.MustUint())
@@ -90,7 +91,7 @@ func TestTupleIterator_Uint(t *testing.T) {
 		return nil
 	})
 	assert.NoError(t, err)
-	assert.Equal(t, []Uint{23, 32}, out)
+	assert.Equal(t, []q.Uint{23, 32}, out)
 }
 
 func TestTupleIterator_BigInt(t *testing.T) {
@@ -98,8 +99,8 @@ func TestTupleIterator_BigInt(t *testing.T) {
 	// a negative constant into a uint64.
 	neg := int64(-32)
 
-	in := Tuple{Uint(23), Uint(neg), Int(23), Int(-32), BigInt(*big.NewInt(10))}
-	var out []BigInt
+	in := q.Tuple{q.Uint(23), q.Uint(neg), q.Int(23), q.Int(-32), q.BigInt(*big.NewInt(10))}
+	var out []q.BigInt
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {
 			out = append(out, iter.MustBigInt())
@@ -110,11 +111,11 @@ func TestTupleIterator_BigInt(t *testing.T) {
 
 	bigBoi := big.NewInt(0)
 	bigBoi.SetUint64(uint64(neg))
-	assert.Equal(t, []BigInt{BigInt(*big.NewInt(23)), BigInt(*bigBoi), BigInt(*big.NewInt(23)), BigInt(*big.NewInt(-32)), BigInt(*big.NewInt(10))}, out)
+	assert.Equal(t, []q.BigInt{q.BigInt(*big.NewInt(23)), q.BigInt(*bigBoi), q.BigInt(*big.NewInt(23)), q.BigInt(*big.NewInt(-32)), q.BigInt(*big.NewInt(10))}, out)
 }
 
 func TestTupleIterator_Float(t *testing.T) {
-	in := Tuple{Float(12.3), Float(-55.234)}
+	in := q.Tuple{q.Float(12.3), q.Float(-55.234)}
 	var out []float64
 	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
 		for range in {

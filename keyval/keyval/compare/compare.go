@@ -2,6 +2,7 @@ package compare
 
 import (
 	q "github.com/janderland/fdbq/keyval/keyval"
+	iter "github.com/janderland/fdbq/keyval/keyval/iterator"
 	"github.com/pkg/errors"
 )
 
@@ -53,7 +54,7 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 	// happened within a sub-tuple, the index of the sub-tuple will be prepended
 	// before the int of the mismatch within the tuple.
 	var index []int
-	err := q.ReadTuple(candidate, q.AllowLong, func(iter *q.TupleIterator) error {
+	err := iter.ReadTuple(candidate, iter.AllowLong, func(iter *iter.TupleIterator) error {
 		for i, e := range pattern {
 			v := newVisitor(iter, i)
 			if index = v.Visit(e); index != nil {
@@ -63,7 +64,7 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 		return nil
 	})
 	if err != nil {
-		if c, ok := err.(q.ConversionError); ok {
+		if c, ok := err.(iter.ConversionError); ok {
 			return []int{c.Index}
 		}
 		panic(errors.Wrap(err, "unexpected error"))

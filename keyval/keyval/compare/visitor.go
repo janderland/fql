@@ -5,16 +5,17 @@ import (
 	"math/big"
 
 	q "github.com/janderland/fdbq/keyval/keyval"
+	iter "github.com/janderland/fdbq/keyval/keyval/iterator"
 	"github.com/pkg/errors"
 )
 
 type visitor struct {
-	iter  *q.TupleIterator
+	iter  *iter.TupleIterator
 	i     int
 	index []int
 }
 
-func newVisitor(iter *q.TupleIterator, i int) visitor {
+func newVisitor(iter *iter.TupleIterator, i int) visitor {
 	return visitor{iter: iter, i: i}
 }
 
