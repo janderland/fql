@@ -65,7 +65,7 @@ func (x {{$type}}) {{$.AcceptorMethod}}(v {{$.Visitor}}) {
 }
 
 func (x VisitorGen) Visitor() string {
-	return x.visitor
+	return x.visitor + "Visitor"
 }
 
 func (x VisitorGen) Acceptor() string {
