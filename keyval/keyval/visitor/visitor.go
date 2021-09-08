@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	var gen VisitorGen
+	var gen visitorGen
 	g.Generate(&gen, []g.Input{
 		{Type: g.Flag, Dst: &gen.visitor, Key: "visitor"},
 		{Type: g.Flag, Dst: &gen.acceptor, Key: "acceptor"},
@@ -16,21 +16,21 @@ func main() {
 	})
 }
 
-type VisitorGen struct {
+type visitorGen struct {
 	visitor  string
 	acceptor string
 	types    string
 }
 
-func (x VisitorGen) Name() string {
+func (x visitorGen) Name() string {
 	return x.visitor
 }
 
-func (x VisitorGen) Data() interface{} {
+func (x visitorGen) Data() interface{} {
 	return x
 }
 
-func (x VisitorGen) Template() *template.Template {
+func (x visitorGen) Template() *template.Template {
 	return template.Must(template.New("").Parse(`
 type (
 	{{.Visitor}} interface {
@@ -64,22 +64,22 @@ func (x {{$type}}) {{$.AcceptorMethod}}(v {{$.Visitor}}) {
 `))
 }
 
-func (x VisitorGen) Visitor() string {
+func (x visitorGen) Visitor() string {
 	return x.visitor + "Visitor"
 }
 
-func (x VisitorGen) Acceptor() string {
+func (x visitorGen) Acceptor() string {
 	return x.acceptor
 }
 
-func (x VisitorGen) Types() []string {
+func (x visitorGen) Types() []string {
 	return strings.Split(x.types, ",")
 }
 
-func (x VisitorGen) VisitorMethod(typ string) string {
+func (x visitorGen) VisitorMethod(typ string) string {
 	return "Visit" + strings.Title(typ)
 }
 
-func (x VisitorGen) AcceptorMethod() string {
+func (x visitorGen) AcceptorMethod() string {
 	return strings.Title(x.acceptor)
 }
