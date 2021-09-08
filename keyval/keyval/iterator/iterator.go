@@ -8,6 +8,9 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Generate the TupleIterator.Must...() methods.
+//go:generate go run ./must -types Bool,Int,Uint,BigInt,Float,String,Bytes,UUID,Tuple
+
 // A TupleErrorMode is passed to ReadTuple and
 // modifies the way ReadTuple fails.
 type TupleErrorMode = int
@@ -31,8 +34,8 @@ type ConversionError struct {
 	Index   int
 }
 
-func (t ConversionError) Error() string {
-	return fmt.Sprintf("failed to convert element %d from %v to %T", t.Index, t.InValue, t.OutType)
+func (x ConversionError) Error() string {
+	return fmt.Sprintf("failed to convert element %d from %v to %T", x.Index, x.InValue, x.OutType)
 }
 
 var (
@@ -86,203 +89,131 @@ type TupleIterator struct {
 	i int
 }
 
-func (i *TupleIterator) getIndex() int {
-	if i.i >= len(i.t) {
+func (x *TupleIterator) getIndex() int {
+	if x.i >= len(x.t) {
 		panic(ShortTupleError)
 	}
 
-	i.i++
-	return i.i - 1
+	x.i++
+	return x.i - 1
 }
 
-func (i *TupleIterator) Any() q.TupElement {
-	return i.t[i.getIndex()]
+func (x *TupleIterator) Any() q.TupElement {
+	return x.t[x.getIndex()]
 }
 
-func (i *TupleIterator) Bool() (out q.Bool, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.Bool); ok {
+func (x *TupleIterator) Bool() (out q.Bool, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.Bool); ok {
 		return val, nil
 	}
 	return false, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustBool() q.Bool {
-	val, err := i.Bool()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) Int() (out q.Int, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.Int); ok {
+func (x *TupleIterator) Int() (out q.Int, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.Int); ok {
 		return val, nil
 	}
 	return 0, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustInt() q.Int {
-	val, err := i.Int()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) Uint() (out q.Uint, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.Uint); ok {
+func (x *TupleIterator) Uint() (out q.Uint, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.Uint); ok {
 		return val, nil
 	}
 	return 0, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustUint() q.Uint {
-	val, err := i.Uint()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) BigInt() (out q.BigInt, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.Int); ok {
+func (x *TupleIterator) BigInt() (out q.BigInt, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.Int); ok {
 		return q.BigInt(*big.NewInt(int64(val))), nil
 	}
-	if val, ok := i.t[index].(q.Uint); ok {
+	if val, ok := x.t[index].(q.Uint); ok {
 		bi := big.NewInt(0)
 		bi.SetUint64(uint64(val))
 		return q.BigInt(*bi), nil
 	}
-	if val, ok := i.t[index].(q.BigInt); ok {
+	if val, ok := x.t[index].(q.BigInt); ok {
 		return val, nil
 	}
 	return q.BigInt{}, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustBigInt() q.BigInt {
-	val, err := i.BigInt()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) Float() (out q.Float, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.Float); ok {
+func (x *TupleIterator) Float() (out q.Float, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.Float); ok {
 		return val, nil
 	}
 	return 0, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustFloat() q.Float {
-	val, err := i.Float()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) String() (out q.String, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.String); ok {
+func (x *TupleIterator) String() (out q.String, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.String); ok {
 		return val, nil
 	}
 	return "", ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustString() q.String {
-	val, err := i.String()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) Bytes() (out q.Bytes, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.Bytes); ok {
+func (x *TupleIterator) Bytes() (out q.Bytes, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.Bytes); ok {
 		return val, nil
 	}
 	return nil, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustBytes() q.Bytes {
-	val, err := i.Bytes()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) UUID() (out q.UUID, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.UUID); ok {
+func (x *TupleIterator) UUID() (out q.UUID, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.UUID); ok {
 		return val, nil
 	}
 	return q.UUID{}, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
 }
 
-func (i *TupleIterator) MustUUID() q.UUID {
-	val, err := i.UUID()
-	if err != nil {
-		panic(err)
-	}
-	return val
-}
-
-func (i *TupleIterator) Tuple() (out q.Tuple, err error) {
-	index := i.getIndex()
-	if val, ok := i.t[index].(q.Tuple); ok {
+func (x *TupleIterator) Tuple() (out q.Tuple, err error) {
+	index := x.getIndex()
+	if val, ok := x.t[index].(q.Tuple); ok {
 		return val, nil
 	}
 	return nil, ConversionError{
-		InValue: i.t[index],
+		InValue: x.t[index],
 		OutType: out,
 		Index:   index,
 	}
-}
-
-func (i *TupleIterator) MustTuple() q.Tuple {
-	val, err := i.Tuple()
-	if err != nil {
-		panic(err)
-	}
-	return val
 }
