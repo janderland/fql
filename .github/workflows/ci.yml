@@ -10,7 +10,7 @@ jobs:
     container: janderland/fdbq-build:latest
     services:
       fdb:
-        image: foundationdb/foundationdb:6.3.12
+        image: foundationdb/foundationdb:6.3.15
         ports:
           - 4500:4500
     steps:
