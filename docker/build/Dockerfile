@@ -1,6 +1,7 @@
 FROM centos:7
 
-RUN yum -y install epel-release gcc-c++-4.8.5-44 ShellCheck-0.3.8-1 &&\
+RUN yum -y --setopt=skip_missing_names_on_install=False install epel-release gcc-4.8.5 &&\
+    yum -y --setopt=skip_missing_names_on_install=False install ShellCheck-0.3.8 &&\
     yum -y clean all
 
 ARG FDB_LIB_URL="https://www.foundationdb.org/downloads/6.3.15/rhel7/installers/foundationdb-clients-6.3.15-1.el7.x86_64.rpm"
@@ -20,5 +21,6 @@ RUN curl -Lo golint.sh $GOLANGCI_LINT_URL &&\
     rm ./golint.sh
 
 ARG HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/v2.7.0/hadolint-Linux-x86_64"
-RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL
+RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\
+    chmod +x /usr/local/bin/hadolint
 
