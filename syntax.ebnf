@@ -4,31 +4,31 @@
  form as defined in ISO/IEC 14977.
 *)
 
-query = keyval | key | directory ;
+query = ws, ( keyval | key | directory ), ws ;
 
 keyval = key, ws, '=', ws, value ;
 
 key = directory, ws, tuple ;
 
-value = tuple | data | 'clear' ;
+value = data | 'clear' ;
 
-directory = { '/', ws, words, ws } ;
+directory = '/', ws, text, [ ws, directory ] ;
 
-tuple = '{', ws, elements, ws, [ '...' ], ws, '}' ;
+data = 'nil' | bool | int | float | scientific | string | uuid | hex | tuple ;
 
-elements = ( data | tuple ), ws, ',', ws, ( elements | data | tuple ) ;
+tuple = '{', [ ws, elements ], [ ws, ',', ws, '...' ], ws, '}' ;
 
-data = 'nil' | bool | int | float | scientific | string | uuid | hex ;
+elements = data, [ ws, ',', ws, elements ] ;
 
 bool = 'true' | 'false' ;
 
-int = number | '-', number ;
+int = [ '-' ], number ;
 
 float = int, '.', number ;
 
-scientific = int, 'e', int | float, 'e', int ;
+scientific = ( int | float ), 'e', int ;
 
-string = '"', words, '"' ;
+string = '"', text, '"' ;
 
 uuid = 8 * hexDigit, '-', 4 * hexDigit, '-', 4 * hexDigit, '-', 4 * hexDigit, '-', 12 * hexDigit ;
 
@@ -36,7 +36,7 @@ hex = '0x', { 2 * hexDigit } ;
 
 number = { digit } ;
 
-words = { character } ;
+text = { character } ;
 
 digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
 
