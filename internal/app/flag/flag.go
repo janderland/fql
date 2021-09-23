@@ -7,7 +7,6 @@ import (
 	"os"
 
 	"github.com/janderland/fdbq/engine"
-
 	"github.com/pkg/errors"
 )
 
