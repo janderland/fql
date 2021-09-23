@@ -24,3 +24,7 @@ ARG HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/v2.7.0/
 RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\
     chmod +x /usr/local/bin/hadolint
 
+ARG JQ_URL="https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64"
+RUN curl -Lo /usr/local/bin/jq $JQ_URL &&\
+    chmod +x /usr/local/bin/jq
+
