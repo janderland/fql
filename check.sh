@@ -2,9 +2,17 @@
 set -exuo pipefail
 
 cd "${0%/*}"
-find . -type f -iname '*.sh' -print0 | xargs -0 shellcheck
-find . -type f -iname 'Dockerfile' -print0 | xargs -0 -n 1 hadolint
-golangci-lint run
-go build ./...
-go test ./...
+
+FDBQ_FDB_NAME="fdbq_fdb"
+export FDBQ_FDB_NAME
+
+FDBQ_SRC_DIR="$(pwd)"
+export FDBQ_SRC_DIR
+
+docker compose up \
+  --abort-on-container-exit \
+  --always-recreate-deps \
+  --renew-anon-volumes \
+  --force-recreate \
+  check
 
