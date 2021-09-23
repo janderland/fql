@@ -1,18 +1,16 @@
 version: "3.9"
 services:
   check:
+    container_name: "check"
     image: "docker.io/janderland/fdbq-build:latest"
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "./scripts/cluster.sh ${FDBQ_FDB_NAME} && ./scripts/check.sh"
+    command: ["/bin/sh", "-c", "./scripts/cluster.sh fdb && ./scripts/check.sh"]
     depends_on:
       - "fdb"
-    working_dir: "${FDBQ_SRC_DIR}"
+    working_dir: "/fdbq"
     volumes:
-      - "${FDBQ_SRC_DIR}:${FDBQ_SRC_DIR}"
+      - ".:/fdbq"
   fdb:
-    container_name: "${FDBQ_FDB_NAME}"
+    container_name: fdb
     image: "foundationdb/foundationdb:6.3.15"
     ports:
       - "4500:4500"
