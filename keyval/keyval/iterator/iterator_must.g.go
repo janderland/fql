@@ -3,6 +3,33 @@ package iterator
 
 import q "github.com/janderland/fdbq/keyval/keyval"
 
+// Bool asserts the current element of the tuple is of type Bool.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) Bool() (out q.Bool, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.Bool); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustBool does the same thing as Bool, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustBool() q.Bool {
 	val, err := x.Bool()
 	if err != nil {
@@ -11,6 +38,33 @@ func (x *TupleIterator) MustBool() q.Bool {
 	return val
 }
 
+// Int asserts the current element of the tuple is of type Int.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) Int() (out q.Int, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.Int); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustInt does the same thing as Int, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustInt() q.Int {
 	val, err := x.Int()
 	if err != nil {
@@ -19,6 +73,33 @@ func (x *TupleIterator) MustInt() q.Int {
 	return val
 }
 
+// Uint asserts the current element of the tuple is of type Uint.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) Uint() (out q.Uint, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.Uint); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustUint does the same thing as Uint, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustUint() q.Uint {
 	val, err := x.Uint()
 	if err != nil {
@@ -27,6 +108,33 @@ func (x *TupleIterator) MustUint() q.Uint {
 	return val
 }
 
+// BigInt asserts the current element of the tuple is of type BigInt.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) BigInt() (out q.BigInt, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.BigInt); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustBigInt does the same thing as BigInt, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustBigInt() q.BigInt {
 	val, err := x.BigInt()
 	if err != nil {
@@ -35,6 +143,33 @@ func (x *TupleIterator) MustBigInt() q.BigInt {
 	return val
 }
 
+// Float asserts the current element of the tuple is of type Float.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) Float() (out q.Float, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.Float); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustFloat does the same thing as Float, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustFloat() q.Float {
 	val, err := x.Float()
 	if err != nil {
@@ -43,6 +178,33 @@ func (x *TupleIterator) MustFloat() q.Float {
 	return val
 }
 
+// String asserts the current element of the tuple is of type String.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) String() (out q.String, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.String); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustString does the same thing as String, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustString() q.String {
 	val, err := x.String()
 	if err != nil {
@@ -51,6 +213,33 @@ func (x *TupleIterator) MustString() q.String {
 	return val
 }
 
+// Bytes asserts the current element of the tuple is of type Bytes.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) Bytes() (out q.Bytes, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.Bytes); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustBytes does the same thing as Bytes, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustBytes() q.Bytes {
 	val, err := x.Bytes()
 	if err != nil {
@@ -59,6 +248,33 @@ func (x *TupleIterator) MustBytes() q.Bytes {
 	return val
 }
 
+// UUID asserts the current element of the tuple is of type UUID.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) UUID() (out q.UUID, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.UUID); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustUUID does the same thing as UUID, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustUUID() q.UUID {
 	val, err := x.UUID()
 	if err != nil {
@@ -67,6 +283,33 @@ func (x *TupleIterator) MustUUID() q.UUID {
 	return val
 }
 
+// Tuple asserts the current element of the tuple is of type Tuple.
+// If the type assertion fails a ConversionError is returned. If the
+// iterator points beyond the end of the tuple, a ShortTupleError is
+// returned. Otherwise, the element is returned and the iterator is
+// pointed at the next element.
+func (x *TupleIterator) Tuple() (out q.Tuple, err error) {
+	if x.i >= len(x.t) {
+		panic(ShortTupleError)
+	}
+
+	var ok bool
+	if out, ok = x.t[x.i].(q.Tuple); !ok {
+		err = ConversionError{
+			InValue: x.t[x.i],
+			OutType: out,
+			Index:   x.i,
+		}
+		return
+	}
+
+	x.i++
+	return
+}
+
+// MustTuple does the same thing as Tuple, except it panics any
+// errors instead of returning them. These errors will be recovered by
+// the wrapping call to ReadTuple and returned by that function.
 func (x *TupleIterator) MustTuple() q.Tuple {
 	val, err := x.Tuple()
 	if err != nil {

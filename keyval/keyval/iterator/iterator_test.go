@@ -42,87 +42,41 @@ func TestReadTuple(t *testing.T) {
 	assert.Equal(t, in, out)
 }
 
-func TestTupleIterator_Bool(t *testing.T) {
-	in := q.Tuple{q.Bool(true), q.Bool(false)}
-	var out []q.Bool
-	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
-		for range in {
-			out = append(out, iter.MustBool())
-		}
+func TestConversionError(t *testing.T) {
+	in := q.Tuple{q.Bool(true)}
+	out := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
+		_ = iter.MustString()
 		return nil
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, []q.Bool{true, false}, out)
+	assert.IsType(t, ConversionError{}, out)
 }
 
-func TestTupleIterator_String(t *testing.T) {
-	in := q.Tuple{q.String("hello"), q.String("goodbye"), q.String("world")}
-	var out []q.String
-	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
-		for range in {
-			out = append(out, iter.MustString())
-		}
+func TestShortTupleError(t *testing.T) {
+	in := q.Tuple{q.Int(10)}
+	out := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
+		_ = iter.MustInt()
+		_ = iter.MustInt()
 		return nil
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, []q.String{"hello", "goodbye", "world"}, out)
+	assert.Equal(t, ShortTupleError, out)
 }
 
-func TestTupleIterator_Int(t *testing.T) {
-	in := q.Tuple{q.Int(23), q.Int(-32)}
-	var out []q.Int
-	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
-		for range in {
-			out = append(out, iter.MustInt())
-		}
-		return nil
+func TestLongTupleError(t *testing.T) {
+	in := q.Tuple{q.Bytes{0xFF, 0xAC}, q.String("hi")}
+
+	t.Run("error", func(t *testing.T) {
+		out := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
+			_ = iter.MustBytes()
+			return nil
+		})
+		assert.Equal(t, LongTupleError, out)
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, []q.Int{23, -32}, out)
-}
 
-func TestTupleIterator_Uint(t *testing.T) {
-	in := q.Tuple{q.Uint(23), q.Uint(32)}
-	var out []q.Uint
-	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
-		for range in {
-			out = append(out, iter.MustUint())
-		}
-		return nil
+	t.Run("allow", func(t *testing.T) {
+		out := ReadTuple(in, AllowLong, func(iter *TupleIterator) error {
+			_ = iter.MustBytes()
+			return nil
+		})
+		assert.NoError(t, out)
 	})
-	assert.NoError(t, err)
-	assert.Equal(t, []q.Uint{23, 32}, out)
-}
-
-func TestTupleIterator_BigInt(t *testing.T) {
-	// This value is needed because we can't overflow
-	// a negative constant into a uint64.
-	neg := int64(-32)
-
-	in := q.Tuple{q.Uint(23), q.Uint(neg), q.Int(23), q.Int(-32), q.BigInt(*big.NewInt(10))}
-	var out []q.BigInt
-	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
-		for range in {
-			out = append(out, iter.MustBigInt())
-		}
-		return nil
-	})
-	assert.NoError(t, err)
-
-	bigBoi := big.NewInt(0)
-	bigBoi.SetUint64(uint64(neg))
-	assert.Equal(t, []q.BigInt{q.BigInt(*big.NewInt(23)), q.BigInt(*bigBoi), q.BigInt(*big.NewInt(23)), q.BigInt(*big.NewInt(-32)), q.BigInt(*big.NewInt(10))}, out)
-}
-
-func TestTupleIterator_Float(t *testing.T) {
-	in := q.Tuple{q.Float(12.3), q.Float(-55.234)}
-	var out []float64
-	err := ReadTuple(in, AllErrors, func(iter *TupleIterator) error {
-		for range in {
-			out = append(out, float64(iter.MustFloat()))
-		}
-		return nil
-	})
-	assert.NoError(t, err)
-	assert.InEpsilonSlice(t, []float64{12.3, -55.234}, out, 0.0001)
 }
