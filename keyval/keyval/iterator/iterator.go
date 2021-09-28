@@ -78,7 +78,7 @@ func ReadTuple(t q.Tuple, mode TupleErrorMode, f func(*TupleIterator) error) (er
 }
 
 // Generate the TupleIterator methods.
-//go:generate go run ./must -types Bool,Int,Uint,BigInt,Float,String,Bytes,UUID,Tuple
+//go:generate go run ./iter -types Bool,Int,Uint,BigInt,Float,String,Bytes,UUID,Tuple
 
 // TupleIterator provides methods for reading each Tuple element
 // and converting the read element to an expected type. It is

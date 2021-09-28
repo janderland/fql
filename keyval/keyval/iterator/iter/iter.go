@@ -19,7 +19,7 @@ type mustGen struct {
 }
 
 func (x mustGen) Name() string {
-	return "must"
+	return ""
 }
 
 func (x mustGen) Data() interface{} {

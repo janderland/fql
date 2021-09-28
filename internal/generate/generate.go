@@ -17,7 +17,8 @@ type CodeGenerator interface {
 	// Name returns a unique identifier for an instance of
 	// generation. Name contributes to part of the generated
 	// filename. Each invocation of `//go:generate` within a
-	// file must return a different result from Name.
+	// file must return a different result from Name. Name
+	// may return the empty string.
 	Name() string
 
 	// Template returns the template used to generate the
@@ -103,7 +104,10 @@ func write(filename, output string) {
 
 func filename(name string) string {
 	noExt := file[0 : len(file)-len(filepath.Ext(file))]
-	return fmt.Sprintf("%s_%s.g.go", noExt, strings.ToLower(name))
+	if len(name) > 0 {
+		return fmt.Sprintf("%s_%s.g.go", noExt, strings.ToLower(name))
+	}
+	return fmt.Sprintf("%s.g.go", noExt)
 }
 
 func prefix() []byte {
