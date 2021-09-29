@@ -102,10 +102,6 @@ func (x *visitor) VisitVariable(e q.Variable) {
 		return
 	}
 
-	// TODO: This shouldn't work.
-	// If we try the wrong kind of type first,
-	// we'll increase the current index which
-	// would break the comparison.
 	found := false
 	for _, vType := range e {
 		var err error
