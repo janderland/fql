@@ -10,8 +10,6 @@ import (
 )
 
 type visitor struct {
-	q.TupleVisitor
-
 	// The iterator wrapping the candidate tuple.
 	iter *iter.TupleIterator
 
@@ -20,15 +18,6 @@ type visitor struct {
 
 	// The index path of the first mismatching element.
 	mismatchIndexPath []int
-}
-
-func newVisitor(iter *iter.TupleIterator, index int) visitor {
-	return visitor{iter: iter, index: index}
-}
-
-func (x *visitor) Visit(e q.TupElement) []int {
-	e.TupElement(x)
-	return x.mismatchIndexPath
 }
 
 func (x *visitor) VisitNil(e q.Nil) {

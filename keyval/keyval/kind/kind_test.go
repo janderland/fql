@@ -9,11 +9,11 @@ import (
 
 func TestKeyValue_Kind(t *testing.T) {
 	tests := []struct {
-		kind Kind
+		kind Class
 		kv   q.KeyValue
 	}{
 		{
-			kind: ConstantKind,
+			kind: ConstantClass,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -23,7 +23,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: ClearKind,
+			kind: ClearClass,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -33,7 +33,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: SingleReadKind,
+			kind: SingleReadClass,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -43,7 +43,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeReadKind,
+			kind: RangeReadClass,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.Variable{}, q.String("dir")},
@@ -53,7 +53,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeReadKind,
+			kind: RangeReadClass,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -63,7 +63,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeReadKind,
+			kind: RangeReadClass,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.Variable{}, q.String("dir")},
@@ -73,7 +73,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: VariableClearKind,
+			kind: VariableClearClass,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},

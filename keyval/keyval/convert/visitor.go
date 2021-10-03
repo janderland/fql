@@ -8,53 +8,53 @@ import (
 	"github.com/pkg/errors"
 )
 
-type toFDB struct {
+type conversion struct {
 	out tuple.TupleElement
 	err error
 }
 
-func (x *toFDB) VisitTuple(in q.Tuple) {
+func (x *conversion) VisitTuple(in q.Tuple) {
 	x.out, x.err = ToFDBTuple(in)
 }
 
-func (x *toFDB) VisitNil(q.Nil) {}
+func (x *conversion) VisitNil(q.Nil) {}
 
-func (x *toFDB) VisitInt(in q.Int) {
+func (x *conversion) VisitInt(in q.Int) {
 	x.out = int64(in)
 }
 
-func (x *toFDB) VisitUint(in q.Uint) {
+func (x *conversion) VisitUint(in q.Uint) {
 	x.out = uint64(in)
 }
 
-func (x *toFDB) VisitBool(in q.Bool) {
+func (x *conversion) VisitBool(in q.Bool) {
 	x.out = bool(in)
 }
 
-func (x *toFDB) VisitFloat(in q.Float) {
+func (x *conversion) VisitFloat(in q.Float) {
 	x.out = float64(in)
 }
 
-func (x *toFDB) VisitBigInt(in q.BigInt) {
+func (x *conversion) VisitBigInt(in q.BigInt) {
 	x.out = big.Int(in)
 }
 
-func (x *toFDB) VisitString(in q.String) {
+func (x *conversion) VisitString(in q.String) {
 	x.out = string(in)
 }
 
-func (x *toFDB) VisitUUID(in q.UUID) {
+func (x *conversion) VisitUUID(in q.UUID) {
 	x.out = tuple.UUID(in)
 }
 
-func (x *toFDB) VisitBytes(in q.Bytes) {
+func (x *conversion) VisitBytes(in q.Bytes) {
 	x.out = []byte(in)
 }
 
-func (x *toFDB) VisitVariable(q.Variable) {
+func (x *conversion) VisitVariable(q.Variable) {
 	x.err = errors.New("cannot convert variable")
 }
 
-func (x *toFDB) VisitMaybeMore(q.MaybeMore) {
+func (x *conversion) VisitMaybeMore(q.MaybeMore) {
 	x.err = errors.New("cannot convert maybe-more")
 }

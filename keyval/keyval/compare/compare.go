@@ -52,9 +52,10 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 	// Loop over both tuples, comparing their elements using the visitor.
 	var mismatchIndexPath []int
 	err := iter.ReadTuple(candidate, iter.AllowLong, func(iter *iter.TupleIterator) error {
-		for i, e := range pattern {
-			v := newVisitor(iter, i)
-			if mismatchIndexPath = v.Visit(e); mismatchIndexPath != nil {
+		for i, element := range pattern {
+			comparison := visitor{iter: iter, index: i}
+			element.TupElement(&comparison)
+			if comparison.mismatchIndexPath != nil {
 				return nil
 			}
 		}

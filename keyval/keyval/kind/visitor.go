@@ -1,117 +1,73 @@
 package kind
 
-import (
-	q "github.com/janderland/fdbq/keyval/keyval"
-)
+import q "github.com/janderland/fdbq/keyval/keyval"
 
-type dirVisitor struct {
-	kind subKind
+type dirClassification struct{ result subClass }
+
+func (x *dirClassification) VisitString(q.String) {}
+
+func (x *dirClassification) VisitVariable(q.Variable) {
+	x.result = variableSubClass
 }
 
-func (x *dirVisitor) VisitString(q.String) {
-	// Do nothing.
+type tupClassification struct{ result subClass }
+
+func (x *tupClassification) VisitTuple(e q.Tuple) {
+	x.result = classifyTuple(e)
 }
 
-func (x *dirVisitor) VisitVariable(q.Variable) {
-	x.kind = variableSubKind
+func (x *tupClassification) VisitVariable(q.Variable) {
+	x.result = variableSubClass
 }
 
-type tupVisitor struct {
-	kind subKind
+func (x *tupClassification) VisitMaybeMore(q.MaybeMore) {
+	x.result = variableSubClass
 }
 
-func (x *tupVisitor) VisitTuple(e q.Tuple) {
-	x.kind = tupKind(e)
+func (x *tupClassification) VisitNil(q.Nil) {}
+
+func (x *tupClassification) VisitInt(q.Int) {}
+
+func (x *tupClassification) VisitUint(q.Uint) {}
+
+func (x *tupClassification) VisitBool(q.Bool) {}
+
+func (x *tupClassification) VisitFloat(q.Float) {}
+
+func (x *tupClassification) VisitBigInt(q.BigInt) {}
+
+func (x *tupClassification) VisitString(q.String) {}
+
+func (x *tupClassification) VisitUUID(q.UUID) {}
+
+func (x *tupClassification) VisitBytes(q.Bytes) {}
+
+type valClassification struct{ result subClass }
+
+func (x *valClassification) VisitTuple(e q.Tuple) {
+	x.result = classifyTuple(e)
 }
 
-func (x *tupVisitor) VisitVariable(q.Variable) {
-	x.kind = variableSubKind
+func (x *valClassification) VisitVariable(q.Variable) {
+	x.result = variableSubClass
 }
 
-func (x *tupVisitor) VisitMaybeMore(q.MaybeMore) {
-	x.kind = variableSubKind
+func (x *valClassification) VisitClear(q.Clear) {
+	x.result = clearSubClass
 }
 
-func (x *tupVisitor) VisitNil(q.Nil) {
-	// Do nothing.
-}
+func (x *valClassification) VisitNil(q.Nil) {}
 
-func (x *tupVisitor) VisitInt(q.Int) {
-	// Do nothing.
-}
+func (x *valClassification) VisitInt(q.Int) {}
 
-func (x *tupVisitor) VisitUint(q.Uint) {
-	// Do nothing.
-}
+func (x *valClassification) VisitUint(q.Uint) {}
 
-func (x *tupVisitor) VisitBool(q.Bool) {
-	// Do nothing.
-}
+func (x *valClassification) VisitBool(q.Bool) {}
 
-func (x *tupVisitor) VisitFloat(q.Float) {
-	// Do nothing.
-}
+func (x *valClassification) VisitFloat(q.Float) {}
 
-func (x *tupVisitor) VisitBigInt(q.BigInt) {
-	// Do nothing.
-}
+func (x *valClassification) VisitString(q.String) {}
 
-func (x *tupVisitor) VisitString(q.String) {
-	// Do nothing.
-}
+func (x *valClassification) VisitUUID(q.UUID) {}
 
-func (x *tupVisitor) VisitUUID(q.UUID) {
-	// Do nothing.
-}
-
-func (x *tupVisitor) VisitBytes(q.Bytes) {
-	// Do nothing.
-}
-
-type valVisitor struct {
-	kind subKind
-}
-
-func (x *valVisitor) VisitTuple(e q.Tuple) {
-	x.kind = tupKind(e)
-}
-
-func (x *valVisitor) VisitVariable(q.Variable) {
-	x.kind = variableSubKind
-}
-
-func (x *valVisitor) VisitClear(q.Clear) {
-	x.kind = clearSubKind
-}
-
-func (x *valVisitor) VisitNil(q.Nil) {
-	// Do nothing.
-}
-
-func (x *valVisitor) VisitInt(q.Int) {
-	// Do nothing.
-}
-
-func (x *valVisitor) VisitUint(q.Uint) {
-	// Do nothing.
-}
-
-func (x *valVisitor) VisitBool(q.Bool) {
-	// Do nothing.
-}
-
-func (x *valVisitor) VisitFloat(q.Float) {
-	// Do nothing.
-}
-
-func (x *valVisitor) VisitString(q.String) {
-	// Do nothing.
-}
-
-func (x *valVisitor) VisitUUID(q.UUID) {
-	// Do nothing.
-}
-
-func (x *valVisitor) VisitBytes(q.Bytes) {
-	// Do nothing.
-}
+func (x *valClassification) VisitBytes(q.Bytes) {}

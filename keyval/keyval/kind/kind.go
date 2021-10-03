@@ -1,111 +1,109 @@
 package kind
 
-import (
-	q "github.com/janderland/fdbq/keyval/keyval"
-)
+import q "github.com/janderland/fdbq/keyval/keyval"
 
-// Kind categorizes a KeyValue.
-type Kind string
+// Class categorizes a KeyValue.
+type Class string
 
 const (
-	// ConstantKind specifies that the KeyValue has no Variable,
+	// ConstantClass specifies that the KeyValue has no Variable,
 	// MaybeMore, or Clear. This kind of KeyValue can be used to
 	// perform a set operation or is returned by a get operation.
-	ConstantKind Kind = "constant"
+	ConstantClass Class = "constant"
 
-	// ClearKind specifies that the KeyValue has no Variable or
+	// ClearClass specifies that the KeyValue has no Variable or
 	// MaybeMore and has a Clear Value. This kind of KeyValue can
 	// be used to perform a clear operation.
-	ClearKind Kind = "clear"
+	ClearClass Class = "clear"
 
-	// SingleReadKind specifies that the KeyValue has a Variable
+	// SingleReadClass specifies that the KeyValue has a Variable
 	// Value and doesn't have a Variable or MaybeMore in its Key.
 	// This kind of KeyValue can be used to perform a get operation
 	// that returns a single KeyValue.
-	SingleReadKind Kind = "single"
+	SingleReadClass Class = "single"
 
-	// RangeReadKind specifies that the KeyValue has a Variable
+	// RangeReadClass specifies that the KeyValue has a Variable
 	// or MaybeMore in its Key and doesn't have a Clear Value.
 	// This kind of KeyValue can be used to perform a get
 	// operation that returns multiple KeyValue.
-	RangeReadKind Kind = "range"
+	RangeReadClass Class = "range"
 
-	// VariableClearKind specifies that the KeyValue has a
+	// VariableClearClass specifies that the KeyValue has a
 	// Variable or MaybeMore in its Key and has a Clear for
-	// its value. This is an invalid kind of KeyValue.
-	VariableClearKind Kind = "variable clear"
+	// its value. This is an invalid class of KeyValue.
+	VariableClearClass Class = "variable clear"
 )
 
-// subKind categorizes the Key, Directory,
+// subClass categorizes the Key, Directory,
 // Tuple, and Value within a KeyValue.
-type subKind = int
+type subClass int
 
 const (
-	// constantSubKind specifies that the component contains no
+	// constantSubClass specifies that the component contains no
 	// Variable, MaybeMore, or Clear.
-	constantSubKind subKind = iota
+	constantSubClass subClass = iota
 
-	// variableSubKind specifies that the component contains a
+	// variableSubClass specifies that the component contains a
 	// Variable or MaybeMore.
-	variableSubKind
+	variableSubClass
 
-	// clearSubKind specifies that the component contains a Clear.
-	clearSubKind
+	// clearSubClass specifies that the component contains a Clear.
+	clearSubClass
 )
 
 // Which returns the Kind of the given KeyValue. If the KeyValue
 // is malformed then InvalidKind and a non-nil error are returned.
 // For details on what a malformed KeyValue is, see the KeyValue,
 // Key, Directory, Tuple, and Value documentation.
-func Which(kv q.KeyValue) Kind {
-	switch keyKind(kv.Key) {
-	case constantSubKind:
-		switch valKind(kv.Value) {
-		case clearSubKind:
-			return ClearKind
-		case variableSubKind:
-			return SingleReadKind
+func Which(kv q.KeyValue) Class {
+	switch classifyKey(kv.Key) {
+	case constantSubClass:
+		switch classifyValue(kv.Value) {
+		case clearSubClass:
+			return ClearClass
+		case variableSubClass:
+			return SingleReadClass
 		default:
-			return ConstantKind
+			return ConstantClass
 		}
 	default:
-		switch valKind(kv.Value) {
-		case clearSubKind:
-			return VariableClearKind
+		switch classifyValue(kv.Value) {
+		case clearSubClass:
+			return VariableClearClass
 		default:
-			return RangeReadKind
+			return RangeReadClass
 		}
 	}
 }
 
-func keyKind(key q.Key) subKind {
-	if dirKind(key.Directory) == variableSubKind {
-		return variableSubKind
+func classifyKey(key q.Key) subClass {
+	if classifyDir(key.Directory) == variableSubClass {
+		return variableSubClass
 	}
-	if tupKind(key.Tuple) == variableSubKind {
-		return variableSubKind
+	if classifyTuple(key.Tuple) == variableSubClass {
+		return variableSubClass
 	}
-	return constantSubKind
+	return constantSubClass
 }
 
-func dirKind(dir q.Directory) subKind {
-	v := dirVisitor{kind: constantSubKind}
+func classifyDir(dir q.Directory) subClass {
+	class := dirClassification{}
 	for _, e := range dir {
-		e.DirElement(&v)
+		e.DirElement(&class)
 	}
-	return v.kind
+	return class.result
 }
 
-func tupKind(tup q.Tuple) subKind {
-	v := tupVisitor{kind: constantSubKind}
+func classifyTuple(tup q.Tuple) subClass {
+	class := tupClassification{}
 	for _, e := range tup {
-		e.TupElement(&v)
+		e.TupElement(&class)
 	}
-	return v.kind
+	return class.result
 }
 
-func valKind(val q.Value) subKind {
-	v := valVisitor{kind: constantSubKind}
-	val.Value(&v)
-	return v.kind
+func classifyValue(val q.Value) subClass {
+	class := valClassification{}
+	val.Value(&class)
+	return class.result
 }

@@ -45,12 +45,12 @@ func ToFDBTuple(in q.Tuple) (tuple.Tuple, error) {
 	out := make(tuple.Tuple, len(in))
 
 	for i, element := range in {
-		conversion := toFDB{}
-		element.TupElement(&conversion)
-		if conversion.err != nil {
-			return nil, errors.Wrapf(conversion.err, "failed to convert index %d", i)
+		conv := conversion{}
+		element.TupElement(&conv)
+		if conv.err != nil {
+			return nil, errors.Wrapf(conv.err, "failed to convert index %d", i)
 		}
-		out[i] = conversion.out
+		out[i] = conv.out
 	}
 
 	return out, nil
