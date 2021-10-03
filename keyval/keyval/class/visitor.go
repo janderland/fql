@@ -1,4 +1,4 @@
-package kind
+package class
 
 import q "github.com/janderland/fdbq/keyval/keyval"
 

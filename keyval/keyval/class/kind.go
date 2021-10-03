@@ -1,4 +1,4 @@
-package kind
+package class
 
 import q "github.com/janderland/fdbq/keyval/keyval"
 
@@ -88,16 +88,16 @@ func classifyKey(key q.Key) subClass {
 
 func classifyDir(dir q.Directory) subClass {
 	class := dirClassification{}
-	for _, e := range dir {
-		e.DirElement(&class)
+	for _, element := range dir {
+		element.DirElement(&class)
 	}
 	return class.result
 }
 
 func classifyTuple(tup q.Tuple) subClass {
 	class := tupClassification{}
-	for _, e := range tup {
-		e.TupElement(&class)
+	for _, element := range tup {
+		element.TupElement(&class)
 	}
 	return class.result
 }
