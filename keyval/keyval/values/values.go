@@ -5,17 +5,16 @@ import (
 	"encoding/binary"
 	"math"
 
-	"github.com/janderland/fdbq/keyval/keyval/convert"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	q "github.com/janderland/fdbq/keyval/keyval"
+	"github.com/janderland/fdbq/keyval/keyval/convert"
 	"github.com/pkg/errors"
 )
 
 type Unpack func(val []byte) q.Value
 
 func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
-	if variable, isVar := query.(q.Variable); isVar {
+	if variable, ok := query.(q.Variable); ok {
 		if len(variable) == 0 {
 			return func(val []byte) q.Value {
 				return q.Bytes(val)

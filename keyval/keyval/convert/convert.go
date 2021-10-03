@@ -65,7 +65,7 @@ func FromFDBTuple(in tuple.Tuple) q.Tuple {
 		case tuple.Tuple:
 			out[i] = FromFDBTuple(element)
 		default:
-			out[i] = FromFDBElement(in[i])
+			out[i] = FromFDBElement(element)
 		}
 	}
 
@@ -123,9 +123,9 @@ func FromFDBElement(in tuple.TupleElement) q.TupElement {
 // before the first variable, the first variable, and a slice of the elements after the variable.
 // TODO: How should this method work with both tuples & directories.
 func SplitAtFirstVariable(list []interface{}) ([]interface{}, *q.Variable, []interface{}) {
-	for i, segment := range list {
-		if segment, ok := segment.(q.Variable); ok {
-			return list[:i], &segment, list[i+1:]
+	for i, element := range list {
+		if variable, ok := element.(q.Variable); ok {
+			return list[:i], &variable, list[i+1:]
 		}
 	}
 	return list, nil, nil
@@ -135,7 +135,7 @@ func SplitAtFirstVariable(list []interface{}) ([]interface{}, *q.Variable, []int
 func RemoveMaybeMore(tup q.Tuple) q.Tuple {
 	if len(tup) > 0 {
 		last := len(tup) - 1
-		if _, hasMaybeMore := tup[last].(q.MaybeMore); hasMaybeMore {
+		if _, ok := tup[last].(q.MaybeMore); ok {
 			tup = tup[:last]
 		}
 	}
