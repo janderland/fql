@@ -335,6 +335,9 @@ func ParseValue(str string) (q.Value, error) {
 		out, err := ParseTuple(str)
 		return out, errors.Wrap(err, "failed to parse as tuple")
 	}
-	val, err := ParseData(str)
-	return val.(q.Value), err
+	out, err := ParseData(str)
+	if out != nil {
+		return out.(q.Value), err
+	}
+	return q.Nil{}, err
 }

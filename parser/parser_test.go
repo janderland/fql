@@ -3,7 +3,6 @@ package parser
 import (
 	"testing"
 
-	tup "github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/stretchr/testify/assert"
 )
@@ -307,23 +306,23 @@ func TestData(t *testing.T) {
 
 		{name: "hex",
 			str: "0xabc032",
-			ast: []byte{0xab, 0xc0, 0x32}},
+			ast: q.Bytes{0xab, 0xc0, 0x32}},
 
 		{name: "uuid",
 			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
-			ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+			ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
 
 		{name: "int",
 			str: "123",
-			ast: int64(123)},
+			ast: q.Int(123)},
 
 		{name: "float",
 			str: "-94.2",
-			ast: -94.2},
+			ast: q.Float(-94.2)},
 
 		{name: "scientific",
 			str: "3.47e-08",
-			ast: 3.47e-8},
+			ast: q.Float(3.47e-8)},
 	}
 
 	for _, test := range roundTrips {
@@ -400,9 +399,9 @@ func TestString(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  string
+		ast  q.String
 	}{
-		{name: "regular", str: "\"hello world\"", ast: "hello world"},
+		{name: "regular", str: "\"hello world\"", ast: q.String("hello world")},
 	}
 
 	for _, test := range roundTrips {
@@ -455,10 +454,10 @@ func TestHex(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  []byte
+		ast  q.Bytes
 	}{
-		{name: "trailing zero", str: "0xffa4b230", ast: []byte{0xFF, 0xA4, 0xB2, 0x30}},
-		{name: "leading zero", str: "0x0a4b12", ast: []byte{0x0A, 0x4B, 0x12}},
+		{name: "trailing zero", str: "0xffa4b230", ast: q.Bytes{0xFF, 0xA4, 0xB2, 0x30}},
+		{name: "leading zero", str: "0x0a4b12", ast: q.Bytes{0x0A, 0x4B, 0x12}},
 	}
 
 	for _, test := range roundTrips {
@@ -490,17 +489,17 @@ func TestUUID(t *testing.T) {
 	for _, test := range parseFailures {
 		ast, err := ParseUUID(test.str)
 		assert.Error(t, err)
-		assert.Equal(t, tup.UUID{}, ast)
+		assert.Equal(t, q.UUID{}, ast)
 	}
 
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  tup.UUID
+		ast  q.UUID
 	}{
 		{name: "normal",
 			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
-			ast: tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+			ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
 	}
 
 	for _, test := range roundTrips {
@@ -521,10 +520,10 @@ func TestNumber(t *testing.T) {
 		str  string
 		ast  interface{}
 	}{
-		{name: "int", str: "-34000", ast: int64(-34000)},
-		{name: "uint", str: "18446744073709551610", ast: uint64(18446744073709551610)},
-		{name: "float", str: "94.33", ast: 94.33},
-		{name: "scientific", str: "1.254e-07", ast: 1.254e-7},
+		{name: "int", str: "-34000", ast: q.Int(-34000)},
+		{name: "uint", str: "18446744073709551610", ast: q.Uint(18446744073709551610)},
+		{name: "float", str: "94.33", ast: q.Float(94.33)},
+		{name: "scientific", str: "1.254e-07", ast: q.Float(1.254e-7)},
 	}
 
 	for _, test := range roundTrips {

@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
@@ -83,9 +82,9 @@ func FormatTuple(tup q.Tuple) (string, error) {
 
 func FormatData(in interface{}) (string, error) {
 	switch in := in.(type) {
-	case nil:
+	case q.Nil:
 		return Nil, nil
-	case bool:
+	case q.Bool:
 		if in {
 			return True, nil
 		} else {
@@ -93,11 +92,11 @@ func FormatData(in interface{}) (string, error) {
 		}
 	case q.Variable:
 		return FormatVariable(in), nil
-	case string:
+	case q.String:
 		return FormatString(in), nil
-	case []byte:
+	case q.Bytes:
 		return FormatHex(in), nil
-	case tuple.UUID:
+	case q.UUID:
 		return FormatUUID(in), nil
 	default:
 		str, err := FormatNumber(in)
@@ -118,22 +117,22 @@ func FormatVariable(in q.Variable) string {
 	return str.String()
 }
 
-func FormatHex(in []byte) string {
+func FormatHex(in q.Bytes) string {
 	var out strings.Builder
 	out.WriteString(HexStart)
 	out.WriteString(hex.EncodeToString(in))
 	return out.String()
 }
 
-func FormatString(in string) string {
+func FormatString(in q.String) string {
 	var out strings.Builder
 	out.WriteRune(StrStart)
-	out.WriteString(in)
+	out.WriteString(string(in))
 	out.WriteRune(StrEnd)
 	return out.String()
 }
 
-func FormatUUID(in tuple.UUID) string {
+func FormatUUID(in q.UUID) string {
 	var out strings.Builder
 	out.WriteString(hex.EncodeToString(in[:4]))
 	out.WriteRune('-')
@@ -149,22 +148,13 @@ func FormatUUID(in tuple.UUID) string {
 
 func FormatNumber(in interface{}) (string, error) {
 	switch in := in.(type) {
-	// Int
-	case int64:
-		return strconv.FormatInt(in, 10), nil
-	case int:
+	case q.Int:
 		return strconv.FormatInt(int64(in), 10), nil
 
-	// Uint
-	case uint64:
-		return strconv.FormatUint(in, 10), nil
-	case uint:
+	case q.Uint:
 		return strconv.FormatUint(uint64(in), 10), nil
 
-	// Float
-	case float64:
-		return strconv.FormatFloat(in, 'g', 10, 64), nil
-	case float32:
+	case q.Float:
 		return strconv.FormatFloat(float64(in), 'g', 10, 64), nil
 
 	default:
