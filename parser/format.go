@@ -42,8 +42,8 @@ func FormatDirectory(dir q.Directory) (string, error) {
 	for i, d := range dir {
 		out.WriteRune(DirSep)
 		switch d := d.(type) {
-		case string:
-			out.WriteString(d)
+		case q.String:
+			out.WriteString(string(d))
 		case q.Variable:
 			out.WriteString(FormatVariable(d))
 		default:

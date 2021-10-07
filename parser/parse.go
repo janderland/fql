@@ -5,7 +5,6 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
@@ -117,7 +116,7 @@ func ParseDirectory(str string) (q.Directory, error) {
 	return directory, nil
 }
 
-func ParsePathElement(str string) (interface{}, error) {
+func ParsePathElement(str string) (q.DirElement, error) {
 	if len(str) == 0 {
 		return nil, errors.New("input is empty")
 	}
@@ -128,7 +127,7 @@ func ParsePathElement(str string) (interface{}, error) {
 		}
 		return variable, nil
 	} else {
-		return str, nil
+		return q.String(str), nil
 	}
 }
 
@@ -166,7 +165,7 @@ func ParseTuple(str string) (q.Tuple, error) {
 	return tup, nil
 }
 
-func ParseTupleElement(str string) (interface{}, error) {
+func ParseTupleElement(str string) (q.TupElement, error) {
 	if len(str) == 0 {
 		return nil, errors.New("element is empty")
 	}
@@ -185,7 +184,7 @@ func ParseTupleElement(str string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-	return data, nil
+	return data.(q.TupElement), nil
 }
 
 func ParseData(str string) (interface{}, error) {
@@ -193,13 +192,13 @@ func ParseData(str string) (interface{}, error) {
 		return nil, errors.New("input is empty")
 	}
 	if str == Nil {
-		return nil, nil
+		return q.Nil{}, nil
 	}
 	if str == True {
-		return true, nil
+		return q.Bool(true), nil
 	}
 	if str == False {
-		return false, nil
+		return q.Bool(false), nil
 	}
 	if str[0] == VarStart {
 		data, err := ParseVariable(str)
@@ -249,7 +248,7 @@ func ParseVariable(str string) (q.Variable, error) {
 	return variable, nil
 }
 
-func ParseString(str string) (string, error) {
+func ParseString(str string) (q.String, error) {
 	if len(str) == 0 {
 		return "", errors.New("input is empty")
 	}
@@ -259,10 +258,10 @@ func ParseString(str string) (string, error) {
 	if str[len(str)-1] != StrEnd {
 		return "", errors.New("must end with double quotes")
 	}
-	return str[1 : len(str)-1], nil
+	return q.String(str[1 : len(str)-1]), nil
 }
 
-func ParseHex(str string) ([]byte, error) {
+func ParseHex(str string) (q.Bytes, error) {
 	if !strings.HasPrefix(str, HexStart) {
 		return nil, errors.Errorf("expected '%s' prefix", HexStart)
 	}
@@ -273,9 +272,9 @@ func ParseHex(str string) ([]byte, error) {
 	return hex.DecodeString(str)
 }
 
-func ParseUUID(str string) (tuple.UUID, error) {
+func ParseUUID(str string) (q.UUID, error) {
 	if len(str) == 0 {
-		return tuple.UUID{}, errors.New("input is empty")
+		return q.UUID{}, errors.New("input is empty")
 	}
 
 	groups := strings.Split(str, "-")
@@ -286,25 +285,25 @@ func ParseUUID(str string) (tuple.UUID, error) {
 		return nil
 	}
 	if err := checkLen(0, 8); err != nil {
-		return tuple.UUID{}, err
+		return q.UUID{}, err
 	}
 	if err := checkLen(1, 4); err != nil {
-		return tuple.UUID{}, err
+		return q.UUID{}, err
 	}
 	if err := checkLen(2, 4); err != nil {
-		return tuple.UUID{}, err
+		return q.UUID{}, err
 	}
 	if err := checkLen(3, 4); err != nil {
-		return tuple.UUID{}, err
+		return q.UUID{}, err
 	}
 	if err := checkLen(4, 12); err != nil {
-		return tuple.UUID{}, err
+		return q.UUID{}, err
 	}
 
-	var uuid tuple.UUID
+	var uuid q.UUID
 	_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(str, "-", "")))
 	if err != nil {
-		return tuple.UUID{}, err
+		return q.UUID{}, err
 	}
 	return uuid, nil
 }
@@ -312,15 +311,15 @@ func ParseUUID(str string) (tuple.UUID, error) {
 func ParseNumber(str string) (interface{}, error) {
 	i, iErr := strconv.ParseInt(str, 10, 64)
 	if iErr == nil {
-		return i, nil
+		return q.Int(i), nil
 	}
 	u, uErr := strconv.ParseUint(str, 10, 64)
 	if uErr == nil {
-		return u, nil
+		return q.Uint(u), nil
 	}
 	f, fErr := strconv.ParseFloat(str, 64)
 	if fErr == nil {
-		return f, nil
+		return q.Float(f), nil
 	}
 	return nil, errors.New("invalid syntax")
 }
@@ -336,5 +335,6 @@ func ParseValue(str string) (q.Value, error) {
 		out, err := ParseTuple(str)
 		return out, errors.Wrap(err, "failed to parse as tuple")
 	}
-	return ParseData(str)
+	val, err := ParseData(str)
+	return val.(q.Value), err
 }

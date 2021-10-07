@@ -17,17 +17,17 @@ func TestParseQuery(t *testing.T) {
 	}{
 		{name: "full",
 			str:     "/my/dir{0.8, 22.8}=nil",
-			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}}, Value: nil},
+			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("my"), q.String("dir")}, Tuple: q.Tuple{q.Float(0.8), q.Float(22.8)}}, Value: q.Nil{}},
 			onlyDir: false},
 
 		{name: "only key",
 			str:     "/my/dir{0.8, 22.8}",
-			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{0.8, 22.8}}, Value: q.Variable{}},
+			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("my"), q.String("dir")}, Tuple: q.Tuple{q.Float(0.8), q.Float(22.8)}}, Value: q.Variable{}},
 			onlyDir: false},
 
 		{name: "only dir",
 			str:     "/my/dir",
-			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{"my", "dir"}}, Value: nil},
+			ast:     q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("my"), q.String("dir")}}, Value: nil},
 			onlyDir: true},
 	}
 
@@ -49,7 +49,7 @@ func TestKeyValue(t *testing.T) {
 	}{
 		{name: "full",
 			str: "/hi/there{54,nil}={33.8}",
-			ast: q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{int64(54), nil}}, Value: q.Tuple{33.8}}},
+			ast: q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi"), q.String("there")}, Tuple: q.Tuple{q.Int(54), q.Nil{}}}, Value: q.Tuple{q.Float(33.8)}}},
 	}
 
 	for _, test := range roundTrips {
@@ -92,15 +92,15 @@ func TestKey(t *testing.T) {
 	}{
 		{name: "dir",
 			str: "/my/dir",
-			ast: q.Key{Directory: q.Directory{"my", "dir"}}},
+			ast: q.Key{Directory: q.Directory{q.String("my"), q.String("dir")}}},
 
 		{name: "tup",
 			str: "{\"str\",-13,{1.2e+13}}",
-			ast: q.Key{Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
+			ast: q.Key{Tuple: q.Tuple{q.String("str"), q.Int(-13), q.Tuple{q.Float(1.2e13)}}}},
 
 		{name: "full",
 			str: "/my/dir{\"str\",-13,{1.2e+13}}",
-			ast: q.Key{Directory: q.Directory{"my", "dir"}, Tuple: q.Tuple{"str", int64(-13), q.Tuple{1.2e13}}}},
+			ast: q.Key{Directory: q.Directory{q.String("my"), q.String("dir")}, Tuple: q.Tuple{q.String("str"), q.Int(-13), q.Tuple{q.Float(1.2e13)}}}},
 	}
 
 	for _, test := range roundTrips {
@@ -140,8 +140,8 @@ func TestValue(t *testing.T) {
 		ast  q.Value
 	}{
 		{name: "clear", str: "clear", ast: q.Clear{}},
-		{name: "tuple", str: "{-16,13.2,\"hi\"}", ast: q.Tuple{int64(-16), 13.2, "hi"}},
-		{name: "raw", str: "-16", ast: int64(-16)},
+		{name: "tuple", str: "{-16,13.2,\"hi\"}", ast: q.Tuple{q.Int(-16), q.Float(13.2), q.String("hi")}},
+		{name: "raw", str: "-16", ast: q.Int(-16)},
 	}
 
 	for _, test := range roundTrips {
@@ -178,9 +178,9 @@ func TestDirectory(t *testing.T) {
 		str  string
 		ast  q.Directory
 	}{
-		{name: "single", str: "/hello", ast: q.Directory{"hello"}},
-		{name: "multi", str: "/hello/world", ast: q.Directory{"hello", "world"}},
-		{name: "variable", str: "/hello/<int>/thing", ast: q.Directory{"hello", q.Variable{q.IntType}, "thing"}},
+		{name: "single", str: "/hello", ast: q.Directory{q.String("hello")}},
+		{name: "multi", str: "/hello/world", ast: q.Directory{q.String("hello"), q.String("world")}},
+		{name: "variable", str: "/hello/<int>/thing", ast: q.Directory{q.String("hello"), q.Variable{q.IntType}, q.String("thing")}},
 	}
 
 	for _, test := range roundTrips {
@@ -228,23 +228,23 @@ func TestTuple(t *testing.T) {
 
 		{name: "one",
 			str: "{17}",
-			ast: q.Tuple{int64(17)}},
+			ast: q.Tuple{q.Int(17)}},
 
 		{name: "two",
 			str: "{17,\"hello world\"}",
-			ast: q.Tuple{int64(17), "hello world"}},
+			ast: q.Tuple{q.Int(17), q.String("hello world")}},
 
 		{name: "sub tuple",
 			str: "{\"hello\",23.3,{-3}}",
-			ast: q.Tuple{"hello", 23.3, q.Tuple{int64(-3)}}},
+			ast: q.Tuple{q.String("hello"), q.Float(23.3), q.Tuple{q.Int(-3)}}},
 
 		{name: "uuid",
 			str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}",
-			ast: q.Tuple{q.Tuple{tup.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
+			ast: q.Tuple{q.Tuple{q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 
 		{name: "maybe more",
 			str: "{18.2,0xffaa,...}",
-			ast: q.Tuple{18.2, []byte{0xFF, 0xAA}, q.MaybeMore{}}},
+			ast: q.Tuple{q.Float(18.2), q.Bytes{0xFF, 0xAA}, q.MaybeMore{}}},
 	}
 
 	for _, test := range roundTrips {
@@ -287,15 +287,15 @@ func TestData(t *testing.T) {
 	}{
 		{name: "nil",
 			str: "nil",
-			ast: nil},
+			ast: q.Nil{}},
 
 		{name: "true",
 			str: "true",
-			ast: true},
+			ast: q.Bool(true)},
 
 		{name: "false",
 			str: "false",
-			ast: false},
+			ast: q.Bool(false)},
 
 		{name: "variable",
 			str: "<int>",
@@ -303,7 +303,7 @@ func TestData(t *testing.T) {
 
 		{name: "string",
 			str: "\"hello world\"",
-			ast: "hello world"},
+			ast: q.String("hello world")},
 
 		{name: "hex",
 			str: "0xabc032",
