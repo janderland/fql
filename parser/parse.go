@@ -339,5 +339,5 @@ func ParseValue(str string) (q.Value, error) {
 	if out != nil {
 		return out.(q.Value), err
 	}
-	return q.Nil{}, err
+	return nil, err
 }

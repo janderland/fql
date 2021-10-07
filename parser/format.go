@@ -150,13 +150,10 @@ func FormatNumber(in interface{}) (string, error) {
 	switch in := in.(type) {
 	case q.Int:
 		return strconv.FormatInt(int64(in), 10), nil
-
 	case q.Uint:
 		return strconv.FormatUint(uint64(in), 10), nil
-
 	case q.Float:
 		return strconv.FormatFloat(float64(in), 'g', 10, 64), nil
-
 	default:
 		return "", errors.Errorf("unexpected input %v (%T)", in, in)
 	}
