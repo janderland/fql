@@ -9,6 +9,8 @@ import (
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval/class"
+	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/parser"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -43,41 +45,33 @@ func (h *Headless) Query(str string) error {
 		return nil
 	}
 
-	kind, err := query.Kind()
-	if err != nil {
-		return errors.Wrap(err, "failed to get kind of query")
-	}
-
-	switch kind {
-	case q.ConstantKind:
+	switch c := class.Which(*query); c {
+	case class.ConstantClass:
 		if err := h.set(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as set query")
 		}
 		return nil
 
-	case q.ClearKind:
+	case class.ClearClass:
 		if err := h.clear(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as clear query")
 		}
 		return nil
 
-	case q.SingleReadKind:
+	case class.SingleReadClass:
 		if err := h.singleRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as single read query")
 		}
 		return nil
 
-	case q.RangeReadKind:
+	case class.RangeReadClass:
 		if err := h.rangeRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as range read query")
 		}
 		return nil
 
-	case q.InvalidKind:
-		return errors.New("query is invalid")
-
 	default:
-		return errors.Errorf("unexpected query kind '%v'", kind)
+		return errors.Errorf("unexpected query class '%v'", c)
 	}
 }
 
@@ -139,7 +133,7 @@ func (h *Headless) directories(query q.Directory) error {
 		if msg.Err != nil {
 			return msg.Err
 		}
-		str, err := parser.FormatDirectory(q.FromStringArray(msg.Dir.GetPath()))
+		str, err := parser.FormatDirectory(convert.FromStringArray(msg.Dir.GetPath()))
 		if err != nil {
 			return errors.Wrap(err, "failed to format output")
 		}
