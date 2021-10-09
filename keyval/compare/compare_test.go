@@ -27,6 +27,19 @@ func TestCompareTuples(t *testing.T) {
 		assert.Empty(t, mismatch)
 	})
 
+	t.Run("not equal", func(t *testing.T) {
+		candidate := q.Tuple{
+			q.Int(-8742),
+			q.Uint(12342),
+		}
+		pattern := q.Tuple{
+			q.Float(-55.93),
+			q.Bool(true),
+		}
+		mismatch := Tuples(pattern, candidate)
+		assert.NotEmpty(t, mismatch)
+	})
+
 	t.Run("variable", func(t *testing.T) {
 		candidate1 := q.Tuple{
 			q.Int(-8742),
