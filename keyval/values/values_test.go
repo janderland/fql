@@ -1,4 +1,4 @@
-package keyval
+package values
 
 import (
 	"encoding/binary"

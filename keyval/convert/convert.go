@@ -119,16 +119,22 @@ func FromFDBElement(in tuple.TupleElement) q.TupElement {
 	}
 }
 
-// SplitAtFirstVariable accepts either a Directory or Tuple and returns a slice of the elements
-// before the first variable, the first variable, and a slice of the elements after the variable.
-// TODO: How should this method work with both tuples & directories.
-func SplitAtFirstVariable(list []interface{}) ([]interface{}, *q.Variable, []interface{}) {
-	for i, element := range list {
+func SplitAtFirstVariable(dir q.Directory) (q.Directory, *q.Variable, q.Directory) {
+	for i, element := range dir {
 		if variable, ok := element.(q.Variable); ok {
-			return list[:i], &variable, list[i+1:]
+			return dir[:i], &variable, dir[i+1:]
 		}
 	}
-	return list, nil, nil
+	return dir, nil, nil
+}
+
+func ToTuplePrefix(tup q.Tuple) q.Tuple {
+	for i, element := range tup {
+		if _, ok := element.(q.Variable); ok {
+			return tup[:i]
+		}
+	}
+	return tup
 }
 
 // RemoveMaybeMore removes a MaybeMore if it exists as the last element of the given Tuple.

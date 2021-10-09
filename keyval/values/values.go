@@ -1,4 +1,4 @@
-package keyval
+package values
 
 import (
 	"bytes"
@@ -10,6 +10,8 @@ import (
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/pkg/errors"
 )
+
+// TODO: Improve readability of Unpack abstraction.
 
 type Unpack func(val []byte) q.Value
 
