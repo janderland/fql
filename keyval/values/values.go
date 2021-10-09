@@ -31,7 +31,7 @@ func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
 				}
 				return out
 			}
-			return q.Nil{}
+			return nil
 		}, nil
 	} else {
 		packed, err := PackValue(query, order)
@@ -43,7 +43,7 @@ func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
 			if bytes.Equal(packed, val) {
 				return query
 			}
-			return q.Nil{}
+			return nil
 		}, nil
 	}
 }
