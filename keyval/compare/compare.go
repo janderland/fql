@@ -56,6 +56,7 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 			comparison := visitor{iter: iter, index: i}
 			element.TupElement(&comparison)
 			if comparison.mismatchIndexPath != nil {
+				mismatchIndexPath = comparison.mismatchIndexPath
 				return nil
 			}
 		}

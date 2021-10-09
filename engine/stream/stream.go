@@ -236,11 +236,13 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
-		if compare.Tuples(query, kv.Key.Tuple) == nil {
-			log.Log().Msg("sending key-value")
-			if !r.SendKV(out, KeyValErr{KV: kv}) {
-				return
-			}
+		if compare.Tuples(query, kv.Key.Tuple) != nil {
+			continue
+		}
+
+		log.Log().Msg("sending key-value")
+		if !r.SendKV(out, KeyValErr{KV: kv}) {
+			return
 		}
 	}
 }
