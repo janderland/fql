@@ -14,6 +14,3 @@
   facilitate this. See the engine package for an initial
   example.
 
-- The unpack abstraction is confusing. Simply renaming the
-  type & functions may help improve it's readability.
-
