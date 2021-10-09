@@ -10,6 +10,7 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
@@ -39,7 +40,7 @@ func init() {
 func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("set and get", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{33.3}}, Value: int64(33)})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi"), q.String("there")}, Tuple: q.Tuple{q.Float(33.3)}}, Value: q.Int(33)})
 			err := e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
@@ -53,7 +54,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 
 	t.Run("set and get empty value", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi", "there"}, Tuple: q.Tuple{33.3}}, Value: []byte{}})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi"), q.String("there")}, Tuple: q.Tuple{q.Float(33.3)}}, Value: q.Bytes{}})
 			err := e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
@@ -67,7 +68,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 
 	t.Run("get nothing", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"nothing", "here"}}, Value: q.Variable{}})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("nothing"), q.String("here")}}, Value: q.Variable{}})
 			result, err := e.SingleRead(query, byteOrder)
 			assert.NoError(t, err)
 			assert.Nil(t, result)
@@ -76,11 +77,11 @@ func TestEngine_SetSingleRead(t *testing.T) {
 
 	t.Run("set errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33, q.Variable{}}}, Value: nil})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33), q.Variable{}}}, Value: q.Nil{}})
 			err := e.Set(query, byteOrder)
 			assert.Error(t, err)
 
-			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: q.Clear{}})
+			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Clear{}})
 			err = e.Set(query, byteOrder)
 			assert.Error(t, err)
 		})
@@ -88,12 +89,12 @@ func TestEngine_SetSingleRead(t *testing.T) {
 
 	t.Run("get errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33, q.Variable{}}}, Value: nil})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33), q.Variable{}}}, Value: q.Nil{}})
 			result, err := e.SingleRead(query, byteOrder)
 			assert.Error(t, err)
 			assert.Nil(t, result)
 
-			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: q.Clear{}})
+			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Clear{}})
 			result, err = e.SingleRead(query, byteOrder)
 			assert.Error(t, err)
 			assert.Nil(t, result)
@@ -104,7 +105,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 func TestEngine_Clear(t *testing.T) {
 	t.Run("set clear get", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			set := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"this", "place"}, Tuple: q.Tuple{32.33}}, Value: []byte{}})
+			set := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("this"), q.String("place")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Bytes{}})
 			err := e.Set(set, byteOrder)
 			assert.NoError(t, err)
 
@@ -127,16 +128,15 @@ func TestEngine_Clear(t *testing.T) {
 
 	t.Run("errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33, q.Variable{}}}, Value: q.Clear{}})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33), q.Variable{}}}, Value: q.Clear{}})
 			err := e.Clear(query)
 			assert.Error(t, err)
 
-			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: nil})
+			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Nil{}})
 			err = e.Clear(query)
 			assert.Error(t, err)
 		})
 	})
-
 }
 
 func TestEngine_RangeRead(t *testing.T) {
@@ -144,17 +144,17 @@ func TestEngine_RangeRead(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			var expected []q.KeyValue
 
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"place"}, Tuple: q.Tuple{"hi you"}}, Value: []byte{}})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("place")}, Tuple: q.Tuple{q.String("hi you")}}, Value: q.Bytes{}})
 			expected = append(expected, query)
 			err := e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
-			query.Key.Tuple = q.Tuple{11.3}
+			query.Key.Tuple = q.Tuple{q.Float(11.3)}
 			expected = append(expected, query)
 			err = e.Set(query, byteOrder)
 			assert.NoError(t, err)
 
-			query.Key.Tuple = q.Tuple{55.3}
+			query.Key.Tuple = q.Tuple{q.Float(55.3)}
 			expected = append(expected, query)
 			err = e.Set(query, byteOrder)
 			assert.NoError(t, err)
@@ -173,7 +173,7 @@ func TestEngine_RangeRead(t *testing.T) {
 
 	t.Run("errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
-			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{"hi"}, Tuple: q.Tuple{32.33}}, Value: q.Clear{}})
+			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Clear{}})
 			out := e.RangeRead(context.Background(), query, RangeOpts{ByteOrder: byteOrder})
 
 			msg := <-out
@@ -202,7 +202,7 @@ func TestEngine_Directories(t *testing.T) {
 			}
 
 			var result []directory.DirectorySubspace
-			query := append(q.FromStringArray(root.GetPath()), q.Directory{"my", q.Variable{}}...)
+			query := append(convert.FromStringArray(root.GetPath()), q.Directory{q.String("my"), q.Variable{}}...)
 			for msg := range e.Directories(context.Background(), query) {
 				assert.NoError(t, msg.Err)
 				result = append(result, msg.Dir)
@@ -248,6 +248,6 @@ func testEnv(t *testing.T, f func(fdb.Transactor, directory.DirectorySubspace, E
 }
 
 func prefixDir(root directory.DirectorySubspace, query q.KeyValue) q.KeyValue {
-	query.Key.Directory = append(q.FromStringArray(root.GetPath()), query.Key.Directory...)
+	query.Key.Directory = append(convert.FromStringArray(root.GetPath()), query.Key.Directory...)
 	return query
 }
