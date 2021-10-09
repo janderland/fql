@@ -11,9 +11,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Unpack func(val []byte) q.Value
+type Filter func(val []byte) q.Value
 
-func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
+func NewFilter(query q.Value, order binary.ByteOrder) (Filter, error) {
 	if variable, ok := query.(q.Variable); ok {
 		if len(variable) == 0 {
 			return func(val []byte) q.Value {
@@ -23,7 +23,7 @@ func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
 
 		return func(val []byte) q.Value {
 			for _, typ := range variable {
-				out, err := UnpackValue(val, typ, order)
+				out, err := Unpack(val, typ, order)
 				if err != nil {
 					continue
 				}
@@ -32,7 +32,7 @@ func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
 			return nil
 		}, nil
 	} else {
-		packed, err := PackValue(query, order)
+		packed, err := Pack(query, order)
 		if err != nil {
 			return nil, err
 		}
@@ -46,7 +46,7 @@ func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
 	}
 }
 
-func PackValue(val q.Value, order binary.ByteOrder) ([]byte, error) {
+func Pack(val q.Value, order binary.ByteOrder) ([]byte, error) {
 	switch val := val.(type) {
 	case q.Nil:
 		return nil, nil
@@ -90,7 +90,7 @@ func PackValue(val q.Value, order binary.ByteOrder) ([]byte, error) {
 	}
 }
 
-func UnpackValue(val []byte, typ q.ValueType, order binary.ByteOrder) (q.Value, error) {
+func Unpack(val []byte, typ q.ValueType, order binary.ByteOrder) (q.Value, error) {
 	switch typ {
 	case q.AnyType:
 		return q.Bytes(val), nil

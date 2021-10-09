@@ -10,7 +10,7 @@ import (
 
 var order = binary.BigEndian
 
-func TestPackUnpackValue(t *testing.T) {
+func TestPackUnpack(t *testing.T) {
 	tests := []struct {
 		val q.Value
 		typ q.ValueType
@@ -27,11 +27,11 @@ func TestPackUnpackValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			v, err := PackValue(test.val, order)
+			v, err := Pack(test.val, order)
 			assert.NoError(t, err)
 			assert.NotNil(t, v)
 
-			out, err := UnpackValue(v, test.typ, order)
+			out, err := Unpack(v, test.typ, order)
 			assert.NoError(t, err)
 			assert.Equal(t, test.val, out)
 		})
@@ -39,16 +39,16 @@ func TestPackUnpackValue(t *testing.T) {
 }
 
 func TestPackUnpackNil(t *testing.T) {
-	v, err := PackValue(nil, order)
+	v, err := Pack(nil, order)
 	assert.Error(t, err)
 	assert.Nil(t, v)
 
-	out, err := UnpackValue(nil, q.AnyType, order)
+	out, err := Unpack(nil, q.AnyType, order)
 	assert.NoError(t, err)
 	assert.Equal(t, q.Bytes(nil), out)
 }
 
-func TestInvalidUnpackValue(t *testing.T) {
+func TestInvalidUnpack(t *testing.T) {
 	tests := []struct {
 		val []byte
 		typ q.ValueType
@@ -62,14 +62,14 @@ func TestInvalidUnpackValue(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			out, err := UnpackValue(test.val, test.typ, order)
+			out, err := Unpack(test.val, test.typ, order)
 			assert.Error(t, err)
 			assert.Nil(t, out)
 		})
 	}
 }
 
-func TestUnpack(t *testing.T) {
+func TestFilter(t *testing.T) {
 	tests := []struct {
 		name  string
 		query q.Value
@@ -85,11 +85,11 @@ func TestUnpack(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			unpack, err := NewUnpack(test.query, binary.BigEndian)
+			filter, err := NewFilter(test.query, binary.BigEndian)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
-			assert.Equal(t, test.out, unpack(test.val))
+			assert.Equal(t, test.out, filter(test.val))
 		})
 	}
 }

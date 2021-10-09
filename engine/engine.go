@@ -73,7 +73,7 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 		return errors.Wrap(err, StringArrayErr)
 	}
 
-	valueBytes, err := values.PackValue(query.Value, byteOrder)
+	valueBytes, err := values.Pack(query.Value, byteOrder)
 	if err != nil {
 		return errors.Wrap(err, PackValueErr)
 	}
@@ -139,7 +139,7 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 		return nil, errors.Wrap(err, StringArrayErr)
 	}
 
-	unpack, err := values.NewUnpack(query.Value, byteOrder)
+	valueFilter, err := values.NewFilter(query.Value, byteOrder)
 	if err != nil {
 		return nil, errors.Wrap(err, NewUnpackerErr)
 	}
@@ -179,7 +179,7 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 	if bytes == nil {
 		return nil, nil
 	}
-	value := unpack(bytes)
+	value := valueFilter(bytes)
 	if value == nil {
 		return nil, nil
 	}

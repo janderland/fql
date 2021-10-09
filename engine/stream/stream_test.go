@@ -390,7 +390,7 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 }
 
 func packWithPanic(val q.Value) q.Bytes {
-	packed, err := values.PackValue(val, byteOrder)
+	packed, err := values.Pack(val, byteOrder)
 	if err != nil {
 		panic(err)
 	}
@@ -398,7 +398,7 @@ func packWithPanic(val q.Value) q.Bytes {
 }
 
 func unpackWithPanic(typ q.ValueType, bytes q.Bytes) q.Value {
-	unpacked, err := values.UnpackValue(bytes, typ, byteOrder)
+	unpacked, err := values.Unpack(bytes, typ, byteOrder)
 	if err != nil {
 		panic(err)
 	}
