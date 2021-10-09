@@ -28,16 +28,29 @@ func TestTuples(t *testing.T) {
 	})
 
 	t.Run("not equal", func(t *testing.T) {
-		candidate := q.Tuple{
-			q.Int(-8742),
-			q.Uint(12342),
+		tests := []struct {
+			name      string
+			candidate q.Tuple
+			pattern   q.Tuple
+		}{
+			{
+				name:      "conversion error",
+				candidate: q.Tuple{q.Int(-8742), q.Uint(12342)},
+				pattern:   q.Tuple{q.Float(-55.93), q.Bool(true)},
+			},
+			{
+				name:      "not equal",
+				candidate: q.Tuple{q.Int(-8742)},
+				pattern:   q.Tuple{q.Int(-55)},
+			},
 		}
-		pattern := q.Tuple{
-			q.Float(-55.93),
-			q.Bool(true),
+
+		for _, test := range tests {
+			t.Run(test.name, func(t *testing.T) {
+				mismatch := Tuples(test.pattern, test.candidate)
+				assert.NotEmpty(t, mismatch)
+			})
 		}
-		mismatch := Tuples(pattern, candidate)
-		assert.NotEmpty(t, mismatch)
 	})
 
 	t.Run("variable", func(t *testing.T) {
