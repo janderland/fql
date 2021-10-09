@@ -7,8 +7,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO: Should the iterator be merged into compare?
-
 // Generate the TupleIterator methods.
 //go:generate go run ./iter -types Bool,Int,Uint,BigInt,Float,String,Bytes,UUID,Tuple
 

@@ -11,8 +11,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-// TODO: Improve readability of Unpack abstraction.
-
 type Unpack func(val []byte) q.Value
 
 func NewUnpack(query q.Value, order binary.ByteOrder) (Unpack, error) {
