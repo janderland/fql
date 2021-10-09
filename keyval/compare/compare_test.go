@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestCompareTuples(t *testing.T) {
+func TestTuples(t *testing.T) {
 	t.Run("equal", func(t *testing.T) {
 		candidate := q.Tuple{
 			q.Int(-8742),
