@@ -32,6 +32,11 @@ const (
 	// Variable or MaybeMore in its Key and has a Clear for
 	// its value. This is an invalid class of KeyValue.
 	VariableClear Class = "variable clear"
+
+	// Nil specifies that the KeyValue contains a nil. This
+	// shouldn't be confused with an instance of the Nil type.
+	// This is an invalid class of KeyValue.
+	Nil Class = "nil"
 )
 
 // subClass categorizes the Key, Directory,
@@ -49,13 +54,29 @@ const (
 
 	// clearSubClass specifies that the component contains a Clear.
 	clearSubClass
+
+	// nilSubClass specifies that the component contains a nil, which
+	// isn't allowed in any part of the key-value. This shouldn't be
+	// confused with an instance of the Nil type.
+	nilSubClass
 )
 
 // Classify returns the Class of the given KeyValue.
 func Classify(kv q.KeyValue) Class {
-	switch classifyKey(kv.Key) {
-	case constantSubClass:
-		switch classifyValue(kv.Value) {
+	keyClass := classifyKey(kv.Key)
+	valClass := classifyValue(kv.Value)
+
+	// If a nil is present in any part of the key, the Nil class
+	// takes precedence.
+	if keyClass == nilSubClass || valClass == nilSubClass {
+		return Nil
+	}
+
+	// If the key is constant, then this query will only affect
+	// a single key and the value will dictate what kind of
+	// single-key query it will be.
+	if keyClass == constantSubClass {
+		switch valClass {
 		case clearSubClass:
 			return Clear
 		case variableSubClass:
@@ -63,21 +84,25 @@ func Classify(kv q.KeyValue) Class {
 		default:
 			return Constant
 		}
-	default:
-		switch classifyValue(kv.Value) {
-		case clearSubClass:
-			return VariableClear
-		default:
-			return RangeRead
-		}
 	}
+
+	// If the key is not constant then the query should be a
+	// range read, unless it has a Clear instance for its
+	// value.
+	if valClass == clearSubClass {
+		return VariableClear
+	}
+	return RangeRead
 }
 
 func classifyKey(key q.Key) subClass {
-	if classifyDir(key.Directory) == variableSubClass {
-		return variableSubClass
+	dirClass := classifyDir(key.Directory)
+	tupClass := classifyTuple(key.Tuple)
+
+	if dirClass == nilSubClass || tupClass == nilSubClass {
+		return nilSubClass
 	}
-	if classifyTuple(key.Tuple) == variableSubClass {
+	if dirClass == variableSubClass || tupClass == variableSubClass {
 		return variableSubClass
 	}
 	return constantSubClass
@@ -86,6 +111,9 @@ func classifyKey(key q.Key) subClass {
 func classifyDir(dir q.Directory) subClass {
 	class := dirClassification{}
 	for _, element := range dir {
+		if element == nil {
+			return nilSubClass
+		}
 		element.DirElement(&class)
 	}
 	return class.result
@@ -94,12 +122,18 @@ func classifyDir(dir q.Directory) subClass {
 func classifyTuple(tup q.Tuple) subClass {
 	class := tupClassification{}
 	for _, element := range tup {
+		if element == nil {
+			return nilSubClass
+		}
 		element.TupElement(&class)
 	}
 	return class.result
 }
 
 func classifyValue(val q.Value) subClass {
+	if val == nil {
+		return nilSubClass
+	}
 	class := valClassification{}
 	val.Value(&class)
 	return class.result

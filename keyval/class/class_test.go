@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestKeyValue_Kind(t *testing.T) {
+func TestClassify(t *testing.T) {
 	tests := []struct {
 		kind Class
 		kv   q.KeyValue
@@ -88,6 +88,51 @@ func TestKeyValue_Kind(t *testing.T) {
 		t.Run(string(test.kind), func(t *testing.T) {
 			kind := Classify(test.kv)
 			assert.Equal(t, test.kind, kind)
+		})
+	}
+}
+
+func TestClassifyNil(t *testing.T) {
+	tests := []struct {
+		name string
+		kv   q.KeyValue
+	}{
+		{
+			name: "directory",
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("hi"), nil, q.String("you")},
+					Tuple:     nil,
+				},
+				Value: q.Bytes{},
+			},
+		},
+		{
+			name: "tuple",
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("hi"), q.String("you")},
+					Tuple:     q.Tuple{q.Int(34), q.String("wow"), nil},
+				},
+				Value: q.Bytes{},
+			},
+		},
+		{
+			name: "value",
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("hi"), q.String("you")},
+					Tuple:     q.Tuple{q.Int(34), q.String("wow")},
+				},
+				Value: nil,
+			},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			kind := Classify(test.kv)
+			assert.Equal(t, Nil, kind)
 		})
 	}
 }
