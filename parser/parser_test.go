@@ -355,7 +355,7 @@ func TestData(t *testing.T) {
 }
 
 func TestVariable(t *testing.T) {
-	tests := []struct {
+	roundTrips := []struct {
 		name string
 		str  string
 		ast  q.Variable
@@ -365,7 +365,7 @@ func TestVariable(t *testing.T) {
 		{name: "multiple", str: "<int|float|tuple>", ast: q.Variable{q.IntType, q.FloatType, q.TupleType}},
 	}
 
-	for _, test := range tests {
+	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseVariable(test.str)
 			assert.Equal(t, test.ast, ast)
@@ -376,7 +376,7 @@ func TestVariable(t *testing.T) {
 		})
 	}
 
-	fails := []struct {
+	parseFailures := []struct {
 		name string
 		str  string
 	}{
@@ -386,7 +386,7 @@ func TestVariable(t *testing.T) {
 		{name: "invalid", str: "<invalid>"},
 	}
 
-	for _, test := range fails {
+	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			v, err := ParseVariable(test.str)
 			assert.Error(t, err)
@@ -435,22 +435,6 @@ func TestString(t *testing.T) {
 }
 
 func TestHex(t *testing.T) {
-	parseFailures := []struct {
-		name string
-		str  string
-	}{
-		{name: "empty", str: ""},
-		{name: "odd digits", str: "0xa23"},
-	}
-
-	for _, test := range parseFailures {
-		t.Run(test.name, func(t *testing.T) {
-			ast, err := ParseHex(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
-		})
-	}
-
 	roundTrips := []struct {
 		name string
 		str  string
@@ -470,28 +454,25 @@ func TestHex(t *testing.T) {
 			assert.Equal(t, test.str, str)
 		})
 	}
-}
 
-func TestUUID(t *testing.T) {
 	parseFailures := []struct {
 		name string
 		str  string
 	}{
 		{name: "empty", str: ""},
-		{name: "bad group 1", str: "cefd2ec-4df5-43b6-8c79-81b70b886af9"},
-		{name: "bad group 2", str: "bcefd2ec-df5-43b6-8c79-81b70b886af9"},
-		{name: "bad group 3", str: "bcefd2ec-4df5-3b6-8c79-81b70b886af9"},
-		{name: "bad group 4", str: "bcefd2ec-4df5-43b6-c79-81b70b886af9"},
-		{name: "bad group 5", str: "bcefd2ec-4df5-43b6-8c79-1b70b886af9"},
-		{name: "long", str: "bcefdyec-4df5-43%6-8c79-81b70bg86af9"},
+		{name: "odd digits", str: "0xa23"},
 	}
 
 	for _, test := range parseFailures {
-		ast, err := ParseUUID(test.str)
-		assert.Error(t, err)
-		assert.Equal(t, q.UUID{}, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := ParseHex(test.str)
+			assert.Error(t, err)
+			assert.Nil(t, ast)
+		})
 	}
+}
 
+func TestUUID(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
@@ -511,6 +492,25 @@ func TestUUID(t *testing.T) {
 			str := FormatUUID(test.ast)
 			assert.Equal(t, test.str, str)
 		})
+	}
+
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "bad group 1", str: "cefd2ec-4df5-43b6-8c79-81b70b886af9"},
+		{name: "bad group 2", str: "bcefd2ec-df5-43b6-8c79-81b70b886af9"},
+		{name: "bad group 3", str: "bcefd2ec-4df5-3b6-8c79-81b70b886af9"},
+		{name: "bad group 4", str: "bcefd2ec-4df5-43b6-c79-81b70b886af9"},
+		{name: "bad group 5", str: "bcefd2ec-4df5-43b6-8c79-1b70b886af9"},
+		{name: "long", str: "bcefdyec-4df5-43%6-8c79-81b70bg86af9"},
+	}
+
+	for _, test := range parseFailures {
+		ast, err := ParseUUID(test.str)
+		assert.Error(t, err)
+		assert.Equal(t, q.UUID{}, ast)
 	}
 }
 
