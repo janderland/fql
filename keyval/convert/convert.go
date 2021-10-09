@@ -74,6 +74,9 @@ func FromFDBTuple(in tuple.Tuple) q.Tuple {
 
 func FromFDBElement(in tuple.TupleElement) q.TupElement {
 	switch in := in.(type) {
+	case tuple.Tuple:
+		return FromFDBTuple(in)
+
 	case []byte:
 		return q.Bytes(in)
 	case fdb.KeyConvertible:
@@ -107,9 +110,6 @@ func FromFDBElement(in tuple.TupleElement) q.TupElement {
 
 	case tuple.UUID:
 		return q.UUID(in)
-
-	case tuple.Tuple:
-		return FromFDBTuple(in)
 
 	case nil:
 		return q.Nil{}
