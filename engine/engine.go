@@ -64,7 +64,7 @@ func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 }
 
 func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
-	if class.Which(query) != class.ConstantClass {
+	if class.Classify(query) != class.Constant {
 		return errors.New(ClassNotConstantErr)
 	}
 
@@ -98,7 +98,7 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 }
 
 func (e *Engine) Clear(query q.KeyValue) error {
-	if class.Which(query) != class.ClearClass {
+	if class.Classify(query) != class.Clear {
 		return errors.New(ClassNotClearErr)
 	}
 
@@ -130,7 +130,7 @@ func (e *Engine) Clear(query q.KeyValue) error {
 }
 
 func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.KeyValue, error) {
-	if class.Which(query) != class.SingleReadClass {
+	if class.Classify(query) != class.SingleRead {
 		return nil, errors.New(ClassNotSingleReadErr)
 	}
 
@@ -198,7 +198,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 		s, stop := stream.New(ctx)
 		defer stop()
 
-		if class.Which(query) != class.RangeReadClass {
+		if class.Classify(query) != class.RangeRead {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New(ClassNotRangeReadErr)})
 			return
 		}

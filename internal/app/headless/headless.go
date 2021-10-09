@@ -45,26 +45,26 @@ func (h *Headless) Query(str string) error {
 		return nil
 	}
 
-	switch c := class.Which(*query); c {
-	case class.ConstantClass:
+	switch c := class.Classify(*query); c {
+	case class.Constant:
 		if err := h.set(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as set query")
 		}
 		return nil
 
-	case class.ClearClass:
+	case class.Clear:
 		if err := h.clear(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as clear query")
 		}
 		return nil
 
-	case class.SingleReadClass:
+	case class.SingleRead:
 		if err := h.singleRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as single read query")
 		}
 		return nil
 
-	case class.RangeReadClass:
+	case class.RangeRead:
 		if err := h.rangeRead(*query); err != nil {
 			return errors.Wrap(err, "failed to execute as range read query")
 		}

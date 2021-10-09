@@ -13,7 +13,7 @@ func TestKeyValue_Kind(t *testing.T) {
 		kv   q.KeyValue
 	}{
 		{
-			kind: ConstantClass,
+			kind: Constant,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -23,7 +23,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: ClearClass,
+			kind: Clear,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -33,7 +33,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: SingleReadClass,
+			kind: SingleRead,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -43,7 +43,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeReadClass,
+			kind: RangeRead,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.Variable{}, q.String("dir")},
@@ -53,7 +53,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeReadClass,
+			kind: RangeRead,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -63,7 +63,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeReadClass,
+			kind: RangeRead,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.Variable{}, q.String("dir")},
@@ -73,7 +73,7 @@ func TestKeyValue_Kind(t *testing.T) {
 			},
 		},
 		{
-			kind: VariableClearClass,
+			kind: VariableClear,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -86,7 +86,7 @@ func TestKeyValue_Kind(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.kind), func(t *testing.T) {
-			kind := Which(test.kv)
+			kind := Classify(test.kv)
 			assert.Equal(t, test.kind, kind)
 		})
 	}

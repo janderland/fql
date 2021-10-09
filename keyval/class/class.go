@@ -6,32 +6,32 @@ import q "github.com/janderland/fdbq/keyval"
 type Class string
 
 const (
-	// ConstantClass specifies that the KeyValue has no Variable,
+	// Constant specifies that the KeyValue has no Variable,
 	// MaybeMore, or Clear. This kind of KeyValue can be used to
 	// perform a set operation or is returned by a get operation.
-	ConstantClass Class = "constant"
+	Constant Class = "constant"
 
-	// ClearClass specifies that the KeyValue has no Variable or
+	// Clear specifies that the KeyValue has no Variable or
 	// MaybeMore and has a Clear Value. This kind of KeyValue can
 	// be used to perform a clear operation.
-	ClearClass Class = "clear"
+	Clear Class = "clear"
 
-	// SingleReadClass specifies that the KeyValue has a Variable
+	// SingleRead specifies that the KeyValue has a Variable
 	// Value and doesn't have a Variable or MaybeMore in its Key.
 	// This kind of KeyValue can be used to perform a get operation
 	// that returns a single KeyValue.
-	SingleReadClass Class = "single"
+	SingleRead Class = "single"
 
-	// RangeReadClass specifies that the KeyValue has a Variable
+	// RangeRead specifies that the KeyValue has a Variable
 	// or MaybeMore in its Key and doesn't have a Clear Value.
 	// This kind of KeyValue can be used to perform a get
 	// operation that returns multiple KeyValue.
-	RangeReadClass Class = "range"
+	RangeRead Class = "range"
 
-	// VariableClearClass specifies that the KeyValue has a
+	// VariableClear specifies that the KeyValue has a
 	// Variable or MaybeMore in its Key and has a Clear for
 	// its value. This is an invalid class of KeyValue.
-	VariableClearClass Class = "variable clear"
+	VariableClear Class = "variable clear"
 )
 
 // subClass categorizes the Key, Directory,
@@ -51,27 +51,24 @@ const (
 	clearSubClass
 )
 
-// Which returns the Kind of the given KeyValue. If the KeyValue
-// is malformed then InvalidKind and a non-nil error are returned.
-// For details on what a malformed KeyValue is, see the KeyValue,
-// Key, Directory, Tuple, and Value documentation.
-func Which(kv q.KeyValue) Class {
+// Classify returns the Class of the given KeyValue.
+func Classify(kv q.KeyValue) Class {
 	switch classifyKey(kv.Key) {
 	case constantSubClass:
 		switch classifyValue(kv.Value) {
 		case clearSubClass:
-			return ClearClass
+			return Clear
 		case variableSubClass:
-			return SingleReadClass
+			return SingleRead
 		default:
-			return ConstantClass
+			return Constant
 		}
 	default:
 		switch classifyValue(kv.Value) {
 		case clearSubClass:
-			return VariableClearClass
+			return VariableClear
 		default:
-			return RangeReadClass
+			return RangeRead
 		}
 	}
 }
