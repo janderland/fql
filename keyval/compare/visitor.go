@@ -5,124 +5,168 @@ import (
 	"math/big"
 
 	q "github.com/janderland/fdbq/keyval"
-	iter "github.com/janderland/fdbq/keyval/iterator"
 	"github.com/pkg/errors"
 )
 
-type visitor struct {
-	// The iterator wrapping the candidate tuple.
-	iter *iter.TupleIterator
-
-	// The index of the tuple element being compared.
-	index int
+type comparison struct {
+	candidate q.TupElement
+	index     int
 
 	// The index path of the first mismatching element.
 	mismatchIndexPath []int
 }
 
-func (x *visitor) VisitNil(e q.Nil) {
-	if e != x.iter.Any() {
+func (x *comparison) VisitNil(e q.Nil) {
+	if _, ok := x.candidate.(q.Nil); !ok {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitBool(e q.Bool) {
-	if x.iter.MustBool() != e {
+func (x *comparison) VisitBool(e q.Bool) {
+	val, ok := x.candidate.(q.Bool)
+	if !ok || val != e {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitInt(e q.Int) {
-	if x.iter.MustInt() != e {
+func (x *comparison) VisitInt(e q.Int) {
+	val, ok := x.candidate.(q.Int)
+	if !ok || val != e {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitUint(e q.Uint) {
-	if x.iter.MustUint() != e {
+func (x *comparison) VisitUint(e q.Uint) {
+	val, ok := x.candidate.(q.Uint)
+	if !ok || val != e {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitFloat(e q.Float) {
-	if x.iter.MustFloat() != e {
+func (x *comparison) VisitFloat(e q.Float) {
+	val, ok := x.candidate.(q.Float)
+	if !ok || val != e {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitBigInt(e q.BigInt) {
-	i1 := big.Int(x.iter.MustBigInt())
-	i2 := big.Int(e)
-	if i1.Cmp(&i2) != 0 {
+func (x *comparison) VisitBigInt(e q.BigInt) {
+	val, ok := x.candidate.(q.BigInt)
+	if !ok {
+		x.mismatchIndexPath = []int{x.index}
+	}
+
+	biVal := big.Int(val)
+	biE := big.Int(e)
+	if biVal.Cmp(&biE) != 0 {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitString(e q.String) {
-	if x.iter.MustString() != e {
+func (x *comparison) VisitString(e q.String) {
+	val, ok := x.candidate.(q.String)
+	if !ok || val != e {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitBytes(e q.Bytes) {
-	if !bytes.Equal(x.iter.MustBytes(), e) {
+func (x *comparison) VisitBytes(e q.Bytes) {
+	val, ok := x.candidate.(q.Bytes)
+	if !ok || bytes.Compare(val, e) != 0 {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitUUID(e q.UUID) {
-	if x.iter.MustUUID() != e {
+func (x *comparison) VisitUUID(e q.UUID) {
+	val, ok := x.candidate.(q.UUID)
+	if !ok || val != e {
 		x.mismatchIndexPath = []int{x.index}
 	}
 }
 
-func (x *visitor) VisitTuple(e q.Tuple) {
-	subIndex := Tuples(e, x.iter.MustTuple())
+func (x *comparison) VisitTuple(e q.Tuple) {
+	val, ok := x.candidate.(q.Tuple)
+	if !ok {
+		x.mismatchIndexPath = []int{x.index}
+	}
+
+	subIndex := Tuples(e, val)
 	if len(subIndex) > 0 {
 		x.mismatchIndexPath = append([]int{x.index}, subIndex...)
 	}
 }
 
-func (x *visitor) VisitVariable(e q.Variable) {
+func (x *comparison) VisitVariable(e q.Variable) {
 	// An empty variable is equivalent
 	// to an AnyType variable.
 	if len(e) == 0 {
-		_ = x.iter.Any()
 		return
 	}
 
 	found := false
+loop:
 	for _, vType := range e {
-		var err error
-
 		switch vType {
 		case q.AnyType:
-			_ = x.iter.Any()
+			found = true
+			break loop
+
 		case q.IntType:
-			_, err = x.iter.Int()
+			if _, ok := x.candidate.(q.Int); ok {
+				found = true
+				break loop
+			}
+
 		case q.UintType:
-			_, err = x.iter.Uint()
+			if _, ok := x.candidate.(q.Uint); ok {
+				found = true
+				break loop
+			}
+
 		case q.BoolType:
-			_, err = x.iter.Bool()
+			if _, ok := x.candidate.(q.Bool); ok {
+				found = true
+				break loop
+			}
+
 		case q.FloatType:
-			_, err = x.iter.Float()
+			if _, ok := x.candidate.(q.Float); ok {
+				found = true
+				break loop
+			}
+
 		case q.BigIntType:
-			_, err = x.iter.BigInt()
+			if _, ok := x.candidate.(q.BigInt); ok {
+				found = true
+				break loop
+			}
+
 		case q.StringType:
-			_, err = x.iter.String()
+			if _, ok := x.candidate.(q.String); ok {
+				found = true
+				break loop
+			}
+
 		case q.BytesType:
-			_, err = x.iter.Bytes()
+			if _, ok := x.candidate.(q.Bytes); ok {
+				found = true
+				break loop
+			}
+
 		case q.UUIDType:
-			_, err = x.iter.UUID()
+			if _, ok := x.candidate.(q.UUID); ok {
+				found = true
+				break loop
+			}
+
 		case q.TupleType:
-			_, err = x.iter.Tuple()
+			if _, ok := x.candidate.(q.Tuple); ok {
+				found = true
+				break loop
+			}
+
 		default:
 			panic(errors.Errorf("unrecognized variable type '%v'", vType))
-		}
-
-		if err == nil {
-			found = true
-			break
 		}
 	}
 	if !found {
@@ -130,7 +174,7 @@ func (x *visitor) VisitVariable(e q.Variable) {
 	}
 }
 
-func (x *visitor) VisitMaybeMore(_ q.MaybeMore) {
+func (x *comparison) VisitMaybeMore(_ q.MaybeMore) {
 	// By the time the visitor is used, the Tuples function
 	// should have removed the trailing MaybeMore. So, any
 	// MaybeMore we encounter here is invalid.

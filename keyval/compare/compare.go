@@ -2,8 +2,6 @@ package compare
 
 import (
 	q "github.com/janderland/fdbq/keyval"
-	iter "github.com/janderland/fdbq/keyval/iterator"
-	"github.com/pkg/errors"
 )
 
 // Tuples checks if the candidate Tuple conforms to the structure
@@ -50,25 +48,13 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 	}
 
 	// Loop over both tuples, comparing their elements using the visitor.
-	var mismatchIndexPath []int
-	err := iter.ReadTuple(candidate, iter.AllowLong, func(iter *iter.TupleIterator) error {
-		for i, element := range pattern {
-			comparison := visitor{iter: iter, index: i}
-			element.TupElement(&comparison)
-			if comparison.mismatchIndexPath != nil {
-				mismatchIndexPath = comparison.mismatchIndexPath
-				return nil
-			}
+	for i, element := range pattern {
+		comp := comparison{candidate: candidate[i], index: i}
+		element.TupElement(&comp)
+		if comp.mismatchIndexPath != nil {
+			return comp.mismatchIndexPath
 		}
-		return nil
-	})
-	if err != nil {
-		// Because the ReadTuple handler function doesn't return an error,
-		// this error should always be a ConversionError.
-		if c, ok := err.(iter.ConversionError); ok {
-			return []int{c.Index}
-		}
-		panic(errors.Wrap(err, "unexpected error"))
 	}
-	return mismatchIndexPath
+
+	return nil
 }
