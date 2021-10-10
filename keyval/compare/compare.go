@@ -51,8 +51,8 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 	for i, element := range pattern {
 		comp := comparison{candidate: candidate[i], index: i}
 		element.TupElement(&comp)
-		if comp.mismatchIndexPath != nil {
-			return comp.mismatchIndexPath
+		if comp.firstMismatch != nil {
+			return comp.firstMismatch
 		}
 	}
 

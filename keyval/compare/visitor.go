@@ -12,87 +12,87 @@ type comparison struct {
 	candidate q.TupElement
 	index     int
 
-	// The index path of the first mismatching element.
-	mismatchIndexPath []int
+	// The index path to the first mismatching elements.
+	firstMismatch []int
 }
 
 func (x *comparison) VisitNil(e q.Nil) {
 	if _, ok := x.candidate.(q.Nil); !ok {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitBool(e q.Bool) {
 	val, ok := x.candidate.(q.Bool)
 	if !ok || val != e {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitInt(e q.Int) {
 	val, ok := x.candidate.(q.Int)
 	if !ok || val != e {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitUint(e q.Uint) {
 	val, ok := x.candidate.(q.Uint)
 	if !ok || val != e {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitFloat(e q.Float) {
 	val, ok := x.candidate.(q.Float)
 	if !ok || val != e {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitBigInt(e q.BigInt) {
 	val, ok := x.candidate.(q.BigInt)
 	if !ok {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 
 	biVal := big.Int(val)
 	biE := big.Int(e)
 	if biVal.Cmp(&biE) != 0 {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitString(e q.String) {
 	val, ok := x.candidate.(q.String)
 	if !ok || val != e {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitBytes(e q.Bytes) {
 	val, ok := x.candidate.(q.Bytes)
 	if !ok || bytes.Compare(val, e) != 0 {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitUUID(e q.UUID) {
 	val, ok := x.candidate.(q.UUID)
 	if !ok || val != e {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
 func (x *comparison) VisitTuple(e q.Tuple) {
 	val, ok := x.candidate.(q.Tuple)
 	if !ok {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 
 	subIndex := Tuples(e, val)
 	if len(subIndex) > 0 {
-		x.mismatchIndexPath = append([]int{x.index}, subIndex...)
+		x.firstMismatch = append([]int{x.index}, subIndex...)
 	}
 }
 
@@ -170,7 +170,7 @@ loop:
 		}
 	}
 	if !found {
-		x.mismatchIndexPath = []int{x.index}
+		x.firstMismatch = []int{x.index}
 	}
 }
 
@@ -178,5 +178,5 @@ func (x *comparison) VisitMaybeMore(_ q.MaybeMore) {
 	// By the time the visitor is used, the Tuples function
 	// should have removed the trailing MaybeMore. So, any
 	// MaybeMore we encounter here is invalid.
-	x.mismatchIndexPath = []int{x.index}
+	x.firstMismatch = []int{x.index}
 }
