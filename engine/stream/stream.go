@@ -7,6 +7,9 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval/compare"
+	"github.com/janderland/fdbq/keyval/convert"
+	"github.com/janderland/fdbq/keyval/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -111,8 +114,8 @@ func (r *Stream) UnpackValues(query q.Value, order binary.ByteOrder, in chan Key
 func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out chan DirErr) {
 	log := r.log.With().Str("stage", "open directories").Interface("query", query).Logger()
 
-	prefix, variable, suffix := q.SplitAtFirstVariable(query)
-	prefixStr, err := q.ToStringArray(prefix)
+	prefix, variable, suffix := convert.SplitAtFirstVariable(query)
+	prefixStr, err := convert.ToStringArray(prefix)
 	if err != nil {
 		r.SendDir(out, DirErr{Err: errors.Wrapf(err, "failed to convert directory prefix to string array")})
 		return
@@ -141,7 +144,7 @@ func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 
 			var dir q.Directory
 			dir = append(dir, prefix...)
-			dir = append(dir, subDir)
+			dir = append(dir, q.String(subDir))
 			dir = append(dir, suffix...)
 			r.goOpenDirectories(tr, dir, out)
 		}
@@ -162,9 +165,13 @@ func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 func (r *Stream) goReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
-	prefix, _, _ := q.SplitAtFirstVariable(query)
-	prefix = q.RemoveMaybeMore(prefix)
-	fdbPrefix := q.ToFDBTuple(prefix)
+	prefix := convert.ToTuplePrefix(query)
+	prefix = convert.RemoveMaybeMore(prefix)
+	fdbPrefix, err := convert.ToFDBTuple(prefix)
+	if err != nil {
+		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to convert prefix to FDB tuple")})
+		return
+	}
 
 	for msg := range in {
 		if msg.Err != nil {
@@ -202,10 +209,10 @@ func (r *Stream) goReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOp
 
 			kv := q.KeyValue{
 				Key: q.Key{
-					Directory: q.FromStringArray(dir.GetPath()),
-					Tuple:     q.FromFDBTuple(tup),
+					Directory: convert.FromStringArray(dir.GetPath()),
+					Tuple:     convert.FromFDBTuple(tup),
 				},
-				Value: fromDB.Value,
+				Value: q.Bytes(fromDB.Value),
 			}
 
 			log.Log().Interface("kv", kv).Msg("sending key-value")
@@ -229,11 +236,13 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
-		if q.CompareTuples(query, kv.Key.Tuple) == nil {
-			log.Log().Msg("sending key-value")
-			if !r.SendKV(out, KeyValErr{KV: kv}) {
-				return
-			}
+		if compare.Tuples(query, kv.Key.Tuple) != nil {
+			continue
+		}
+
+		log.Log().Msg("sending key-value")
+		if !r.SendKV(out, KeyValErr{KV: kv}) {
+			return
 		}
 	}
 }
@@ -241,7 +250,7 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
-	unpack, err := q.NewUnpack(query, order)
+	filter, err := values.NewFilter(query, order)
 	if err != nil {
 		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
 		return
@@ -257,7 +266,7 @@ func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan K
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
-		if kv.Value = unpack(kv.Value.([]byte)); kv.Value != nil {
+		if kv.Value = filter(kv.Value.(q.Bytes)); kv.Value != nil {
 			log.Log().Interface("kv", kv).Msg("sending key-value")
 			if !r.SendKV(out, KeyValErr{KV: kv}) {
 				return

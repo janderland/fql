@@ -8,18 +8,21 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/stream"
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval/class"
+	"github.com/janderland/fdbq/keyval/convert"
+	"github.com/janderland/fdbq/keyval/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
 
 const (
-	KindErr              = "failed to get query kind"
-	KindNotConstantErr   = "query not constant kind"
-	KindNotClearErr      = "query not clear kind"
-	KindNotSingleReadErr = "query not single-read kind"
-	KindNotRangeReadErr  = "query not range-read kind"
+	ClassNotConstantErr   = "query not constant class"
+	ClassNotClearErr      = "query not clear class"
+	ClassNotSingleReadErr = "query not single-read class"
+	ClassNotRangeReadErr  = "query not range-read class"
 
 	StringArrayErr   = "failed to convert directory to string array"
+	TupleErr         = "failed to convert to FDB tuple"
 	OpenDirectoryErr = "failed to open directory"
 	TransactionErr   = "transaction failed"
 
@@ -61,19 +64,16 @@ func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 }
 
 func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
-	kind, err := query.Kind()
-	if err != nil {
-		return errors.Wrap(err, KindErr)
-	}
-	if kind != q.ConstantKind {
-		return errors.New(KindNotConstantErr)
+	if class.Classify(query) != class.Constant {
+		return errors.New(ClassNotConstantErr)
 	}
 
-	path, err := q.ToStringArray(query.Key.Directory)
+	path, err := convert.ToStringArray(query.Key.Directory)
 	if err != nil {
 		return errors.Wrap(err, StringArrayErr)
 	}
-	valueBytes, err := q.PackValue(query.Value, byteOrder)
+
+	valueBytes, err := values.Pack(query.Value, byteOrder)
 	if err != nil {
 		return errors.Wrap(err, PackValueErr)
 	}
@@ -85,22 +85,24 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 		if err != nil {
 			return nil, errors.Wrap(err, OpenDirectoryErr)
 		}
-		tr.Set(dir.Pack(q.ToFDBTuple(query.Key.Tuple)), valueBytes)
+
+		tup, err := convert.ToFDBTuple(query.Key.Tuple)
+		if err != nil {
+			return nil, errors.Wrap(err, TupleErr)
+		}
+
+		tr.Set(dir.Pack(tup), valueBytes)
 		return nil, nil
 	})
 	return errors.Wrap(err, TransactionErr)
 }
 
 func (e *Engine) Clear(query q.KeyValue) error {
-	kind, err := query.Kind()
-	if err != nil {
-		return errors.Wrap(err, KindErr)
-	}
-	if kind != q.ClearKind {
-		return errors.New(KindNotClearErr)
+	if class.Classify(query) != class.Clear {
+		return errors.New(ClassNotClearErr)
 	}
 
-	path, err := q.ToStringArray(query.Key.Directory)
+	path, err := convert.ToStringArray(query.Key.Directory)
 	if err != nil {
 		return errors.Wrap(err, StringArrayErr)
 	}
@@ -115,26 +117,29 @@ func (e *Engine) Clear(query q.KeyValue) error {
 			}
 			return nil, errors.Wrap(err, OpenDirectoryErr)
 		}
-		tr.Clear(dir.Pack(q.ToFDBTuple(query.Key.Tuple)))
+
+		tup, err := convert.ToFDBTuple(query.Key.Tuple)
+		if err != nil {
+			return nil, errors.Wrap(err, TupleErr)
+		}
+
+		tr.Clear(dir.Pack(tup))
 		return nil, nil
 	})
 	return errors.Wrap(err, TransactionErr)
 }
 
 func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.KeyValue, error) {
-	kind, err := query.Kind()
-	if err != nil {
-		return nil, errors.Wrap(err, KindErr)
-	}
-	if kind != q.SingleReadKind {
-		return nil, errors.New(KindNotSingleReadErr)
+	if class.Classify(query) != class.SingleRead {
+		return nil, errors.New(ClassNotSingleReadErr)
 	}
 
-	path, err := q.ToStringArray(query.Key.Directory)
+	path, err := convert.ToStringArray(query.Key.Directory)
 	if err != nil {
 		return nil, errors.Wrap(err, StringArrayErr)
 	}
-	unpack, err := q.NewUnpack(query.Value, byteOrder)
+
+	valueFilter, err := values.NewFilter(query.Value, byteOrder)
 	if err != nil {
 		return nil, errors.Wrap(err, NewUnpackerErr)
 	}
@@ -149,7 +154,13 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 			}
 			return nil, errors.Wrap(err, OpenDirectoryErr)
 		}
-		return tr.Get(dir.Pack(q.ToFDBTuple(query.Key.Tuple))).Get()
+
+		tup, err := convert.ToFDBTuple(query.Key.Tuple)
+		if err != nil {
+			return nil, errors.Wrap(err, TupleErr)
+		}
+
+		return tr.Get(dir.Pack(tup)).Get()
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, TransactionErr)
@@ -168,7 +179,7 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 	if bytes == nil {
 		return nil, nil
 	}
-	value := unpack(bytes)
+	value := valueFilter(bytes)
 	if value == nil {
 		return nil, nil
 	}
@@ -187,17 +198,12 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 		s, stop := stream.New(ctx)
 		defer stop()
 
-		kind, err := query.Kind()
-		if err != nil {
-			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, KindErr)})
-			return
-		}
-		if kind != q.RangeReadKind {
-			s.SendKV(out, stream.KeyValErr{Err: errors.New(KindNotRangeReadErr)})
+		if class.Classify(query) != class.RangeRead {
+			s.SendKV(out, stream.KeyValErr{Err: errors.New(ClassNotRangeReadErr)})
 			return
 		}
 
-		_, err = e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
