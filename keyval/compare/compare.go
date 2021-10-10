@@ -21,9 +21,12 @@ import (
 // would be `[]int{1,2,0}`. If the Tuples aren't the same length, then the
 // length of the shorter Tuple is used as the mismatching index.
 func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
-	// Guards against invalid indexes in the
-	// MaybeMore type switch below.
+	// If the pattern is empty, the candidate must
+	// be empty as well.
 	if len(pattern) == 0 {
+		if len(candidate) == 0 {
+			return nil
+		}
 		return []int{0}
 	}
 
@@ -40,21 +43,18 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 		}
 	}
 
-	// This check would be done by the ReadTuple()
-	// call below, but as an optimization we may
-	// exit early by checking here.
+	// The candidate must be at least as long
+	// as the pattern.
 	if len(pattern) > len(candidate) {
 		return []int{len(candidate)}
 	}
 
-	// Loop over both tuples, comparing their elements using the visitor.
+	// Loop over both tuples, comparing their elements.
 	for i, element := range pattern {
-		comp := comparison{candidate: candidate[i], index: i}
-		element.TupElement(&comp)
-		if comp.firstMismatch != nil {
-			return comp.firstMismatch
+		mismatch := newComparison(i, candidate[i]).Do(element)
+		if mismatch != nil {
+			return mismatch
 		}
 	}
-
 	return nil
 }

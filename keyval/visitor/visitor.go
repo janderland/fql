@@ -41,6 +41,7 @@ type (
 
 	{{.Acceptor}} interface {
 		{{.AcceptorMethod}}({{.Visitor}})
+		Eq(interface{}) bool
 	}
 )
 

@@ -18,6 +18,7 @@ type (
 
 	value interface {
 		Value(ValueVisitor)
+		Eq(interface{}) bool
 	}
 )
 

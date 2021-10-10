@@ -19,6 +19,7 @@ type (
 
 	TupElement interface {
 		TupElement(TupleVisitor)
+		Eq(interface{}) bool
 	}
 )
 
