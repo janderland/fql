@@ -9,6 +9,7 @@ type (
 
 	DirElement interface {
 		DirElement(DirectoryVisitor)
+		Eq(interface{}) bool
 	}
 )
 
