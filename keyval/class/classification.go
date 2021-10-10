@@ -2,6 +2,12 @@ package class
 
 import q "github.com/janderland/fdbq/keyval"
 
+var (
+	_ q.DirectoryVisitor = &dirClassification{}
+	_ q.TupleVisitor     = &tupClassification{}
+	_ q.ValueVisitor     = &valClassification{}
+)
+
 type dirClassification struct{ result subClass }
 
 func (x *dirClassification) VisitString(q.String) {}
