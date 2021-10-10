@@ -8,9 +8,16 @@ import (
 	"github.com/pkg/errors"
 )
 
+var _ q.TupleVisitor = &conversion{}
+
 type conversion struct {
 	out tuple.TupleElement
 	err error
+}
+
+func (x conversion) Do(e q.TupElement) (tuple.TupleElement, error) {
+	e.TupElement(&x)
+	return x.out, x.err
 }
 
 func (x *conversion) VisitTuple(in q.Tuple) {

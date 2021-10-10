@@ -43,14 +43,13 @@ func FromStringArray(in []string) q.Directory {
 // Tuple contains a Variable.
 func ToFDBTuple(in q.Tuple) (tuple.Tuple, error) {
 	out := make(tuple.Tuple, len(in))
+	var err error
 
 	for i, element := range in {
-		conv := conversion{}
-		element.TupElement(&conv)
-		if conv.err != nil {
-			return nil, errors.Wrapf(conv.err, "failed to convert index %d", i)
+		out[i], err = conversion{}.Do(element)
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to convert index %d", i)
 		}
-		out[i] = conv.out
 	}
 
 	return out, nil

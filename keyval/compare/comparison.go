@@ -5,6 +5,8 @@ import (
 	"github.com/pkg/errors"
 )
 
+var _ q.TupleVisitor = &comparison{}
+
 type comparison struct {
 	i         int
 	candidate q.TupElement
