@@ -178,4 +178,3 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   return results, nil
 })
 ```
-

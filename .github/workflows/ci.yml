@@ -11,5 +11,5 @@ jobs:
     - name: Checkout
       uses: actions/checkout@v2
 
-    - name: Check
-      run: docker compose up check
+    - name: Verify
+      run: ./verify
