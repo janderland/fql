@@ -5,4 +5,4 @@ DIR="${0%/*}"
 TAG="janderland/fdbq-build:latest"
 
 docker build -t "$TAG" - < "$DIR"/Dockerfile
-docker push "$TAG"
+# docker push "$TAG"

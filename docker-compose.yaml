@@ -8,8 +8,11 @@ services:
     working_dir: "/fdbq"
     volumes:
       - ".:/fdbq"
+      - "cache:/cache"
   fdb:
     container_name: fdb
     image: "foundationdb/foundationdb:6.3.15"
     ports:
       - "4500:4500"
+volumes:
+  cache:
