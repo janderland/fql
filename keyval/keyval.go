@@ -1,5 +1,32 @@
-// Package keyval provides the key value data structure
-// and functions for inspecting the key values.
+// Package keyval provides types representing key-values and utilities
+// for their inspection and manipulation. These types serve as both the
+// AST which the FDBQ parser outputs and as part of the Go API for
+// performing queries.
+//
+// Embedded Query Strings
+//
+// When working with SQL, programmers will often embed SQL strings in
+// the application. This requires extra tooling to catch syntax errors
+// at build time. Instead of using string literals, FDBQ allows the
+// programmer to directly construct the queries using the type-safe AST,
+// allowing some syntax errors to be caught at build time.
+//
+// This package does not prevent all kinds of syntax errors, only
+// "structural" ones. For instance, the type system ensures tuples only
+// contain valid elements and limits what kinds of objects can be used
+// as the value of a key-value. In spite of this, an invalid query
+// can still be constructed (see package "class").
+//
+// Visitor Pattern
+//
+// The Directory, Tuple, & Value types would be best represented by tagged
+// unions. While Go does not natively support tagged unions, this package
+// implements equivalent functionality using interfaces. Furthermore, these
+// interfaces implement the visitor pattern which avoids the need for type
+// switches. While type switches will almost certainly result in a faster
+// runtime, the programmer must remember to handle all the types implementing
+// a given interface. The visitor pattern forces the programmer to handle all
+// relevant types via the type system.
 package keyval
 
 import "math/big"
