@@ -7,34 +7,9 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    container: janderland/fdbq-build:latest
-    services:
-      fdb:
-        image: foundationdb/foundationdb:6.3.15
-        ports:
-          - 4500:4500
     steps:
     - name: Checkout
-      uses: actions/checkout@v2  
+      uses: actions/checkout@v2
 
-    - name: Cache
-      uses: actions/cache@v2
-      with:
-        path: ~/go/pkg/mod
-        key: go-${{ hashFiles('**/go.sum') }}
-        restore-keys: go-
-
-    - name: DB
-      run: |
-        FDB_IP=$(getent hosts fdb | awk '{print $1}')
-        echo "docker:docker@${FDB_IP}:4500" > /etc/foundationdb/fdb.cluster
-        fdbcli --exec "configure new single memory"
-
-    - name: Lint
-      run: golangci-lint run
-
-    - name: Build
-      run: go build -v ./...
-
-    - name: Test
-      run: go test -v ./...
+    - name: Check
+      run: docker compose up check
