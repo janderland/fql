@@ -14,11 +14,14 @@ RUN curl -Lo go.tar.gz $GO_URL &&\
     tar -C /usr/local -xzf ./go.tar.gz &&\
     rm ./go.tar.gz
 ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
+ENV GOCACHE="/cache/gocache"
+ENV GOMODCACHE="/cache/gomod"
 
 ARG GOLANGCI_LINT_URL="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 RUN curl -Lo golint.sh $GOLANGCI_LINT_URL &&\
     sh ./golint.sh -b "$(go env GOPATH)/bin" v1.42.1 &&\
     rm ./golint.sh
+ENV GOLANGCI_LINT_CACHE="/cache/golangci-lint"
 
 ARG HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/v2.7.0/hadolint-Linux-x86_64"
 RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\
@@ -27,4 +30,3 @@ RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\
 ARG JQ_URL="https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64"
 RUN curl -Lo /usr/local/bin/jq $JQ_URL &&\
     chmod +x /usr/local/bin/jq
-

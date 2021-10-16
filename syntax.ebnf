@@ -45,4 +45,3 @@ hexDigit = digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' ;
 character = ? Any single ASCII character from the "printable" character group (32-126). ? ;
 
 ws = ? Any number of ASCII characters with codes 9 (Horizontal Tab), 10 (Line Feed), 13 (Carriage Return), or 32 (Space). ? ;
-
