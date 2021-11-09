@@ -10,9 +10,7 @@ if [[ -z "$flag" ]]; then
   docker compose build verify_built
   docker compose up verify_built
   exit $?
-fi
-
-if [[ "$flag" == "--mounted" ]]; then
+elif [[ "$flag" == "--mounted" ]]; then
   docker compose up verify_mounted
   exit $?
 else
