@@ -1,16 +1,13 @@
-name: Docker Benchmark
-
+name: Benchmark Docker
 on:
   schedule:
     - cron: '0 0 1 * *'
   workflow_dispatch:
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v2
-      
       - name: Benchmark
         run: ./scripts/benchmark_docker.sh --warm-ups 3 --iterations 5 --out out.txt && cat out.txt
