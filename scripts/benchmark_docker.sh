@@ -4,6 +4,7 @@ set -euo pipefail
 # Change directory to repo root.
 cd "${0%/*}/.."
 
+SCRIPT_NAME="$0"
 OUT_FILE="./benchmark_out.txt"
 BUILT_IN_FILE=""
 MOUNTED_FILE=""
@@ -12,13 +13,13 @@ BENCHMARK_COUNT=1
 
 # help echos a CLI flags description to stdout.
 function print_help {
-  echo "benchmark.sh [--built-in CACHE_FILE] [--mounted CACHE_FILE] [--warm-ups WARM_UP_COUNT] [--iterations ITERATION_COUNT] --out OUTPUT_FILE"
+  echo "$SCRIPT_NAME [--built-in CACHE_FILE] [--mounted CACHE_FILE] [--warm-ups WARM_UP_COUNT] [--iterations ITERATION_COUNT] --out OUTPUT_FILE"
 }
 
 # log echos a prefix followed by the first
 # argument to stderr.
 function log {
-  echo "benchmark.sh | $1" >&2
+  echo "$SCRIPT_NAME | $1" >&2
 }
 
 # perform_benchmark stops all docker compose containers,
