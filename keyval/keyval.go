@@ -4,9 +4,9 @@ package keyval
 
 import "math/big"
 
-//go:generate go run ./visitor -op-name Directory -param-name DirElement -types String,Variable
-//go:generate go run ./visitor -op-name Tuple -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
-//go:generate go run ./visitor -op-name Value -param-name value -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
+//go:generate go run ./operation -op-name Directory -param-name DirElement -types String,Variable
+//go:generate go run ./operation -op-name Tuple -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
+//go:generate go run ./operation -op-name Value -param-name value -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
 
 type (
 	// A KeyValue is a query or result depending on the
