@@ -5,7 +5,7 @@ import (
 	"github.com/pkg/errors"
 )
 
-var _ q.TupleVisitor = &comparison{}
+var _ q.TupleOperation = &comparison{}
 
 type comparison struct {
 	i         int
@@ -22,61 +22,61 @@ func (x comparison) Do(pattern q.TupElement) []int {
 	return x.mismatch
 }
 
-func (x *comparison) VisitNil(e q.Nil) {
+func (x *comparison) ForNil(e q.Nil) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitBool(e q.Bool) {
+func (x *comparison) ForBool(e q.Bool) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitInt(e q.Int) {
+func (x *comparison) ForInt(e q.Int) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitUint(e q.Uint) {
+func (x *comparison) ForUint(e q.Uint) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitFloat(e q.Float) {
+func (x *comparison) ForFloat(e q.Float) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitBigInt(e q.BigInt) {
+func (x *comparison) ForBigInt(e q.BigInt) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitString(e q.String) {
+func (x *comparison) ForString(e q.String) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitBytes(e q.Bytes) {
+func (x *comparison) ForBytes(e q.Bytes) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitUUID(e q.UUID) {
+func (x *comparison) ForUUID(e q.UUID) {
 	if !e.Eq(x.candidate) {
 		x.mismatch = []int{x.i}
 	}
 }
 
-func (x *comparison) VisitTuple(e q.Tuple) {
+func (x *comparison) ForTuple(e q.Tuple) {
 	val, ok := x.candidate.(q.Tuple)
 	if !ok {
 		x.mismatch = []int{x.i}
@@ -88,7 +88,7 @@ func (x *comparison) VisitTuple(e q.Tuple) {
 	}
 }
 
-func (x *comparison) VisitVariable(e q.Variable) {
+func (x *comparison) ForVariable(e q.Variable) {
 	// An empty variable is equivalent
 	// to an AnyType variable.
 	if len(e) == 0 {
@@ -166,7 +166,7 @@ loop:
 	}
 }
 
-func (x *comparison) VisitMaybeMore(_ q.MaybeMore) {
+func (x *comparison) ForMaybeMore(_ q.MaybeMore) {
 	// By the time the visitor is used, the Tuples function
 	// should have removed the trailing MaybeMore. So, any
 	// MaybeMore we encounter here is invalid.
