@@ -20,31 +20,37 @@ type Flags struct {
 	Limit   int
 }
 
-func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
+func setupFlagSet(output *os.File) (*Flags, *flag.FlagSet) {
 	var flags Flags
 
-	flagSet := flag.NewFlagSet(args[0], flag.ContinueOnError)
-	flagSet.SetOutput(stderr)
-	flagSet.Usage = func() {
-		_, _ = fmt.Fprint(flagSet.Output(), "fdbq [flags] query1 [query2...]\n\n")
-		flagSet.PrintDefaults()
+	fs := flag.NewFlagSet("", flag.ContinueOnError)
+	fs.Usage = func() {
+		_, _ = fmt.Fprint(fs.Output(), "fdbq [flags] query1 [query2...]\n\n")
+		fs.PrintDefaults()
 	}
 
-	flagSet.StringVar(&flags.Cluster, "cluster", "", "path to cluster file")
-	flagSet.BoolVar(&flags.Write, "write", false, "allow write queries")
-	flagSet.BoolVar(&flags.Log, "log", false, "perform logging")
+	fs.SetOutput(output)
 
-	flagSet.BoolVar(&flags.Reverse, "reverse", false, "reverse range reads")
-	flagSet.BoolVar(&flags.Little, "little", false, "little endian value encoding")
-	flagSet.IntVar(&flags.Limit, "limit", 0, "range read limit")
+	fs.StringVar(&flags.Cluster, "cluster", "", "path to cluster file")
+	fs.BoolVar(&flags.Write, "write", false, "allow write queries")
+	fs.BoolVar(&flags.Log, "log", false, "perform logging")
 
+	fs.BoolVar(&flags.Reverse, "reverse", false, "reverse range reads")
+	fs.BoolVar(&flags.Little, "little", false, "little endian value encoding")
+	fs.IntVar(&flags.Limit, "limit", 0, "range read limit")
+
+	return &flags, fs
+}
+
+func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
+	flags, flagSet := setupFlagSet(stderr)
 	if err := flagSet.Parse(args[1:]); err != nil {
 		if errors.Is(err, flag.ErrHelp) {
 			return nil, nil, nil
 		}
 		return nil, nil, errors.Wrap(err, "failed to parse flags")
 	}
-	return &flags, flagSet.Args(), nil
+	return flags, flagSet.Args(), nil
 }
 
 func (x *Flags) ByteOrder() binary.ByteOrder {
