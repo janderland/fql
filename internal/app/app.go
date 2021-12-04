@@ -24,6 +24,9 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to parse args")
 	}
+
+	// If Parse returns nil flags, it's assumed the help
+	// flag was given and the help message was printed.
 	if flags == nil {
 		return nil
 	}

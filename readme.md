@@ -18,6 +18,32 @@ acheive are:
 Here is the [syntax definiton](syntax.ebnf) for the query
 language.
 
+## Docker
+
+FDBQ is available as a Docker image for running queries. The
+first argument passed to the container is the contents of
+the cluster file. The remaning arguments are passed to the
+FDBQ binary.
+
+```bash
+# 'fdb:fdb@172.20.3.33:4500' is used as the contents for the
+# cluster file. '-log' and '/my/dir{<>}=42' are passed as
+# args to the FDBQ binary.
+docker run docker.io/janderland/fdbq 'my_cluster:baoeA32@172.20.3.33:4500' -log '/my/dir{<>}=42'
+```
+
+The cluster file contents (first argument) is evaluated by
+Bash within the container before being written to disk,
+which allows for converting hostnames into IPs.
+
+```bash
+# The cluster file contents includes a bit of Bash which
+# converts the hostname 'fdb' to an IP address before
+# writing the cluster file on to the container's disk.
+CFILE='docker:docker@$(getent hosts fdb | cut -d" " -f1):4500'
+docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
+```
+
 ## Examples
 
 The following examples showcase FDBQ queries and the
