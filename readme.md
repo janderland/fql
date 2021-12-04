@@ -20,7 +20,7 @@ language.
 
 ## Build
 
-```
+```bash
 cd /path/to/repo/root
 go build
 ```
@@ -43,7 +43,7 @@ The cluster file contents (first argument) is evaluated by
 Bash within the container before being written to disk,
 which allows for converting hostnames into IPs.
 
-```
+```bash
 # The cluster file contents includes a bit of Bash which
 # converts the hostname 'fdb' to an IP address before
 # writing the cluster file on to the container's disk.
