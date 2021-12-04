@@ -47,7 +47,7 @@ which allows for converting hostnames into IPs.
 # The cluster file contents includes a bit of Bash which
 # converts the hostname 'fdb' to an IP address before
 # writing the cluster file on to the container's disk.
-CFILE='docker:docker@$(getent hosts host.docker.internal | cut -d" " -f1):4500'
+CFILE='docker:docker@$(getent hosts fdb | cut -d" " -f1):4500'
 docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
 ```
 
