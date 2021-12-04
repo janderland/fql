@@ -18,13 +18,6 @@ acheive are:
 Here is the [syntax definiton](syntax.ebnf) for the query
 language.
 
-## Build
-
-```bash
-cd /path/to/repo/root
-go build
-```
-
 ## Docker
 
 FDBQ is available as a Docker image for running queries. The
