@@ -3,7 +3,7 @@ module github.com/janderland/fdbq
 go 1.16
 
 require (
-	github.com/apple/foundationdb/bindings/go v0.0.0-20210223161539-764f76eac34b
+	github.com/apple/foundationdb/bindings/go v0.0.0-20210510203748-af616f980733
 	github.com/davecgh/go-spew v1.1.1 // indirect
 	github.com/kr/pretty v0.1.0 // indirect
 	github.com/pkg/errors v0.9.1
