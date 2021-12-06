@@ -47,11 +47,6 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 		return errors.Wrap(err, "failed to connect to DB")
 	}
 
-	app := headless.New(log.WithContext(context.Background()), *flags, stdout, db)
-	for _, query := range queries {
-		if err := app.Query(query); err != nil {
-			return errors.Wrapf(err, "failed to execute '%s'", query)
-		}
-	}
-	return nil
+	app := headless.New(log.WithContext(context.Background()), *flags, stdout)
+	return errors.Wrap(app.Run(db, queries), "headless app failed")
 }
