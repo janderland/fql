@@ -54,7 +54,7 @@ func TestHeadless_Query(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, test.flags, func(h Headless) {
-				err := h.Query(test.query)
+				err := h.query(test.query)
 				if test.err {
 					assert.Error(t, err)
 				} else {
