@@ -8,10 +8,10 @@ readonly flag="${1:-}"
 
 if [[ -z "$flag" ]]; then
   docker compose build verify_built
-  docker compose up verify_built
+  docker compose up verify_built --exit-code-from verify_built
   exit $?
 elif [[ "$flag" == "--mounted" ]]; then
-  docker compose up verify_mounted
+  docker compose up verify_mounted --exit-code-from verify_mounted
   exit $?
 else
   echo "verify.sh [--mounted]"
