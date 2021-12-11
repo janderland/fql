@@ -15,7 +15,7 @@ acheive are:
 - [ ] Standardize the encoding of primitives (int, float,
   bool) as FDB values.
 
-Here is the [syntax definiton](syntax.ebnf) for the query
+Here is the [syntax definition](syntax.ebnf) for the query
 language.
 
 ## Docker
