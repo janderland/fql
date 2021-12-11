@@ -10,5 +10,5 @@ shift || true
 
 # Create the cluster file and run FDBQ with the
 # remaining arguments.
-echo $CLUSTER_FILE > /etc/foundationdb/fdb.cluster
+echo "$CLUSTER_FILE" > /etc/foundationdb/fdb.cluster
 /fdbq "$@"
