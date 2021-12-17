@@ -7,6 +7,8 @@ import (
 	"os"
 	"testing"
 
+	"github.com/janderland/fdbq/engine/facade"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	q "github.com/janderland/fdbq/keyval"
@@ -19,7 +21,6 @@ import (
 const root = "engine"
 
 var (
-	db        fdb.Database
 	byteOrder binary.ByteOrder
 
 	flags struct {
@@ -30,7 +31,6 @@ var (
 
 func init() {
 	fdb.MustAPIVersion(620)
-	db = fdb.MustOpenDefault()
 	byteOrder = binary.BigEndian
 
 	flag.BoolVar(&flags.force, "force", false, "remove test directory if it exists")
@@ -213,6 +213,7 @@ func TestEngine_Directories(t *testing.T) {
 }
 
 func testEnv(t *testing.T, f func(fdb.Transactor, directory.DirectorySubspace, Engine)) {
+	db := fdb.MustOpenDefault()
 	exists, err := directory.Exists(db, []string{root})
 	if err != nil {
 		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
@@ -244,7 +245,7 @@ func testEnv(t *testing.T, f func(fdb.Transactor, directory.DirectorySubspace, E
 	zerolog.SetGlobalLevel(level)
 	log := zerolog.New(zerolog.ConsoleWriter{Out: os.Stdout})
 
-	f(db, dir, New(log.WithContext(context.Background()), db))
+	f(db, dir, New(log.WithContext(context.Background()), facade.NewTransactor(db)))
 }
 
 func prefixDir(root directory.DirectorySubspace, query q.KeyValue) q.KeyValue {

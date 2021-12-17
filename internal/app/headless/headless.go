@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/janderland/fdbq/engine"
+	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
@@ -32,7 +32,7 @@ func New(ctx context.Context, flags flag.Flags, out io.Writer) Headless {
 	}
 }
 
-func (h *Headless) Run(db fdb.Transactor, queries []string) error {
+func (h *Headless) Run(db facade.Transactor, queries []string) error {
 	eg := engine.New(h.ctx, db)
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
