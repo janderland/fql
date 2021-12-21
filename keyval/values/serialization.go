@@ -22,6 +22,9 @@ func newSerialization(order binary.ByteOrder) serialization {
 }
 
 func (x serialization) Do(v q.Value) ([]byte, error) {
+	if v == nil {
+		return nil, errors.New("value cannot be nil")
+	}
 	v.Value(&x)
 	return x.out, x.err
 }
