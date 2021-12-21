@@ -6,12 +6,16 @@ cd "${0%/*}"
 
 readonly flag="${1:-}"
 
+function docker_compose_up {
+  docker compose up "$1" --exit-code-from "$1"
+}
+
 if [[ -z "$flag" ]]; then
   docker compose build verify_built
-  docker compose up verify_built --exit-code-from verify_built
+  docker_compose_up verify_built
   exit $?
 elif [[ "$flag" == "--mounted" ]]; then
-  docker compose up verify_mounted --exit-code-from verify_mounted
+  docker_compose_up verify_mounted
   exit $?
 else
   echo "verify.sh [--mounted]"
