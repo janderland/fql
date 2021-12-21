@@ -52,6 +52,13 @@ type (
 	}
 )
 
+var (
+	_ ReadTransactor  = &readTransactor{}
+	_ ReadTransaction = &readTransaction{}
+	_ Transactor      = &transactor{}
+	_ Transaction     = &transaction{}
+)
+
 func NewReadTransactor(tr fdb.ReadTransactor) ReadTransactor {
 	return &readTransactor{tr}
 }
@@ -61,19 +68,12 @@ func NewReadTransaction(tr fdb.ReadTransaction) ReadTransaction {
 }
 
 func NewTransactor(tr fdb.Transactor) Transactor {
-	return &transactor{&readTransactor{tr}, tr}
+	return &transactor{NewReadTransactor(tr), tr}
 }
 
 func NewTransaction(tr fdb.Transaction) Transaction {
-	return &transaction{&readTransaction{tr}, tr}
+	return &transaction{NewReadTransaction(tr), tr}
 }
-
-var (
-	_ ReadTransactor  = &readTransactor{}
-	_ ReadTransaction = &readTransaction{}
-	_ Transactor      = &transactor{}
-	_ Transaction     = &transaction{}
-)
 
 func (x *readTransactor) ReadTransact(f func(ReadTransaction) (interface{}, error)) (interface{}, error) {
 	return x.tr.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
