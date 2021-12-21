@@ -7,10 +7,9 @@ import (
 	"os"
 	"testing"
 
-	"github.com/janderland/fdbq/engine/facade"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/janderland/fdbq/engine/facade"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/pkg/errors"
