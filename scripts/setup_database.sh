@@ -14,25 +14,24 @@ FDB_IP=$(getent hosts "$FDB_HOSTNAME" | awk '{print $1}')
 # Create the FDB cluster file.
 echo "${FDB_DESCRIPTION_ID}@${FDB_IP}:4500" > /etc/foundationdb/fdb.cluster
 
-# Query for the status of the FDB cluster.
-status=$(fdbcli --exec 'status json')
-
-# Search for the "unreadable_configuration" message in the cluster's status. This message would let us
-# know that the database hasn't been initialized. With the '-e' flag, jq will return 0 if the message
-# is found and 1 if it isn't. Any other error code should be treated as a script failure.
-# https://stedolan.github.io/jq/manual/#Invokingjq
-# NOTE: This command is run in a sub-shell so 'set -e' doesn't cause an immediate exit.
+# Search for the "unreadable_configuration" message in the cluster's status. This message
+# would let us know that the database hasn't been initialized.
 JQ_CODE=$(
-  jq -e '.cluster.messages[] | select(.name | contains("unreadable_configuration"))' <(echo "$status") >&2
+  jq -e '.cluster.messages[] | select(.name | contains("unreadable_configuration"))' \
+    <(fdbcli --exec 'status json') >&2
   echo $?
 )
-if [[ $JQ_CODE -gt 1 ]] || [[ $JQ_CODE -lt 0 ]]; then
-  exit $JQ_CODE
+
+# jq should only return codes between 0 & 4 inclusive. Our particular query never
+# returns 'null' or 'false', so we shouldn't see code 1. Codes 2 & 3 occur on
+# system & compile errors respectively, so the only valid codes are 0 & 4.
+# https://stedolan.github.io/jq/manual/#Invokingjq
+if [[ $JQ_CODE -lt 0 || ( $JQ_CODE -gt 0 && $JQ_CODE -lt 4 ) || $JQ_CODE -gt 4 ]]; then
+  exit "$JQ_CODE"
 fi
 
 # If this is a new instance of FDB, configure the database.
 # https://apple.github.io/foundationdb/administration.html#re-creating-a-database
-if $JQ_CODE -eq 0 then
+if [[ $JQ_CODE -eq 0 ]]; then
   fdbcli --exec "configure new single memory"
-  exit $?
 fi
