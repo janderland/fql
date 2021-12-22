@@ -2,7 +2,6 @@ package stream
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -90,23 +89,23 @@ func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeO
 	return out
 }
 
-func (r *Stream) FilterKeys(query q.Tuple, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) FilterKeys(query q.Tuple, filter bool, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.goFilterKeys(query, in, out)
+		r.goFilterKeys(query, filter, in, out)
 	}()
 
 	return out
 }
 
-func (r *Stream) UnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) UnpackValues(query q.Value, deserialize values.Deserialize, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.goUnpackValues(query, order, in, out)
+		r.goUnpackValues(query, deserialize, in, out)
 	}()
 
 	return out
@@ -224,7 +223,7 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 	}
 }
 
-func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "filter keys").Interface("query", query).Logger()
 
 	for msg := range in {
@@ -237,8 +236,12 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
-		if compare.Tuples(query, kv.Key.Tuple) != nil {
-			continue
+		if mismatch := compare.Tuples(query, kv.Key.Tuple); mismatch != nil {
+			if filter {
+				continue
+			}
+			r.SendKV(out, KeyValErr{Err: errors.Errorf("key disobeys schema at tuple index %v", mismatch)})
+			return
 		}
 
 		log.Log().Msg("sending key-value")
@@ -248,14 +251,8 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 	}
 }
 
-func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) goUnpackValues(query q.Value, deserialize values.Deserialize, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
-
-	deserialize, err := values.NewDeserialize(query, order, true)
-	if err != nil {
-		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
-		return
-	}
 
 	for msg := range in {
 		if msg.Err != nil {
@@ -267,6 +264,7 @@ func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan K
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
+		var err error
 		kv.Value, err = deserialize(kv.Value.(q.Bytes))
 		if err != nil {
 			r.SendKV(out, KeyValErr{Err: err})

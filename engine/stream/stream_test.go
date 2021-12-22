@@ -9,16 +9,16 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/janderland/fdbq/engine/facade"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/janderland/fdbq/engine/facade"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/keyval/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 const root = "root"
@@ -262,7 +262,7 @@ func TestStream_FilterKeys(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.FilterKeys(test.query, sendKVs(t, s, test.initial))
+				out := s.FilterKeys(test.query, true, sendKVs(t, s, test.initial))
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 
@@ -332,17 +332,16 @@ func TestStream_UnpackValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.UnpackValues(test.query, byteOrder, sendKVs(t, s, test.initial))
-				kvs, err := collectKVs(out)
-				assert.NoError(t, err)
+				deserialize, err := values.NewDeserialize(test.query, byteOrder, true)
+				require.NoError(t, err)
 
-				if !assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values") {
-					t.FailNow()
-				}
+				out := s.UnpackValues(test.query, deserialize, sendKVs(t, s, test.initial))
+				kvs, err := collectKVs(out)
+				require.NoError(t, err)
+
+				require.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
-					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i) {
-						t.FailNow()
-					}
+					require.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i)
 				}
 			})
 		})

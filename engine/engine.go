@@ -18,6 +18,7 @@ import (
 type RangeOpts struct {
 	ByteOrder binary.ByteOrder
 	Reverse   bool
+	Filter    bool
 	Limit     int
 }
 
@@ -129,7 +130,8 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}
 
-	result, err := e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+	var valBytes []byte
+	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		e.log.Log().Interface("query", query).Msg("single reading")
 
 		dir, err := tr.DirOpen(path)
@@ -145,26 +147,17 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
 		}
 
-		return tr.Get(dir.Pack(tup)).Get()
+		valBytes = tr.Get(dir.Pack(tup)).MustGet()
+		return nil, nil
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "transaction failed")
 	}
-
-	// Before asserting the result is a []byte, we need
-	// to check if it's an untyped nil. This check could
-	// be avoided if we ensured the transaction callback
-	// always returned a []byte, but having this check
-	// here is less fragile.
-	if result == nil {
+	if valBytes == nil {
 		return nil, nil
 	}
 
-	bytes := result.([]byte)
-	if bytes == nil {
-		return nil, nil
-	}
-	value, err := deserialize(bytes)
+	value, err := deserialize(valBytes)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to deserialize value")
 	}
@@ -191,11 +184,17 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 			return
 		}
 
-		_, err := e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		deserialize, err := values.NewDeserialize(query.Value, opts.ByteOrder, opts.Filter)
+		if err != nil {
+			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
+			return
+		}
+
+		_, err = e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
-			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
-			for kve := range s.UnpackValues(query.Value, opts.ByteOrder, stage3) {
+			stage3 := s.FilterKeys(query.Key.Tuple, opts.Filter, stage2)
+			for kve := range s.UnpackValues(query.Value, deserialize, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil
