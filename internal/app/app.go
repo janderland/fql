@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
+	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/janderland/fdbq/internal/app/headless"
 	"github.com/pkg/errors"
@@ -42,11 +43,11 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 	if err := fdb.APIVersion(620); err != nil {
 		return errors.Wrap(err, "failed to set FDB API version")
 	}
-	db, err := fdb.OpenDatabase(flags.Cluster)
+	fdb, err := fdb.OpenDatabase(flags.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to connect to DB")
 	}
 
 	app := headless.New(log.WithContext(context.Background()), *flags, stdout)
-	return errors.Wrap(app.Run(db, queries), "headless app failed")
+	return errors.Wrap(app.Run(facade.NewTransactor(fdb), queries), "headless app failed")
 }

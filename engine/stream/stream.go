@@ -6,6 +6,7 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/janderland/fdbq/engine/facade"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/compare"
 	"github.com/janderland/fdbq/keyval/convert"
@@ -67,7 +68,7 @@ func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	}
 }
 
-func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.Directory) chan DirErr {
+func (r *Stream) OpenDirectories(tr facade.ReadTransactor, query q.Directory) chan DirErr {
 	out := make(chan DirErr)
 
 	go func() {
@@ -78,7 +79,7 @@ func (r *Stream) OpenDirectories(tr fdb.ReadTransactor, query q.Directory) chan 
 	return out
 }
 
-func (r *Stream) ReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan KeyValErr {
+func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
@@ -111,7 +112,7 @@ func (r *Stream) UnpackValues(query q.Value, order binary.ByteOrder, in chan Key
 	return out
 }
 
-func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out chan DirErr) {
+func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, out chan DirErr) {
 	log := r.log.With().Str("stage", "open directories").Interface("query", query).Logger()
 
 	prefix, variable, suffix := convert.SplitAtFirstVariable(query)
@@ -122,7 +123,7 @@ func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 	}
 
 	if variable != nil {
-		subDirs, err := directory.List(tr, prefixStr)
+		subDirs, err := tr.DirList(prefixStr)
 		if err != nil {
 			r.SendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
 			return
@@ -149,7 +150,7 @@ func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 			r.goOpenDirectories(tr, dir, out)
 		}
 	} else {
-		dir, err := directory.Open(tr, prefixStr, nil)
+		dir, err := tr.DirOpen(prefixStr)
 		if err != nil {
 			r.SendDir(out, DirErr{Err: errors.Wrapf(err, "failed to open directory %v", prefixStr)})
 			return
@@ -162,7 +163,7 @@ func (r *Stream) goOpenDirectories(tr fdb.ReadTransactor, query q.Directory, out
 	}
 }
 
-func (r *Stream) goReadRange(tr fdb.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
+func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix := convert.ToTuplePrefix(query)

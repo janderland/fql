@@ -47,47 +47,7 @@ func NewFilter(query q.Value, order binary.ByteOrder) (Filter, error) {
 }
 
 func Pack(val q.Value, order binary.ByteOrder) ([]byte, error) {
-	switch val := val.(type) {
-	case q.Nil:
-		return nil, nil
-
-	case q.Bool:
-		if val {
-			return []byte{1}, nil
-		}
-		return []byte{0}, nil
-
-	case q.Int:
-		b := make([]byte, 8)
-		order.PutUint64(b, uint64(val))
-		return b, nil
-
-	case q.Uint:
-		b := make([]byte, 8)
-		order.PutUint64(b, uint64(val))
-		return b, nil
-
-	case q.Float:
-		b := make([]byte, 8)
-		order.PutUint64(b, math.Float64bits(float64(val)))
-		return b, nil
-
-	case q.String:
-		return []byte(val), nil
-
-	case q.Bytes:
-		return val, nil
-
-	case q.UUID:
-		return val[:], nil
-
-	case q.Tuple:
-		tup, err := convert.ToFDBTuple(val)
-		return tup.Pack(), errors.Wrap(err, "failed to convert to FDB tuple")
-
-	default:
-		return nil, errors.Errorf("unknown Value type '%T'", val)
-	}
+	return newSerialization(order).Do(val)
 }
 
 func Unpack(val []byte, typ q.ValueType, order binary.ByteOrder) (q.Value, error) {

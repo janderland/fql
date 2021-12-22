@@ -9,6 +9,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/janderland/fdbq/engine/facade"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	q "github.com/janderland/fdbq/keyval"
@@ -90,7 +92,7 @@ func TestStream_OpenDirectories(t *testing.T) {
 					}
 				}
 
-				out := s.OpenDirectories(tr, append(convert.FromStringArray(rootDir.GetPath()), test.query...))
+				out := s.OpenDirectories(facade.NewReadTransaction(tr), append(convert.FromStringArray(rootDir.GetPath()), test.query...))
 				directories, err := collectDirs(out)
 				if test.error {
 					assert.Error(t, err)
@@ -192,7 +194,7 @@ func TestStream_ReadRange(t *testing.T) {
 					}
 				}
 
-				out := s.ReadRange(tr, test.query, RangeOpts{}, sendDirs(t, s, dirs))
+				out := s.ReadRange(facade.NewReadTransaction(tr), test.query, RangeOpts{}, sendDirs(t, s, dirs))
 				kvs, err := collectKVs(out)
 				assert.NoError(t, err)
 

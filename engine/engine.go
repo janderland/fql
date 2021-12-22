@@ -4,8 +4,8 @@ import (
 	"context"
 	"encoding/binary"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/engine/stream"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
@@ -29,21 +29,21 @@ func (x RangeOpts) forStream() stream.RangeOpts {
 }
 
 type Engine struct {
-	db  fdb.Transactor
+	tr  facade.Transactor
 	ctx context.Context
 	log *zerolog.Logger
 }
 
-func New(ctx context.Context, db fdb.Transactor) Engine {
+func New(ctx context.Context, tr facade.Transactor) Engine {
 	return Engine{
-		db:  db,
+		tr:  tr,
 		ctx: ctx,
 		log: zerolog.Ctx(ctx),
 	}
 }
 
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
-	return e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	return e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		return f(New(e.ctx, tr))
 	})
 }
@@ -63,10 +63,10 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 		return errors.Wrap(err, "failed to pack value")
 	}
 
-	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		e.log.Log().Interface("query", query).Msg("setting")
 
-		dir, err := directory.CreateOrOpen(tr, path, nil)
+		dir, err := tr.DirCreateOrOpen(path)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to open directory")
 		}
@@ -92,10 +92,10 @@ func (e *Engine) Clear(query q.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	_, err = e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		e.log.Log().Interface("query", query).Msg("clearing")
 
-		dir, err := directory.Open(tr, path, nil)
+		dir, err := tr.DirOpen(path)
 		if err != nil {
 			if errors.Is(err, directory.ErrDirNotExists) {
 				return nil, nil
@@ -129,10 +129,10 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}
 
-	result, err := e.db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+	result, err := e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		e.log.Log().Interface("query", query).Msg("single reading")
 
-		dir, err := directory.Open(tr, path, nil)
+		dir, err := tr.DirOpen(path)
 		if err != nil {
 			if errors.Is(err, directory.ErrDirNotExists) {
 				return nil, nil
@@ -188,7 +188,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 			return
 		}
 
-		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+		_, err := e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
@@ -214,7 +214,7 @@ func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream
 		s, stop := stream.New(ctx)
 		defer stop()
 
-		_, err := e.db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+		_, err := e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, query) {
 				s.SendDir(out, dir)
 			}
