@@ -106,7 +106,7 @@ func (h *Headless) clear(eg engine.Engine, query q.KeyValue) error {
 
 func (h *Headless) singleRead(eg engine.Engine, query q.KeyValue) error {
 	h.log.Log().Interface("query", query).Msg("executing single-read query")
-	kv, err := eg.SingleRead(query, h.flags.ByteOrder())
+	kv, err := eg.SingleRead(query, h.flags.SingleOpts())
 	if err != nil {
 		return err
 	}

@@ -15,6 +15,11 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type SingleOpts struct {
+	ByteOrder binary.ByteOrder
+	Filter    bool
+}
+
 type RangeOpts struct {
 	ByteOrder binary.ByteOrder
 	Reverse   bool
@@ -115,7 +120,7 @@ func (e *Engine) Clear(query q.KeyValue) error {
 	return errors.Wrap(err, "transaction failed")
 }
 
-func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.KeyValue, error) {
+func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, error) {
 	if class.Classify(query) != class.SingleRead {
 		return nil, errors.New("query not single-read class")
 	}
@@ -125,7 +130,7 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	deserialize, err := values.NewDeserialize(query.Value, byteOrder, true)
+	deserialize, err := values.NewDeserialize(query.Value, opts.ByteOrder, opts.Filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}

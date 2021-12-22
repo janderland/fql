@@ -45,7 +45,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 
 			expected := query
 			query.Value = q.Variable{q.IntType}
-			result, err := e.SingleRead(query, byteOrder)
+			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			assert.NoError(t, err)
 			assert.Equal(t, &expected, result)
 		})
@@ -59,7 +59,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 
 			expected := query
 			query.Value = q.Variable{}
-			result, err := e.SingleRead(query, byteOrder)
+			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			assert.NoError(t, err)
 			assert.Equal(t, &expected, result)
 		})
@@ -68,7 +68,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("get nothing", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("nothing"), q.String("here")}}, Value: q.Variable{}})
-			result, err := e.SingleRead(query, byteOrder)
+			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			assert.NoError(t, err)
 			assert.Nil(t, result)
 		})
@@ -89,12 +89,12 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("get errors", func(t *testing.T) {
 		testEnv(t, func(_ fdb.Transactor, root directory.DirectorySubspace, e Engine) {
 			query := prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33), q.Variable{}}}, Value: q.Nil{}})
-			result, err := e.SingleRead(query, byteOrder)
+			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			assert.Error(t, err)
 			assert.Nil(t, result)
 
 			query = prefixDir(root, q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Clear{}})
-			result, err = e.SingleRead(query, byteOrder)
+			result, err = e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			assert.Error(t, err)
 			assert.Nil(t, result)
 		})
@@ -110,7 +110,7 @@ func TestEngine_Clear(t *testing.T) {
 
 			get := set
 			get.Value = q.Variable{}
-			result, err := e.SingleRead(get, byteOrder)
+			result, err := e.SingleRead(get, SingleOpts{ByteOrder: byteOrder})
 			assert.NoError(t, err)
 			assert.Equal(t, &set, result)
 
@@ -119,7 +119,7 @@ func TestEngine_Clear(t *testing.T) {
 			err = e.Clear(clear)
 			assert.NoError(t, err)
 
-			result, err = e.SingleRead(get, byteOrder)
+			result, err = e.SingleRead(get, SingleOpts{ByteOrder: byteOrder})
 			assert.NoError(t, err)
 			assert.Nil(t, result)
 		})
