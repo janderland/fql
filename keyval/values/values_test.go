@@ -86,7 +86,7 @@ func TestNoFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			filter, err := NewDeserializer(test.query, binary.BigEndian, false)
+			filter, err := NewDeserialize(test.query, binary.BigEndian, false)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
@@ -118,7 +118,7 @@ func TestFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			filter, err := NewDeserializer(test.query, binary.BigEndian, true)
+			filter, err := NewDeserialize(test.query, binary.BigEndian, true)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}

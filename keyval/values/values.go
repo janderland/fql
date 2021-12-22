@@ -3,7 +3,9 @@ package values
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"math"
+	"strings"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
 	q "github.com/janderland/fdbq/keyval"
@@ -11,9 +13,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Deserializer func(val []byte) (q.Value, error)
+type Deserialize func(val []byte) (q.Value, error)
 
-func NewDeserializer(query q.Value, order binary.ByteOrder, filter bool) (Deserializer, error) {
+func NewDeserialize(query q.Value, order binary.ByteOrder, filter bool) (Deserialize, error) {
 	if variable, ok := query.(q.Variable); ok {
 		if len(variable) == 0 {
 			return func(val []byte) (q.Value, error) {
@@ -22,9 +24,11 @@ func NewDeserializer(query q.Value, order binary.ByteOrder, filter bool) (Deseri
 		}
 
 		return func(val []byte) (q.Value, error) {
+			var errs []error
 			for _, typ := range variable {
 				out, err := Unpack(val, typ, order)
 				if err != nil {
+					errs = append(errs, err)
 					continue
 				}
 				return out, nil
@@ -32,12 +36,20 @@ func NewDeserializer(query q.Value, order binary.ByteOrder, filter bool) (Deseri
 			if filter {
 				return nil, nil
 			}
-			return nil, errors.Errorf("failed to deserialize value (%d bytes) as %v", len(val), variable)
+
+			var str strings.Builder
+			for i, err := range errs {
+				if i > 0 {
+					str.WriteRune(',')
+				}
+				str.WriteString(fmt.Sprintf("%s: %v", variable[i], err))
+			}
+			return nil, errors.Wrap(errors.New(str.String()), "failed to unpack as")
 		}, nil
 	} else {
 		packed, err := Pack(query, order)
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "failed to pack query")
 		}
 
 		return func(val []byte) (q.Value, error) {
@@ -47,7 +59,7 @@ func NewDeserializer(query q.Value, order binary.ByteOrder, filter bool) (Deseri
 			if filter {
 				return nil, nil
 			}
-			return nil, errors.Errorf("unexpected value: bytes don't match query")
+			return nil, errors.New("unexpected value")
 		}, nil
 	}
 }

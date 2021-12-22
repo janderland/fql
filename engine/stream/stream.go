@@ -251,7 +251,7 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
-	deserialize, err := values.NewDeserializer(query, order, true)
+	deserialize, err := values.NewDeserialize(query, order, true)
 	if err != nil {
 		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
 		return
