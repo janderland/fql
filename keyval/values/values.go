@@ -11,25 +11,28 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Filter func(val []byte) q.Value
+type Deserializer func(val []byte) (q.Value, error)
 
-func NewFilter(query q.Value, order binary.ByteOrder) (Filter, error) {
+func NewDeserializer(query q.Value, order binary.ByteOrder, filter bool) (Deserializer, error) {
 	if variable, ok := query.(q.Variable); ok {
 		if len(variable) == 0 {
-			return func(val []byte) q.Value {
-				return q.Bytes(val)
+			return func(val []byte) (q.Value, error) {
+				return q.Bytes(val), nil
 			}, nil
 		}
 
-		return func(val []byte) q.Value {
+		return func(val []byte) (q.Value, error) {
 			for _, typ := range variable {
 				out, err := Unpack(val, typ, order)
 				if err != nil {
 					continue
 				}
-				return out
+				return out, nil
 			}
-			return nil
+			if filter {
+				return nil, nil
+			}
+			return nil, errors.Errorf("failed to deserialize value (%d bytes) as %v", len(val), variable)
 		}, nil
 	} else {
 		packed, err := Pack(query, order)
@@ -37,11 +40,14 @@ func NewFilter(query q.Value, order binary.ByteOrder) (Filter, error) {
 			return nil, err
 		}
 
-		return func(val []byte) q.Value {
+		return func(val []byte) (q.Value, error) {
 			if bytes.Equal(packed, val) {
-				return query
+				return query, nil
 			}
-			return nil
+			if filter {
+				return nil, nil
+			}
+			return nil, errors.Errorf("unexpected value: bytes don't match query")
 		}, nil
 	}
 }

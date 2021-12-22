@@ -124,7 +124,7 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	valueFilter, err := values.NewFilter(query.Value, byteOrder)
+	deserialize, err := values.NewDeserializer(query.Value, byteOrder, true)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init unpacker")
 	}
@@ -164,7 +164,10 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 	if bytes == nil {
 		return nil, nil
 	}
-	value := valueFilter(bytes)
+	value, err := deserialize(bytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to deserialize value")
+	}
 	if value == nil {
 		return nil, nil
 	}

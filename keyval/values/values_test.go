@@ -85,11 +85,13 @@ func TestFilter(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			filter, err := NewFilter(test.query, binary.BigEndian)
+			filter, err := NewDeserializer(test.query, binary.BigEndian, true)
 			if !assert.NoError(t, err) {
 				t.FailNow()
 			}
-			assert.Equal(t, test.out, filter(test.val))
+			val, err := filter(test.val)
+			assert.Equal(t, test.out, val)
+			assert.NoError(t, err)
 		})
 	}
 }
