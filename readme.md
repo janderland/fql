@@ -26,9 +26,9 @@ the cluster file. The remaning arguments are passed to the
 FDBQ binary.
 
 ```bash
-# 'fdb:fdb@172.20.3.33:4500' is used as the contents for the
-# cluster file. '-log' and '/my/dir{<>}=42' are passed as
-# args to the FDBQ binary.
+# 'my_cluster:baoeA32@172.20.3.33:4500' is used as the contents
+# for the cluster file. '-log' and '/my/dir{<>}=42' are passed
+# as args to the FDBQ binary.
 docker run docker.io/janderland/fdbq 'my_cluster:baoeA32@172.20.3.33:4500' -log '/my/dir{<>}=42'
 ```
 
