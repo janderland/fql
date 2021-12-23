@@ -15,8 +15,8 @@ type conversion struct {
 	err error
 }
 
-func (x conversion) Do(e q.TupElement) (tuple.TupleElement, error) {
-	e.TupElement(&x)
+func (x *conversion) Do(e q.TupElement) (tuple.TupleElement, error) {
+	e.TupElement(x)
 	return x.out, x.err
 }
 

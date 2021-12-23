@@ -48,9 +48,10 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 		return errors.Wrap(err, "failed to connect to DB")
 	}
 
-	return headless.App{
+	app := headless.App{
 		Flags: *flags,
 		Log:   log,
 		Out:   stdout,
-	}.Run(context.Background(), facade.NewTransactor(db), queries)
+	}
+	return app.Run(context.Background(), facade.NewTransactor(db), queries)
 }

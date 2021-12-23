@@ -65,7 +65,8 @@ func NewDeserialize(query q.Value, order binary.ByteOrder, filter bool) (Deseria
 }
 
 func Pack(val q.Value, order binary.ByteOrder) ([]byte, error) {
-	return newSerialization(order).Do(val)
+	s := newSerialization(order)
+	return s.Do(val)
 }
 
 func Unpack(val []byte, typ q.ValueType, order binary.ByteOrder) (q.Value, error) {

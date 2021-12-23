@@ -22,7 +22,7 @@ type App struct {
 	Out   io.Writer
 }
 
-func (x App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
+func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
 	eg := engine.New(ctx, db)
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
