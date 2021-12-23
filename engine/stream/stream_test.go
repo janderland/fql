@@ -216,13 +216,16 @@ func TestStream_ReadRange(t *testing.T) {
 func TestStream_FilterKeys(t *testing.T) {
 	var tests = []struct {
 		name     string
+		filter   bool
 		query    q.Tuple
 		initial  []q.KeyValue
 		expected []q.KeyValue
+		err      bool
 	}{
 		{
-			name:  "no variable",
-			query: q.Tuple{q.Int(123), q.String("hello"), q.Float(-50.6)},
+			name:   "no variable",
+			filter: true,
+			query:  q.Tuple{q.Int(123), q.String("hello"), q.Float(-50.6)},
 			initial: []q.KeyValue{
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(123), q.String("hello"), q.Float(-50.6)}}},
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(321), q.String("goodbye"), q.Float(50.6)}}},
@@ -233,8 +236,9 @@ func TestStream_FilterKeys(t *testing.T) {
 			},
 		},
 		{
-			name:  "variable",
-			query: q.Tuple{q.Int(123), q.Variable{}, q.String("sing")},
+			name:   "variable",
+			filter: true,
+			query:  q.Tuple{q.Int(123), q.Variable{}, q.String("sing")},
 			initial: []q.KeyValue{
 				{Key: q.Key{Directory: q.Directory{q.String("this"), q.String("thing")}, Tuple: q.Tuple{q.Int(123), q.String("song"), q.String("sing")}}},
 				{Key: q.Key{Directory: q.Directory{q.String("that"), q.String("there")}, Tuple: q.Tuple{q.Int(123), q.Float(13.45), q.String("sing")}}},
@@ -247,32 +251,40 @@ func TestStream_FilterKeys(t *testing.T) {
 			},
 		},
 		{
-			name:  "read everything",
-			query: q.Tuple{},
+			name:   "read everything",
+			filter: true,
+			query:  q.Tuple{},
 			initial: []q.KeyValue{
 				{Key: q.Key{Directory: q.Directory{q.String("this"), q.String("thing")}, Tuple: q.Tuple{q.Int(123), q.String("song"), q.String("sing")}}},
 				{Key: q.Key{Directory: q.Directory{q.String("that"), q.String("there")}, Tuple: q.Tuple{q.Int(123), q.Float(13.45), q.String("sing")}}},
 				{Key: q.Key{Directory: q.Directory{q.String("iam")}, Tuple: q.Tuple{
 					q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 			},
-			expected: nil,
+		},
+		{
+			name:  "non-filter err",
+			query: q.Tuple{q.Int(123), q.Variable{q.IntType}, q.String("sing")},
+			initial: []q.KeyValue{
+				{Key: q.Key{Directory: q.Directory{q.String("this"), q.String("thing")}, Tuple: q.Tuple{q.Int(123), q.String("song"), q.String("sing")}}},
+			},
+			err: true,
 		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				out := s.FilterKeys(test.query, true, sendKVs(t, s, test.initial))
+				out := s.FilterKeys(test.query, test.filter, sendKVs(t, s, test.initial))
 				kvs, err := collectKVs(out)
-				assert.NoError(t, err)
-
-				if !assert.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values") {
-					t.FailNow()
+				if test.err {
+					require.Error(t, err)
+				} else {
+					require.NoError(t, err)
 				}
+
+				require.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
-					if !assert.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i) {
-						t.FailNow()
-					}
+					require.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i)
 				}
 			})
 		})
