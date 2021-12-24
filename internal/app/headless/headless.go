@@ -23,10 +23,10 @@ type App struct {
 }
 
 func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
-	eg := engine.New(ctx, db)
+	eg := engine.Engine{Tr: db, Log: x.Log}
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
-			if err := x.query(eg, str); err != nil {
+			if err := x.query(ctx, eg, str); err != nil {
 				return nil, err
 			}
 		}
@@ -35,14 +35,14 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 	return err
 }
 
-func (x *App) query(eg engine.Engine, str string) error {
+func (x *App) query(ctx context.Context, eg engine.Engine, str string) error {
 	query, onlyDir, err := parser.ParseQuery(str)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse query")
 	}
 
 	if onlyDir {
-		if err := x.directories(eg, query.Key.Directory); err != nil {
+		if err := x.directories(ctx, eg, query.Key.Directory); err != nil {
 			return errors.Wrap(err, "failed to execute as directory query")
 		}
 		return nil
@@ -68,7 +68,7 @@ func (x *App) query(eg engine.Engine, str string) error {
 		return nil
 
 	case class.RangeRead:
-		if err := x.rangeRead(eg, *query); err != nil {
+		if err := x.rangeRead(ctx, eg, *query); err != nil {
 			return errors.Wrap(err, "failed to execute as range read query")
 		}
 		return nil
@@ -113,9 +113,9 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 	return nil
 }
 
-func (x *App) rangeRead(eg engine.Engine, query q.KeyValue) error {
+func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue) error {
 	x.Log.Log().Interface("query", query).Msg("executing range-read query")
-	for kv := range eg.RangeRead(context.Background(), query, x.Flags.RangeOpts()) {
+	for kv := range eg.RangeRead(ctx, query, x.Flags.RangeOpts()) {
 		if kv.Err != nil {
 			return kv.Err
 		}
@@ -130,9 +130,9 @@ func (x *App) rangeRead(eg engine.Engine, query q.KeyValue) error {
 	return nil
 }
 
-func (x *App) directories(eg engine.Engine, query q.Directory) error {
+func (x *App) directories(ctx context.Context, eg engine.Engine, query q.Directory) error {
 	x.Log.Log().Interface("query", query).Msg("executing directory query")
-	for dir := range eg.Directories(context.Background(), query) {
+	for dir := range eg.Directories(ctx, query) {
 		if dir.Err != nil {
 			return dir.Err
 		}

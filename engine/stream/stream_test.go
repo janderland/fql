@@ -392,10 +392,10 @@ func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, 
 	log := zerolog.New(writer)
 
 	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		s, stop := New(log.WithContext(context.Background()))
-		defer stop()
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
 
-		f(tr, dir, s)
+		f(tr, dir, Stream{Ctx: ctx, Log: log})
 		return nil, nil
 	})
 	if err != nil {

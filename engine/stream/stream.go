@@ -21,8 +21,8 @@ type (
 	}
 
 	Stream struct {
-		ctx context.Context
-		log *zerolog.Logger
+		Ctx context.Context
+		Log zerolog.Logger
 	}
 
 	DirErr struct {
@@ -36,22 +36,9 @@ type (
 	}
 )
 
-func New(ctx context.Context) (Stream, func()) {
-	ctx, cancel := context.WithCancel(ctx)
-	log := zerolog.Ctx(ctx)
-
-	return Stream{
-			ctx: ctx,
-			log: log,
-		}, func() {
-			log.Log().Msg("closing stream")
-			cancel()
-		}
-}
-
 func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 	select {
-	case <-r.ctx.Done():
+	case <-r.Ctx.Done():
 		return false
 	case out <- in:
 		return true
@@ -60,7 +47,7 @@ func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 
 func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	select {
-	case <-r.ctx.Done():
+	case <-r.Ctx.Done():
 		return false
 	case out <- in:
 		return true
@@ -112,7 +99,7 @@ func (r *Stream) UnpackValues(query q.Value, valHandler internal.ValHandler, in 
 }
 
 func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, out chan DirErr) {
-	log := r.log.With().Str("stage", "open directories").Interface("query", query).Logger()
+	log := r.Log.With().Str("stage", "open directories").Interface("query", query).Logger()
 
 	prefix, variable, suffix := convert.SplitAtFirstVariable(query)
 	prefixStr, err := convert.ToStringArray(prefix)
@@ -137,7 +124,7 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 		for _, subDir := range subDirs {
 			// Between each interaction with the DB, give
 			// this goroutine a chance to exit early.
-			if err := r.ctx.Err(); err != nil {
+			if err := r.Ctx.Err(); err != nil {
 				r.SendDir(out, DirErr{Err: err})
 				return
 			}
@@ -163,7 +150,7 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 }
 
 func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
-	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
+	log := r.Log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix := convert.ToTuplePrefix(query)
 	prefix = convert.RemoveMaybeMore(prefix)
@@ -224,7 +211,7 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 }
 
 func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan KeyValErr, out chan KeyValErr) {
-	log := r.log.With().Str("stage", "filter keys").Interface("query", query).Logger()
+	log := r.Log.With().Str("stage", "filter keys").Interface("query", query).Logger()
 
 	for msg := range in {
 		if msg.Err != nil {
@@ -252,7 +239,7 @@ func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan KeyValErr, out
 }
 
 func (r *Stream) goUnpackValues(query q.Value, valHandler internal.ValHandler, in chan KeyValErr, out chan KeyValErr) {
-	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
+	log := r.Log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
 	for msg := range in {
 		if msg.Err != nil {

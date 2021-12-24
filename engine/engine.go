@@ -36,22 +36,13 @@ func (x RangeOpts) forStream() stream.RangeOpts {
 }
 
 type Engine struct {
-	tr  facade.Transactor
-	ctx context.Context
-	log *zerolog.Logger
-}
-
-func New(ctx context.Context, tr facade.Transactor) Engine {
-	return Engine{
-		tr:  tr,
-		ctx: ctx,
-		log: zerolog.Ctx(ctx),
-	}
+	Tr  facade.Transactor
+	Log zerolog.Logger
 }
 
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
-	return e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		return f(New(e.ctx, tr))
+	return e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		return f(Engine{Tr: tr, Log: e.Log})
 	})
 }
 
@@ -70,8 +61,8 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 		return errors.Wrap(err, "failed to pack value")
 	}
 
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("setting")
+	_, err = e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		e.Log.Log().Interface("query", query).Msg("setting")
 
 		dir, err := tr.DirCreateOrOpen(path)
 		if err != nil {
@@ -99,8 +90,8 @@ func (e *Engine) Clear(query q.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("clearing")
+	_, err = e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		e.Log.Log().Interface("query", query).Msg("clearing")
 
 		dir, err := tr.DirOpen(path)
 		if err != nil {
@@ -137,8 +128,8 @@ func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, err
 	}
 
 	var valBytes []byte
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("single reading")
+	_, err = e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		e.Log.Log().Interface("query", query).Msg("single reading")
 
 		dir, err := tr.DirOpen(path)
 		if err != nil {
@@ -182,8 +173,10 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 	go func() {
 		defer close(out)
 
-		s, stop := stream.New(ctx)
-		defer stop()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		s := stream.Stream{Ctx: ctx, Log: e.Log}
 
 		if class.Classify(query) != class.RangeRead {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read class")})
@@ -196,7 +189,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 			return
 		}
 
-		_, err = e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		_, err = e.Tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, opts.Filter, stage2)
@@ -219,10 +212,12 @@ func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream
 	go func() {
 		defer close(out)
 
-		s, stop := stream.New(ctx)
-		defer stop()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-		_, err := e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		s := stream.Stream{Ctx: ctx, Log: e.Log}
+
+		_, err := e.Tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, query) {
 				s.SendDir(out, dir)
 			}
