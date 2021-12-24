@@ -12,6 +12,7 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/engine/internal"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/keyval/values"
@@ -344,10 +345,10 @@ func TestStream_UnpackValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				deserialize, err := values.NewDeserialize(test.query, byteOrder, true)
+				valHandler, err := internal.NewValueHandler(test.query, byteOrder, true)
 				require.NoError(t, err)
 
-				out := s.UnpackValues(test.query, deserialize, sendKVs(t, s, test.initial))
+				out := s.UnpackValues(test.query, valHandler, sendKVs(t, s, test.initial))
 				kvs, err := collectKVs(out)
 				require.NoError(t, err)
 

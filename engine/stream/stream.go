@@ -6,10 +6,10 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/engine/internal"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/compare"
 	"github.com/janderland/fdbq/keyval/convert"
-	"github.com/janderland/fdbq/keyval/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -100,12 +100,12 @@ func (r *Stream) FilterKeys(query q.Tuple, filter bool, in chan KeyValErr) chan 
 	return out
 }
 
-func (r *Stream) UnpackValues(query q.Value, deserialize values.Deserialize, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) UnpackValues(query q.Value, valHandler internal.ValHandler, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.goUnpackValues(query, deserialize, in, out)
+		r.goUnpackValues(query, valHandler, in, out)
 	}()
 
 	return out
@@ -251,7 +251,7 @@ func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan KeyValErr, out
 	}
 }
 
-func (r *Stream) goUnpackValues(query q.Value, deserialize values.Deserialize, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) goUnpackValues(query q.Value, valHandler internal.ValHandler, in chan KeyValErr, out chan KeyValErr) {
 	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
 	for msg := range in {
@@ -265,7 +265,7 @@ func (r *Stream) goUnpackValues(query q.Value, deserialize values.Deserialize, i
 		log.Log().Msg("received key-value")
 
 		var err error
-		kv.Value, err = deserialize(kv.Value.(q.Bytes))
+		kv.Value, err = valHandler.Handle(kv.Value.(q.Bytes))
 		if err != nil {
 			r.SendKV(out, KeyValErr{Err: err})
 			return

@@ -6,6 +6,7 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/engine/internal"
 	"github.com/janderland/fdbq/engine/stream"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
@@ -130,9 +131,9 @@ func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, err
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	deserialize, err := values.NewDeserialize(query.Value, opts.ByteOrder, opts.Filter)
+	valHandler, err := internal.NewValueHandler(query.Value, opts.ByteOrder, opts.Filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to init unpacker")
+		return nil, errors.Wrap(err, "failed to init value handler")
 	}
 
 	var valBytes []byte
@@ -162,9 +163,9 @@ func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, err
 		return nil, nil
 	}
 
-	value, err := deserialize(valBytes)
+	value, err := valHandler.Handle(valBytes)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to deserialize value")
+		return nil, errors.Wrap(err, "failed to unpack value")
 	}
 	if value == nil {
 		return nil, nil
@@ -189,9 +190,9 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 			return
 		}
 
-		deserialize, err := values.NewDeserialize(query.Value, opts.ByteOrder, opts.Filter)
+		valHandler, err := internal.NewValueHandler(query.Value, opts.ByteOrder, opts.Filter)
 		if err != nil {
-			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
+			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to init value handler")})
 			return
 		}
 
@@ -199,7 +200,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.FilterKeys(query.Key.Tuple, opts.Filter, stage2)
-			for kve := range s.UnpackValues(query.Value, deserialize, stage3) {
+			for kve := range s.UnpackValues(query.Value, valHandler, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil
