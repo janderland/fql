@@ -53,8 +53,8 @@ func TestHeadless_Query(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, test.flags, func(h Headless, tr facade.Transactor) {
-				err := h.Run(tr, test.queries)
+			testEnv(t, test.flags, func(h App, tr facade.Transactor) {
+				err := h.Run(context.Background(), tr, test.queries)
 				if test.err {
 					assert.Error(t, err)
 				} else {
@@ -65,7 +65,7 @@ func TestHeadless_Query(t *testing.T) {
 	}
 }
 
-func testEnv(t *testing.T, flags flag.Flags, f func(Headless, facade.Transactor)) {
+func testEnv(t *testing.T, flags flag.Flags, f func(App, facade.Transactor)) {
 	writer := zerolog.ConsoleWriter{Out: os.Stdout}
 	writer.FormatLevel = func(_ interface{}) string { return "" }
 	log := zerolog.New(writer).With().Timestamp().Logger()
@@ -73,7 +73,11 @@ func testEnv(t *testing.T, flags flag.Flags, f func(Headless, facade.Transactor)
 	dv, closeDV := devnull(t)
 	defer closeDV()
 
-	f(New(log.WithContext(context.Background()), flags, dv), facade.NewNilTransactor())
+	f(App{
+		Flags: flags,
+		Log:   log,
+		Out:   dv,
+	}, facade.NewNilTransactor())
 }
 
 func devnull(t *testing.T) (*os.File, func()) {

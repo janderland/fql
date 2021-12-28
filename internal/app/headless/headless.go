@@ -16,27 +16,17 @@ import (
 	"github.com/rs/zerolog"
 )
 
-type Headless struct {
-	ctx   context.Context
-	log   *zerolog.Logger
-	flags flag.Flags
-	out   io.Writer
+type App struct {
+	Flags flag.Flags
+	Log   zerolog.Logger
+	Out   io.Writer
 }
 
-func New(ctx context.Context, flags flag.Flags, out io.Writer) Headless {
-	return Headless{
-		ctx:   ctx,
-		log:   zerolog.Ctx(ctx),
-		flags: flags,
-		out:   out,
-	}
-}
-
-func (h *Headless) Run(db facade.Transactor, queries []string) error {
-	eg := engine.New(h.ctx, db)
+func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
+	eg := engine.Engine{Tr: db, Log: x.Log}
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
-			if err := h.query(eg, str); err != nil {
+			if err := x.query(ctx, eg, str); err != nil {
 				return nil, err
 			}
 		}
@@ -45,14 +35,14 @@ func (h *Headless) Run(db facade.Transactor, queries []string) error {
 	return err
 }
 
-func (h *Headless) query(eg engine.Engine, str string) error {
+func (x *App) query(ctx context.Context, eg engine.Engine, str string) error {
 	query, onlyDir, err := parser.ParseQuery(str)
 	if err != nil {
 		return errors.Wrap(err, "failed to parse query")
 	}
 
 	if onlyDir {
-		if err := h.directories(eg, query.Key.Directory); err != nil {
+		if err := x.directories(ctx, eg, query.Key.Directory); err != nil {
 			return errors.Wrap(err, "failed to execute as directory query")
 		}
 		return nil
@@ -60,25 +50,25 @@ func (h *Headless) query(eg engine.Engine, str string) error {
 
 	switch c := class.Classify(*query); c {
 	case class.Constant:
-		if err := h.set(eg, *query); err != nil {
+		if err := x.set(eg, *query); err != nil {
 			return errors.Wrap(err, "failed to execute as set query")
 		}
 		return nil
 
 	case class.Clear:
-		if err := h.clear(eg, *query); err != nil {
+		if err := x.clear(eg, *query); err != nil {
 			return errors.Wrap(err, "failed to execute as clear query")
 		}
 		return nil
 
 	case class.SingleRead:
-		if err := h.singleRead(eg, *query); err != nil {
+		if err := x.singleRead(eg, *query); err != nil {
 			return errors.Wrap(err, "failed to execute as single read query")
 		}
 		return nil
 
 	case class.RangeRead:
-		if err := h.rangeRead(eg, *query); err != nil {
+		if err := x.rangeRead(ctx, eg, *query); err != nil {
 			return errors.Wrap(err, "failed to execute as range read query")
 		}
 		return nil
@@ -88,25 +78,25 @@ func (h *Headless) query(eg engine.Engine, str string) error {
 	}
 }
 
-func (h *Headless) set(eg engine.Engine, query q.KeyValue) error {
-	if !h.flags.Write {
+func (x *App) set(eg engine.Engine, query q.KeyValue) error {
+	if !x.Flags.Write {
 		return errors.New("writing isn't enabled")
 	}
-	h.log.Log().Interface("query", query).Msg("executing set query")
-	return eg.Set(query, h.flags.ByteOrder())
+	x.Log.Log().Interface("query", query).Msg("executing set query")
+	return eg.Set(query, x.Flags.ByteOrder())
 }
 
-func (h *Headless) clear(eg engine.Engine, query q.KeyValue) error {
-	if !h.flags.Write {
+func (x *App) clear(eg engine.Engine, query q.KeyValue) error {
+	if !x.Flags.Write {
 		return errors.New("writing isn't enabled")
 	}
-	h.log.Log().Interface("query", query).Msg("executing clear query")
+	x.Log.Log().Interface("query", query).Msg("executing clear query")
 	return eg.Clear(query)
 }
 
-func (h *Headless) singleRead(eg engine.Engine, query q.KeyValue) error {
-	h.log.Log().Interface("query", query).Msg("executing single-read query")
-	kv, err := eg.SingleRead(query, h.flags.ByteOrder())
+func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
+	x.Log.Log().Interface("query", query).Msg("executing single-read query")
+	kv, err := eg.SingleRead(query, x.Flags.SingleOpts())
 	if err != nil {
 		return err
 	}
@@ -117,15 +107,15 @@ func (h *Headless) singleRead(eg engine.Engine, query q.KeyValue) error {
 	if err != nil {
 		return errors.Wrap(err, "failed to format output")
 	}
-	if _, err := fmt.Fprintln(h.out, str); err != nil {
+	if _, err := fmt.Fprintln(x.Out, str); err != nil {
 		return errors.Wrap(err, "failed to print output")
 	}
 	return nil
 }
 
-func (h *Headless) rangeRead(eg engine.Engine, query q.KeyValue) error {
-	h.log.Log().Interface("query", query).Msg("executing range-read query")
-	for kv := range eg.RangeRead(context.Background(), query, h.flags.RangeOpts()) {
+func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue) error {
+	x.Log.Log().Interface("query", query).Msg("executing range-read query")
+	for kv := range eg.RangeRead(ctx, query, x.Flags.RangeOpts()) {
 		if kv.Err != nil {
 			return kv.Err
 		}
@@ -133,24 +123,24 @@ func (h *Headless) rangeRead(eg engine.Engine, query q.KeyValue) error {
 		if err != nil {
 			return errors.Wrap(err, "failed to format output")
 		}
-		if _, err := fmt.Fprintln(h.out, str); err != nil {
+		if _, err := fmt.Fprintln(x.Out, str); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}
 	}
 	return nil
 }
 
-func (h *Headless) directories(eg engine.Engine, query q.Directory) error {
-	h.log.Log().Interface("query", query).Msg("executing directory query")
-	for msg := range eg.Directories(context.Background(), query) {
-		if msg.Err != nil {
-			return msg.Err
+func (x *App) directories(ctx context.Context, eg engine.Engine, query q.Directory) error {
+	x.Log.Log().Interface("query", query).Msg("executing directory query")
+	for dir := range eg.Directories(ctx, query) {
+		if dir.Err != nil {
+			return dir.Err
 		}
-		str, err := parser.FormatDirectory(convert.FromStringArray(msg.Dir.GetPath()))
+		str, err := parser.FormatDirectory(convert.FromStringArray(dir.Dir.GetPath()))
 		if err != nil {
 			return errors.Wrap(err, "failed to format output")
 		}
-		if _, err := fmt.Fprintln(h.out, str); err != nil {
+		if _, err := fmt.Fprintln(x.Out, str); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}
 	}

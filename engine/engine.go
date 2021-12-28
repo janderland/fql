@@ -6,6 +6,7 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/engine/internal"
 	"github.com/janderland/fdbq/engine/stream"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
@@ -15,9 +16,15 @@ import (
 	"github.com/rs/zerolog"
 )
 
+type SingleOpts struct {
+	ByteOrder binary.ByteOrder
+	Filter    bool
+}
+
 type RangeOpts struct {
 	ByteOrder binary.ByteOrder
 	Reverse   bool
+	Filter    bool
 	Limit     int
 }
 
@@ -29,22 +36,13 @@ func (x RangeOpts) forStream() stream.RangeOpts {
 }
 
 type Engine struct {
-	tr  facade.Transactor
-	ctx context.Context
-	log *zerolog.Logger
-}
-
-func New(ctx context.Context, tr facade.Transactor) Engine {
-	return Engine{
-		tr:  tr,
-		ctx: ctx,
-		log: zerolog.Ctx(ctx),
-	}
+	Tr  facade.Transactor
+	Log zerolog.Logger
 }
 
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
-	return e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		return f(New(e.ctx, tr))
+	return e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		return f(Engine{Tr: tr, Log: e.Log})
 	})
 }
 
@@ -63,8 +61,8 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 		return errors.Wrap(err, "failed to pack value")
 	}
 
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("setting")
+	_, err = e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		e.Log.Log().Interface("query", query).Msg("setting")
 
 		dir, err := tr.DirCreateOrOpen(path)
 		if err != nil {
@@ -92,8 +90,8 @@ func (e *Engine) Clear(query q.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("clearing")
+	_, err = e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		e.Log.Log().Interface("query", query).Msg("clearing")
 
 		dir, err := tr.DirOpen(path)
 		if err != nil {
@@ -114,7 +112,7 @@ func (e *Engine) Clear(query q.KeyValue) error {
 	return errors.Wrap(err, "transaction failed")
 }
 
-func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.KeyValue, error) {
+func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, error) {
 	if class.Classify(query) != class.SingleRead {
 		return nil, errors.New("query not single-read class")
 	}
@@ -124,13 +122,14 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	valueFilter, err := values.NewFilter(query.Value, byteOrder)
+	valHandler, err := internal.NewValueHandler(query.Value, opts.ByteOrder, opts.Filter)
 	if err != nil {
-		return nil, errors.Wrap(err, "failed to init unpacker")
+		return nil, errors.Wrap(err, "failed to init value handler")
 	}
 
-	result, err := e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("single reading")
+	var valBytes []byte
+	_, err = e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		e.Log.Log().Interface("query", query).Msg("single reading")
 
 		dir, err := tr.DirOpen(path)
 		if err != nil {
@@ -145,26 +144,20 @@ func (e *Engine) SingleRead(query q.KeyValue, byteOrder binary.ByteOrder) (*q.Ke
 			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
 		}
 
-		return tr.Get(dir.Pack(tup)).Get()
+		valBytes = tr.Get(dir.Pack(tup)).MustGet()
+		return nil, nil
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "transaction failed")
 	}
-
-	// Before asserting the result is a []byte, we need
-	// to check if it's an untyped nil. This check could
-	// be avoided if we ensured the transaction callback
-	// always returned a []byte, but having this check
-	// here is less fragile.
-	if result == nil {
+	if valBytes == nil {
 		return nil, nil
 	}
 
-	bytes := result.([]byte)
-	if bytes == nil {
-		return nil, nil
+	value, err := valHandler.Handle(valBytes)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to unpack value")
 	}
-	value := valueFilter(bytes)
 	if value == nil {
 		return nil, nil
 	}
@@ -180,19 +173,27 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 	go func() {
 		defer close(out)
 
-		s, stop := stream.New(ctx)
-		defer stop()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
+
+		s := stream.Stream{Ctx: ctx, Log: e.Log}
 
 		if class.Classify(query) != class.RangeRead {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read class")})
 			return
 		}
 
-		_, err := e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		valHandler, err := internal.NewValueHandler(query.Value, opts.ByteOrder, opts.Filter)
+		if err != nil {
+			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to init value handler")})
+			return
+		}
+
+		_, err = e.Tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
-			stage3 := s.FilterKeys(query.Key.Tuple, stage2)
-			for kve := range s.UnpackValues(query.Value, opts.ByteOrder, stage3) {
+			stage3 := s.UnpackKeys(query.Key.Tuple, opts.Filter, stage2)
+			for kve := range s.UnpackValues(query.Value, valHandler, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil
@@ -211,10 +212,12 @@ func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream
 	go func() {
 		defer close(out)
 
-		s, stop := stream.New(ctx)
-		defer stop()
+		ctx, cancel := context.WithCancel(ctx)
+		defer cancel()
 
-		_, err := e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		s := stream.Stream{Ctx: ctx, Log: e.Log}
+
+		_, err := e.Tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, query) {
 				s.SendDir(out, dir)
 			}

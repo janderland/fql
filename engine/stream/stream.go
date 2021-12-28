@@ -2,15 +2,14 @@ package stream
 
 import (
 	"context"
-	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/engine/internal"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/compare"
 	"github.com/janderland/fdbq/keyval/convert"
-	"github.com/janderland/fdbq/keyval/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -22,12 +21,18 @@ type (
 	}
 
 	Stream struct {
-		ctx context.Context
-		log *zerolog.Logger
+		Ctx context.Context
+		Log zerolog.Logger
 	}
 
 	DirErr struct {
 		Dir directory.DirectorySubspace
+		Err error
+	}
+
+	DirKVErr struct {
+		Dir directory.DirectorySubspace
+		KV  fdb.KeyValue
 		Err error
 	}
 
@@ -37,22 +42,18 @@ type (
 	}
 )
 
-func New(ctx context.Context) (Stream, func()) {
-	ctx, cancel := context.WithCancel(ctx)
-	log := zerolog.Ctx(ctx)
-
-	return Stream{
-			ctx: ctx,
-			log: log,
-		}, func() {
-			log.Log().Msg("closing stream")
-			cancel()
-		}
-}
-
 func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 	select {
-	case <-r.ctx.Done():
+	case <-r.Ctx.Done():
+		return false
+	case out <- in:
+		return true
+	}
+}
+
+func (r *Stream) SendDirKV(out chan<- DirKVErr, in DirKVErr) bool {
+	select {
+	case <-r.Ctx.Done():
 		return false
 	case out <- in:
 		return true
@@ -61,7 +62,7 @@ func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 
 func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	select {
-	case <-r.ctx.Done():
+	case <-r.Ctx.Done():
 		return false
 	case out <- in:
 		return true
@@ -79,8 +80,8 @@ func (r *Stream) OpenDirectories(tr facade.ReadTransactor, query q.Directory) ch
 	return out
 }
 
-func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan KeyValErr {
-	out := make(chan KeyValErr)
+func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan DirKVErr {
+	out := make(chan DirKVErr)
 
 	go func() {
 		defer close(out)
@@ -90,30 +91,30 @@ func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeO
 	return out
 }
 
-func (r *Stream) FilterKeys(query q.Tuple, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) UnpackKeys(query q.Tuple, filter bool, in chan DirKVErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.goFilterKeys(query, in, out)
+		r.goUnpackKeys(query, filter, in, out)
 	}()
 
 	return out
 }
 
-func (r *Stream) UnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) UnpackValues(query q.Value, valHandler internal.ValHandler, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.goUnpackValues(query, order, in, out)
+		r.goUnpackValues(query, valHandler, in, out)
 	}()
 
 	return out
 }
 
 func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, out chan DirErr) {
-	log := r.log.With().Str("stage", "open directories").Interface("query", query).Logger()
+	log := r.Log.With().Str("stage", "open directories").Interface("query", query).Logger()
 
 	prefix, variable, suffix := convert.SplitAtFirstVariable(query)
 	prefixStr, err := convert.ToStringArray(prefix)
@@ -138,7 +139,7 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 		for _, subDir := range subDirs {
 			// Between each interaction with the DB, give
 			// this goroutine a chance to exit early.
-			if err := r.ctx.Err(); err != nil {
+			if err := r.Ctx.Err(); err != nil {
 				r.SendDir(out, DirErr{Err: err})
 				return
 			}
@@ -163,20 +164,20 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 	}
 }
 
-func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
-	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
+func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan DirKVErr) {
+	log := r.Log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix := convert.ToTuplePrefix(query)
 	prefix = convert.RemoveMaybeMore(prefix)
 	fdbPrefix, err := convert.ToFDBTuple(prefix)
 	if err != nil {
-		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to convert prefix to FDB tuple")})
+		r.SendDirKV(out, DirKVErr{Err: errors.Wrap(err, "failed to convert prefix to FDB tuple")})
 		return
 	}
 
 	for msg := range in {
 		if msg.Err != nil {
-			r.SendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "read range input closed")})
+			r.SendDirKV(out, DirKVErr{Err: errors.Wrap(msg.Err, "read range input closed")})
 			return
 		}
 
@@ -186,7 +187,7 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 
 		rng, err := fdb.PrefixRange(dir.Pack(fdbPrefix))
 		if err != nil {
-			r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to create prefix range")})
+			r.SendDirKV(out, DirKVErr{Err: errors.Wrap(err, "failed to create prefix range")})
 			return
 		}
 
@@ -196,36 +197,20 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 		}).Iterator()
 
 		for iter.Advance() {
-			fromDB, err := iter.Get()
+			kv, err := iter.Get()
 			if err != nil {
-				r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to get key-value")})
+				r.SendDirKV(out, DirKVErr{Err: errors.Wrap(err, "failed to get key-value")})
 				return
 			}
-
-			tup, err := dir.Unpack(fromDB.Key)
-			if err != nil {
-				r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to unpack key")})
-				return
-			}
-
-			kv := q.KeyValue{
-				Key: q.Key{
-					Directory: convert.FromStringArray(dir.GetPath()),
-					Tuple:     convert.FromFDBTuple(tup),
-				},
-				Value: q.Bytes(fromDB.Value),
-			}
-
-			log.Log().Interface("kv", kv).Msg("sending key-value")
-			if !r.SendKV(out, KeyValErr{KV: kv}) {
+			if !r.SendDirKV(out, DirKVErr{Dir: dir, KV: kv}) {
 				return
 			}
 		}
 	}
 }
 
-func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValErr) {
-	log := r.log.With().Str("stage", "filter keys").Interface("query", query).Logger()
+func (r *Stream) goUnpackKeys(query q.Tuple, filter bool, in chan DirKVErr, out chan KeyValErr) {
+	log := r.Log.With().Str("stage", "unpack keys").Interface("query", query).Logger()
 
 	for msg := range in {
 		if msg.Err != nil {
@@ -233,12 +218,31 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 			return
 		}
 
-		kv := msg.KV
-		log := log.With().Interface("kv", kv).Logger()
+		dir := msg.Dir
+		fromDB := msg.KV
+		log := log.With().Interface("dir", dir.GetPath()).Logger()
 		log.Log().Msg("received key-value")
 
-		if compare.Tuples(query, kv.Key.Tuple) != nil {
-			continue
+		tup, err := dir.Unpack(fromDB.Key)
+		if err != nil {
+			r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to unpack key")})
+			return
+		}
+
+		kv := q.KeyValue{
+			Key: q.Key{
+				Directory: convert.FromStringArray(dir.GetPath()),
+				Tuple:     convert.FromFDBTuple(tup),
+			},
+			Value: q.Bytes(fromDB.Value),
+		}
+
+		if mismatch := compare.Tuples(query, kv.Key.Tuple); mismatch != nil {
+			if filter {
+				continue
+			}
+			r.SendKV(out, KeyValErr{Err: errors.Errorf("key's tuple disobeys schema at index path %v", mismatch)})
+			return
 		}
 
 		log.Log().Msg("sending key-value")
@@ -248,14 +252,8 @@ func (r *Stream) goFilterKeys(query q.Tuple, in chan KeyValErr, out chan KeyValE
 	}
 }
 
-func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan KeyValErr, out chan KeyValErr) {
-	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
-
-	filter, err := values.NewFilter(query, order)
-	if err != nil {
-		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to init unpacker")})
-		return
-	}
+func (r *Stream) goUnpackValues(query q.Value, valHandler internal.ValHandler, in chan KeyValErr, out chan KeyValErr) {
+	log := r.Log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
 	for msg := range in {
 		if msg.Err != nil {
@@ -267,7 +265,13 @@ func (r *Stream) goUnpackValues(query q.Value, order binary.ByteOrder, in chan K
 		log := log.With().Interface("kv", kv).Logger()
 		log.Log().Msg("received key-value")
 
-		if kv.Value = filter(kv.Value.(q.Bytes)); kv.Value != nil {
+		var err error
+		kv.Value, err = valHandler.Handle(kv.Value.(q.Bytes))
+		if err != nil {
+			r.SendKV(out, KeyValErr{Err: err})
+			return
+		}
+		if kv.Value != nil {
 			log.Log().Interface("kv", kv).Msg("sending key-value")
 			if !r.SendKV(out, KeyValErr{KV: kv}) {
 				return

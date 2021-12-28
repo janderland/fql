@@ -51,8 +51,8 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 
 	// Loop over both tuples, comparing their elements.
 	for i, element := range pattern {
-		mismatch := newComparison(i, candidate[i]).Do(element)
-		if mismatch != nil {
+		c := newComparison(i, candidate[i])
+		if mismatch := c.Do(element); mismatch != nil {
 			return mismatch
 		}
 	}

@@ -17,8 +17,8 @@ func newComparison(i int, candidate q.TupElement) comparison {
 	return comparison{i: i, candidate: candidate}
 }
 
-func (x comparison) Do(pattern q.TupElement) []int {
-	pattern.TupElement(&x)
+func (x *comparison) Do(pattern q.TupElement) []int {
+	pattern.TupElement(x)
 	return x.mismatch
 }
 

@@ -46,7 +46,8 @@ func ToFDBTuple(in q.Tuple) (tuple.Tuple, error) {
 	var err error
 
 	for i, element := range in {
-		out[i], err = conversion{}.Do(element)
+		var c conversion
+		out[i], err = c.Do(element)
 		if err != nil {
 			return nil, errors.Wrapf(err, "failed to convert index %d", i)
 		}

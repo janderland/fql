@@ -43,11 +43,15 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 	if err := fdb.APIVersion(620); err != nil {
 		return errors.Wrap(err, "failed to set FDB API version")
 	}
-	fdb, err := fdb.OpenDatabase(flags.Cluster)
+	db, err := fdb.OpenDatabase(flags.Cluster)
 	if err != nil {
 		return errors.Wrap(err, "failed to connect to DB")
 	}
 
-	app := headless.New(log.WithContext(context.Background()), *flags, stdout)
-	return errors.Wrap(app.Run(facade.NewTransactor(fdb), queries), "headless app failed")
+	app := headless.App{
+		Flags: *flags,
+		Log:   log,
+		Out:   stdout,
+	}
+	return app.Run(context.Background(), facade.NewTransactor(db), queries)
 }

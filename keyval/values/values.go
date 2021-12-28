@@ -1,7 +1,6 @@
 package values
 
 import (
-	"bytes"
 	"encoding/binary"
 	"math"
 
@@ -11,43 +10,9 @@ import (
 	"github.com/pkg/errors"
 )
 
-type Filter func(val []byte) q.Value
-
-func NewFilter(query q.Value, order binary.ByteOrder) (Filter, error) {
-	if variable, ok := query.(q.Variable); ok {
-		if len(variable) == 0 {
-			return func(val []byte) q.Value {
-				return q.Bytes(val)
-			}, nil
-		}
-
-		return func(val []byte) q.Value {
-			for _, typ := range variable {
-				out, err := Unpack(val, typ, order)
-				if err != nil {
-					continue
-				}
-				return out
-			}
-			return nil
-		}, nil
-	} else {
-		packed, err := Pack(query, order)
-		if err != nil {
-			return nil, err
-		}
-
-		return func(val []byte) q.Value {
-			if bytes.Equal(packed, val) {
-				return query
-			}
-			return nil
-		}, nil
-	}
-}
-
 func Pack(val q.Value, order binary.ByteOrder) ([]byte, error) {
-	return newSerialization(order).Do(val)
+	s := newSerialization(order)
+	return s.Do(val)
 }
 
 func Unpack(val []byte, typ q.ValueType, order binary.ByteOrder) (q.Value, error) {
