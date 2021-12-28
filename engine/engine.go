@@ -192,7 +192,7 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 		_, err = e.Tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
-			stage3 := s.FilterKeys(query.Key.Tuple, opts.Filter, stage2)
+			stage3 := s.UnpackKeys(query.Key.Tuple, opts.Filter, stage2)
 			for kve := range s.UnpackValues(query.Value, valHandler, stage3) {
 				s.SendKV(out, kve)
 			}

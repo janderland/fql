@@ -316,7 +316,7 @@ func TestStream_FilterKeys(t *testing.T) {
 					kvsToSend = append(kvsToSend, fdb.KeyValue{Key: dir.Pack(tup), Value: val})
 				}
 
-				out := s.FilterKeys(test.query, test.filter, sendDirKVs(t, s, dirsToSend, kvsToSend))
+				out := s.UnpackKeys(test.query, test.filter, sendDirKVs(t, s, dirsToSend, kvsToSend))
 				kvs, err := collectKVs(out)
 				if test.err {
 					require.Error(t, err)

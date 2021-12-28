@@ -91,12 +91,12 @@ func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeO
 	return out
 }
 
-func (r *Stream) FilterKeys(query q.Tuple, filter bool, in chan DirKVErr) chan KeyValErr {
+func (r *Stream) UnpackKeys(query q.Tuple, filter bool, in chan DirKVErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		r.goFilterKeys(query, filter, in, out)
+		r.goUnpackKeys(query, filter, in, out)
 	}()
 
 	return out
@@ -209,8 +209,8 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 	}
 }
 
-func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan DirKVErr, out chan KeyValErr) {
-	log := r.Log.With().Str("stage", "filter keys").Interface("query", query).Logger()
+func (r *Stream) goUnpackKeys(query q.Tuple, filter bool, in chan DirKVErr, out chan KeyValErr) {
+	log := r.Log.With().Str("stage", "unpack keys").Interface("query", query).Logger()
 
 	for msg := range in {
 		if msg.Err != nil {
