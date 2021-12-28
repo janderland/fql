@@ -30,6 +30,12 @@ type (
 		Err error
 	}
 
+	DirKVErr struct {
+		Dir directory.DirectorySubspace
+		KV  fdb.KeyValue
+		Err error
+	}
+
 	KeyValErr struct {
 		KV  q.KeyValue
 		Err error
@@ -37,6 +43,15 @@ type (
 )
 
 func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
+	select {
+	case <-r.Ctx.Done():
+		return false
+	case out <- in:
+		return true
+	}
+}
+
+func (r *Stream) SendDirKV(out chan<- DirKVErr, in DirKVErr) bool {
 	select {
 	case <-r.Ctx.Done():
 		return false
@@ -65,8 +80,8 @@ func (r *Stream) OpenDirectories(tr facade.ReadTransactor, query q.Directory) ch
 	return out
 }
 
-func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan KeyValErr {
-	out := make(chan KeyValErr)
+func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan DirKVErr {
+	out := make(chan DirKVErr)
 
 	go func() {
 		defer close(out)
@@ -76,7 +91,7 @@ func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeO
 	return out
 }
 
-func (r *Stream) FilterKeys(query q.Tuple, filter bool, in chan KeyValErr) chan KeyValErr {
+func (r *Stream) FilterKeys(query q.Tuple, filter bool, in chan DirKVErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
@@ -149,20 +164,20 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 	}
 }
 
-func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan KeyValErr) {
+func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan DirKVErr) {
 	log := r.Log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix := convert.ToTuplePrefix(query)
 	prefix = convert.RemoveMaybeMore(prefix)
 	fdbPrefix, err := convert.ToFDBTuple(prefix)
 	if err != nil {
-		r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to convert prefix to FDB tuple")})
+		r.SendDirKV(out, DirKVErr{Err: errors.Wrap(err, "failed to convert prefix to FDB tuple")})
 		return
 	}
 
 	for msg := range in {
 		if msg.Err != nil {
-			r.SendKV(out, KeyValErr{Err: errors.Wrap(msg.Err, "read range input closed")})
+			r.SendDirKV(out, DirKVErr{Err: errors.Wrap(msg.Err, "read range input closed")})
 			return
 		}
 
@@ -172,7 +187,7 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 
 		rng, err := fdb.PrefixRange(dir.Pack(fdbPrefix))
 		if err != nil {
-			r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to create prefix range")})
+			r.SendDirKV(out, DirKVErr{Err: errors.Wrap(err, "failed to create prefix range")})
 			return
 		}
 
@@ -182,35 +197,19 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 		}).Iterator()
 
 		for iter.Advance() {
-			fromDB, err := iter.Get()
+			kv, err := iter.Get()
 			if err != nil {
-				r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to get key-value")})
+				r.SendDirKV(out, DirKVErr{Err: errors.Wrap(err, "failed to get key-value")})
 				return
 			}
-
-			tup, err := dir.Unpack(fromDB.Key)
-			if err != nil {
-				r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to unpack key")})
-				return
-			}
-
-			kv := q.KeyValue{
-				Key: q.Key{
-					Directory: convert.FromStringArray(dir.GetPath()),
-					Tuple:     convert.FromFDBTuple(tup),
-				},
-				Value: q.Bytes(fromDB.Value),
-			}
-
-			log.Log().Interface("kv", kv).Msg("sending key-value")
-			if !r.SendKV(out, KeyValErr{KV: kv}) {
+			if !r.SendDirKV(out, DirKVErr{Dir: dir, KV: kv}) {
 				return
 			}
 		}
 	}
 }
 
-func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan KeyValErr, out chan KeyValErr) {
+func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan DirKVErr, out chan KeyValErr) {
 	log := r.Log.With().Str("stage", "filter keys").Interface("query", query).Logger()
 
 	for msg := range in {
@@ -219,15 +218,30 @@ func (r *Stream) goFilterKeys(query q.Tuple, filter bool, in chan KeyValErr, out
 			return
 		}
 
-		kv := msg.KV
-		log := log.With().Interface("kv", kv).Logger()
+		dir := msg.Dir
+		fromDB := msg.KV
+		log := log.With().Interface("dir", dir.GetPath()).Logger()
 		log.Log().Msg("received key-value")
+
+		tup, err := dir.Unpack(fromDB.Key)
+		if err != nil {
+			r.SendKV(out, KeyValErr{Err: errors.Wrap(err, "failed to unpack key")})
+			return
+		}
+
+		kv := q.KeyValue{
+			Key: q.Key{
+				Directory: convert.FromStringArray(dir.GetPath()),
+				Tuple:     convert.FromFDBTuple(tup),
+			},
+			Value: q.Bytes(fromDB.Value),
+		}
 
 		if mismatch := compare.Tuples(query, kv.Key.Tuple); mismatch != nil {
 			if filter {
 				continue
 			}
-			r.SendKV(out, KeyValErr{Err: errors.Errorf("key disobeys schema at tuple index %v", mismatch)})
+			r.SendKV(out, KeyValErr{Err: errors.Errorf("key's tuple disobeys schema at index path %v", mismatch)})
 			return
 		}
 
