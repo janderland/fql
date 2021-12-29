@@ -18,7 +18,6 @@ import (
 	"github.com/janderland/fdbq/keyval/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
@@ -88,27 +87,21 @@ func TestStream_OpenDirectories(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				for _, path := range test.initial {
 					_, err := rootDir.Create(tr, path, nil)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
+					require.NoError(t, err, "failed to create directory")
 				}
 
 				out := s.OpenDirectories(facade.NewReadTransaction(tr), append(convert.FromStringArray(rootDir.GetPath()), test.query...))
 				directories, err := collectDirs(out)
 				if test.error {
-					assert.Error(t, err)
+					require.Error(t, err, "failed to open directories")
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err, "successfully opened directories")
 				}
 
-				if !assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
-					t.FailNow()
-				}
+				require.Equalf(t, len(test.expected), len(directories), "unexpected number of directories")
 				for i, expected := range test.expected {
 					expected = append(rootDir.GetPath(), expected...)
-					if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory at index %d", i) {
-						t.FailNow()
-					}
+					require.Equalf(t, expected, directories[i].GetPath(), "unexpected directory at index %d", i)
 				}
 			})
 		})
@@ -180,7 +173,7 @@ func TestStream_ReadRange(t *testing.T) {
 
 				ch := s.ReadRange(facade.NewReadTransaction(tr), test.query, RangeOpts{}, sendDirs(t, s, uniqueDirs))
 				actual, err := collectDirKVs(ch)
-				assert.NoError(t, err)
+				require.NoError(t, err, "failed to read range")
 
 				require.Equal(t, len(expected), len(actual), "unexpected number of results")
 				for i := range expected {
@@ -258,9 +251,9 @@ func TestStream_FilterKeys(t *testing.T) {
 				ch := s.UnpackKeys(test.query, test.filter, sendDirKVs(t, s, dirKVs))
 				actual, err := collectKVs(ch)
 				if test.err {
-					require.Error(t, err)
+					require.Error(t, err, "failed to unpack keys")
 				} else {
-					require.NoError(t, err)
+					require.NoError(t, err, "successfully unpacked keys")
 				}
 
 				rootPath := convert.FromStringArray(rootDir.GetPath())
@@ -328,11 +321,11 @@ func TestStream_UnpackValues(t *testing.T) {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
 				valHandler, err := internal.NewValueHandler(test.query, byteOrder, true)
-				require.NoError(t, err)
+				require.NoError(t, err, "failed to create value handler")
 
 				out := s.UnpackValues(test.query, valHandler, sendKVs(t, s, test.initial))
 				kvs, err := collectKVs(out)
-				require.NoError(t, err)
+				require.NoError(t, err, "failed to unpack values")
 
 				require.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
@@ -414,7 +407,7 @@ func openDirs(t *testing.T, tr fdb.Transaction, rootDir directory.Directory, kvs
 
 	for _, kv := range kvs {
 		path, err := convert.ToStringArray(kv.Key.Directory)
-		require.NoError(t, err)
+		require.NoError(t, err, "failed to convert to string array")
 
 		pathStr := strings.Join(path, "/")
 
@@ -422,7 +415,7 @@ func openDirs(t *testing.T, tr fdb.Transaction, rootDir directory.Directory, kvs
 			t.Logf("adding to dir list: %v", path)
 
 			dir, err := rootDir.CreateOrOpen(tr, path, nil)
-			require.NoError(t, err)
+			require.NoError(t, err, "failed to create or open directory")
 
 			dirsByPath[pathStr] = dir
 			uniqueDirs = append(uniqueDirs, dir)
@@ -437,19 +430,17 @@ func buildDirKVs(t *testing.T, dirs map[string]directory.DirectorySubspace, init
 
 	for _, kv := range initial {
 		path, err := convert.ToStringArray(kv.Key.Directory)
-		require.NoError(t, err)
+		require.NoError(t, err, "failed to convert to string array")
 
 		pathStr := strings.Join(path, "/")
 		dir, ok := dirs[pathStr]
-		if !ok {
-			t.Fatalf("%s wasn't provided", pathStr)
-		}
+		require.Truef(t, ok, "%s wasn't provided", pathStr)
 
 		tup, err := convert.ToFDBTuple(kv.Key.Tuple)
-		require.NoError(t, err)
+		require.NoError(t, err, "failed to convert to FDB tuple")
 
 		val, err := values.Pack(kv.Value, byteOrder)
-		require.NoError(t, err)
+		require.NoError(t, err, "failed to pack value")
 
 		out = append(out, DirKV{
 			dir: dir,
