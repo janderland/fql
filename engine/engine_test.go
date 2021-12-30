@@ -6,16 +6,13 @@ import (
 	"flag"
 	"testing"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-
-	"github.com/janderland/fdbq/engine/internal"
-
-	"github.com/stretchr/testify/require"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
+	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/engine/internal"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -33,11 +30,13 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("set and get", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi"), q.String("there")}, Tuple: q.Tuple{q.Float(33.3)}}, Value: q.Int(33)}
+
 			err := e.Set(query, byteOrder)
 			require.NoError(t, err)
 
 			expected := query
 			query.Value = q.Variable{q.IntType}
+
 			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Equal(t, &expected, result)
@@ -47,11 +46,13 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("set and get empty value", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi"), q.String("there")}, Tuple: q.Tuple{q.Float(33.3)}}, Value: q.Bytes{}}
+
 			err := e.Set(query, byteOrder)
 			require.NoError(t, err)
 
 			expected := query
 			query.Value = q.Variable{}
+
 			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Equal(t, &expected, result)
@@ -61,6 +62,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("get nothing", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("nothing"), q.String("here")}}, Value: q.Variable{}}
+
 			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Nil(t, result)
