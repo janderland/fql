@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestClassify(t *testing.T) {
@@ -87,7 +87,7 @@ func TestClassify(t *testing.T) {
 	for _, test := range tests {
 		t.Run(string(test.kind), func(t *testing.T) {
 			kind := Classify(test.kv)
-			assert.Equal(t, test.kind, kind)
+			require.Equal(t, test.kind, kind)
 		})
 	}
 }
@@ -132,7 +132,7 @@ func TestClassifyNil(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			kind := Classify(test.kv)
-			assert.Equal(t, Nil, kind)
+			require.Equal(t, Nil, kind)
 		})
 	}
 }

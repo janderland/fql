@@ -5,7 +5,6 @@ import (
 	"encoding/binary"
 	"flag"
 	"math/big"
-	"os"
 	"strings"
 	"testing"
 
@@ -18,27 +17,18 @@ import (
 	"github.com/janderland/fdbq/keyval/values"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 )
 
-const root = "root"
-
 var (
-	db        fdb.Database
 	byteOrder binary.ByteOrder
-
-	flags struct {
-		force bool
-	}
+	force     bool
 )
 
 func init() {
 	fdb.MustAPIVersion(620)
-	db = fdb.MustOpenDefault()
 	byteOrder = binary.BigEndian
-
-	flag.BoolVar(&flags.force, "force", false, "remove test directory if it exists")
+	flag.BoolVar(&force, "force", false, "remove test directory if it exists")
 }
 
 func TestStream_OpenDirectories(t *testing.T) {
@@ -85,30 +75,30 @@ func TestStream_OpenDirectories(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
+			testEnv(t, func(tr facade.Transaction, s Stream) {
 				for _, path := range test.initial {
-					_, err := rootDir.Create(tr, path, nil)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
+					_, err := tr.DirCreateOrOpen(path)
+					require.NoError(t, err, "failed to create directory")
 				}
 
-				out := s.OpenDirectories(facade.NewReadTransaction(tr), append(convert.FromStringArray(rootDir.GetPath()), test.query...))
-				directories, err := collectDirs(out)
+				ch := s.OpenDirectories(tr, test.query)
+				dirs, err := collectDirs(ch)
 				if test.error {
-					assert.Error(t, err)
+					require.Error(t, err, "failed to open directories")
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err, "successfully opened directories")
 				}
 
-				if !assert.Equalf(t, len(test.expected), len(directories), "unexpected number of directories") {
-					t.FailNow()
+				var actual [][]string
+				for _, dir := range dirs {
+					// The first element of the dir path is dropped because it
+					// should be a random dir created by the test framework.
+					actual = append(actual, dir.GetPath()[1:])
 				}
+
+				require.Equal(t, len(test.expected), len(actual), "unexpected number of directories")
 				for i, expected := range test.expected {
-					expected = append(rootDir.GetPath(), expected...)
-					if !assert.Equalf(t, expected, directories[i].GetPath(), "unexpected directory at index %d", i) {
-						t.FailNow()
-					}
+					require.Equalf(t, expected, actual[i], "unexpected directory at index %d", i)
 				}
 			})
 		})
@@ -168,73 +158,30 @@ func TestStream_ReadRange(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				var (
-					byPath = make(map[string]directory.DirectorySubspace)
-					toSend []directory.DirectorySubspace
-				)
-				for _, kv := range test.initial {
-					path, err := convert.ToStringArray(kv.Key.Directory)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
-					tup, err := convert.ToFDBTuple(kv.Key.Tuple)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
-					dir, err := rootDir.CreateOrOpen(tr, path, nil)
-					if !assert.NoError(t, err) {
-						t.FailNow()
-					}
-					tr.Set(dir.Pack(tup), nil)
+			testEnv(t, func(tr facade.Transaction, s Stream) {
+				dirsByPath, uniqueDirs := openDirs(t, tr, test.initial)
 
-					pathStr := strings.Join(path, "/")
-					if _, exists := byPath[pathStr]; !exists {
-						t.Logf("adding to dir list: %v", path)
-						byPath[pathStr] = dir
-						toSend = append(toSend, dir)
-					}
+				initial := buildDirKVs(t, dirsByPath, test.initial)
+				for _, dirKV := range initial {
+					tr.Set(dirKV.kv.Key, dirKV.kv.Value)
 				}
 
-				var (
-					expectedDirs []directory.DirectorySubspace
-					expectedKVs  []fdb.KeyValue
-				)
-				for _, kv := range test.expected {
-					path, err := convert.ToStringArray(kv.Key.Directory)
-					require.NoError(t, err)
+				expected := buildDirKVs(t, dirsByPath, test.expected)
 
-					dir, exists := byPath[strings.Join(path, "/")]
-					require.Truef(t, exists, "dir missing for path %v", path)
+				ch := s.ReadRange(tr, test.query, RangeOpts{}, sendDirs(t, s, uniqueDirs))
+				actual, err := collectDirKVs(ch)
+				require.NoError(t, err, "failed to read range")
 
-					tup, err := convert.ToFDBTuple(kv.Key.Tuple)
-					require.NoError(t, err)
-
-					val, err := values.Pack(kv.Value, byteOrder)
-					require.NoError(t, err)
-
-					expectedDirs = append(expectedDirs, dir)
-					expectedKVs = append(expectedKVs, fdb.KeyValue{
-						Key:   dir.Pack(tup),
-						Value: val,
-					})
-				}
-
-				out := s.ReadRange(facade.NewReadTransaction(tr), test.query, RangeOpts{}, sendDirs(t, s, toSend))
-				dirs, kvs, err := collectDirKVs(out)
-				assert.NoError(t, err)
-
-				require.Equal(t, len(expectedDirs), len(dirs), "unexpected number of results")
-				for i := range expectedDirs {
-					require.Equalf(t, expectedDirs[i], dirs[i], "unexpected directory at index %d", i)
-					require.Equalf(t, expectedKVs[i], kvs[i], "unexpected key-value at index %d", i)
+				require.Equal(t, len(expected), len(actual), "unexpected number of results")
+				for i := range expected {
+					require.Equalf(t, expected[i], actual[i], "unexpected directory at index %d", i)
 				}
 			})
 		})
 	}
 }
 
-func TestStream_FilterKeys(t *testing.T) {
+func TestStream_UnpackKeys(t *testing.T) {
 	var tests = []struct {
 		name     string
 		filter   bool
@@ -294,41 +241,27 @@ func TestStream_FilterKeys(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
-				var (
-					dirsToSend []directory.DirectorySubspace
-					kvsToSend  []fdb.KeyValue
-				)
-				for _, kv := range test.initial {
-					path, err := convert.ToStringArray(kv.Key.Directory)
-					require.NoError(t, err)
+			testEnv(t, func(tr facade.Transaction, s Stream) {
+				dirsByPath, _ := openDirs(t, tr, test.initial)
+				dirKVs := buildDirKVs(t, dirsByPath, test.initial)
 
-					dir, err := rootDir.CreateOrOpen(tr, path, nil)
-					require.NoError(t, err)
-
-					tup, err := convert.ToFDBTuple(kv.Key.Tuple)
-					require.NoError(t, err)
-
-					val, err := values.Pack(kv.Value, byteOrder)
-					require.NoError(t, err)
-
-					dirsToSend = append(dirsToSend, dir)
-					kvsToSend = append(kvsToSend, fdb.KeyValue{Key: dir.Pack(tup), Value: val})
-				}
-
-				out := s.UnpackKeys(test.query, test.filter, sendDirKVs(t, s, dirsToSend, kvsToSend))
-				kvs, err := collectKVs(out)
+				ch := s.UnpackKeys(test.query, test.filter, sendDirKVs(t, s, dirKVs))
+				actual, err := collectKVs(ch)
 				if test.err {
-					require.Error(t, err)
+					require.Error(t, err, "failed to unpack keys")
 				} else {
-					require.NoError(t, err)
+					require.NoError(t, err, "successfully unpacked keys")
 				}
 
-				rootPath := convert.FromStringArray(rootDir.GetPath())
-				require.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
+				for i := range actual {
+					// The first element of the dir path is dropped because it
+					// should be a random dir created by the test framework.
+					actual[i].Key.Directory = actual[i].Key.Directory[1:]
+				}
+
+				require.Equal(t, len(test.expected), len(actual), "unexpected number of key-values")
 				for i, expected := range test.expected {
-					expected.Key.Directory = append(rootPath, expected.Key.Directory...)
-					require.Equalf(t, expected, kvs[i], "unexpected key-value at index %d", i)
+					require.Equalf(t, expected, actual[i], "unexpected key-value at index %d", i)
 				}
 			})
 		})
@@ -387,13 +320,13 @@ func TestStream_UnpackValues(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, func(tr fdb.Transaction, rootDir directory.DirectorySubspace, s Stream) {
+			testEnv(t, func(_ facade.Transaction, s Stream) {
 				valHandler, err := internal.NewValueHandler(test.query, byteOrder, true)
-				require.NoError(t, err)
+				require.NoError(t, err, "failed to create value handler")
 
-				out := s.UnpackValues(test.query, valHandler, sendKVs(t, s, test.initial))
-				kvs, err := collectKVs(out)
-				require.NoError(t, err)
+				ch := s.UnpackValues(test.query, valHandler, sendKVs(t, s, test.initial))
+				kvs, err := collectKVs(ch)
+				require.NoError(t, err, "failed to unpack values")
 
 				require.Equal(t, len(test.expected), len(kvs), "unexpected number of key-values")
 				for i, expected := range test.expected {
@@ -404,46 +337,19 @@ func TestStream_UnpackValues(t *testing.T) {
 	}
 }
 
-func testEnv(t *testing.T, f func(fdb.Transaction, directory.DirectorySubspace, Stream)) {
-	exists, err := directory.Exists(db, []string{root})
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to check if root directory exists"))
-	}
-	if exists {
-		if !flags.force {
-			t.Fatal(errors.New("test directory already exists, use '-force' flag to remove"))
-		}
-		if _, err := directory.Root().Remove(db, []string{root}); err != nil {
-			t.Fatal(errors.Wrap(err, "failed to remove directory"))
-		}
-	}
+func testEnv(t *testing.T, f func(facade.Transaction, Stream)) {
+	internal.TestEnv(t, force, func(tr facade.Transactor, log zerolog.Logger) {
+		_, err := tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
 
-	dir, err := directory.Create(db, []string{root}, nil)
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "failed to create test directory"))
-	}
-	defer func() {
-		_, err := directory.Root().Remove(db, []string{root})
+			f(tr, Stream{Ctx: ctx, Log: log})
+			return nil, nil
+		})
 		if err != nil {
-			t.Error(errors.Wrap(err, "failed to clean root directory"))
+			t.Fatal(errors.Wrap(err, "transaction failed"))
 		}
-	}()
-
-	writer := zerolog.ConsoleWriter{Out: os.Stdout}
-	writer.FormatLevel = func(_ interface{}) string { return "" }
-	writer.FormatTimestamp = func(_ interface{}) string { return "" }
-	log := zerolog.New(writer)
-
-	_, err = db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		ctx, cancel := context.WithCancel(context.Background())
-		defer cancel()
-
-		f(tr, dir, Stream{Ctx: ctx, Log: log})
-		return nil, nil
 	})
-	if err != nil {
-		t.Fatal(errors.Wrap(err, "transaction failed"))
-	}
 }
 
 func packWithPanic(val q.Value) q.Bytes {
@@ -462,6 +368,63 @@ func unpackWithPanic(typ q.ValueType, bytes q.Bytes) q.Value {
 	return unpacked
 }
 
+type DirKV struct {
+	dir directory.DirectorySubspace
+	kv  fdb.KeyValue
+}
+
+func openDirs(t *testing.T, tr facade.Transaction, kvs []q.KeyValue) (map[string]directory.DirectorySubspace, []directory.DirectorySubspace) {
+	var (
+		dirsByPath = make(map[string]directory.DirectorySubspace)
+		uniqueDirs []directory.DirectorySubspace
+	)
+
+	for _, kv := range kvs {
+		path, err := convert.ToStringArray(kv.Key.Directory)
+		require.NoError(t, err, "failed to convert to string array")
+
+		pathStr := strings.Join(path, "/")
+
+		if _, exists := dirsByPath[pathStr]; !exists {
+			t.Logf("adding to dir list: %v", path)
+
+			dir, err := tr.DirCreateOrOpen(path)
+			require.NoError(t, err, "failed to create or open directory")
+
+			dirsByPath[pathStr] = dir
+			uniqueDirs = append(uniqueDirs, dir)
+		}
+	}
+
+	return dirsByPath, uniqueDirs
+}
+
+func buildDirKVs(t *testing.T, dirs map[string]directory.DirectorySubspace, kvs []q.KeyValue) []DirKV {
+	var out []DirKV
+
+	for _, kv := range kvs {
+		path, err := convert.ToStringArray(kv.Key.Directory)
+		require.NoError(t, err, "failed to convert to string array")
+
+		pathStr := strings.Join(path, "/")
+		dir, ok := dirs[pathStr]
+		require.Truef(t, ok, "%s wasn't provided", pathStr)
+
+		tup, err := convert.ToFDBTuple(kv.Key.Tuple)
+		require.NoError(t, err, "failed to convert to FDB tuple")
+
+		val, err := values.Pack(kv.Value, byteOrder)
+		require.NoError(t, err, "failed to pack value")
+
+		out = append(out, DirKV{
+			dir: dir,
+			kv:  fdb.KeyValue{Key: dir.Pack(tup), Value: val},
+		})
+	}
+
+	return out
+}
+
 func collectDirs(in chan DirErr) ([]directory.DirectorySubspace, error) {
 	var out []directory.DirectorySubspace
 
@@ -475,19 +438,20 @@ func collectDirs(in chan DirErr) ([]directory.DirectorySubspace, error) {
 	return out, nil
 }
 
-func collectDirKVs(in chan DirKVErr) ([]directory.DirectorySubspace, []fdb.KeyValue, error) {
-	var (
-		dirs []directory.DirectorySubspace
-		kvs  []fdb.KeyValue
-	)
+func collectDirKVs(in chan DirKVErr) ([]DirKV, error) {
+	var out []DirKV
+
 	for msg := range in {
 		if msg.Err != nil {
-			return nil, nil, msg.Err
+			return nil, msg.Err
 		}
-		dirs = append(dirs, msg.Dir)
-		kvs = append(kvs, msg.KV)
+		out = append(out, DirKV{
+			dir: msg.Dir,
+			kv:  msg.KV,
+		})
 	}
-	return dirs, kvs, nil
+
+	return out, nil
 }
 
 func collectKVs(in chan KeyValErr) ([]q.KeyValue, error) {
@@ -519,16 +483,16 @@ func sendDirs(t *testing.T, s Stream, in []directory.DirectorySubspace) chan Dir
 	return out
 }
 
-func sendDirKVs(t *testing.T, s Stream, dirs []directory.DirectorySubspace, kvs []fdb.KeyValue) chan DirKVErr {
+func sendDirKVs(t *testing.T, s Stream, in []DirKV) chan DirKVErr {
 	out := make(chan DirKVErr)
 
 	go func() {
 		defer close(out)
-		for i, dir := range dirs {
-			if !s.SendDirKV(out, DirKVErr{Dir: dir, KV: kvs[i]}) {
+		for _, dirKV := range in {
+			if !s.SendDirKV(out, DirKVErr{Dir: dirKV.dir, KV: dirKV.kv}) {
 				return
 			}
-			t.Logf("sent dir-kv: %+v", dir.GetPath())
+			t.Logf("sent dir-kv: %+v", dirKV.dir.GetPath())
 		}
 	}()
 

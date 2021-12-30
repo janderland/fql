@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/pkg/errors"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParse(t *testing.T) {
@@ -23,9 +23,9 @@ func TestParse(t *testing.T) {
 		args := []string{"", "-cluster", "my.cluster", "-write", expectedQueries[0], expectedQueries[1]}
 		flags, queries, err := Parse(args, dv)
 
-		assert.NoError(t, err)
-		assert.Equal(t, &expectedFlags, flags)
-		assert.Equal(t, expectedQueries, queries)
+		require.NoError(t, err)
+		require.Equal(t, &expectedFlags, flags)
+		require.Equal(t, expectedQueries, queries)
 	})
 
 	t.Run("help", func(t *testing.T) {
@@ -33,9 +33,9 @@ func TestParse(t *testing.T) {
 		defer closeDV()
 
 		flags, queries, err := Parse([]string{"", "-h"}, dv)
-		assert.NoError(t, err)
-		assert.Nil(t, flags)
-		assert.Nil(t, queries)
+		require.NoError(t, err)
+		require.Nil(t, flags)
+		require.Nil(t, queries)
 	})
 
 	t.Run("failure", func(t *testing.T) {
@@ -43,9 +43,9 @@ func TestParse(t *testing.T) {
 		defer closeDV()
 
 		flags, queries, err := Parse([]string{"", "-bad"}, dv)
-		assert.Error(t, err)
-		assert.Nil(t, flags)
-		assert.Nil(t, queries)
+		require.Error(t, err)
+		require.Nil(t, flags)
+		require.Nil(t, queries)
 	})
 }
 

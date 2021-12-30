@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestParseQuery(t *testing.T) {
@@ -33,9 +33,9 @@ func TestParseQuery(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			ast, onlyDir, err := ParseQuery(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, *ast)
-			assert.Equal(t, test.onlyDir, onlyDir)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, *ast)
+			require.Equal(t, test.onlyDir, onlyDir)
 		})
 	}
 }
@@ -54,12 +54,12 @@ func TestKeyValue(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseKeyValue(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, *ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, *ast)
 
 			str, err := FormatKeyValue(test.ast)
-			assert.NoError(t, err)
-			assert.Equal(t, test.str, str)
+			require.NoError(t, err)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -77,8 +77,8 @@ func TestKeyValue(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseKeyValue(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
+			require.Error(t, err)
+			require.Nil(t, ast)
 		})
 	}
 }
@@ -105,12 +105,12 @@ func TestKey(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseKey(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, &test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, &test.ast, ast)
 
 			str, err := FormatKey(*ast)
-			assert.NoError(t, err)
-			assert.Equal(t, test.str, str)
+			require.NoError(t, err)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -126,8 +126,8 @@ func TestKey(t *testing.T) {
 	for _, fail := range parseFailures {
 		t.Run(fail.name, func(t *testing.T) {
 			key, err := ParseKey(fail.str)
-			assert.Error(t, err)
-			assert.Nil(t, key)
+			require.Error(t, err)
+			require.Nil(t, key)
 		})
 	}
 }
@@ -146,12 +146,12 @@ func TestValue(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseValue(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str, err := FormatValue(test.ast)
-			assert.NoError(t, err)
-			assert.Equal(t, test.str, str)
+			require.NoError(t, err)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -165,8 +165,8 @@ func TestValue(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseValue(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
+			require.Error(t, err)
+			require.Nil(t, ast)
 		})
 	}
 }
@@ -185,12 +185,12 @@ func TestDirectory(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseDirectory(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str, err := FormatDirectory(test.ast)
-			assert.NoError(t, err)
-			assert.Equal(t, test.str, str)
+			require.NoError(t, err)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -209,8 +209,8 @@ func TestDirectory(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseDirectory(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
+			require.Error(t, err)
+			require.Nil(t, ast)
 		})
 	}
 }
@@ -249,12 +249,12 @@ func TestTuple(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseTuple(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str, err := FormatTuple(test.ast)
-			assert.NoError(t, err)
-			assert.Equal(t, test.str, str)
+			require.NoError(t, err)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -272,8 +272,8 @@ func TestTuple(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseTuple(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
+			require.Error(t, err)
+			require.Nil(t, ast)
 		})
 	}
 }
@@ -328,12 +328,12 @@ func TestData(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseData(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str, err := FormatData(test.ast)
-			assert.NoError(t, err)
-			assert.Equal(t, test.str, str)
+			require.NoError(t, err)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -348,8 +348,8 @@ func TestData(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseData(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
+			require.Error(t, err)
+			require.Nil(t, ast)
 		})
 	}
 }
@@ -368,11 +368,11 @@ func TestVariable(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseVariable(test.str)
-			assert.Equal(t, test.ast, ast)
-			assert.NoError(t, err)
+			require.Equal(t, test.ast, ast)
+			require.NoError(t, err)
 
 			str := FormatVariable(test.ast)
-			assert.Equal(t, test.str, str)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -389,8 +389,8 @@ func TestVariable(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			v, err := ParseVariable(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, v)
+			require.Error(t, err)
+			require.Nil(t, v)
 		})
 	}
 }
@@ -407,11 +407,11 @@ func TestString(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseString(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str := FormatString(test.ast)
-			assert.Equal(t, test.str, str)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -428,8 +428,8 @@ func TestString(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseString(test.str)
-			assert.Error(t, err)
-			assert.Empty(t, ast)
+			require.Error(t, err)
+			require.Empty(t, ast)
 		})
 	}
 }
@@ -447,11 +447,11 @@ func TestHex(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseHex(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str := FormatHex(test.ast)
-			assert.Equal(t, test.str, str)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -466,8 +466,8 @@ func TestHex(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseHex(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
+			require.Error(t, err)
+			require.Nil(t, ast)
 		})
 	}
 }
@@ -486,11 +486,11 @@ func TestUUID(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseUUID(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str := FormatUUID(test.ast)
-			assert.Equal(t, test.str, str)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -509,8 +509,8 @@ func TestUUID(t *testing.T) {
 
 	for _, test := range parseFailures {
 		ast, err := ParseUUID(test.str)
-		assert.Error(t, err)
-		assert.Equal(t, q.UUID{}, ast)
+		require.Error(t, err)
+		require.Equal(t, q.UUID{}, ast)
 	}
 }
 
@@ -529,12 +529,12 @@ func TestNumber(t *testing.T) {
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseNumber(test.str)
-			assert.NoError(t, err)
-			assert.Equal(t, test.ast, ast)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
 
 			str, err := FormatNumber(test.ast)
-			assert.NoError(t, err)
-			assert.Equal(t, test.str, str)
+			require.NoError(t, err)
+			require.Equal(t, test.str, str)
 		})
 	}
 
@@ -548,8 +548,8 @@ func TestNumber(t *testing.T) {
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
 			ast, err := ParseNumber(test.str)
-			assert.Error(t, err)
-			assert.Nil(t, ast)
+			require.Error(t, err)
+			require.Nil(t, ast)
 		})
 	}
 }
