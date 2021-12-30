@@ -3,7 +3,7 @@ package parser
 import (
 	"testing"
 
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestOrdinal(t *testing.T) {
@@ -21,7 +21,7 @@ func TestOrdinal(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			assert.Equal(t, test.out, ordinal(test.in))
+			require.Equal(t, test.out, ordinal(test.in))
 		})
 	}
 }
