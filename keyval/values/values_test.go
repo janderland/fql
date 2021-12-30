@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 var order = binary.BigEndian
@@ -28,24 +28,24 @@ func TestPackUnpack(t *testing.T) {
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
 			v, err := Pack(test.val, order)
-			assert.NoError(t, err)
-			assert.NotNil(t, v)
+			require.NoError(t, err)
+			require.NotNil(t, v)
 
 			out, err := Unpack(v, test.typ, order)
-			assert.NoError(t, err)
-			assert.Equal(t, test.val, out)
+			require.NoError(t, err)
+			require.Equal(t, test.val, out)
 		})
 	}
 }
 
 func TestPackUnpackNil(t *testing.T) {
 	v, err := Pack(nil, order)
-	assert.Error(t, err)
-	assert.Nil(t, v)
+	require.Error(t, err)
+	require.Nil(t, v)
 
 	out, err := Unpack(nil, q.AnyType, order)
-	assert.NoError(t, err)
-	assert.Equal(t, q.Bytes(nil), out)
+	require.NoError(t, err)
+	require.Equal(t, q.Bytes(nil), out)
 }
 
 func TestInvalidUnpack(t *testing.T) {
@@ -63,8 +63,8 @@ func TestInvalidUnpack(t *testing.T) {
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
 			out, err := Unpack(test.val, test.typ, order)
-			assert.Error(t, err)
-			assert.Nil(t, out)
+			require.Error(t, err)
+			require.Nil(t, out)
 		})
 	}
 }

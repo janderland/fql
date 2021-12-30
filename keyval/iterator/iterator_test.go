@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestReadTuple(t *testing.T) {
@@ -38,8 +38,8 @@ func TestReadTuple(t *testing.T) {
 		return nil
 	})
 
-	assert.NoError(t, err)
-	assert.Equal(t, in, out)
+	require.NoError(t, err)
+	require.Equal(t, in, out)
 }
 
 func TestConversionError(t *testing.T) {
@@ -48,7 +48,7 @@ func TestConversionError(t *testing.T) {
 		_ = iter.MustString()
 		return nil
 	})
-	assert.IsType(t, ConversionError{}, out)
+	require.IsType(t, ConversionError{}, out)
 }
 
 func TestShortTupleError(t *testing.T) {
@@ -58,7 +58,7 @@ func TestShortTupleError(t *testing.T) {
 		_ = iter.MustInt()
 		return nil
 	})
-	assert.Equal(t, ShortTupleError, out)
+	require.Equal(t, ShortTupleError, out)
 }
 
 func TestLongTupleError(t *testing.T) {
@@ -69,7 +69,7 @@ func TestLongTupleError(t *testing.T) {
 			_ = iter.MustBytes()
 			return nil
 		})
-		assert.Equal(t, LongTupleError, out)
+		require.Equal(t, LongTupleError, out)
 	})
 
 	t.Run("allow", func(t *testing.T) {
@@ -77,6 +77,6 @@ func TestLongTupleError(t *testing.T) {
 			_ = iter.MustBytes()
 			return nil
 		})
-		assert.NoError(t, out)
+		require.NoError(t, out)
 	})
 }

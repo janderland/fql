@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestTuples(t *testing.T) {
@@ -21,10 +21,10 @@ func TestTuples(t *testing.T) {
 			q.BigInt(*big.NewInt(math.MaxInt64)),
 		}
 		pattern := make(q.Tuple, len(candidate))
-		assert.Equal(t, copy(pattern, candidate), len(candidate))
+		require.Equal(t, copy(pattern, candidate), len(candidate))
 
 		mismatch := Tuples(pattern, candidate)
-		assert.Empty(t, mismatch)
+		require.Empty(t, mismatch)
 	})
 
 	t.Run("not equal", func(t *testing.T) {
@@ -48,7 +48,7 @@ func TestTuples(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
 				mismatch := Tuples(test.pattern, test.candidate)
-				assert.NotEmpty(t, mismatch)
+				require.NotEmpty(t, mismatch)
 			})
 		}
 	})
@@ -74,10 +74,10 @@ func TestTuples(t *testing.T) {
 		}
 
 		mismatch := Tuples(pattern, candidate1)
-		assert.Empty(t, mismatch)
+		require.Empty(t, mismatch)
 
 		mismatch = Tuples(pattern, candidate2)
-		assert.Empty(t, mismatch)
+		require.Empty(t, mismatch)
 	})
 
 	t.Run("multi type", func(t *testing.T) {
@@ -85,7 +85,7 @@ func TestTuples(t *testing.T) {
 		pattern := q.Tuple{q.Variable{q.IntType, q.TupleType, q.StringType}}
 
 		mismatch := Tuples(pattern, candidate)
-		assert.Empty(t, mismatch)
+		require.Empty(t, mismatch)
 	})
 
 	t.Run("too long", func(t *testing.T) {
@@ -104,7 +104,7 @@ func TestTuples(t *testing.T) {
 		}
 
 		mismatch := Tuples(pattern, candidate)
-		assert.NotEmpty(t, mismatch)
+		require.NotEmpty(t, mismatch)
 	})
 
 	t.Run("too short", func(t *testing.T) {
@@ -121,7 +121,7 @@ func TestTuples(t *testing.T) {
 		}
 
 		mismatch := Tuples(pattern, candidate)
-		assert.NotEmpty(t, mismatch)
+		require.NotEmpty(t, mismatch)
 	})
 
 	t.Run("maybe more", func(t *testing.T) {
@@ -140,6 +140,6 @@ func TestTuples(t *testing.T) {
 		}
 
 		mismatch := Tuples(pattern, candidate)
-		assert.Empty(t, mismatch)
+		require.Empty(t, mismatch)
 	})
 }
