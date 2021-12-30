@@ -34,21 +34,25 @@ type (
 
 type (
 	readTransactor struct {
-		tr fdb.ReadTransactor
+		tr   fdb.ReadTransactor
+		root directory.Directory
 	}
 
 	readTransaction struct {
-		tr fdb.ReadTransaction
+		tr   fdb.ReadTransaction
+		root directory.Directory
 	}
 
 	transactor struct {
 		ReadTransactor
-		tr fdb.Transactor
+		tr   fdb.Transactor
+		root directory.Directory
 	}
 
 	transaction struct {
 		ReadTransaction
-		tr fdb.Transaction
+		tr   fdb.Transaction
+		root directory.Directory
 	}
 )
 
@@ -59,48 +63,48 @@ var (
 	_ Transaction     = &transaction{}
 )
 
-func NewReadTransactor(tr fdb.ReadTransactor) ReadTransactor {
-	return &readTransactor{tr}
+func NewReadTransactor(tr fdb.ReadTransactor, root directory.Directory) ReadTransactor {
+	return &readTransactor{tr, root}
 }
 
-func NewReadTransaction(tr fdb.ReadTransaction) ReadTransaction {
-	return &readTransaction{tr}
+func NewReadTransaction(tr fdb.ReadTransaction, root directory.Directory) ReadTransaction {
+	return &readTransaction{tr, root}
 }
 
-func NewTransactor(tr fdb.Transactor) Transactor {
-	return &transactor{NewReadTransactor(tr), tr}
+func NewTransactor(tr fdb.Transactor, root directory.Directory) Transactor {
+	return &transactor{NewReadTransactor(tr, root), tr, root}
 }
 
-func NewTransaction(tr fdb.Transaction) Transaction {
-	return &transaction{NewReadTransaction(tr), tr}
+func NewTransaction(tr fdb.Transaction, root directory.Directory) Transaction {
+	return &transaction{NewReadTransaction(tr, root), tr, root}
 }
 
 func (x *readTransactor) ReadTransact(f func(ReadTransaction) (interface{}, error)) (interface{}, error) {
 	return x.tr.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-		return f(NewReadTransaction(tr))
+		return f(NewReadTransaction(tr, x.root))
 	})
 }
 
 func (x *readTransactor) DirOpen(path []string) (directory.DirectorySubspace, error) {
-	return directory.Open(x.tr, path, nil)
+	return x.root.Open(x.tr, path, nil)
 }
 
 func (x *readTransactor) DirList(path []string) ([]string, error) {
-	return directory.List(x.tr, path)
+	return x.root.List(x.tr, path)
 }
 
 func (x *readTransaction) ReadTransact(f func(ReadTransaction) (interface{}, error)) (interface{}, error) {
 	return x.tr.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-		return f(NewReadTransaction(tr))
+		return f(NewReadTransaction(tr, x.root))
 	})
 }
 
 func (x *readTransaction) DirOpen(path []string) (directory.DirectorySubspace, error) {
-	return directory.Open(x.tr, path, nil)
+	return x.root.Open(x.tr, path, nil)
 }
 
 func (x *readTransaction) DirList(path []string) ([]string, error) {
-	return directory.List(x.tr, path)
+	return x.root.List(x.tr, path)
 }
 
 func (x *readTransaction) Get(key fdb.KeyConvertible) fdb.FutureByteSlice {
@@ -113,22 +117,22 @@ func (x *readTransaction) GetRange(rng fdb.Range, options fdb.RangeOptions) fdb.
 
 func (x *transactor) Transact(f func(Transaction) (interface{}, error)) (interface{}, error) {
 	return x.tr.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		return f(NewTransaction(tr))
+		return f(NewTransaction(tr, x.root))
 	})
 }
 
 func (x *transactor) DirCreateOrOpen(path []string) (directory.DirectorySubspace, error) {
-	return directory.CreateOrOpen(x.tr, path, nil)
+	return x.root.CreateOrOpen(x.tr, path, nil)
 }
 
 func (x *transaction) Transact(f func(Transaction) (interface{}, error)) (interface{}, error) {
 	return x.tr.Transact(func(tr fdb.Transaction) (interface{}, error) {
-		return f(NewTransaction(tr))
+		return f(NewTransaction(tr, x.root))
 	})
 }
 
 func (x *transaction) DirCreateOrOpen(path []string) (directory.DirectorySubspace, error) {
-	return directory.CreateOrOpen(x.tr, path, nil)
+	return x.root.CreateOrOpen(x.tr, path, nil)
 }
 
 func (x *transaction) Set(key fdb.KeyConvertible, val []byte) {

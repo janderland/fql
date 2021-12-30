@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
@@ -53,5 +55,5 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 		Log:   log,
 		Out:   stdout,
 	}
-	return app.Run(context.Background(), facade.NewTransactor(db), queries)
+	return app.Run(context.Background(), facade.NewTransactor(db, directory.Root()), queries)
 }
