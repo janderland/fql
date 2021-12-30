@@ -9,7 +9,7 @@ import (
 	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestHeadless_Query(t *testing.T) {
@@ -56,9 +56,9 @@ func TestHeadless_Query(t *testing.T) {
 			testEnv(t, test.flags, func(h App, tr facade.Transactor) {
 				err := h.Run(context.Background(), tr, test.queries)
 				if test.err {
-					assert.Error(t, err)
+					require.Error(t, err)
 				} else {
-					assert.NoError(t, err)
+					require.NoError(t, err)
 				}
 			})
 		})
@@ -68,7 +68,8 @@ func TestHeadless_Query(t *testing.T) {
 func testEnv(t *testing.T, flags flag.Flags, f func(App, facade.Transactor)) {
 	writer := zerolog.ConsoleWriter{Out: os.Stdout}
 	writer.FormatLevel = func(_ interface{}) string { return "" }
-	log := zerolog.New(writer).With().Timestamp().Logger()
+	writer.FormatTimestamp = func(_ interface{}) string { return "" }
+	log := zerolog.New(writer)
 
 	dv, closeDV := devnull(t)
 	defer closeDV()
