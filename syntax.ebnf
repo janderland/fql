@@ -4,25 +4,21 @@
  form as defined in ISO/IEC 14977.
 *)
 
-
 query = keyval | key | directory ;
-
 
 keyval = key, '=', ws, value ;
 
 key = directory, tuple ;
 
-value = data | 'clear' ;
+value = 'clear' | data ;
 
-
-directory = '/', ( text | '<>' ), [ directory ] ;
+directory = '/', ( '<>' | text ), [ directory ] ;
 
 tuple = '{', [ nl, elements, [ ',' ], nl ] '}' ;
 
-elements = '...' | ( ( data | 'nil' ), [ ',', nl, elements ] ) ;
+elements = '...' | ( data, [ ',', nl, elements ] ) ;
 
-
-data = variable | tuple | bool | int | float | scientific | string | uuid | bytes ;
+data = 'nil' | variable | tuple | bool | int | float | scientific | string | uuid | bytes ;
 
 variable = '<', [ type ], '>' ;
 
@@ -41,7 +37,6 @@ string = '"', text, '"' ;
 uuid = 8 * hexDigit, '-', 4 * hexDigit, '-', 4 * hexDigit, '-', 4 * hexDigit, '-', 12 * hexDigit ;
 
 bytes = '0x', { 2 * hexDigit } ;
-
 
 number = { digit } ;
 
