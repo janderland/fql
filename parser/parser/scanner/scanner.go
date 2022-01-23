@@ -65,14 +65,6 @@ var kindByState = map[state]TokenKind{
 	stateOther:      TokenOther,
 }
 
-func toTokenKind(in state) TokenKind {
-	out, ok := kindByState[in]
-	if !ok {
-		panic(errors.Errorf("unexpected state %v", in))
-	}
-	return out
-}
-
 type Scanner struct {
 	reader *bufio.Reader
 	token  strings.Builder
@@ -87,7 +79,18 @@ func (x *Scanner) Token() string {
 	return x.token.String()
 }
 
-func (x *Scanner) Scan() (TokenKind, error) {
+func (x *Scanner) Scan() (kind TokenKind, err error) {
+	defer func() {
+		if r := recover(); r != nil {
+			if e, ok := r.(error); ok {
+				kind = TokenInvalid
+				err = e
+				return
+			}
+			panic(r)
+		}
+	}()
+
 	x.token.Reset()
 
 	for {
@@ -96,13 +99,13 @@ func (x *Scanner) Scan() (TokenKind, error) {
 			if x.token.Len() == 0 {
 				return TokenEnd, nil
 			}
-			return toTokenKind(x.state), nil
+			return kindByState[x.state], nil
 		}
 
 		if kind, ok := specialTokensByRune[r]; ok {
 			if x.token.Len() > 0 {
 				x.unread()
-				return toTokenKind(x.state), nil
+				return kindByState[x.state], nil
 			}
 
 			switch kind {
@@ -152,7 +155,7 @@ func (x *Scanner) Scan() (TokenKind, error) {
 				continue
 			}
 			x.unread()
-			kind := toTokenKind(x.state)
+			kind := kindByState[x.state]
 			x.state = stateOther
 			return kind, nil
 
@@ -167,7 +170,7 @@ func (x *Scanner) Scan() (TokenKind, error) {
 				continue
 			}
 			x.unread()
-			kind := toTokenKind(x.state)
+			kind := kindByState[x.state]
 			x.state = stateOther
 			return kind, nil
 
@@ -182,13 +185,13 @@ func (x *Scanner) Scan() (TokenKind, error) {
 		case stateOther:
 			if strings.ContainsRune(whitespace, r) {
 				x.unread()
-				kind := toTokenKind(x.state)
+				kind := kindByState[x.state]
 				x.state = stateWhitespace
 				return kind, nil
 			}
 			if strings.ContainsRune(newline, r) {
 				x.unread()
-				kind := toTokenKind(x.state)
+				kind := kindByState[x.state]
 				x.state = stateNewline
 				return kind, nil
 			}

@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/pkg/errors"
+
 	"github.com/janderland/fdbq/parser/parser"
 	"github.com/stretchr/testify/require"
 )
@@ -106,4 +108,16 @@ func TestScanner(t *testing.T) {
 			require.Equal(t, test.tokens, tokens)
 		})
 	}
+}
+
+func TestErrRecovery(t *testing.T) {
+	s := New(&badReader{})
+	_, err := s.Scan()
+	require.Error(t, err)
+}
+
+type badReader struct{}
+
+func (x *badReader) Read(_ []byte) (int, error) {
+	return 0, errors.New("this reader always fails")
 }
