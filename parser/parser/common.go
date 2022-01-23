@@ -1,30 +1,25 @@
-package new
+package parser
 
 import "strconv"
 
 const (
-	KVSep  = '='
-	DirSep = '/'
-
+	KVSep    = '='
+	DirSep   = '/'
 	TupStart = '{'
 	TupEnd   = '}'
 	TupSep   = ','
-
 	VarStart = '<'
 	VarEnd   = '>'
 	VarSep   = '|'
-
-	StrStart = '"'
-	StrEnd   = '"'
-
+	StrMark  = '"'
 	HexStart = "0x"
+	Escape   = '\\'
 
+	Nil       = "nil"
+	True      = "true"
+	False     = "false"
+	Clear     = "clear"
 	MaybeMore = "..."
-
-	Nil   = "nil"
-	True  = "true"
-	False = "false"
-	Clear = "clear"
 )
 
 func ordinal(x int) string {
