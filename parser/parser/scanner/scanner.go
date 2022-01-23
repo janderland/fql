@@ -35,7 +35,7 @@ const (
 	TokenEnd
 )
 
-var specials = map[rune]TokenKind{
+var specialTokensByRune = map[rune]TokenKind{
 	parser.KVSep:    TokenKVSep,
 	parser.DirSep:   TokenDirSep,
 	parser.TupStart: TokenTupStart,
@@ -76,8 +76,6 @@ func toTokenKind(in state) TokenKind {
 type Scanner struct {
 	reader *bufio.Reader
 	token  strings.Builder
-
-	escape bool
 	state  state
 }
 
@@ -89,36 +87,19 @@ func (x *Scanner) Token() string {
 	return x.token.String()
 }
 
-func (x *Scanner) append(r rune) {
-	_, err := x.token.WriteRune(r)
-	if err != nil {
-		panic(err)
-	}
-}
-
-func (x *Scanner) unread() {
-	err := x.reader.UnreadRune()
-	if err != nil {
-		panic(err)
-	}
-}
-
 func (x *Scanner) Scan() (TokenKind, error) {
 	x.token.Reset()
 
 	for {
-		r, _, err := x.reader.ReadRune()
-		if err != nil {
-			if err == io.EOF {
-				if x.token.Len() == 0 {
-					return TokenEnd, nil
-				}
-				return toTokenKind(x.state), nil
+		r, eof := x.read()
+		if eof {
+			if x.token.Len() == 0 {
+				return TokenEnd, nil
 			}
-			return TokenInvalid, err
+			return toTokenKind(x.state), nil
 		}
 
-		if kind, ok := specials[r]; ok {
+		if kind, ok := specialTokensByRune[r]; ok {
 			if x.token.Len() > 0 {
 				x.unread()
 				return toTokenKind(x.state), nil
@@ -214,5 +195,30 @@ func (x *Scanner) Scan() (TokenKind, error) {
 			x.append(r)
 			continue
 		}
+	}
+}
+
+func (x *Scanner) append(r rune) {
+	_, err := x.token.WriteRune(r)
+	if err != nil {
+		panic(errors.Wrap(err, "failed to append rune"))
+	}
+}
+
+func (x *Scanner) read() (rune, bool) {
+	r, _, err := x.reader.ReadRune()
+	if err == io.EOF {
+		return 0, true
+	}
+	if err != nil {
+		panic(errors.Wrap(err, "failed to read rune"))
+	}
+	return r, false
+}
+
+func (x *Scanner) unread() {
+	err := x.reader.UnreadRune()
+	if err != nil {
+		panic(errors.Wrap(err, "failed to unread rune"))
 	}
 }
