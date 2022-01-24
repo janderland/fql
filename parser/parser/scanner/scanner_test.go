@@ -10,78 +10,78 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-const (
-	KVSep    = string(parser.KVSep)
-	DirSep   = string(parser.DirSep)
-	TupStart = string(parser.TupStart)
-	TupEnd   = string(parser.TupEnd)
-	TupSep   = string(parser.TupSep)
-	StrMark  = string(parser.StrMark)
+var (
+	tkKVSep    = tokenWithKind{TokenKVSep, string(parser.KVSep)}
+	tkDirSep   = tokenWithKind{TokenDirSep, string(parser.DirSep)}
+	tkTupStart = tokenWithKind{TokenTupStart, string(parser.TupStart)}
+	tkTupEnd   = tokenWithKind{TokenTupEnd, string(parser.TupEnd)}
+	tkTupSep   = tokenWithKind{TokenTupSep, string(parser.TupSep)}
+	tkStrMark  = tokenWithKind{TokenStrMark, string(parser.StrMark)}
 )
 
-type token struct {
-	kind TokenKind
-	str  string
+type tokenWithKind struct {
+	kind  TokenKind
+	token string
 }
 
 func TestScanner(t *testing.T) {
 	tests := []struct {
 		name   string
 		input  string
-		tokens []token
+		tokens []tokenWithKind
 	}{
 		{
 			name:  "dirs",
 			input: "/my\r\n/dir\t ",
-			tokens: []token{
-				{TokenDirSep, DirSep},
+			tokens: []tokenWithKind{
+				tkDirSep,
 				{TokenOther, "my\r\n"},
-				{TokenDirSep, DirSep},
+				tkDirSep,
 				{TokenOther, "dir\t "},
 			},
 		},
 		{
 			name:  "tuples",
 			input: "{\"something\"\r, \t22.88e0,- 88  \n}",
-			tokens: []token{
-				{TokenTupStart, TupStart},
-				{TokenStrMark, StrMark},
+			tokens: []tokenWithKind{
+				tkTupStart,
+				tkStrMark,
 				{TokenOther, "something"},
-				{TokenStrMark, StrMark},
+				tkStrMark,
 				{TokenNewLine, "\r"},
-				{TokenTupSep, TupSep},
+				tkTupSep,
 				{TokenWhitespace, " \t"},
 				{TokenOther, "22.88e0"},
-				{TokenTupSep, TupSep},
+				tkTupSep,
 				{TokenOther, "-"},
 				{TokenWhitespace, " "},
 				{TokenOther, "88"},
 				{TokenNewLine, "  \n"},
-				{TokenTupEnd, TupEnd},
+				tkTupEnd,
 			},
 		},
 		{
 			name:  "key-value",
 			input: "/my \t/dir\r\n{ \"hi world\" ,\n 88-212 = {, \t",
-			tokens: []token{
-				{TokenDirSep, DirSep},
+			tokens: []tokenWithKind{
+				tkDirSep,
 				{TokenOther, "my \t"},
-				{TokenDirSep, DirSep},
+				tkDirSep,
 				{TokenOther, "dir\r\n"},
-				{TokenTupStart, TupStart},
+				tkTupStart,
 				{TokenWhitespace, " "},
-				{TokenStrMark, StrMark},
+				tkStrMark,
 				{TokenOther, "hi world"},
-				{TokenStrMark, StrMark},
+				tkStrMark,
 				{TokenWhitespace, " "},
-				{TokenTupSep, TupSep},
+				tkTupSep,
 				{TokenNewLine, "\n "},
 				{TokenOther, "88-212"},
 				{TokenWhitespace, " "},
-				{TokenKVSep, KVSep},
+				tkKVSep,
 				{TokenWhitespace, " "},
-				{TokenTupStart, TupStart},
-				{TokenTupSep, TupSep},
+				tkTupStart,
+				tkTupSep,
 				{TokenWhitespace, " \t"},
 			},
 		},
@@ -90,7 +90,7 @@ func TestScanner(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			s := New(strings.NewReader(test.input))
-			var tokens []token
+			var tokens []tokenWithKind
 
 			for {
 				kind, err := s.Scan()
@@ -99,9 +99,9 @@ func TestScanner(t *testing.T) {
 					break
 				}
 
-				tokens = append(tokens, token{
-					kind: kind,
-					str:  s.Token(),
+				tokens = append(tokens, tokenWithKind{
+					kind:  kind,
+					token: s.Token(),
 				})
 			}
 
