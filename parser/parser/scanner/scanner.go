@@ -57,7 +57,7 @@ const (
 	stateOther
 )
 
-var kindByState = map[state]TokenKind{
+var primaryKindByState = map[state]TokenKind{
 	stateWhitespace: TokenWhitespace,
 	stateNewline:    TokenNewLine,
 	stateDirPart:    TokenOther,
@@ -99,13 +99,13 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			if x.token.Len() == 0 {
 				return TokenEnd, nil
 			}
-			return kindByState[x.state], nil
+			return primaryKindByState[x.state], nil
 		}
 
 		if kind, ok := specialTokensByRune[r]; ok {
 			if x.token.Len() > 0 {
 				x.unread()
-				return kindByState[x.state], nil
+				return primaryKindByState[x.state], nil
 			}
 
 			switch r {
@@ -142,7 +142,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			switch x.state {
 			case stateOther:
 				x.unread()
-				kind := kindByState[x.state]
+				kind := primaryKindByState[x.state]
 				x.state = stateWhitespace
 				return kind, nil
 
@@ -161,7 +161,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 
 			case stateOther:
 				x.unread()
-				kind := kindByState[x.state]
+				kind := primaryKindByState[x.state]
 				x.state = stateNewline
 				return kind, nil
 
@@ -179,7 +179,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 				continue
 			}
 			x.unread()
-			kind := kindByState[x.state]
+			kind := primaryKindByState[x.state]
 			x.state = stateOther
 			return kind, nil
 
