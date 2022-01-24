@@ -1,4 +1,4 @@
-package scanner
+package parser
 
 import (
 	"strings"
@@ -6,17 +6,16 @@ import (
 
 	"github.com/pkg/errors"
 
-	"github.com/janderland/fdbq/parser/parser"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	tkKVSep    = tokenWithKind{TokenKVSep, string(parser.KVSep)}
-	tkDirSep   = tokenWithKind{TokenDirSep, string(parser.DirSep)}
-	tkTupStart = tokenWithKind{TokenTupStart, string(parser.TupStart)}
-	tkTupEnd   = tokenWithKind{TokenTupEnd, string(parser.TupEnd)}
-	tkTupSep   = tokenWithKind{TokenTupSep, string(parser.TupSep)}
-	tkStrMark  = tokenWithKind{TokenStrMark, string(parser.StrMark)}
+	tkKVSep    = tokenWithKind{TokenKVSep, string(KVSep)}
+	tkDirSep   = tokenWithKind{TokenDirSep, string(DirSep)}
+	tkTupStart = tokenWithKind{TokenTupStart, string(TupStart)}
+	tkTupEnd   = tokenWithKind{TokenTupEnd, string(TupEnd)}
+	tkTupSep   = tokenWithKind{TokenTupSep, string(TupSep)}
+	tkStrMark  = tokenWithKind{TokenStrMark, string(StrMark)}
 )
 
 type tokenWithKind struct {

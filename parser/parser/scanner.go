@@ -1,11 +1,10 @@
-package scanner
+package parser
 
 import (
 	"bufio"
 	"io"
 	"strings"
 
-	"github.com/janderland/fdbq/parser/parser"
 	"github.com/pkg/errors"
 )
 
@@ -34,15 +33,15 @@ const (
 )
 
 var specialTokensByRune = map[rune]TokenKind{
-	parser.KVSep:    TokenKVSep,
-	parser.DirSep:   TokenDirSep,
-	parser.TupStart: TokenTupStart,
-	parser.TupEnd:   TokenTupEnd,
-	parser.TupSep:   TokenTupSep,
-	parser.VarStart: TokenVarStart,
-	parser.VarEnd:   TokenVarEnd,
-	parser.VarSep:   TokenVarSep,
-	parser.StrMark:  TokenStrMark,
+	KVSep:    TokenKVSep,
+	DirSep:   TokenDirSep,
+	TupStart: TokenTupStart,
+	TupEnd:   TokenTupEnd,
+	TupSep:   TokenTupSep,
+	VarStart: TokenVarStart,
+	VarEnd:   TokenVarEnd,
+	VarSep:   TokenVarSep,
+	StrMark:  TokenStrMark,
 }
 
 type state int
@@ -107,7 +106,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			}
 
 			switch r {
-			case parser.DirSep:
+			case DirSep:
 				switch x.state {
 				case stateString:
 					break
@@ -115,7 +114,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 					x.state = stateDirPart
 				}
 
-			case parser.StrMark:
+			case StrMark:
 				switch x.state {
 				case stateString:
 					x.state = stateWhitespace
