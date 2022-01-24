@@ -10,15 +10,14 @@ import (
 )
 
 const (
-	whitespace = "\t "
-	newline    = "\t\n\r "
+	runesWhitespace = "\t "
+	runesNewline    = "\n\r"
 )
 
 type TokenKind int
 
 const (
 	TokenInvalid TokenKind = iota
-
 	TokenKVSep
 	TokenDirSep
 	TokenTupStart
@@ -28,7 +27,6 @@ const (
 	TokenVarEnd
 	TokenVarSep
 	TokenStrMark
-
 	TokenWhitespace
 	TokenNewLine
 	TokenOther
@@ -138,7 +136,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			return kind, nil
 		}
 
-		if strings.ContainsRune(whitespace, r) {
+		if strings.ContainsRune(runesWhitespace, r) {
 			switch x.state {
 			case stateOther:
 				x.unread()
@@ -152,7 +150,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			}
 		}
 
-		if strings.ContainsRune(newline, r) {
+		if strings.ContainsRune(runesNewline, r) {
 			switch x.state {
 			case stateWhitespace:
 				x.state = stateNewline
