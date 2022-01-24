@@ -108,8 +108,8 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 				return kindByState[x.state], nil
 			}
 
-			switch kind {
-			case TokenDirSep:
+			switch r {
+			case parser.DirSep:
 				switch x.state {
 				case stateString:
 					break
@@ -117,7 +117,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 					x.state = stateDirPart
 				}
 
-			case TokenStrMark:
+			case parser.StrMark:
 				switch x.state {
 				case stateString:
 					x.state = stateWhitespace
@@ -138,63 +138,52 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			return kind, nil
 		}
 
-		switch x.state {
-		case stateWhitespace:
-			if strings.ContainsRune(whitespace, r) {
-				x.append(r)
-				continue
-			}
-			if strings.ContainsRune(newline, r) {
-				x.state = stateNewline
-				x.append(r)
-				continue
-			}
-			if x.token.Len() == 0 {
-				x.state = stateOther
-				x.append(r)
-				continue
-			}
-			x.unread()
-			kind := kindByState[x.state]
-			x.state = stateOther
-			return kind, nil
-
-		case stateNewline:
-			if strings.ContainsRune(newline, r) {
-				x.append(r)
-				continue
-			}
-			if x.token.Len() == 0 {
-				x.state = stateOther
-				x.append(r)
-				continue
-			}
-			x.unread()
-			kind := kindByState[x.state]
-			x.state = stateOther
-			return kind, nil
-
-		case stateDirPart:
-			x.append(r)
-			continue
-
-		case stateString:
-			x.append(r)
-			continue
-
-		case stateOther:
-			if strings.ContainsRune(whitespace, r) {
+		if strings.ContainsRune(whitespace, r) {
+			switch x.state {
+			case stateOther:
 				x.unread()
 				kind := kindByState[x.state]
 				x.state = stateWhitespace
 				return kind, nil
+
+			default:
+				x.append(r)
+				continue
 			}
-			if strings.ContainsRune(newline, r) {
+		}
+
+		if strings.ContainsRune(newline, r) {
+			switch x.state {
+			case stateWhitespace:
+				x.state = stateNewline
+				x.append(r)
+				continue
+
+			case stateOther:
 				x.unread()
 				kind := kindByState[x.state]
 				x.state = stateNewline
 				return kind, nil
+
+			default:
+				x.append(r)
+				continue
 			}
+		}
+
+		switch x.state {
+		case stateWhitespace, stateNewline:
+			if x.token.Len() == 0 {
+				x.state = stateOther
+				x.append(r)
+				continue
+			}
+			x.unread()
+			kind := kindByState[x.state]
+			x.state = stateOther
+			return kind, nil
+
+		default:
 			x.append(r)
 			continue
 		}
