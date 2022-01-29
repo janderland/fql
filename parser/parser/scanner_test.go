@@ -10,12 +10,12 @@ import (
 )
 
 var (
-	tkKVSep    = tokenWithKind{TokenKVSep, string(KVSep)}
-	tkDirSep   = tokenWithKind{TokenDirSep, string(DirSep)}
-	tkTupStart = tokenWithKind{TokenTupStart, string(TupStart)}
-	tkTupEnd   = tokenWithKind{TokenTupEnd, string(TupEnd)}
-	tkTupSep   = tokenWithKind{TokenTupSep, string(TupSep)}
-	tkStrMark  = tokenWithKind{TokenStrMark, string(StrMark)}
+	tkKVSep    = tokenWithKind{TokenKindKVSep, string(KVSep)}
+	tkDirSep   = tokenWithKind{TokenKindDirSep, string(DirSep)}
+	tkTupStart = tokenWithKind{TokenKindTupStart, string(TupStart)}
+	tkTupEnd   = tokenWithKind{TokenKindTupEnd, string(TupEnd)}
+	tkTupSep   = tokenWithKind{TokenKindTupSep, string(TupSep)}
+	tkStrMark  = tokenWithKind{TokenKindStrMark, string(StrMark)}
 )
 
 type tokenWithKind struct {
@@ -34,9 +34,9 @@ func TestScanner(t *testing.T) {
 			input: "/my\r\n/dir\t ",
 			tokens: []tokenWithKind{
 				tkDirSep,
-				{TokenOther, "my\r\n"},
+				{TokenKindOther, "my\r\n"},
 				tkDirSep,
-				{TokenOther, "dir\t "},
+				{TokenKindOther, "dir\t "},
 			},
 		},
 		{
@@ -45,17 +45,17 @@ func TestScanner(t *testing.T) {
 			tokens: []tokenWithKind{
 				tkTupStart,
 				tkStrMark,
-				{TokenOther, "something"},
+				{TokenKindOther, "something"},
 				tkStrMark,
-				{TokenNewLine, "\r"},
+				{TokenKindNewLine, "\r"},
 				tkTupSep,
-				{TokenWhitespace, " \t"},
-				{TokenOther, "22.88e0"},
+				{TokenKindWhitespace, " \t"},
+				{TokenKindOther, "22.88e0"},
 				tkTupSep,
-				{TokenOther, "-"},
-				{TokenWhitespace, " "},
-				{TokenOther, "88"},
-				{TokenNewLine, "  \n"},
+				{TokenKindOther, "-"},
+				{TokenKindWhitespace, " "},
+				{TokenKindOther, "88"},
+				{TokenKindNewLine, "  \n"},
 				tkTupEnd,
 			},
 		},
@@ -64,24 +64,24 @@ func TestScanner(t *testing.T) {
 			input: "/my \t/dir\r\n{ \"hi world\" ,\n 88-212 = {, \t",
 			tokens: []tokenWithKind{
 				tkDirSep,
-				{TokenOther, "my \t"},
+				{TokenKindOther, "my \t"},
 				tkDirSep,
-				{TokenOther, "dir\r\n"},
+				{TokenKindOther, "dir\r\n"},
 				tkTupStart,
-				{TokenWhitespace, " "},
+				{TokenKindWhitespace, " "},
 				tkStrMark,
-				{TokenOther, "hi world"},
+				{TokenKindOther, "hi world"},
 				tkStrMark,
-				{TokenWhitespace, " "},
+				{TokenKindWhitespace, " "},
 				tkTupSep,
-				{TokenNewLine, "\n "},
-				{TokenOther, "88-212"},
-				{TokenWhitespace, " "},
+				{TokenKindNewLine, "\n "},
+				{TokenKindOther, "88-212"},
+				{TokenKindWhitespace, " "},
 				tkKVSep,
-				{TokenWhitespace, " "},
+				{TokenKindWhitespace, " "},
 				tkTupStart,
 				tkTupSep,
-				{TokenWhitespace, " \t"},
+				{TokenKindWhitespace, " \t"},
 			},
 		},
 	}
@@ -94,7 +94,7 @@ func TestScanner(t *testing.T) {
 			for {
 				kind, err := s.Scan()
 				require.NoError(t, err)
-				if kind == TokenEnd {
+				if kind == TokenKindEnd {
 					break
 				}
 

@@ -16,32 +16,32 @@ const (
 type TokenKind int
 
 const (
-	TokenInvalid TokenKind = iota
-	TokenKVSep
-	TokenDirSep
-	TokenTupStart
-	TokenTupEnd
-	TokenTupSep
-	TokenVarStart
-	TokenVarEnd
-	TokenVarSep
-	TokenStrMark
-	TokenWhitespace
-	TokenNewLine
-	TokenOther
-	TokenEnd
+	TokenKindInvalid TokenKind = iota
+	TokenKindKVSep
+	TokenKindDirSep
+	TokenKindTupStart
+	TokenKindTupEnd
+	TokenKindTupSep
+	TokenKindVarStart
+	TokenKindVarEnd
+	TokenKindVarSep
+	TokenKindStrMark
+	TokenKindWhitespace
+	TokenKindNewLine
+	TokenKindOther
+	TokenKindEnd
 )
 
 var specialTokensByRune = map[rune]TokenKind{
-	KVSep:    TokenKVSep,
-	DirSep:   TokenDirSep,
-	TupStart: TokenTupStart,
-	TupEnd:   TokenTupEnd,
-	TupSep:   TokenTupSep,
-	VarStart: TokenVarStart,
-	VarEnd:   TokenVarEnd,
-	VarSep:   TokenVarSep,
-	StrMark:  TokenStrMark,
+	KVSep:    TokenKindKVSep,
+	DirSep:   TokenKindDirSep,
+	TupStart: TokenKindTupStart,
+	TupEnd:   TokenKindTupEnd,
+	TupSep:   TokenKindTupSep,
+	VarStart: TokenKindVarStart,
+	VarEnd:   TokenKindVarEnd,
+	VarSep:   TokenKindVarSep,
+	StrMark:  TokenKindStrMark,
 }
 
 type state int
@@ -55,11 +55,11 @@ const (
 )
 
 var primaryKindByState = map[state]TokenKind{
-	stateWhitespace: TokenWhitespace,
-	stateNewline:    TokenNewLine,
-	stateDirPart:    TokenOther,
-	stateString:     TokenOther,
-	stateOther:      TokenOther,
+	stateWhitespace: TokenKindWhitespace,
+	stateNewline:    TokenKindNewLine,
+	stateDirPart:    TokenKindOther,
+	stateString:     TokenKindOther,
+	stateOther:      TokenKindOther,
 }
 
 type Scanner struct {
@@ -80,7 +80,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
-				kind = TokenInvalid
+				kind = TokenKindInvalid
 				err = e
 				return
 			}
@@ -94,7 +94,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		r, eof := x.read()
 		if eof {
 			if x.token.Len() == 0 {
-				return TokenEnd, nil
+				return TokenKindEnd, nil
 			}
 			return primaryKindByState[x.state], nil
 		}
