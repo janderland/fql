@@ -32,7 +32,7 @@ const (
 	TokenKindEnd
 )
 
-var specialTokensByRune = map[rune]TokenKind{
+var specialKindByRune = map[rune]TokenKind{
 	KVSep:    TokenKindKVSep,
 	DirSep:   TokenKindDirSep,
 	TupStart: TokenKindTupStart,
@@ -44,31 +44,31 @@ var specialTokensByRune = map[rune]TokenKind{
 	StrMark:  TokenKindStrMark,
 }
 
-type state int
+type scannerState int
 
 const (
-	stateWhitespace state = iota
-	stateNewline
-	stateDirPart
-	stateString
-	stateOther
+	scannerStateWhitespace scannerState = iota
+	scannerStateNewline
+	scannerStateDirPart
+	scannerStateString
+	scannerStateOther
 )
 
-var primaryKindByState = map[state]TokenKind{
-	stateWhitespace: TokenKindWhitespace,
-	stateNewline:    TokenKindNewLine,
-	stateDirPart:    TokenKindOther,
-	stateString:     TokenKindOther,
-	stateOther:      TokenKindOther,
+var primaryKindByState = map[scannerState]TokenKind{
+	scannerStateWhitespace: TokenKindWhitespace,
+	scannerStateNewline:    TokenKindNewLine,
+	scannerStateDirPart:    TokenKindOther,
+	scannerStateString:     TokenKindOther,
+	scannerStateOther:      TokenKindOther,
 }
 
 type Scanner struct {
 	reader *bufio.Reader
 	token  strings.Builder
-	state  state
+	state  scannerState
 }
 
-func New(rd io.Reader) Scanner {
+func NewScanner(rd io.Reader) Scanner {
 	return Scanner{reader: bufio.NewReader(rd)}
 }
 
@@ -99,7 +99,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			return primaryKindByState[x.state], nil
 		}
 
-		if kind, ok := specialTokensByRune[r]; ok {
+		if kind, ok := specialKindByRune[r]; ok {
 			if x.token.Len() > 0 {
 				x.unread()
 				return primaryKindByState[x.state], nil
@@ -108,26 +108,26 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			switch r {
 			case DirSep:
 				switch x.state {
-				case stateString:
+				case scannerStateString:
 					break
 				default:
-					x.state = stateDirPart
+					x.state = scannerStateDirPart
 				}
 
 			case StrMark:
 				switch x.state {
-				case stateString:
-					x.state = stateWhitespace
+				case scannerStateString:
+					x.state = scannerStateWhitespace
 				default:
-					x.state = stateString
+					x.state = scannerStateString
 				}
 
 			default:
 				switch x.state {
-				case stateString:
+				case scannerStateString:
 					break
 				default:
-					x.state = stateWhitespace
+					x.state = scannerStateWhitespace
 				}
 			}
 
@@ -137,10 +137,10 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 
 		if strings.ContainsRune(runesWhitespace, r) {
 			switch x.state {
-			case stateOther:
+			case scannerStateOther:
 				x.unread()
 				kind := primaryKindByState[x.state]
-				x.state = stateWhitespace
+				x.state = scannerStateWhitespace
 				return kind, nil
 
 			default:
@@ -151,15 +151,15 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 
 		if strings.ContainsRune(runesNewline, r) {
 			switch x.state {
-			case stateWhitespace:
-				x.state = stateNewline
+			case scannerStateWhitespace:
+				x.state = scannerStateNewline
 				x.append(r)
 				continue
 
-			case stateOther:
+			case scannerStateOther:
 				x.unread()
 				kind := primaryKindByState[x.state]
-				x.state = stateNewline
+				x.state = scannerStateNewline
 				return kind, nil
 
 			default:
@@ -169,15 +169,15 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		}
 
 		switch x.state {
-		case stateWhitespace, stateNewline:
+		case scannerStateWhitespace, scannerStateNewline:
 			if x.token.Len() == 0 {
-				x.state = stateOther
+				x.state = scannerStateOther
 				x.append(r)
 				continue
 			}
 			x.unread()
 			kind := primaryKindByState[x.state]
-			x.state = stateOther
+			x.state = scannerStateOther
 			return kind, nil
 
 		default:
