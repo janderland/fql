@@ -100,25 +100,37 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		}
 
 		if kind, ok := specialKindByRune[r]; ok {
-			if x.token.Len() > 0 {
-				x.unread()
-				return primaryKindByState[x.state], nil
-			}
-
 			switch r {
 			case DirSep:
 				switch x.state {
 				case scannerStateString:
 					break
+
 				default:
+					if x.token.Len() > 0 {
+						x.unread()
+						return primaryKindByState[x.state], nil
+					}
 					x.state = scannerStateDirPart
 				}
 
 			case StrMark:
 				switch x.state {
+				case scannerStateDirPart:
+					break
+
 				case scannerStateString:
+					if x.token.Len() > 0 {
+						x.unread()
+						return primaryKindByState[x.state], nil
+					}
 					x.state = scannerStateWhitespace
+
 				default:
+					if x.token.Len() > 0 {
+						x.unread()
+						return primaryKindByState[x.state], nil
+					}
 					x.state = scannerStateString
 				}
 
@@ -126,7 +138,12 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 				switch x.state {
 				case scannerStateString:
 					break
+
 				default:
+					if x.token.Len() > 0 {
+						x.unread()
+						return primaryKindByState[x.state], nil
+					}
 					x.state = scannerStateWhitespace
 				}
 			}
