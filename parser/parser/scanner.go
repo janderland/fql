@@ -99,10 +99,10 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 	for {
 		r, eof := x.read()
 		if eof {
-			if x.token.Len() == 0 {
-				return TokenKindEnd, nil
+			if x.token.Len() > 0 {
+				return primaryKindByState[x.state], nil
 			}
-			return primaryKindByState[x.state], nil
+			return TokenKindEnd, nil
 		}
 
 		if x.escape {
