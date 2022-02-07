@@ -66,14 +66,16 @@ var primaryKindByState = map[scannerState]TokenKind{
 
 type Scanner struct {
 	reader *bufio.Reader
-	token  strings.Builder
+	token  *strings.Builder
 	state  scannerState
 	escape bool
 }
 
 func NewScanner(rd io.Reader) Scanner {
+	var token strings.Builder
 	return Scanner{
 		reader: bufio.NewReader(rd),
+		token:  &token,
 		state:  scannerStateWhitespace,
 	}
 }
