@@ -16,7 +16,7 @@ const (
 type TokenKind int
 
 const (
-	TokenKindInvalid TokenKind = iota
+	TokenKindUnassigned TokenKind = iota
 	TokenKindEscape
 	TokenKindKVSep
 	TokenKindDirSep
@@ -48,7 +48,7 @@ var specialKindByRune = map[rune]TokenKind{
 type scannerState int
 
 const (
-	scannerStateInvalid scannerState = iota
+	scannerStateUnassigned scannerState = iota
 	scannerStateWhitespace
 	scannerStateNewline
 	scannerStateDirPart
@@ -88,7 +88,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
-				kind = TokenKindInvalid
+				kind = TokenKindUnassigned
 				err = e
 				return
 			}
@@ -122,7 +122,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		}
 
 		if kind, ok := specialKindByRune[r]; ok {
-			newState := scannerStateInvalid
+			newState := scannerStateUnassigned
 
 			switch r {
 			case DirSep:
@@ -152,7 +152,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 				}
 			}
 
-			if newState != scannerStateInvalid {
+			if newState != scannerStateUnassigned {
 				if x.token.Len() > 0 {
 					x.unread()
 					return primaryKindByState[x.state], nil
