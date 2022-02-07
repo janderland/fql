@@ -48,7 +48,7 @@ var specialKindByRune = map[rune]TokenKind{
 type scannerState int
 
 const (
-	ScannerStateInvalid scannerState = iota
+	scannerStateInvalid scannerState = iota
 	scannerStateWhitespace
 	scannerStateNewline
 	scannerStateDirPart
@@ -120,7 +120,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		}
 
 		if kind, ok := specialKindByRune[r]; ok {
-			newState := ScannerStateInvalid
+			newState := scannerStateInvalid
 
 			switch r {
 			case DirSep:
@@ -150,7 +150,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 				}
 			}
 
-			if newState != ScannerStateInvalid {
+			if newState != scannerStateInvalid {
 				if x.token.Len() > 0 {
 					x.unread()
 					return primaryKindByState[x.state], nil
