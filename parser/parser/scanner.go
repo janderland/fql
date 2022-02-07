@@ -17,6 +17,7 @@ type TokenKind int
 
 const (
 	TokenKindInvalid TokenKind = iota
+	TokenKindEscape
 	TokenKindKVSep
 	TokenKindDirSep
 	TokenKindTupStart
@@ -67,6 +68,7 @@ type Scanner struct {
 	reader *bufio.Reader
 	token  strings.Builder
 	state  scannerState
+	escape bool
 }
 
 func NewScanner(rd io.Reader) Scanner {
@@ -101,6 +103,20 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 				return TokenKindEnd, nil
 			}
 			return primaryKindByState[x.state], nil
+		}
+
+		if x.escape {
+			x.escape = false
+			x.append(r)
+			return TokenKindEscape, nil
+		} else if r == Escape {
+			if x.token.Len() > 0 {
+				x.unread()
+				return primaryKindByState[x.state], nil
+			}
+			x.escape = true
+			x.append(r)
+			continue
 		}
 
 		if kind, ok := specialKindByRune[r]; ok {

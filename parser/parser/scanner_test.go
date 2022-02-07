@@ -84,6 +84,25 @@ func TestScanner(t *testing.T) {
 				{TokenKindWhitespace, " \t"},
 			},
 		},
+		{
+			name:  "escape",
+			input: "/how \\a\n /wow { \"tens \\\\ \"",
+			tokens: []tokenWithKind{
+				tkDirSep,
+				{TokenKindOther, "how "},
+				{TokenKindEscape, "\\a"},
+				{TokenKindOther, "\n "},
+				tkDirSep,
+				{TokenKindOther, "wow "},
+				tkTupStart,
+				{TokenKindWhitespace, " "},
+				tkStrMark,
+				{TokenKindOther, "tens "},
+				{TokenKindEscape, "\\\\"},
+				{TokenKindOther, " "},
+				tkStrMark,
+			},
+		},
 	}
 
 	for _, test := range tests {
