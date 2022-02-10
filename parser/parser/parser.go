@@ -1,6 +1,8 @@
 package parser
 
 import (
+	"strings"
+
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
 )
@@ -56,7 +58,15 @@ type Error struct {
 }
 
 func (x *Error) Error() string {
-	return x.Err.Error()
+	var msg strings.Builder
+	for i, token := range x.Tokens {
+		if i == x.Index {
+			msg.WriteString(" <--- ")
+		}
+		msg.WriteString(token.Token)
+	}
+
+	return errors.Wrap(x.Err, msg.String()).Error()
 }
 
 func Parse(scanner Scanner) (q.Query, error) {
