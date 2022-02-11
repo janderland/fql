@@ -68,67 +68,55 @@ func (x *Error) Error() string {
 	return errors.Wrap(x.Err, msg.String()).Error()
 }
 
-func Parse(scanner Scanner) (q.Query, error) {
-	var (
-		tokens []Token
-		state  parserState
-		kv     q.KeyValue
-	)
+type Parser struct {
+	scanner Scanner
+	tokens  []Token
+	state   parserState
+}
 
-	withTokens := func(err error) error {
-		out := Error{
-			Index: len(tokens),
-			Err:   err,
-		}
+func NewParser(s Scanner) Parser {
+	return Parser{scanner: s}
+}
 
-		for {
-			kind, err := scanner.Scan()
-			if err != nil {
-				return err
-			}
-
-			if kind == TokenKindEnd {
-				out.Tokens = tokens
-				return &out
-			}
-
-			tokens = append(tokens, Token{Kind: kind, Token: scanner.Token()})
-		}
-	}
+func (x *Parser) Parse() (q.Query, error) {
+	var kv q.KeyValue
 
 	for {
-		kind, err := scanner.Scan()
+		kind, err := x.scanner.Scan()
 		if err != nil {
 			return nil, err
 		}
 
-		token := scanner.Token()
-		tokens = append(tokens, Token{Kind: kind, Token: token})
+		token := x.scanner.Token()
+		x.tokens = append(x.tokens, Token{
+			Kind:  kind,
+			Token: token,
+		})
 
-		switch state {
+		switch x.state {
 		case parserStateInitial:
 			switch kind {
 			case TokenKindDirSep:
-				state = parserStateDirHead
+				x.state = parserStateDirHead
 
 			default:
-				return nil, withTokens(stateErr(kind, state))
+				return nil, x.withTokens(x.stateErr(kind))
 			}
 
 		case parserStateDirTail:
 			switch kind {
 			case TokenKindDirSep:
-				state = parserStateDirHead
+				x.state = parserStateDirHead
 
 			case TokenKindTupStart:
-				state = parserStateTupleHead
+				x.state = parserStateTupleHead
 
 			case TokenKindEscape, TokenKindOther:
 				if kind == TokenKindEscape {
 					switch token[1] {
 					case DirSep:
 					default:
-						return nil, withTokens(escapeErr(token, state))
+						return nil, x.withTokens(x.escapeErr(token))
 					}
 				}
 				i := len(kv.Key.Directory) - 1
@@ -139,39 +127,63 @@ func Parse(scanner Scanner) (q.Query, error) {
 				return kv.Key.Directory, nil
 
 			default:
-				return nil, withTokens(stateErr(kind, state))
+				return nil, x.withTokens(x.stateErr(kind))
 			}
 
 		case parserStateDirVarEnd:
 			switch kind {
 			case TokenKindVarEnd:
 				kv.Key.Directory = append(kv.Key.Directory, q.Variable{})
-				state = parserStateDirTail
+				x.state = parserStateDirTail
 
 			default:
-				return nil, withTokens(stateErr(kind, state))
+				return nil, x.withTokens(x.stateErr(kind))
 			}
 
 		case parserStateDirHead:
 			switch kind {
 			case TokenKindVarStart:
-				state = parserStateDirVarEnd
+				x.state = parserStateDirVarEnd
 
 			case TokenKindEscape, TokenKindOther:
-				state = parserStateDirTail
+				x.state = parserStateDirTail
 				kv.Key.Directory = append(kv.Key.Directory, q.String(token))
 
 			default:
-				return nil, withTokens(stateErr(kind, state))
+				return nil, x.withTokens(x.stateErr(kind))
 			}
 		}
 	}
 }
 
-func escapeErr(token string, state parserState) error {
-	return errors.Errorf("unexpected escape '%v' while parsing %v", token, parserStateName[state])
+func (x *Parser) withTokens(err error) error {
+	out := Error{
+		Index: len(x.tokens),
+		Err:   err,
+	}
+
+	for {
+		kind, err := x.scanner.Scan()
+		if err != nil {
+			return err
+		}
+
+		if kind == TokenKindEnd {
+			out.Tokens = x.tokens
+			return &out
+		}
+
+		x.tokens = append(x.tokens, Token{
+			Kind:  kind,
+			Token: x.scanner.Token(),
+		})
+	}
 }
 
-func stateErr(kind TokenKind, state parserState) error {
-	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName[state])
+func (x *Parser) escapeErr(token string) error {
+	return errors.Errorf("unexpected escape '%v' while parsing %v", token, parserStateName[x.state])
+}
+
+func (x *Parser) stateErr(kind TokenKind) error {
+	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName[x.state])
 }

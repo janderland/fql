@@ -21,7 +21,8 @@ func TestDirectory(t *testing.T) {
 
 	for _, test := range roundTrips {
 		t.Run(test.name, func(t *testing.T) {
-			ast, err := Parse(NewScanner(strings.NewReader(test.str)))
+			p := NewParser(NewScanner(strings.NewReader(test.str)))
+			ast, err := p.Parse()
 			require.NoError(t, err)
 			require.Equal(t, test.ast, ast)
 
@@ -47,7 +48,8 @@ func TestDirectory(t *testing.T) {
 
 	for _, test := range parseFailures {
 		t.Run(test.name, func(t *testing.T) {
-			ast, err := Parse(NewScanner(strings.NewReader(test.str)))
+			p := NewParser(NewScanner(strings.NewReader(test.str)))
+			ast, err := p.Parse()
 			require.Error(t, err)
 			require.Nil(t, ast)
 		})
