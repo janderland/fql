@@ -41,7 +41,6 @@ func TestDirectory(t *testing.T) {
 		{name: "empty", str: ""},
 		{name: "no paths", str: "/"},
 		{name: "no slash", str: "hello"},
-		{name: "empty path", str: "/ /path"},
 		{name: "trailing slash", str: "/hello/world/"},
 		{name: "invalid var", str: "/hello/</thing"},
 	}

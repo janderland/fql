@@ -65,7 +65,6 @@ func (x *Error) Error() string {
 		}
 		msg.WriteString(token.Token)
 	}
-
 	return errors.Wrap(x.Err, msg.String()).Error()
 }
 
@@ -109,6 +108,8 @@ func Parse(scanner Scanner) (q.Query, error) {
 		switch state {
 		case parserStateInitial:
 			switch kind {
+			case TokenKindDirSep:
+				state = parserStateDirHead
 
 			default:
 				return nil, withTokens(stateErr(kind, state))
@@ -159,9 +160,6 @@ func Parse(scanner Scanner) (q.Query, error) {
 			case TokenKindEscape, TokenKindOther:
 				state = parserStateDirTail
 				kv.Key.Directory = append(kv.Key.Directory, q.String(token))
-
-			case TokenKindEnd:
-				return kv.Key.Directory, nil
 
 			default:
 				return nil, withTokens(stateErr(kind, state))
