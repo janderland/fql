@@ -79,6 +79,7 @@ type Parser struct {
 	scanner Scanner
 	tokens  []Token
 	state   parserState
+	path    []int
 }
 
 func NewParser(s Scanner) Parser {
@@ -117,6 +118,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindTupStart:
 				x.state = parserStateTupleHead
+				x.path = []int{-1}
 
 			case TokenKindEscape, TokenKindOther:
 				if kind == TokenKindEscape {
@@ -140,8 +142,8 @@ func (x *Parser) Parse() (q.Query, error) {
 		case parserStateDirVarEnd:
 			switch kind {
 			case TokenKindVarEnd:
-				kv.Key.Directory = append(kv.Key.Directory, q.Variable{})
 				x.state = parserStateDirTail
+				kv.Key.Directory = append(kv.Key.Directory, q.Variable{})
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -161,7 +163,18 @@ func (x *Parser) Parse() (q.Query, error) {
 			}
 
 		case parserStateTupleHead:
+			x.path[len(x.path)-1]++
+
 			switch kind {
+			case TokenKindTupStart:
+				tup := kv.Key.Tuple
+				for _, i := range x.path[:len(x.path)-1] {
+					tup = tup[i].(q.Tuple)
+				}
+				kv.Key.Tuple = append(kv.Key.Tuple, q.Tuple{})
+				x.path = append(x.path, -1)
+				break
+
 			case TokenKindTupEnd:
 				x.state = parserStateSeparator
 
@@ -170,6 +183,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindStrMark:
 				x.state = parserStateTupleString
+				tup := kv.Key.Tuple
+				for _, i := range x.path[:len(x.path)-1] {
+					tup = tup[i].(q.Tuple)
+				}
 				kv.Key.Tuple = append(kv.Key.Tuple, q.String(""))
 
 			case TokenKindWhitespace, TokenKindNewLine:
@@ -203,7 +220,10 @@ func (x *Parser) Parse() (q.Query, error) {
 		case parserStateTupleTail:
 			switch kind {
 			case TokenKindTupEnd:
-				x.state = parserStateSeparator
+				x.path = x.path[:len(x.path)-1]
+				if len(x.path) == 0 {
+					x.state = parserStateSeparator
+				}
 
 			case TokenKindTupSep:
 				x.state = parserStateTupleHead
