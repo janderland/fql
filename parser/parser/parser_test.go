@@ -30,28 +30,19 @@ func TestTuple(t *testing.T) {
 		str  string
 		ast  q.Tuple
 	}{
-		{name: "empty",
-			str: "{}",
-			ast: q.Tuple{}},
+		{name: "empty", str: "{}", ast: q.Tuple(nil)},
 
-		{name: "one",
-			str: "{17}",
-			ast: q.Tuple{q.Int(17)}},
+		{name: "one", str: "{17}", ast: q.Tuple{q.Int(17)}},
 
-		{name: "two",
-			str: "{17,\"hello world\"}",
-			ast: q.Tuple{q.Int(17), q.String("hello world")}},
+		{name: "two", str: "{17,\"hello world\"}", ast: q.Tuple{q.Int(17), q.String("hello world")}},
 
-		{name: "sub tuple",
-			str: "{\"hello\",23.3,{-3}}",
+		{name: "sub tuple", str: "{\"hello\",23.3,{-3}}",
 			ast: q.Tuple{q.String("hello"), q.Float(23.3), q.Tuple{q.Int(-3)}}},
 
-		{name: "uuid",
-			str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}",
+		{name: "uuid", str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}",
 			ast: q.Tuple{q.Tuple{q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 
-		{name: "maybe more",
-			str: "{18.2,0xffaa,...}",
+		{name: "maybe more", str: "{18.2,0xffaa,...}",
 			ast: q.Tuple{q.Float(18.2), q.Bytes{0xFF, 0xAA}, q.MaybeMore{}}},
 	}
 

@@ -11,11 +11,14 @@ type parserState int
 
 const (
 	parserStateInitial parserState = iota
+	parserStateDirHead
 	parserStateDirTail
 	parserStateDirVarEnd
-	parserStateDirHead
-	parserStateTupleTail
 	parserStateTupleHead
+	parserStateTupleTail
+	parserStateTupleVarHead
+	parserStateTupleVarTail
+	parserStateTupleString
 	parserStateSeparator
 	parserStateValue
 )
@@ -60,10 +63,10 @@ type Error struct {
 func (x *Error) Error() string {
 	var msg strings.Builder
 	for i, token := range x.Tokens {
-		if i == x.Index {
-			msg.WriteString(" <--- ")
-		}
 		msg.WriteString(token.Token)
+		if i+1 == x.Index {
+			msg.WriteString(" <--failure-point---- ")
+		}
 	}
 	return errors.Wrap(x.Err, msg.String()).Error()
 }
@@ -153,6 +156,49 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		case parserStateTupleHead:
+			switch kind {
+			case TokenKindTupEnd:
+				x.state = parserStateSeparator
+
+			case TokenKindVarStart:
+				x.state = parserStateTupleVarHead
+
+			case TokenKindStrMark:
+				x.state = parserStateTupleString
+
+			case TokenKindWhitespace, TokenKindNewLine:
+				break
+
+			case TokenKindOther:
+				x.state = parserStateTupleTail
+				kv.Key.Tuple = append(kv.Key.Tuple, q.String(token))
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		case parserStateTupleTail:
+			switch kind {
+			case TokenKindTupEnd:
+				x.state = parserStateSeparator
+
+			case TokenKindTupSep:
+				x.state = parserStateTupleHead
+
+			case TokenKindWhitespace, TokenKindNewLine:
+				break
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		case parserStateSeparator:
+			switch kind {
+			case TokenKindEnd:
+				return kv.Key, nil
+			}
+
 		default:
 			return nil, x.stateErr()
 		}
@@ -192,5 +238,5 @@ func (x *Parser) tokenErr(kind TokenKind) error {
 }
 
 func (x *Parser) stateErr() error {
-	return errors.Errorf("unknown state %v", x.state)
+	return errors.Errorf("unexpected state %v", parserStateName[x.state])
 }
