@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"strconv"
 	"strings"
 
 	q "github.com/janderland/fdbq/keyval"
@@ -172,7 +173,26 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindOther:
 				x.state = parserStateTupleTail
-				kv.Key.Tuple = append(kv.Key.Tuple, q.String(token))
+
+				var num q.TupElement
+				i, err := strconv.ParseInt(token, 10, 64)
+				if num == nil && err == nil {
+					num = q.Int(i)
+				}
+				u, err := strconv.ParseUint(token, 10, 64)
+				if num == nil && err == nil {
+					num = q.Uint(u)
+				}
+				f, err := strconv.ParseFloat(token, 64)
+				if num == nil && err == nil {
+					num = q.Float(f)
+				}
+				if num != nil {
+					kv.Key.Tuple = append(kv.Key.Tuple, num)
+					break
+				}
+
+				return nil, x.withTokens(errors.Errorf("invalid tuple element"))
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -200,7 +220,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			}
 
 		default:
-			return nil, x.stateErr()
+			return nil, errors.Errorf("unexpected state %v", parserStateName[x.state])
 		}
 	}
 }
@@ -235,8 +255,4 @@ func (x *Parser) escapeErr(token string) error {
 
 func (x *Parser) tokenErr(kind TokenKind) error {
 	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName[x.state])
-}
-
-func (x *Parser) stateErr() error {
-	return errors.Errorf("unexpected state %v", parserStateName[x.state])
 }
