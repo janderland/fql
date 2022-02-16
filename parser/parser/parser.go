@@ -64,9 +64,12 @@ type Error struct {
 func (x *Error) Error() string {
 	var msg strings.Builder
 	for i, token := range x.Tokens {
+		if i+1 == x.Index {
+			msg.WriteString(" --> ")
+		}
 		msg.WriteString(token.Token)
 		if i+1 == x.Index {
-			msg.WriteString(" <--failure-point---- ")
+			msg.WriteString(" <--invalid-token--- ")
 		}
 	}
 	return errors.Wrap(x.Err, msg.String()).Error()
@@ -167,13 +170,13 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindStrMark:
 				x.state = parserStateTupleString
+				kv.Key.Tuple = append(kv.Key.Tuple, q.String(""))
 
 			case TokenKindWhitespace, TokenKindNewLine:
 				break
 
 			case TokenKindOther:
 				x.state = parserStateTupleTail
-
 				var num q.TupElement
 				i, err := strconv.ParseInt(token, 10, 64)
 				if num == nil && err == nil {
@@ -191,7 +194,6 @@ func (x *Parser) Parse() (q.Query, error) {
 					kv.Key.Tuple = append(kv.Key.Tuple, num)
 					break
 				}
-
 				return nil, x.withTokens(errors.Errorf("invalid tuple element"))
 
 			default:
@@ -212,6 +214,21 @@ func (x *Parser) Parse() (q.Query, error) {
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
+
+		case parserStateTupleString:
+			if kind == TokenKindEnd {
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+			if kind == TokenKindStrMark {
+				x.state = parserStateTupleTail
+				break
+			}
+			i := len(kv.Key.Tuple) - 1
+			str := kv.Key.Tuple[i].(q.String)
+			if kind == TokenKindEscape {
+				str = str[1:]
+			}
+			kv.Key.Tuple[i] = q.String(string(str) + token)
 
 		case parserStateSeparator:
 			switch kind {
