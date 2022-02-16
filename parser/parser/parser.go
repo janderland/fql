@@ -100,7 +100,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = parserStateDirHead
 
 			default:
-				return nil, x.withTokens(x.stateErr(kind))
+				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
 		case parserStateDirTail:
@@ -127,7 +127,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				return kv.Key.Directory, nil
 
 			default:
-				return nil, x.withTokens(x.stateErr(kind))
+				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
 		case parserStateDirVarEnd:
@@ -137,7 +137,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = parserStateDirTail
 
 			default:
-				return nil, x.withTokens(x.stateErr(kind))
+				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
 		case parserStateDirHead:
@@ -150,8 +150,11 @@ func (x *Parser) Parse() (q.Query, error) {
 				kv.Key.Directory = append(kv.Key.Directory, q.String(token))
 
 			default:
-				return nil, x.withTokens(x.stateErr(kind))
+				return nil, x.withTokens(x.tokenErr(kind))
 			}
+
+		default:
+			return nil, x.stateErr()
 		}
 	}
 }
@@ -184,6 +187,10 @@ func (x *Parser) escapeErr(token string) error {
 	return errors.Errorf("unexpected escape '%v' while parsing %v", token, parserStateName[x.state])
 }
 
-func (x *Parser) stateErr(kind TokenKind) error {
+func (x *Parser) tokenErr(kind TokenKind) error {
 	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName[x.state])
+}
+
+func (x *Parser) stateErr() error {
+	return errors.Errorf("unknown state %v", x.state)
 }

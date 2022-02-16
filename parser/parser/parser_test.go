@@ -9,13 +9,13 @@ import (
 )
 
 func TestDirectory(t *testing.T) {
-	RoundTripTests{
+	roundTripTests{
 		{name: "single", str: "/hello", ast: q.Directory{q.String("hello")}},
 		{name: "multi", str: "/hello/world", ast: q.Directory{q.String("hello"), q.String("world")}},
 		{name: "variable", str: "/hello/<>/thing", ast: q.Directory{q.String("hello"), q.Variable{}, q.String("thing")}},
 	}.run(t)
 
-	ParseFailureTests{
+	parseFailureTests{
 		{name: "empty", str: ""},
 		{name: "no paths", str: "/"},
 		{name: "no slash", str: "hello"},
@@ -24,7 +24,6 @@ func TestDirectory(t *testing.T) {
 	}.run(t)
 }
 
-/*
 func TestTuple(t *testing.T) {
 	roundTrips := []struct {
 		name string
@@ -56,13 +55,15 @@ func TestTuple(t *testing.T) {
 			ast: q.Tuple{q.Float(18.2), q.Bytes{0xFF, 0xAA}, q.MaybeMore{}}},
 	}
 
-	for _, test := range roundTrips {
-		t.Run(test.name, func(t *testing.T) {
-			ast, err := ParseTuple(test.str)
-			require.NoError(t, err)
-			require.Equal(t, test.ast, ast)
-		})
+	roundTripTests := make(roundTripTests, len(roundTrips))
+	for i, test := range roundTrips {
+		roundTripTests[i] = roundTripTest{
+			name: test.name,
+			str:  "/dir" + test.str,
+			ast:  q.Key{Directory: q.Directory{q.String("dir")}, Tuple: test.ast},
+		}
 	}
+	roundTripTests.run(t)
 
 	parseFailures := []struct {
 		name string
@@ -75,56 +76,60 @@ func TestTuple(t *testing.T) {
 		{name: "empty element", str: "{\"hello\",, -3}"},
 	}
 
-	for _, test := range parseFailures {
-		t.Run(test.name, func(t *testing.T) {
-			ast, err := ParseTuple(test.str)
-			require.Error(t, err)
-			require.Nil(t, ast)
-		})
+	parseFailureTests := make(parseFailureTests, len(parseFailures))
+	for i, test := range parseFailures {
+		parseFailureTests[i] = parseFailureTest{
+			name: test.name,
+			str:  "/dir" + test.str,
+		}
 	}
+	parseFailureTests.run(t)
 }
-*/
 
-type RoundTripTest struct {
+type roundTripTest struct {
 	name string
 	str  string
 	ast  q.Query
 }
 
-type RoundTripTests []RoundTripTest
+type roundTripTests []roundTripTest
 
-func (x RoundTripTests) run(t *testing.T) {
-	for _, test := range x {
-		t.Run(test.name, func(t *testing.T) {
-			p := NewParser(NewScanner(strings.NewReader(test.str)))
-			ast, err := p.Parse()
-			require.NoError(t, err)
-			require.Equal(t, test.ast, ast)
-
-			/*
-				TODO: Enable test.
-				str, err := FormatDirectory(test.ast)
+func (x roundTripTests) run(t *testing.T) {
+	t.Run("round trips", func(t *testing.T) {
+		for _, test := range x {
+			t.Run(test.name, func(t *testing.T) {
+				p := NewParser(NewScanner(strings.NewReader(test.str)))
+				ast, err := p.Parse()
 				require.NoError(t, err)
-				require.Equal(t, test.str, str)
-			*/
-		})
-	}
+				require.Equal(t, test.ast, ast)
+
+				/*
+					TODO: Enable test.
+					str, err := FormatDirectory(test.ast)
+					require.NoError(t, err)
+					require.Equal(t, test.str, str)
+				*/
+			})
+		}
+	})
 }
 
-type ParseFailureTest struct {
+type parseFailureTest struct {
 	name string
 	str  string
 }
 
-type ParseFailureTests []ParseFailureTest
+type parseFailureTests []parseFailureTest
 
-func (x ParseFailureTests) run(t *testing.T) {
-	for _, test := range x {
-		t.Run(test.name, func(t *testing.T) {
-			p := NewParser(NewScanner(strings.NewReader(test.str)))
-			ast, err := p.Parse()
-			require.Error(t, err)
-			require.Nil(t, ast)
-		})
-	}
+func (x parseFailureTests) run(t *testing.T) {
+	t.Run("parse failures", func(t *testing.T) {
+		for _, test := range x {
+			t.Run(test.name, func(t *testing.T) {
+				p := NewParser(NewScanner(strings.NewReader(test.str)))
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
+		}
+	})
 }
