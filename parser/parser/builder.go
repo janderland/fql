@@ -3,7 +3,6 @@ package parser
 import q "github.com/janderland/fdbq/keyval"
 
 type kvBuilder struct {
-	tupBuilder
 	kv q.KeyValue
 }
 
@@ -25,16 +24,12 @@ func (x *kvBuilder) appendToLastDirPart(token string) {
 	x.kv.Key.Directory[i] = q.String(string(str) + token)
 }
 
-func (x *kvBuilder) startTuple() {
-	x.tupBuilder = tupBuilder{}
+func (x *kvBuilder) setKeyTuple(b tupBuilder) {
+	x.kv.Key.Tuple = b.get()
 }
 
-func (x *kvBuilder) endKeyTuple() {
-	x.kv.Key.Tuple = x.tupBuilder.get()
-}
-
-func (x *kvBuilder) endValueTuple() {
-	x.kv.Value = x.tupBuilder.get()
+func (x *kvBuilder) setValueTuple(b tupBuilder) {
+	x.kv.Value = b.get()
 }
 
 type tupBuilder struct {

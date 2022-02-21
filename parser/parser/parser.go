@@ -86,7 +86,10 @@ func NewParser(s Scanner) Parser {
 }
 
 func (x *Parser) Parse() (q.Query, error) {
-	var b kvBuilder
+	var (
+		kv  kvBuilder
+		tup tupBuilder
+	)
 
 	for {
 		kind, err := x.scanner.Scan()
@@ -117,7 +120,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindTupStart:
 				x.state = parserStateTupleHead
-				b.startTuple()
+				tup = tupBuilder{}
 
 			case TokenKindEscape, TokenKindOther:
 				if kind == TokenKindEscape {
@@ -127,10 +130,10 @@ func (x *Parser) Parse() (q.Query, error) {
 						return nil, x.withTokens(x.escapeErr(token))
 					}
 				}
-				b.appendToLastDirPart(token)
+				kv.appendToLastDirPart(token)
 
 			case TokenKindEnd:
-				return b.get().Key.Directory, nil
+				return kv.get().Key.Directory, nil
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -140,7 +143,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			switch kind {
 			case TokenKindVarEnd:
 				x.state = parserStateDirTail
-				b.appendVarToDirectory()
+				kv.appendVarToDirectory()
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -153,7 +156,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindEscape, TokenKindOther:
 				x.state = parserStateDirTail
-				b.appendPartToDirectory(token)
+				kv.appendPartToDirectory(token)
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -162,7 +165,7 @@ func (x *Parser) Parse() (q.Query, error) {
 		case parserStateTupleHead:
 			switch kind {
 			case TokenKindTupStart:
-				b.startSubTuple()
+				tup.startSubTuple()
 
 			case TokenKindTupEnd:
 				x.state = parserStateSeparator
@@ -172,7 +175,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindStrMark:
 				x.state = parserStateTupleString
-				b.appendToTuple(q.String(""))
+				tup.appendToTuple(q.String(""))
 
 			case TokenKindWhitespace, TokenKindNewLine:
 				break
@@ -193,7 +196,7 @@ func (x *Parser) Parse() (q.Query, error) {
 					num = q.Float(f)
 				}
 				if num != nil {
-					b.appendToTuple(num)
+					tup.appendToTuple(num)
 					break
 				}
 				return nil, x.withTokens(errors.Errorf("invalid tuple element"))
@@ -205,9 +208,9 @@ func (x *Parser) Parse() (q.Query, error) {
 		case parserStateTupleTail:
 			switch kind {
 			case TokenKindTupEnd:
-				if b.endCurrentTuple() {
+				if tup.endCurrentTuple() {
 					x.state = parserStateSeparator
-					b.endKeyTuple()
+					kv.setKeyTuple(tup)
 				}
 
 			case TokenKindTupSep:
@@ -228,12 +231,12 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = parserStateTupleTail
 				break
 			}
-			b.appendToLastTupElem(token)
+			tup.appendToLastTupElem(token)
 
 		case parserStateSeparator:
 			switch kind {
 			case TokenKindEnd:
-				return b.get().Key, nil
+				return kv.get().Key, nil
 			}
 
 		default:
