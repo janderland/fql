@@ -210,7 +210,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			case TokenKindTupEnd:
 				if tup.endCurrentTuple() {
 					x.state = parserStateSeparator
-					kv.setKeyTuple(tup)
+					kv.setKeyTuple(tup.get())
 				}
 
 			case TokenKindTupSep:

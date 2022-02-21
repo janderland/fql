@@ -24,12 +24,12 @@ func (x *kvBuilder) appendToLastDirPart(token string) {
 	x.kv.Key.Directory[i] = q.String(string(str) + token)
 }
 
-func (x *kvBuilder) setKeyTuple(b tupBuilder) {
-	x.kv.Key.Tuple = b.get()
+func (x *kvBuilder) setKeyTuple(tup q.Tuple) {
+	x.kv.Key.Tuple = tup
 }
 
-func (x *kvBuilder) setValueTuple(b tupBuilder) {
-	x.kv.Value = b.get()
+func (x *kvBuilder) setValue(val q.Value) {
+	x.kv.Value = val
 }
 
 type tupBuilder struct {
