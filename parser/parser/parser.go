@@ -153,7 +153,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindEscape, TokenKindOther:
 				x.state = parserStateDirTail
-				b.appendToLastDirPart(token)
+				b.appendPartToDirectory(token)
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
