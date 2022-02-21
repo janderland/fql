@@ -3,26 +3,26 @@ package parser
 import q "github.com/janderland/fdbq/keyval"
 
 type kvBuilder struct {
-	q.KeyValue
 	tupBuilder
+	kv q.KeyValue
 }
 
 func (x *kvBuilder) get() q.KeyValue {
-	return x.KeyValue
+	return x.kv
 }
 
 func (x *kvBuilder) appendVarToDirectory() {
-	x.Key.Directory = append(x.Key.Directory, q.Variable{})
+	x.kv.Key.Directory = append(x.kv.Key.Directory, q.Variable{})
 }
 
 func (x *kvBuilder) appendPartToDirectory(token string) {
-	x.Key.Directory = append(x.Key.Directory, q.String(token))
+	x.kv.Key.Directory = append(x.kv.Key.Directory, q.String(token))
 }
 
 func (x *kvBuilder) appendToLastDirPart(token string) {
-	i := len(x.Key.Directory) - 1
-	str := x.Key.Directory[i].(q.String)
-	x.Key.Directory[i] = q.String(string(str) + token)
+	i := len(x.kv.Key.Directory) - 1
+	str := x.kv.Key.Directory[i].(q.String)
+	x.kv.Key.Directory[i] = q.String(string(str) + token)
 }
 
 func (x *kvBuilder) startTuple() {
@@ -30,11 +30,11 @@ func (x *kvBuilder) startTuple() {
 }
 
 func (x *kvBuilder) endKeyTuple() {
-	x.Key.Tuple = x.tupBuilder.get()
+	x.kv.Key.Tuple = x.tupBuilder.get()
 }
 
 func (x *kvBuilder) endValueTuple() {
-	x.Value = x.tupBuilder.get()
+	x.kv.Value = x.tupBuilder.get()
 }
 
 type tupBuilder struct {
@@ -61,9 +61,9 @@ func (x *tupBuilder) endCurrentTuple() bool {
 	return false
 }
 
-func (x *tupBuilder) appendStringToTuple() {
+func (x *tupBuilder) appendToTuple(e q.TupElement) {
 	x.mutateTuple(func(tup q.Tuple) q.Tuple {
-		return append(tup, q.String(""))
+		return append(tup, e)
 	})
 }
 

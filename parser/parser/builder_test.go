@@ -20,11 +20,11 @@ func TestTupBuilder_startSubTuple(t *testing.T) {
 func TestTupBuilder_appendStringToTuple(t *testing.T) {
 	var b tupBuilder
 
-	b.appendStringToTuple()
+	b.appendToTuple(q.String(""))
 	require.Equal(t, q.Tuple{q.String("")}, b.get())
 
 	b.startSubTuple()
-	b.appendStringToTuple()
+	b.appendToTuple(q.String(""))
 	require.Equal(t, q.Tuple{q.String(""), q.Tuple{q.String("")}}, b.get())
 }
 
@@ -33,7 +33,7 @@ func TestTupBuilder_appendToLastTupElem(t *testing.T) {
 
 	b.startSubTuple()
 	b.startSubTuple()
-	b.appendStringToTuple()
+	b.appendToTuple(q.String(""))
 	b.appendToLastTupElem("hello")
 	require.Equal(t, q.Tuple{q.Tuple{q.Tuple{q.String("hello")}}}, b.get())
 }

@@ -172,7 +172,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindStrMark:
 				x.state = parserStateTupleString
-				b.appendStringToTuple()
+				b.appendToTuple(q.String(""))
 
 			case TokenKindWhitespace, TokenKindNewLine:
 				break
@@ -193,7 +193,7 @@ func (x *Parser) Parse() (q.Query, error) {
 					num = q.Float(f)
 				}
 				if num != nil {
-					b.Key.Tuple = append(b.Key.Tuple, num)
+					b.appendToTuple(num)
 					break
 				}
 				return nil, x.withTokens(errors.Errorf("invalid tuple element"))
@@ -228,12 +228,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = parserStateTupleTail
 				break
 			}
-			i := len(b.Key.Tuple) - 1
-			str := b.Key.Tuple[i].(q.String)
-			if kind == TokenKindEscape {
-				str = str[1:]
-			}
-			b.Key.Tuple[i] = q.String(string(str) + token)
+			b.appendToLastTupElem(token)
 
 		case parserStateSeparator:
 			switch kind {
