@@ -208,7 +208,7 @@ func (x *Parser) Parse() (q.Query, error) {
 		case parserStateTupleTail:
 			switch kind {
 			case TokenKindTupEnd:
-				if tup.endCurrentTuple() {
+				if tup.endTuple() {
 					x.state = parserStateSeparator
 					kv.setKeyTuple(tup.get())
 				}
@@ -231,7 +231,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = parserStateTupleTail
 				break
 			}
-			tup.appendToLastTupElem(token)
+			tup.appendToLastElem(token)
 
 		case parserStateSeparator:
 			switch kind {

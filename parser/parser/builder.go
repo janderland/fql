@@ -48,7 +48,7 @@ func (x *tupBuilder) startSubTuple() {
 	x.depth++
 }
 
-func (x *tupBuilder) endCurrentTuple() bool {
+func (x *tupBuilder) endTuple() bool {
 	x.depth--
 	if x.depth == -1 {
 		return true
@@ -62,7 +62,7 @@ func (x *tupBuilder) appendToTuple(e q.TupElement) {
 	})
 }
 
-func (x *tupBuilder) appendToLastTupElem(token string) {
+func (x *tupBuilder) appendToLastElem(token string) {
 	x.mutateTuple(func(tup q.Tuple) q.Tuple {
 		i := len(tup) - 1
 		str := tup[i].(q.String)
