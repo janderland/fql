@@ -79,7 +79,6 @@ type Parser struct {
 	scanner Scanner
 	tokens  []Token
 	state   parserState
-	path    []int
 }
 
 func NewParser(s Scanner) Parser {
@@ -118,7 +117,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindTupStart:
 				x.state = parserStateTupleHead
-				x.path = []int{-1}
+				b.startTuple()
 
 			case TokenKindEscape, TokenKindOther:
 				if kind == TokenKindEscape {
@@ -173,11 +172,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindStrMark:
 				x.state = parserStateTupleString
-				tup := b.Key.Tuple
-				for _, i := range x.path[:len(x.path)-1] {
-					tup = tup[i].(q.Tuple)
-				}
-				b.Key.Tuple = append(b.Key.Tuple, q.String(""))
+				b.appendStringToTuple()
 
 			case TokenKindWhitespace, TokenKindNewLine:
 				break
@@ -210,9 +205,9 @@ func (x *Parser) Parse() (q.Query, error) {
 		case parserStateTupleTail:
 			switch kind {
 			case TokenKindTupEnd:
-				x.path = x.path[:len(x.path)-1]
-				if len(x.path) == 0 {
+				if b.endCurrentTuple() {
 					x.state = parserStateSeparator
+					b.endKeyTuple()
 				}
 
 			case TokenKindTupSep:
