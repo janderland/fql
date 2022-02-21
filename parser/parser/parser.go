@@ -1,6 +1,7 @@
 package parser
 
 import (
+	"encoding/hex"
 	"strconv"
 	"strings"
 
@@ -175,31 +176,18 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindStrMark:
 				x.state = parserStateTupleString
-				tup.appendToTuple(q.String(""))
+				tup.append(q.String(""))
 
 			case TokenKindWhitespace, TokenKindNewLine:
 				break
 
 			case TokenKindOther:
 				x.state = parserStateTupleTail
-				var num q.TupElement
-				i, err := strconv.ParseInt(token, 10, 64)
-				if num == nil && err == nil {
-					num = q.Int(i)
+				data, err := parseData(token)
+				if err != nil {
+					return nil, x.withTokens(err)
 				}
-				u, err := strconv.ParseUint(token, 10, 64)
-				if num == nil && err == nil {
-					num = q.Uint(u)
-				}
-				f, err := strconv.ParseFloat(token, 64)
-				if num == nil && err == nil {
-					num = q.Float(f)
-				}
-				if num != nil {
-					tup.appendToTuple(num)
-					break
-				}
-				return nil, x.withTokens(errors.Errorf("invalid tuple element"))
+				tup.append(data.(q.TupElement))
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -275,4 +263,95 @@ func (x *Parser) escapeErr(token string) error {
 
 func (x *Parser) tokenErr(kind TokenKind) error {
 	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName[x.state])
+}
+
+// TODO: Get rid of the empty interface.
+func parseData(token string) (interface{}, error) {
+	if token == Nil {
+		return q.Nil{}, nil
+	}
+	if token == True {
+		return q.Bool(true), nil
+	}
+	if token == False {
+		return q.Bool(false), nil
+	}
+	if strings.HasPrefix(token, HexStart) {
+		token = token[len(HexStart):]
+		if len(token)%2 != 0 {
+			return nil, errors.New("expected even number of hex digits")
+		}
+		data, err := hex.DecodeString(token)
+		if err != nil {
+			return nil, err
+		}
+		return q.Bytes(data), nil
+	}
+	if strings.Count(token, "-") == 4 {
+		return parseUUID(token)
+	}
+	i, err := strconv.ParseInt(token, 10, 64)
+	if err == nil {
+		return q.Int(i), nil
+	}
+	u, err := strconv.ParseUint(token, 10, 64)
+	if err == nil {
+		return q.Uint(u), nil
+	}
+	f, err := strconv.ParseFloat(token, 64)
+	if err == nil {
+		return q.Float(f), nil
+	}
+	return nil, errors.New("unrecognized data element")
+}
+
+func parseUUID(token string) (q.UUID, error) {
+	groups := strings.Split(token, "-")
+	checkLen := func(i int, expLen int) error {
+		if len(groups[i]) != expLen {
+			return errors.Errorf("the %s group should contain %d characters rather than %d", ordinal(i+1), expLen, len(groups[i]))
+		}
+		return nil
+	}
+	if err := checkLen(0, 8); err != nil {
+		return q.UUID{}, err
+	}
+	if err := checkLen(1, 4); err != nil {
+		return q.UUID{}, err
+	}
+	if err := checkLen(2, 4); err != nil {
+		return q.UUID{}, err
+	}
+	if err := checkLen(3, 4); err != nil {
+		return q.UUID{}, err
+	}
+	if err := checkLen(4, 12); err != nil {
+		return q.UUID{}, err
+	}
+
+	var uuid q.UUID
+	_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
+	if err != nil {
+		return q.UUID{}, err
+	}
+	return uuid, nil
+}
+
+func ordinal(x int) string {
+	suffix := "th"
+	switch x % 10 {
+	case 1:
+		if x%100 != 11 {
+			suffix = "st"
+		}
+	case 2:
+		if x%100 != 12 {
+			suffix = "nd"
+		}
+	case 3:
+		if x%100 != 13 {
+			suffix = "rd"
+		}
+	}
+	return strconv.Itoa(x) + suffix
 }

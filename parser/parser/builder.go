@@ -56,7 +56,7 @@ func (x *tupBuilder) endTuple() bool {
 	return false
 }
 
-func (x *tupBuilder) appendToTuple(e q.TupElement) {
+func (x *tupBuilder) append(e q.TupElement) {
 	x.mutateTuple(func(tup q.Tuple) q.Tuple {
 		return append(tup, e)
 	})
