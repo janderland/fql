@@ -50,10 +50,7 @@ func (x *tupBuilder) startSubTuple() {
 
 func (x *tupBuilder) endTuple() bool {
 	x.depth--
-	if x.depth == -1 {
-		return true
-	}
-	return false
+	return x.depth == -1
 }
 
 func (x *tupBuilder) append(e q.TupElement) {
@@ -81,8 +78,8 @@ func (x *tupBuilder) mutateTuple(f func(q.Tuple) q.Tuple) {
 	}
 
 	tup = f(tup)
-
 	tuples[len(tuples)-1] = tup
+
 	for i := len(tuples) - 1; i > 0; i-- {
 		tuples[i-1][len(tuples[i-1])-1] = tuples[i]
 	}
