@@ -183,6 +183,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindOther:
 				x.state = parserStateTupleTail
+				if token == MaybeMore {
+					tup.append(q.MaybeMore{})
+					break
+				}
 				data, err := parseData(token)
 				if err != nil {
 					return nil, x.withTokens(err)
