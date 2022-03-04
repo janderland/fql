@@ -229,6 +229,9 @@ func (x *Parser) Parse() (q.Query, error) {
 			switch kind {
 			case TokenKindEnd:
 				return kv.get().Key, nil
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
 		default:
