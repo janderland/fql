@@ -60,7 +60,6 @@ func TestTuple(t *testing.T) {
 		name string
 		str  string
 	}{
-		{name: "empty", str: ""},
 		{name: "no close", str: "{"},
 		{name: "no open", str: "}"},
 		{name: "bad element", str: "{bad}"},
