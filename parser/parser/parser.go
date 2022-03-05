@@ -23,6 +23,7 @@ const (
 	parserStateTupleString
 	parserStateSeparator
 	parserStateValue
+	parserStateFinished
 )
 
 var parserStateName = map[parserState]string{
@@ -32,6 +33,7 @@ var parserStateName = map[parserState]string{
 	parserStateTupleHead: "key's tuple",
 	parserStateSeparator: "query",
 	parserStateValue:     "value",
+	parserStateFinished:  "finished",
 }
 
 var tokenKindName = map[TokenKind]string{
@@ -230,12 +232,45 @@ func (x *Parser) Parse() (q.Query, error) {
 			case TokenKindEnd:
 				return kv.get().Key, nil
 
+			case TokenKindKVSep:
+				x.state = parserStateValue
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		case parserStateValue:
+			switch kind {
+			case TokenKindOther:
+				x.state = parserStateFinished
+				if token == Clear {
+					kv.setValue(q.Clear{})
+					break
+				}
+				data, err := parseData(token)
+				if err != nil {
+					return nil, x.withTokens(err)
+				}
+				kv.setValue(data.(q.Value))
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		case parserStateFinished:
+			switch kind {
+			case TokenKindWhitespace:
+				break
+
+			case TokenKindEnd:
+				return kv.get(), nil
+
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
 		default:
-			return nil, errors.Errorf("unexpected state %v", parserStateName[x.state])
+			return nil, errors.Errorf("unexpected state '%v'", parserStateName[x.state])
 		}
 	}
 }
