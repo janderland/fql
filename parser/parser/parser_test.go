@@ -115,6 +115,60 @@ func TestValue(t *testing.T) {
 	runParseFailures(t, parseFailureTests)
 }
 
+func TestData(t *testing.T) {
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  interface{}
+	}{
+		{name: "nil",
+			str: "nil",
+			ast: q.Nil{}},
+
+		{name: "true",
+			str: "true",
+			ast: q.Bool(true)},
+
+		{name: "false",
+			str: "false",
+			ast: q.Bool(false)},
+
+		{name: "hex",
+			str: "0xabc032",
+			ast: q.Bytes{0xab, 0xc0, 0x32}},
+
+		{name: "uuid",
+			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
+			ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+
+		{name: "int",
+			str: "123",
+			ast: q.Int(123)},
+
+		{name: "float",
+			str: "-94.2",
+			ast: q.Float(-94.2)},
+
+		{name: "scientific",
+			str: "3.47e-08",
+			ast: q.Float(3.47e-8)},
+	}
+
+	for _, test := range roundTrips {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := parseData(test.str)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
+
+			/*
+				str, err := FormatData(test.ast)
+				require.NoError(t, err)
+				require.Equal(t, test.str, str)
+			*/
+		})
+	}
+}
+
 type roundTripTest struct {
 	name string
 	str  string
