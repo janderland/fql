@@ -82,7 +82,6 @@ type Parser struct {
 	scanner Scanner
 	tokens  []Token
 	state   parserState
-	valTup  bool
 }
 
 func NewParser(s Scanner) Parser {
@@ -93,6 +92,8 @@ func (x *Parser) Parse() (q.Query, error) {
 	var (
 		kv  kvBuilder
 		tup tupBuilder
+
+		valTup bool
 	)
 
 	for {
@@ -125,6 +126,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			case TokenKindTupStart:
 				x.state = parserStateTupleHead
 				tup = tupBuilder{}
+				valTup = false
 
 			case TokenKindEscape, TokenKindOther:
 				if kind == TokenKindEscape {
@@ -204,7 +206,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			switch kind {
 			case TokenKindTupEnd:
 				if tup.endTuple() {
-					if x.valTup {
+					if valTup {
 						x.state = parserStateFinished
 						kv.setValue(tup.get())
 						break
@@ -249,8 +251,8 @@ func (x *Parser) Parse() (q.Query, error) {
 			switch kind {
 			case TokenKindTupStart:
 				x.state = parserStateTupleHead
-				x.valTup = true
 				tup = tupBuilder{}
+				valTup = true
 
 			case TokenKindOther:
 				x.state = parserStateFinished
