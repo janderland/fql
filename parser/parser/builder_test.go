@@ -34,6 +34,6 @@ func TestTupBuilder_appendToLastTupElem(t *testing.T) {
 	b.startSubTuple()
 	b.startSubTuple()
 	b.append(q.String(""))
-	b.appendToLastElem("hello")
+	b.appendToLastElemStr("hello")
 	require.Equal(t, q.Tuple{q.Tuple{q.Tuple{q.String("hello")}}}, b.get())
 }

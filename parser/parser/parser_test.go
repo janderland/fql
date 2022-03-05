@@ -37,12 +37,9 @@ func TestTuple(t *testing.T) {
 		{name: "empty", str: "{}", ast: q.Tuple(nil)},
 		{name: "one", str: "{17}", ast: q.Tuple{q.Int(17)}},
 		{name: "two", str: "{17,\"hello world\"}", ast: q.Tuple{q.Int(17), q.String("hello world")}},
-		{name: "sub tuple", str: "{\"hello\",23.3,{-3}}",
-			ast: q.Tuple{q.String("hello"), q.Float(23.3), q.Tuple{q.Int(-3)}}},
-		{name: "uuid", str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}",
-			ast: q.Tuple{q.Tuple{q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
-		{name: "maybe more", str: "{18.2,0xffaa,...}",
-			ast: q.Tuple{q.Float(18.2), q.Bytes{0xFF, 0xAA}, q.MaybeMore{}}},
+		{name: "sub tuple", str: "{\"hello\",23.3,{-3}}", ast: q.Tuple{q.String("hello"), q.Float(23.3), q.Tuple{q.Int(-3)}}},
+		{name: "uuid", str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}", ast: q.Tuple{q.Tuple{q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
+		{name: "maybe more", str: "{18.2,0xffaa,...}", ast: q.Tuple{q.Float(18.2), q.Bytes{0xFF, 0xAA}, q.MaybeMore{}}},
 	}
 
 	roundTripTests := make([]roundTripTest, len(roundTrips))
@@ -115,43 +112,70 @@ func TestValue(t *testing.T) {
 	runParseFailures(t, parseFailureTests)
 }
 
+func TestVariable(t *testing.T) {
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  q.Variable
+		val  bool
+	}{
+		{name: "empty", str: "<>", ast: q.Variable{}},
+		{name: "single", str: "<int>", ast: q.Variable{q.IntType}},
+		{name: "multiple", str: "<int|float|tuple>", ast: q.Variable{q.IntType, q.FloatType, q.TupleType}},
+		{name: "value", str: "<int|string>", ast: q.Variable{q.IntType, q.StringType}, val: true},
+	}
+
+	roundTripTests := make([]roundTripTest, len(roundTrips))
+	for i, test := range roundTrips {
+		if test.val {
+			roundTripTests[i] = roundTripTest{
+				name: test.name,
+				str:  "/dir{}=" + test.str,
+				ast:  q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("dir")}, Tuple: q.Tuple{}}, Value: test.ast},
+			}
+		} else {
+			roundTripTests[i] = roundTripTest{
+				name: test.name,
+				str:  "/dir{" + test.str + "}",
+				ast:  q.Key{Directory: q.Directory{q.String("dir")}, Tuple: q.Tuple{test.ast}},
+			}
+		}
+	}
+	runRoundTrips(t, roundTripTests)
+
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "unclosed", str: "<"},
+		{name: "unopened", str: ">"},
+		{name: "invalid", str: "<invalid>"},
+	}
+
+	parseFailureTests := make([]parseFailureTest, len(parseFailures))
+	for i, test := range parseFailures {
+		parseFailureTests[i] = parseFailureTest{
+			name: test.name,
+			str:  "/dir{" + test.str + "}",
+		}
+	}
+	runParseFailures(t, parseFailureTests)
+}
+
 func TestData(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
 		ast  interface{}
 	}{
-		{name: "nil",
-			str: "nil",
-			ast: q.Nil{}},
-
-		{name: "true",
-			str: "true",
-			ast: q.Bool(true)},
-
-		{name: "false",
-			str: "false",
-			ast: q.Bool(false)},
-
-		{name: "hex",
-			str: "0xabc032",
-			ast: q.Bytes{0xab, 0xc0, 0x32}},
-
-		{name: "uuid",
-			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
-			ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
-
-		{name: "int",
-			str: "123",
-			ast: q.Int(123)},
-
-		{name: "float",
-			str: "-94.2",
-			ast: q.Float(-94.2)},
-
-		{name: "scientific",
-			str: "3.47e-08",
-			ast: q.Float(3.47e-8)},
+		{name: "nil", str: "nil", ast: q.Nil{}},
+		{name: "true", str: "true", ast: q.Bool(true)},
+		{name: "false", str: "false", ast: q.Bool(false)},
+		{name: "hex", str: "0xabc032", ast: q.Bytes{0xab, 0xc0, 0x32}},
+		{name: "uuid", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+		{name: "int", str: "123", ast: q.Int(123)},
+		{name: "float", str: "-94.2", ast: q.Float(-94.2)},
+		{name: "scientific", str: "3.47e-08", ast: q.Float(3.47e-8)},
 	}
 
 	for _, test := range roundTrips {
@@ -175,9 +199,7 @@ func TestUUID(t *testing.T) {
 		str  string
 		ast  q.UUID
 	}{
-		{name: "normal",
-			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
-			ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+		{name: "normal", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
 	}
 
 	for _, test := range roundTrips {

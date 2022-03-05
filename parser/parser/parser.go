@@ -27,13 +27,18 @@ const (
 )
 
 var parserStateName = map[parserState]string{
-	parserStateDirTail:   "directory",
-	parserStateDirHead:   "directory",
-	parserStateTupleTail: "key's tuple",
-	parserStateTupleHead: "key's tuple",
-	parserStateSeparator: "query",
-	parserStateValue:     "value",
-	parserStateFinished:  "finished",
+	parserStateInitial:      "initial",
+	parserStateDirHead:      "directory",
+	parserStateDirTail:      "directory",
+	parserStateDirVarEnd:    "directory",
+	parserStateTupleHead:    "tuple",
+	parserStateTupleTail:    "tuple",
+	parserStateTupleVarHead: "variable",
+	parserStateTupleVarTail: "variable",
+	parserStateTupleString:  "string",
+	parserStateSeparator:    "query",
+	parserStateValue:        "value",
+	parserStateFinished:     "finished",
 }
 
 var tokenKindName = map[TokenKind]string{
@@ -178,6 +183,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case TokenKindVarStart:
 				x.state = parserStateTupleVarHead
+				tup.append(q.Variable{})
 
 			case TokenKindStrMark:
 				x.state = parserStateTupleString
@@ -233,7 +239,22 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = parserStateTupleTail
 				break
 			}
-			tup.appendToLastElem(token)
+			tup.appendToLastElemStr(token)
+
+		case parserStateTupleVarHead:
+			switch kind {
+			case TokenKindVarEnd:
+				x.state = parserStateTupleTail
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		case parserStateTupleVarTail:
+			switch kind {
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
 
 		case parserStateSeparator:
 			switch kind {

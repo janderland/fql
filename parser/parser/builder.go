@@ -59,11 +59,20 @@ func (x *tupBuilder) append(e q.TupElement) {
 	})
 }
 
-func (x *tupBuilder) appendToLastElem(token string) {
+func (x *tupBuilder) appendToLastElemStr(token string) {
 	x.mutateTuple(func(tup q.Tuple) q.Tuple {
 		i := len(tup) - 1
 		str := tup[i].(q.String)
 		tup[i] = q.String(string(str) + token)
+		return tup
+	})
+}
+
+func (x *tupBuilder) appendToLastElemVar(typ q.ValueType) {
+	x.mutateTuple(func(tup q.Tuple) q.Tuple {
+		i := len(tup) - 1
+		v := tup[i].(q.Variable)
+		tup[i] = append(v, typ)
 		return tup
 	})
 }
