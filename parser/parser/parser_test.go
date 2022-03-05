@@ -169,6 +169,50 @@ func TestData(t *testing.T) {
 	}
 }
 
+func TestUUID(t *testing.T) {
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  q.UUID
+	}{
+		{name: "normal",
+			str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9",
+			ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
+	}
+
+	for _, test := range roundTrips {
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := parseUUID(test.str)
+			require.NoError(t, err)
+			require.Equal(t, test.ast, ast)
+
+			/*
+				str := FormatUUID(test.ast)
+				require.Equal(t, test.str, str)
+			*/
+		})
+	}
+
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "empty", str: ""},
+		{name: "bad group 1", str: "cefd2ec-4df5-43b6-8c79-81b70b886af9"},
+		{name: "bad group 2", str: "bcefd2ec-df5-43b6-8c79-81b70b886af9"},
+		{name: "bad group 3", str: "bcefd2ec-4df5-3b6-8c79-81b70b886af9"},
+		{name: "bad group 4", str: "bcefd2ec-4df5-43b6-c79-81b70b886af9"},
+		{name: "bad group 5", str: "bcefd2ec-4df5-43b6-8c79-1b70b886af9"},
+		{name: "long", str: "bcefdyec-4df5-43%6-8c79-81b70bg86af9"},
+	}
+
+	for _, test := range parseFailures {
+		ast, err := parseUUID(test.str)
+		require.Error(t, err)
+		require.Equal(t, q.UUID{}, ast)
+	}
+}
+
 type roundTripTest struct {
 	name string
 	str  string
