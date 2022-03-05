@@ -246,12 +246,26 @@ func (x *Parser) Parse() (q.Query, error) {
 			case TokenKindVarEnd:
 				x.state = parserStateTupleTail
 
+			case TokenKindOther:
+				x.state = parserStateTupleVarTail
+				v, err := parseValueType(token)
+				if err != nil {
+					return nil, x.withTokens(err)
+				}
+				tup.appendToLastElemVar(v)
+
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
 		case parserStateTupleVarTail:
 			switch kind {
+			case TokenKindVarEnd:
+				x.state = parserStateTupleTail
+
+			case TokenKindVarSep:
+				x.state = parserStateTupleVarHead
+
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
@@ -339,6 +353,15 @@ func (x *Parser) escapeErr(token string) error {
 
 func (x *Parser) tokenErr(kind TokenKind) error {
 	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName[x.state])
+}
+
+func parseValueType(token string) (q.ValueType, error) {
+	for _, v := range q.AllTypes() {
+		if string(v) == token {
+			return v, nil
+		}
+	}
+	return q.AnyType, errors.Errorf("unrecognized value type")
 }
 
 // TODO: Get rid of the empty interface.
