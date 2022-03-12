@@ -131,7 +131,7 @@ func TestVariable(t *testing.T) {
 			roundTripTests[i] = roundTripTest{
 				name: test.name,
 				str:  "/dir{}=" + test.str,
-				ast:  q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("dir")}, Tuple: q.Tuple{}}, Value: test.ast},
+				ast:  q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("dir")}}, Value: test.ast},
 			}
 		} else {
 			roundTripTests[i] = roundTripTest{
