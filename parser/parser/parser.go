@@ -23,6 +23,8 @@ const (
 	parserStateTupleString
 	parserStateSeparator
 	parserStateValue
+	parserStateValueVarHead
+	parserStateValueVarTail
 	parserStateFinished
 )
 
@@ -38,6 +40,8 @@ var parserStateName = map[parserState]string{
 	parserStateTupleString:  "string",
 	parserStateSeparator:    "query",
 	parserStateValue:        "value",
+	parserStateValueVarHead: "variable",
+	parserStateValueVarTail: "variable",
 	parserStateFinished:     "finished",
 }
 
@@ -289,6 +293,10 @@ func (x *Parser) Parse() (q.Query, error) {
 				tup = tupBuilder{}
 				valTup = true
 
+			case TokenKindVarStart:
+				x.state = parserStateValueVarHead
+				kv.setValue(q.Variable{})
+
 			case TokenKindOther:
 				x.state = parserStateFinished
 				if token == Clear {
@@ -300,6 +308,35 @@ func (x *Parser) Parse() (q.Query, error) {
 					return nil, x.withTokens(err)
 				}
 				kv.setValue(data.(q.Value))
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		case parserStateValueVarHead:
+			switch kind {
+			case TokenKindVarEnd:
+				x.state = parserStateFinished
+
+			case TokenKindOther:
+				x.state = parserStateValueVarTail
+				v, err := parseValueType(token)
+				if err != nil {
+					return nil, x.withTokens(err)
+				}
+				kv.appendToValueVar(v)
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		case parserStateValueVarTail:
+			switch kind {
+			case TokenKindVarEnd:
+				x.state = parserStateFinished
+
+			case TokenKindVarSep:
+				x.state = parserStateValueVarHead
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))

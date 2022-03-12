@@ -24,6 +24,10 @@ func (x *kvBuilder) appendToLastDirPart(token string) {
 	x.kv.Key.Directory[i] = q.String(string(str) + token)
 }
 
+func (x *kvBuilder) appendToValueVar(typ q.ValueType) {
+	x.kv.Value = append(x.kv.Value.(q.Variable), typ)
+}
+
 func (x *kvBuilder) setKeyTuple(tup q.Tuple) {
 	x.kv.Key.Tuple = tup
 }
