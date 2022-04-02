@@ -115,17 +115,17 @@ var primaryKindByState = map[scannerState]TokenKind{
 // of token is returned. After a call to Scan, the Token
 // method may be called to obtain the token string.
 type Scanner struct {
-	reader *bufio.Reader
+	source *bufio.Reader
 	token  *strings.Builder
 	state  scannerState
 	escape bool
 }
 
 // NewScanner creates a Scanner which reads from the given io.Reader.
-func NewScanner(rd io.Reader) Scanner {
+func NewScanner(src io.Reader) Scanner {
 	var token strings.Builder
 	return Scanner{
-		reader: bufio.NewReader(rd),
+		source: bufio.NewReader(src),
 		token:  &token,
 		state:  scannerStateWhitespace,
 	}
@@ -275,7 +275,7 @@ func (x *Scanner) append(r rune) {
 }
 
 func (x *Scanner) read() (rune, bool) {
-	r, _, err := x.reader.ReadRune()
+	r, _, err := x.source.ReadRune()
 	if err == io.EOF {
 		return 0, true
 	}
@@ -286,7 +286,7 @@ func (x *Scanner) read() (rune, bool) {
 }
 
 func (x *Scanner) unread() {
-	err := x.reader.UnreadRune()
+	err := x.source.UnreadRune()
 	if err != nil {
 		panic(errors.Wrap(err, "failed to unread rune"))
 	}
