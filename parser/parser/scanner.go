@@ -8,16 +8,6 @@ import (
 	"github.com/pkg/errors"
 )
 
-const (
-	// runesWhitespace contains the runes allowed to be
-	// in a TokenKindWhitespace token.
-	runesWhitespace = "\t "
-
-	// runesNewline, together with runesWhitespace, contains the
-	// runes allowed to be in a TokenKindNewLine token.
-	runesNewline = "\n\r"
-)
-
 // TokenKind represents the kind of token read during a call to Scanner.Scan.
 type TokenKind int
 
@@ -78,22 +68,6 @@ const (
 	TokenKindStrMark
 )
 
-// singleCharKindByRune contains all the TokenKind whose tokens must
-// be a single rune, indexed by the rune which said tokens must contain.
-// These kinds of tokens are all handled in a similar way and
-// this map is be used by Scanner.Scan to identify them.
-var singleCharKindByRune = map[rune]TokenKind{
-	KVSep:    TokenKindKVSep,
-	DirSep:   TokenKindDirSep,
-	TupStart: TokenKindTupStart,
-	TupEnd:   TokenKindTupEnd,
-	TupSep:   TokenKindTupSep,
-	VarStart: TokenKindVarStart,
-	VarEnd:   TokenKindVarEnd,
-	VarSep:   TokenKindVarSep,
-	StrMark:  TokenKindStrMark,
-}
-
 type scannerState int
 
 const (
@@ -133,6 +107,36 @@ const (
 	scannerStateOther
 )
 
+const (
+	// runesWhitespace contains the runes allowed to be
+	// in a TokenKindWhitespace token.
+	runesWhitespace = "\t "
+
+	// runesNewline, together with runesWhitespace, contains the
+	// runes allowed to be in a TokenKindNewLine token.
+	runesNewline = "\n\r"
+)
+
+// singleCharKindByRune contains all the TokenKind whose tokens must
+// be a single rune, indexed by the rune which said tokens must contain.
+// These kinds of tokens are all handled in a similar way and
+// this map is be used by Scanner.Scan to identify them.
+var singleCharKindByRune = map[rune]TokenKind{
+	KVSep:    TokenKindKVSep,
+	DirSep:   TokenKindDirSep,
+	TupStart: TokenKindTupStart,
+	TupEnd:   TokenKindTupEnd,
+	TupSep:   TokenKindTupSep,
+	VarStart: TokenKindVarStart,
+	VarEnd:   TokenKindVarEnd,
+	VarSep:   TokenKindVarSep,
+	StrMark:  TokenKindStrMark,
+}
+
+// primaryKindByState maps a scannerState to the TokenKind usually returned
+// by Scanner.Scan during a given state. If the scanner encounters an escape
+// or any of the runes in singleCharKindByRune, then the Scanner.Scan method
+// may return a different TokenKind than what this map provides.
 var primaryKindByState = map[scannerState]TokenKind{
 	scannerStateWhitespace: TokenKindWhitespace,
 	scannerStateNewline:    TokenKindNewLine,
