@@ -9,12 +9,12 @@ import (
 )
 
 const (
-	// runesWhitespace contains the characters allowed to be
+	// runesWhitespace contains the runes allowed to be
 	// in a TokenKindWhitespace token.
 	runesWhitespace = "\t "
 
 	// runesNewline, together with runesWhitespace, contains the
-	// characters allowed to be in a TokenKindNewLine token.
+	// runes allowed to be in a TokenKindNewLine token.
 	runesNewline = "\n\r"
 )
 
@@ -28,16 +28,16 @@ const (
 	TokenKindUnassigned TokenKind = iota
 
 	// TokenKindWhitespace identifies a token which only contains
-	// characters found in the runesWhitespace constant.
+	// runes found in the runesWhitespace constant.
 	TokenKindWhitespace
 
 	// TokenKindNewLine identifies a token which only contains
-	// characters found in the runesWhitespace or runesNewline
+	// runes found in the runesWhitespace or runesNewline
 	// constants.
 	TokenKindNewLine
 
-	// TokenKindEscape identifies a 2-character token which always
-	// starts with the Escape character.
+	// TokenKindEscape identifies a 2-rune token which always
+	// starts with the Escape rune.
 	TokenKindEscape
 
 	// TokenKindOther identifies all other possible tokens which are
@@ -78,7 +78,11 @@ const (
 	TokenKindStrMark
 )
 
-var specialKindByRune = map[rune]TokenKind{
+// singleCharKindByRune contains all the TokenKind whose tokens must
+// be a single rune, indexed by the rune which said tokens must contain.
+// These kinds of tokens are all handled in a similar way and
+// this map is be used by Scanner.Scan to identify them.
+var singleCharKindByRune = map[rune]TokenKind{
 	KVSep:    TokenKindKVSep,
 	DirSep:   TokenKindDirSep,
 	TupStart: TokenKindTupStart,
@@ -93,11 +97,39 @@ var specialKindByRune = map[rune]TokenKind{
 type scannerState int
 
 const (
+	// scannerStateUnassigned is used to identify a scannerState variable
+	// which hasn't been assigned to yet. For this purpose, it must
+	// be the zero-value of its type.
 	scannerStateUnassigned scannerState = iota
+
+	// scannerStateWhitespace is the root state of the scanner. The scanner
+	// remains in this state as long as the current token only contains runes
+	// found in the runesWhitespace constant.
 	scannerStateWhitespace
+
+	// scannerStateNewline follows scannerStateWhitespace if any of the runes
+	// found in the runesNewline constant are encountered. The scanner remains
+	// in this state as long os the current token only contains runes found in
+	// the runesWhitespace or runesNewline constants.
 	scannerStateNewline
+
+	// scannerStateDirPart follows any state, save for scannerStateString, if
+	// a DirSep rune is encountered. During this state, the scanner doesn't
+	// separate whitespace or newlines into separate tokens. The scanner remains
+	// in this state until a TupStart is encountered.
 	scannerStateDirPart
+
+	// scannerStateString follows any state, save for scannerStateDirPart, if a
+	// StrMark rune is encountered. During this state, the scanner doesn't
+	// separate whitespace or newlines into separate tokens. The scanner remains
+	// in this state until another StrMark is encountered.
 	scannerStateString
+
+	// scannerStateOther follows scannerStateWhitespace or scannerStateNewline
+	// if a non-significant character is encountered. The scanner remains in
+	// this state until a significant rune is encountered. Significant runes
+	// include any of the single-rune constants from special.go, or any of
+	// the runes in the constants runesWhitespace and runesNewline.
 	scannerStateOther
 )
 
@@ -172,7 +204,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			continue
 		}
 
-		if kind, ok := specialKindByRune[r]; ok {
+		if kind, ok := singleCharKindByRune[r]; ok {
 			newState := scannerStateUnassigned
 
 			switch r {
