@@ -9,28 +9,73 @@ import (
 )
 
 const (
+	// runesWhitespace contains the characters allowed to be
+	// in a TokenKindWhitespace token.
 	runesWhitespace = "\t "
-	runesNewline    = "\n\r"
+
+	// runesNewline, together with runesWhitespace, contains the
+	// characters allowed to be in a TokenKindNewLine token.
+	runesNewline = "\n\r"
 )
 
+// TokenKind represents the kind of token read during a call to Scanner.Scan.
 type TokenKind int
 
 const (
+	// TokenKindUnassigned is used to identify a TokenKind variable
+	// which hasn't been assigned to yet. For this purpose, it must
+	// be the zero-value of its type.
 	TokenKindUnassigned TokenKind = iota
-	TokenKindEscape
-	TokenKindKVSep
-	TokenKindDirSep
-	TokenKindTupStart
-	TokenKindTupEnd
-	TokenKindTupSep
-	TokenKindVarStart
-	TokenKindVarEnd
-	TokenKindVarSep
-	TokenKindStrMark
+
+	// TokenKindWhitespace identifies a token which only contains
+	// characters found in the runesWhitespace constant.
 	TokenKindWhitespace
+
+	// TokenKindNewLine identifies a token which only contains
+	// characters found in the runesWhitespace or runesNewline
+	// constants.
 	TokenKindNewLine
+
+	// TokenKindEscape identifies a 2-character token which always
+	// starts with the Escape character.
+	TokenKindEscape
+
+	// TokenKindOther identifies all other possible tokens which are
+	// not identified by the given TokenKind constants. This kind of
+	// token is used to represent directory names, value types, and
+	// data elements (numbers, strings, UUIDs, etc...).
 	TokenKindOther
+
+	// TokenKindEnd is returned from Scanner.Scan when the wrapped
+	// io.Reader has been read to completion.
 	TokenKindEnd
+
+	// TokenKindKVSep identifies a token equal to KVSep.
+	TokenKindKVSep
+
+	// TokenKindDirSep identifies a token equal to DirSep.
+	TokenKindDirSep
+
+	// TokenKindTupStart identifies a token equal to TupStart.
+	TokenKindTupStart
+
+	// TokenKindTupEnd identifies a token equal to TupEnd.
+	TokenKindTupEnd
+
+	// TokenKindTupSep identifies a token equal to TupSep.
+	TokenKindTupSep
+
+	// TokenKindVarStart identifies a token equal to VarStart.
+	TokenKindVarStart
+
+	// TokenKindVarEnd identifies a token equal to VarEnd.
+	TokenKindVarEnd
+
+	// TokenKindVarSep identifies a token equal to VarSep.
+	TokenKindVarSep
+
+	// TokenKindStrMark identifies a token equal to StrMark.
+	TokenKindStrMark
 )
 
 var specialKindByRune = map[rune]TokenKind{
@@ -64,6 +109,11 @@ var primaryKindByState = map[scannerState]TokenKind{
 	scannerStateOther:      TokenKindOther,
 }
 
+// Scanner splits the bytes from an io.Reader into tokens
+// for a Parser. For each call to the Scan method, a token
+// worth of bytes is read from the io.Reader and the kind
+// of token is returned. After a call to Scan, the Token
+// method may be called to obtain the token string.
 type Scanner struct {
 	reader *bufio.Reader
 	token  *strings.Builder
@@ -71,6 +121,7 @@ type Scanner struct {
 	escape bool
 }
 
+// NewScanner creates a Scanner which reads from the given io.Reader.
 func NewScanner(rd io.Reader) Scanner {
 	var token strings.Builder
 	return Scanner{
