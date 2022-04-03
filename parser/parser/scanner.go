@@ -117,11 +117,11 @@ const (
 	runesNewline = "\n\r"
 )
 
-// singleCharKindByRune contains all the TokenKind whose tokens must
-// be a single rune, indexed by the rune which said tokens must contain.
+// specialKindByRune contains all the TokenKind whose tokens must be
+// a single rune, indexed by the rune which said tokens must contain.
 // These kinds of tokens are all handled in a similar way and
 // this map is be used by Scanner.Scan to identify them.
-var singleCharKindByRune = map[rune]TokenKind{
+var specialKindByRune = map[rune]TokenKind{
 	KVSep:    TokenKindKVSep,
 	DirSep:   TokenKindDirSep,
 	TupStart: TokenKindTupStart,
@@ -135,7 +135,7 @@ var singleCharKindByRune = map[rune]TokenKind{
 
 // primaryKindByState maps a scannerState to the TokenKind usually returned
 // by Scanner.Scan during a given state. If the scanner encounters an escape
-// or any of the runes in singleCharKindByRune, then the Scanner.Scan method
+// or any of the runes in specialKindByRune, then the Scanner.Scan method
 // may return a different TokenKind than what this map provides.
 var primaryKindByState = map[scannerState]TokenKind{
 	scannerStateWhitespace: TokenKindWhitespace,
@@ -210,7 +210,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			continue
 		}
 
-		if kind, ok := singleCharKindByRune[r]; ok {
+		if kind, ok := specialKindByRune[r]; ok {
 			newState := scannerStateUnassigned
 
 			switch r {
