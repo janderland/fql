@@ -6,9 +6,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/janderland/fdbq/parser/parser/internal"
-
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/parser/parser/internal"
 	"github.com/janderland/fdbq/parser/parser/scanner"
 	"github.com/pkg/errors"
 )
@@ -139,8 +138,8 @@ func NewParser(s scanner.Scanner) Parser {
 
 func (x *Parser) Parse() (q.Query, error) {
 	var (
-		kv  KVBuilder
-		tup TupBuilder
+		kv  internal.KVBuilder
+		tup internal.TupBuilder
 
 		valTup bool
 	)
@@ -174,7 +173,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindTupStart:
 				x.state = parserStateTupleHead
-				tup = TupBuilder{}
+				tup = internal.TupBuilder{}
 				valTup = false
 
 			case scanner.TokenKindEscape, scanner.TokenKindOther:
@@ -330,7 +329,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			switch kind {
 			case scanner.TokenKindTupStart:
 				x.state = parserStateTupleHead
-				tup = TupBuilder{}
+				tup = internal.TupBuilder{}
 				valTup = true
 
 			case scanner.TokenKindVarStart:

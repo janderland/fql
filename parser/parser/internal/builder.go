@@ -1,4 +1,4 @@
-package parser
+package internal
 
 import q "github.com/janderland/fdbq/keyval"
 
