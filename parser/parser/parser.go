@@ -2,6 +2,7 @@ package parser
 
 import (
 	"encoding/hex"
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -28,21 +29,39 @@ const (
 	parserStateFinished
 )
 
-var parserStateName = map[parserState]string{
-	parserStateInitial:      "initial",
-	parserStateDirHead:      "directory",
-	parserStateDirTail:      "directory",
-	parserStateDirVarEnd:    "directory",
-	parserStateTupleHead:    "tuple",
-	parserStateTupleTail:    "tuple",
-	parserStateTupleVarHead: "variable",
-	parserStateTupleVarTail: "variable",
-	parserStateTupleString:  "string",
-	parserStateSeparator:    "query",
-	parserStateValue:        "value",
-	parserStateValueVarHead: "variable",
-	parserStateValueVarTail: "variable",
-	parserStateFinished:     "finished",
+func parserStateName(state parserState) string {
+	switch state {
+	case parserStateInitial:
+		return "initial"
+	case parserStateDirHead:
+		return "directory"
+	case parserStateDirTail:
+		return "directory"
+	case parserStateDirVarEnd:
+		return "directory"
+	case parserStateTupleHead:
+		return "tuple"
+	case parserStateTupleTail:
+		return "tuple"
+	case parserStateTupleVarHead:
+		return "variable"
+	case parserStateTupleVarTail:
+		return "variable"
+	case parserStateTupleString:
+		return "string"
+	case parserStateSeparator:
+		return "query"
+	case parserStateValue:
+		return "value"
+	case parserStateValueVarHead:
+		return "variable"
+	case parserStateValueVarTail:
+		return "variable"
+	case parserStateFinished:
+		return "finished"
+	default:
+		return fmt.Sprintf("[unknown parser state %v]", state)
+	}
 }
 
 var tokenKindName = map[TokenKind]string{
@@ -355,7 +374,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			}
 
 		default:
-			return nil, errors.Errorf("unexpected state '%v'", parserStateName[x.state])
+			return nil, errors.Errorf("unexpected state '%v'", parserStateName(x.state))
 		}
 	}
 }
@@ -385,11 +404,11 @@ func (x *Parser) withTokens(err error) error {
 }
 
 func (x *Parser) escapeErr(token string) error {
-	return errors.Errorf("unexpected escape '%v' while parsing %v", token, parserStateName[x.state])
+	return errors.Errorf("unexpected escape '%v' while parsing %v", token, parserStateName(x.state))
 }
 
 func (x *Parser) tokenErr(kind TokenKind) error {
-	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName[x.state])
+	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName(x.state))
 }
 
 func parseValueType(token string) (q.ValueType, error) {
