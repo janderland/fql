@@ -147,16 +147,27 @@ func singleRuneKind(r rune) TokenKind {
 	}
 }
 
-// primaryKindByState maps a scannerState to the TokenKind usually returned
-// by Scanner.Scan during a given state. If the scanner encounters an escape
-// or any of the runes in specialKindByRune, then the Scanner.Scan method
-// may return a different TokenKind than what this map provides.
-var primaryKindByState = map[scannerState]TokenKind{
-	scannerStateWhitespace: TokenKindWhitespace,
-	scannerStateNewline:    TokenKindNewline,
-	scannerStateDirPart:    TokenKindOther,
-	scannerStateString:     TokenKindOther,
-	scannerStateOther:      TokenKindOther,
+// primaryKind maps a scannerState to the TokenKind usually returned
+// by Scanner.Scan during said state. If the scanner encounters an escape
+// or any of runes accepted by singleRuneKind, then the Scanner.Scan
+// method may return a different TokenKind than what this function returns.
+func primaryKind(state scannerState) TokenKind {
+	switch state {
+	case scannerStateWhitespace:
+		return TokenKindWhitespace
+	case scannerStateNewline:
+		return TokenKindNewline
+	case scannerStateDirPart:
+		return TokenKindOther
+	case scannerStateString:
+		return TokenKindOther
+	case scannerStateOther:
+		return TokenKindOther
+	default:
+		// Its expected that this panic is recovered in Scanner.Scan.
+		err := errors.Errorf("unrecognized scanner state '%v'", state)
+		panic(errors.Wrap(err, "failed to get primary kind"))
+	}
 }
 
 // Scanner splits the bytes from an io.Reader into tokens
@@ -205,7 +216,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		r, eof := x.read()
 		if eof {
 			if x.token.Len() > 0 {
-				return primaryKindByState[x.state], nil
+				return primaryKind(x.state), nil
 			}
 			return TokenKindEnd, nil
 		}
@@ -217,7 +228,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		} else if r == Escape {
 			if x.token.Len() > 0 {
 				x.unread()
-				return primaryKindByState[x.state], nil
+				return primaryKind(x.state), nil
 			}
 			x.escape = true
 			x.append(r)
@@ -258,7 +269,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			if newState != scannerStateUnassigned {
 				if x.token.Len() > 0 {
 					x.unread()
-					return primaryKindByState[x.state], nil
+					return primaryKind(x.state), nil
 				}
 				x.state = newState
 			}
@@ -271,7 +282,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			switch x.state {
 			case scannerStateOther:
 				x.unread()
-				kind := primaryKindByState[x.state]
+				kind := primaryKind(x.state)
 				x.state = scannerStateWhitespace
 				return kind, nil
 
@@ -290,7 +301,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 
 			case scannerStateOther:
 				x.unread()
-				kind := primaryKindByState[x.state]
+				kind := primaryKind(x.state)
 				x.state = scannerStateNewline
 				return kind, nil
 
@@ -308,7 +319,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 				continue
 			}
 			x.unread()
-			kind := primaryKindByState[x.state]
+			kind := primaryKind(x.state)
 			x.state = scannerStateOther
 			return kind, nil
 
