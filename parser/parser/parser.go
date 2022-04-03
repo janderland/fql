@@ -206,7 +206,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				if err != nil {
 					return nil, x.withTokens(err)
 				}
-				tup.append(data.(q.TupElement))
+				tup.append(data)
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -307,7 +307,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				if err != nil {
 					return nil, x.withTokens(err)
 				}
-				kv.setValue(data.(q.Value))
+				kv.setValue(data)
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -401,8 +401,14 @@ func parseValueType(token string) (q.ValueType, error) {
 	return q.AnyType, errors.Errorf("unrecognized value type")
 }
 
-// TODO: Get rid of the empty interface.
-func parseData(token string) (interface{}, error) {
+func parseData(token string) (
+	interface {
+		TupElement(q.TupleOperation)
+		Value(q.ValueOperation)
+		Eq(interface{}) bool
+	},
+	error,
+) {
 	if token == Nil {
 		return q.Nil{}, nil
 	}
