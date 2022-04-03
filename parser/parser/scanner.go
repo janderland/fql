@@ -117,20 +117,34 @@ const (
 	runesNewline = "\n\r"
 )
 
-// specialKindByRune contains all the TokenKind whose tokens must be
-// a single rune, indexed by the rune which said tokens must contain.
-// These kinds of tokens are all handled in a similar way and
-// this map is be used by Scanner.Scan to identify them.
-var specialKindByRune = map[rune]TokenKind{
-	KVSep:    TokenKindKVSep,
-	DirSep:   TokenKindDirSep,
-	TupStart: TokenKindTupStart,
-	TupEnd:   TokenKindTupEnd,
-	TupSep:   TokenKindTupSep,
-	VarStart: TokenKindVarStart,
-	VarEnd:   TokenKindVarEnd,
-	VarSep:   TokenKindVarSep,
-	StrMark:  TokenKindStrMark,
+// singleRuneKind returns a TokenKind which identifies a token equal
+// to the given rune, if such a TokenKind exists. There are a subset
+// of TokenKind whose tokens are a single rune. One of these is
+// returned. If no TokenKind exists for the given rune then
+// TokenKindUnassigned is returned.
+func singleRuneKind(r rune) TokenKind {
+	switch r {
+	case KVSep:
+		return TokenKindKVSep
+	case DirSep:
+		return TokenKindDirSep
+	case TupStart:
+		return TokenKindTupStart
+	case TupEnd:
+		return TokenKindTupEnd
+	case TupSep:
+		return TokenKindTupSep
+	case VarStart:
+		return TokenKindVarStart
+	case VarEnd:
+		return TokenKindVarEnd
+	case VarSep:
+		return TokenKindVarSep
+	case StrMark:
+		return TokenKindStrMark
+	default:
+		return TokenKindUnassigned
+	}
 }
 
 // primaryKindByState maps a scannerState to the TokenKind usually returned
@@ -210,7 +224,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			continue
 		}
 
-		if kind, ok := specialKindByRune[r]; ok {
+		if kind := singleRuneKind(r); kind != TokenKindUnassigned {
 			newState := scannerStateUnassigned
 
 			switch r {
