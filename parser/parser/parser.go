@@ -64,21 +64,39 @@ func parserStateName(state parserState) string {
 	}
 }
 
-var tokenKindName = map[TokenKind]string{
-	TokenKindEscape:     "escape",
-	TokenKindKVSep:      "key-value separator",
-	TokenKindDirSep:     "directory separator",
-	TokenKindTupStart:   "tuple start",
-	TokenKindTupEnd:     "tuple end",
-	TokenKindTupSep:     "tuple separator",
-	TokenKindVarStart:   "variable start",
-	TokenKindVarEnd:     "variable end",
-	TokenKindVarSep:     "variable separator",
-	TokenKindStrMark:    "string mark",
-	TokenKindWhitespace: "whitespace",
-	TokenKindNewline:    "newline",
-	TokenKindOther:      "other",
-	TokenKindEnd:        "end of query",
+func tokenKindName(kind TokenKind) string {
+	switch kind {
+	case TokenKindEscape:
+		return "escape"
+	case TokenKindKVSep:
+		return "key-value separator"
+	case TokenKindDirSep:
+		return "directory separator"
+	case TokenKindTupStart:
+		return "tuple start"
+	case TokenKindTupEnd:
+		return "tuple end"
+	case TokenKindTupSep:
+		return "tuple separator"
+	case TokenKindVarStart:
+		return "variable start"
+	case TokenKindVarEnd:
+		return "variable end"
+	case TokenKindVarSep:
+		return "variable separator"
+	case TokenKindStrMark:
+		return "string mark"
+	case TokenKindWhitespace:
+		return "whitespace"
+	case TokenKindNewline:
+		return "newline"
+	case TokenKindOther:
+		return "other"
+	case TokenKindEnd:
+		return "end of query"
+	default:
+		return fmt.Sprintf("[unknown token kind %v]", kind)
+	}
 }
 
 type Token struct {
@@ -408,7 +426,7 @@ func (x *Parser) escapeErr(token string) error {
 }
 
 func (x *Parser) tokenErr(kind TokenKind) error {
-	return errors.Errorf("unexpected %v while parsing %v", tokenKindName[kind], parserStateName(x.state))
+	return errors.Errorf("unexpected %v while parsing %v", tokenKindName(kind), parserStateName(x.state))
 }
 
 func parseValueType(token string) (q.ValueType, error) {
