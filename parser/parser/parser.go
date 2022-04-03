@@ -57,7 +57,7 @@ var tokenKindName = map[TokenKind]string{
 	TokenKindVarSep:     "variable separator",
 	TokenKindStrMark:    "string mark",
 	TokenKindWhitespace: "whitespace",
-	TokenKindNewLine:    "newline",
+	TokenKindNewline:    "newline",
 	TokenKindOther:      "other",
 	TokenKindEnd:        "end of query",
 }
@@ -193,7 +193,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = parserStateTupleString
 				tup.append(q.String(""))
 
-			case TokenKindWhitespace, TokenKindNewLine:
+			case TokenKindWhitespace, TokenKindNewline:
 				break
 
 			case TokenKindOther:
@@ -228,7 +228,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			case TokenKindTupSep:
 				x.state = parserStateTupleHead
 
-			case TokenKindWhitespace, TokenKindNewLine:
+			case TokenKindWhitespace, TokenKindNewline:
 				break
 
 			default:

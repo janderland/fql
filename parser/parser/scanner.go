@@ -21,10 +21,10 @@ const (
 	// runes found in the runesWhitespace constant.
 	TokenKindWhitespace
 
-	// TokenKindNewLine identifies a token which only contains
+	// TokenKindNewline identifies a token which only contains
 	// runes found in the runesWhitespace or runesNewline
 	// constants.
-	TokenKindNewLine
+	TokenKindNewline
 
 	// TokenKindEscape identifies a 2-rune token which always
 	// starts with the Escape rune.
@@ -113,7 +113,7 @@ const (
 	runesWhitespace = "\t "
 
 	// runesNewline, together with runesWhitespace, contains the
-	// runes allowed to be in a TokenKindNewLine token.
+	// runes allowed to be in a TokenKindNewline token.
 	runesNewline = "\n\r"
 )
 
@@ -139,7 +139,7 @@ var singleCharKindByRune = map[rune]TokenKind{
 // may return a different TokenKind than what this map provides.
 var primaryKindByState = map[scannerState]TokenKind{
 	scannerStateWhitespace: TokenKindWhitespace,
-	scannerStateNewline:    TokenKindNewLine,
+	scannerStateNewline:    TokenKindNewline,
 	scannerStateDirPart:    TokenKindOther,
 	scannerStateString:     TokenKindOther,
 	scannerStateOther:      TokenKindOther,
@@ -167,10 +167,12 @@ func NewScanner(src io.Reader) Scanner {
 	}
 }
 
+// Token returns token obtained from the wrapped io.Reader by the last call to Scan.
 func (x *Scanner) Token() string {
 	return x.token.String()
 }
 
+// Scan reads a token from the wrapped io.Reader and returns the kind of token read.
 func (x *Scanner) Scan() (kind TokenKind, err error) {
 	defer func() {
 		if r := recover(); r != nil {
