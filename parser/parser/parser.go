@@ -6,7 +6,10 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/janderland/fdbq/parser/parser/internal"
+
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/parser/parser/scanner"
 	"github.com/pkg/errors"
 )
 
@@ -64,35 +67,35 @@ func parserStateName(state parserState) string {
 	}
 }
 
-func tokenKindName(kind TokenKind) string {
+func tokenKindName(kind scanner.TokenKind) string {
 	switch kind {
-	case TokenKindEscape:
+	case scanner.TokenKindEscape:
 		return "escape"
-	case TokenKindKVSep:
+	case scanner.TokenKindKVSep:
 		return "key-value separator"
-	case TokenKindDirSep:
+	case scanner.TokenKindDirSep:
 		return "directory separator"
-	case TokenKindTupStart:
+	case scanner.TokenKindTupStart:
 		return "tuple start"
-	case TokenKindTupEnd:
+	case scanner.TokenKindTupEnd:
 		return "tuple end"
-	case TokenKindTupSep:
+	case scanner.TokenKindTupSep:
 		return "tuple separator"
-	case TokenKindVarStart:
+	case scanner.TokenKindVarStart:
 		return "variable start"
-	case TokenKindVarEnd:
+	case scanner.TokenKindVarEnd:
 		return "variable end"
-	case TokenKindVarSep:
+	case scanner.TokenKindVarSep:
 		return "variable separator"
-	case TokenKindStrMark:
+	case scanner.TokenKindStrMark:
 		return "string mark"
-	case TokenKindWhitespace:
+	case scanner.TokenKindWhitespace:
 		return "whitespace"
-	case TokenKindNewline:
+	case scanner.TokenKindNewline:
 		return "newline"
-	case TokenKindOther:
+	case scanner.TokenKindOther:
 		return "other"
-	case TokenKindEnd:
+	case scanner.TokenKindEnd:
 		return "end of query"
 	default:
 		return fmt.Sprintf("[unknown token kind %v]", kind)
@@ -100,7 +103,7 @@ func tokenKindName(kind TokenKind) string {
 }
 
 type Token struct {
-	Kind  TokenKind
+	Kind  scanner.TokenKind
 	Token string
 }
 
@@ -125,12 +128,12 @@ func (x *Error) Error() string {
 }
 
 type Parser struct {
-	scanner Scanner
+	scanner scanner.Scanner
 	tokens  []Token
 	state   parserState
 }
 
-func NewParser(s Scanner) Parser {
+func NewParser(s scanner.Scanner) Parser {
 	return Parser{scanner: s}
 }
 
@@ -157,7 +160,7 @@ func (x *Parser) Parse() (q.Query, error) {
 		switch x.state {
 		case parserStateInitial:
 			switch kind {
-			case TokenKindDirSep:
+			case scanner.TokenKindDirSep:
 				x.state = parserStateDirHead
 
 			default:
@@ -166,25 +169,25 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateDirTail:
 			switch kind {
-			case TokenKindDirSep:
+			case scanner.TokenKindDirSep:
 				x.state = parserStateDirHead
 
-			case TokenKindTupStart:
+			case scanner.TokenKindTupStart:
 				x.state = parserStateTupleHead
 				tup = tupBuilder{}
 				valTup = false
 
-			case TokenKindEscape, TokenKindOther:
-				if kind == TokenKindEscape {
+			case scanner.TokenKindEscape, scanner.TokenKindOther:
+				if kind == scanner.TokenKindEscape {
 					switch token[1] {
-					case DirSep:
+					case internal.DirSep:
 					default:
 						return nil, x.withTokens(x.escapeErr(token))
 					}
 				}
 				kv.appendToLastDirPart(token)
 
-			case TokenKindEnd:
+			case scanner.TokenKindEnd:
 				return kv.get().Key.Directory, nil
 
 			default:
@@ -193,7 +196,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateDirVarEnd:
 			switch kind {
-			case TokenKindVarEnd:
+			case scanner.TokenKindVarEnd:
 				x.state = parserStateDirTail
 				kv.appendVarToDirectory()
 
@@ -203,10 +206,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateDirHead:
 			switch kind {
-			case TokenKindVarStart:
+			case scanner.TokenKindVarStart:
 				x.state = parserStateDirVarEnd
 
-			case TokenKindEscape, TokenKindOther:
+			case scanner.TokenKindEscape, scanner.TokenKindOther:
 				x.state = parserStateDirTail
 				kv.appendPartToDirectory(token)
 
@@ -216,26 +219,26 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateTupleHead:
 			switch kind {
-			case TokenKindTupStart:
+			case scanner.TokenKindTupStart:
 				tup.startSubTuple()
 
-			case TokenKindTupEnd:
+			case scanner.TokenKindTupEnd:
 				x.state = parserStateSeparator
 
-			case TokenKindVarStart:
+			case scanner.TokenKindVarStart:
 				x.state = parserStateTupleVarHead
 				tup.append(q.Variable{})
 
-			case TokenKindStrMark:
+			case scanner.TokenKindStrMark:
 				x.state = parserStateTupleString
 				tup.append(q.String(""))
 
-			case TokenKindWhitespace, TokenKindNewline:
+			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
 				break
 
-			case TokenKindOther:
+			case scanner.TokenKindOther:
 				x.state = parserStateTupleTail
-				if token == MaybeMore {
+				if token == internal.MaybeMore {
 					tup.append(q.MaybeMore{})
 					break
 				}
@@ -251,7 +254,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateTupleTail:
 			switch kind {
-			case TokenKindTupEnd:
+			case scanner.TokenKindTupEnd:
 				if tup.endTuple() {
 					if valTup {
 						x.state = parserStateFinished
@@ -262,10 +265,10 @@ func (x *Parser) Parse() (q.Query, error) {
 					kv.setKeyTuple(tup.get())
 				}
 
-			case TokenKindTupSep:
+			case scanner.TokenKindTupSep:
 				x.state = parserStateTupleHead
 
-			case TokenKindWhitespace, TokenKindNewline:
+			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
 				break
 
 			default:
@@ -273,10 +276,10 @@ func (x *Parser) Parse() (q.Query, error) {
 			}
 
 		case parserStateTupleString:
-			if kind == TokenKindEnd {
+			if kind == scanner.TokenKindEnd {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
-			if kind == TokenKindStrMark {
+			if kind == scanner.TokenKindStrMark {
 				x.state = parserStateTupleTail
 				break
 			}
@@ -284,10 +287,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateTupleVarHead:
 			switch kind {
-			case TokenKindVarEnd:
+			case scanner.TokenKindVarEnd:
 				x.state = parserStateTupleTail
 
-			case TokenKindOther:
+			case scanner.TokenKindOther:
 				x.state = parserStateTupleVarTail
 				v, err := parseValueType(token)
 				if err != nil {
@@ -301,10 +304,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateTupleVarTail:
 			switch kind {
-			case TokenKindVarEnd:
+			case scanner.TokenKindVarEnd:
 				x.state = parserStateTupleTail
 
-			case TokenKindVarSep:
+			case scanner.TokenKindVarSep:
 				x.state = parserStateTupleVarHead
 
 			default:
@@ -313,10 +316,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateSeparator:
 			switch kind {
-			case TokenKindEnd:
+			case scanner.TokenKindEnd:
 				return kv.get().Key, nil
 
-			case TokenKindKVSep:
+			case scanner.TokenKindKVSep:
 				x.state = parserStateValue
 
 			default:
@@ -325,18 +328,18 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateValue:
 			switch kind {
-			case TokenKindTupStart:
+			case scanner.TokenKindTupStart:
 				x.state = parserStateTupleHead
 				tup = tupBuilder{}
 				valTup = true
 
-			case TokenKindVarStart:
+			case scanner.TokenKindVarStart:
 				x.state = parserStateValueVarHead
 				kv.setValue(q.Variable{})
 
-			case TokenKindOther:
+			case scanner.TokenKindOther:
 				x.state = parserStateFinished
-				if token == Clear {
+				if token == internal.Clear {
 					kv.setValue(q.Clear{})
 					break
 				}
@@ -352,10 +355,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateValueVarHead:
 			switch kind {
-			case TokenKindVarEnd:
+			case scanner.TokenKindVarEnd:
 				x.state = parserStateFinished
 
-			case TokenKindOther:
+			case scanner.TokenKindOther:
 				x.state = parserStateValueVarTail
 				v, err := parseValueType(token)
 				if err != nil {
@@ -369,10 +372,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateValueVarTail:
 			switch kind {
-			case TokenKindVarEnd:
+			case scanner.TokenKindVarEnd:
 				x.state = parserStateFinished
 
-			case TokenKindVarSep:
+			case scanner.TokenKindVarSep:
 				x.state = parserStateValueVarHead
 
 			default:
@@ -381,10 +384,10 @@ func (x *Parser) Parse() (q.Query, error) {
 
 		case parserStateFinished:
 			switch kind {
-			case TokenKindWhitespace:
+			case scanner.TokenKindWhitespace:
 				break
 
-			case TokenKindEnd:
+			case scanner.TokenKindEnd:
 				return kv.get(), nil
 
 			default:
@@ -409,7 +412,7 @@ func (x *Parser) withTokens(err error) error {
 			return err
 		}
 
-		if kind == TokenKindEnd {
+		if kind == scanner.TokenKindEnd {
 			out.Tokens = x.tokens
 			return &out
 		}
@@ -425,7 +428,7 @@ func (x *Parser) escapeErr(token string) error {
 	return errors.Errorf("unexpected escape '%v' while parsing %v", token, parserStateName(x.state))
 }
 
-func (x *Parser) tokenErr(kind TokenKind) error {
+func (x *Parser) tokenErr(kind scanner.TokenKind) error {
 	return errors.Errorf("unexpected %v while parsing %v", tokenKindName(kind), parserStateName(x.state))
 }
 
@@ -446,17 +449,17 @@ func parseData(token string) (
 	},
 	error,
 ) {
-	if token == Nil {
+	if token == internal.Nil {
 		return q.Nil{}, nil
 	}
-	if token == True {
+	if token == internal.True {
 		return q.Bool(true), nil
 	}
-	if token == False {
+	if token == internal.False {
 		return q.Bool(false), nil
 	}
-	if strings.HasPrefix(token, HexStart) {
-		token = token[len(HexStart):]
+	if strings.HasPrefix(token, internal.HexStart) {
+		token = token[len(internal.HexStart):]
 		if len(token)%2 != 0 {
 			return nil, errors.New("expected even number of hex digits")
 		}

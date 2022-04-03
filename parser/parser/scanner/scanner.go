@@ -1,10 +1,11 @@
-package parser
+package scanner
 
 import (
 	"bufio"
 	"io"
 	"strings"
 
+	"github.com/janderland/fdbq/parser/parser/internal"
 	"github.com/pkg/errors"
 )
 
@@ -124,23 +125,23 @@ const (
 // TokenKindUnassigned is returned.
 func singleRuneKind(r rune) TokenKind {
 	switch r {
-	case KVSep:
+	case internal.KVSep:
 		return TokenKindKVSep
-	case DirSep:
+	case internal.DirSep:
 		return TokenKindDirSep
-	case TupStart:
+	case internal.TupStart:
 		return TokenKindTupStart
-	case TupEnd:
+	case internal.TupEnd:
 		return TokenKindTupEnd
-	case TupSep:
+	case internal.TupSep:
 		return TokenKindTupSep
-	case VarStart:
+	case internal.VarStart:
 		return TokenKindVarStart
-	case VarEnd:
+	case internal.VarEnd:
 		return TokenKindVarEnd
-	case VarSep:
+	case internal.VarSep:
 		return TokenKindVarSep
-	case StrMark:
+	case internal.StrMark:
 		return TokenKindStrMark
 	default:
 		return TokenKindUnassigned
@@ -249,7 +250,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			x.escape = false
 			x.append(r)
 			return TokenKindEscape, nil
-		} else if r == Escape {
+		} else if r == internal.Escape {
 			if x.token.Len() > 0 {
 				x.unread()
 				return primaryKind(x.state), nil
@@ -265,7 +266,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			newState := scannerStateUnassigned
 
 			switch r {
-			case DirSep:
+			case internal.DirSep:
 				switch x.state {
 				case scannerStateString:
 					break
@@ -273,7 +274,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 					newState = scannerStateDirPart
 				}
 
-			case StrMark:
+			case internal.StrMark:
 				switch x.state {
 				case scannerStateDirPart:
 					break

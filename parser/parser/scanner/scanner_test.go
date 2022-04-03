@@ -1,20 +1,21 @@
-package parser
+package scanner
 
 import (
 	"strings"
 	"testing"
 
+	"github.com/janderland/fdbq/parser/parser/internal"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 )
 
 var (
-	tokenKVSep    = token{TokenKindKVSep, string(KVSep)}
-	tokenDirSep   = token{TokenKindDirSep, string(DirSep)}
-	tokenTupStart = token{TokenKindTupStart, string(TupStart)}
-	tokenTupEnd   = token{TokenKindTupEnd, string(TupEnd)}
-	tokenTupSep   = token{TokenKindTupSep, string(TupSep)}
-	tokenStrMark  = token{TokenKindStrMark, string(StrMark)}
+	tokenKVSep    = token{TokenKindKVSep, string(internal.KVSep)}
+	tokenDirSep   = token{TokenKindDirSep, string(internal.DirSep)}
+	tokenTupStart = token{TokenKindTupStart, string(internal.TupStart)}
+	tokenTupEnd   = token{TokenKindTupEnd, string(internal.TupEnd)}
+	tokenTupSep   = token{TokenKindTupSep, string(internal.TupSep)}
+	tokenStrMark  = token{TokenKindStrMark, string(internal.StrMark)}
 )
 
 type token struct {

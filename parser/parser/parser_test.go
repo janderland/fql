@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/parser/parser/scanner"
 	"github.com/stretchr/testify/require"
 )
 
@@ -245,7 +246,7 @@ func runRoundTrips(t *testing.T, tests []roundTripTest) {
 	t.Run("round trips", func(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				p := NewParser(NewScanner(strings.NewReader(test.str)))
+				p := NewParser(scanner.NewScanner(strings.NewReader(test.str)))
 				ast, err := p.Parse()
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast)
@@ -270,7 +271,7 @@ func runParseFailures(t *testing.T, tests []parseFailureTest) {
 	t.Run("parse failures", func(t *testing.T) {
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				p := NewParser(NewScanner(strings.NewReader(test.str)))
+				p := NewParser(scanner.NewScanner(strings.NewReader(test.str)))
 				ast, err := p.Parse()
 				require.Error(t, err)
 				require.Nil(t, ast)
