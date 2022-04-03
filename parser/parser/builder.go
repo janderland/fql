@@ -2,6 +2,10 @@ package parser
 
 import q "github.com/janderland/fdbq/keyval"
 
+// kvBuilder is used by Parser to manipulate a keyval.KeyValue.
+// Parser doesn't interact with keyval.KeyValue directly, so
+// these methods outline all the keyval.KeyValue state changes
+// performed by the Parser.
 type kvBuilder struct {
 	kv q.KeyValue
 }
@@ -36,6 +40,10 @@ func (x *kvBuilder) setValue(val q.Value) {
 	x.kv.Value = val
 }
 
+// tupBuilder is used by Parser to manipulate a keyval.Tuple.
+// Parser doesn't interact with keyval.Tuple directly, so
+// these methods outline all the keyval.Tuple state changes
+// performed by the Parser.
 type tupBuilder struct {
 	root  q.Tuple
 	depth int
