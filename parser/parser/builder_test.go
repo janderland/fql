@@ -8,32 +8,32 @@ import (
 )
 
 func TestTupBuilder_startSubTuple(t *testing.T) {
-	var b tupBuilder
+	var b TupBuilder
 
-	b.startSubTuple()
-	require.Equal(t, q.Tuple{q.Tuple{}}, b.get())
+	b.StartSubTuple()
+	require.Equal(t, q.Tuple{q.Tuple{}}, b.Get())
 
-	b.startSubTuple()
-	require.Equal(t, q.Tuple{q.Tuple{q.Tuple{}}}, b.get())
+	b.StartSubTuple()
+	require.Equal(t, q.Tuple{q.Tuple{q.Tuple{}}}, b.Get())
 }
 
 func TestTupBuilder_appendStringToTuple(t *testing.T) {
-	var b tupBuilder
+	var b TupBuilder
 
-	b.append(q.String(""))
-	require.Equal(t, q.Tuple{q.String("")}, b.get())
+	b.Append(q.String(""))
+	require.Equal(t, q.Tuple{q.String("")}, b.Get())
 
-	b.startSubTuple()
-	b.append(q.String(""))
-	require.Equal(t, q.Tuple{q.String(""), q.Tuple{q.String("")}}, b.get())
+	b.StartSubTuple()
+	b.Append(q.String(""))
+	require.Equal(t, q.Tuple{q.String(""), q.Tuple{q.String("")}}, b.Get())
 }
 
 func TestTupBuilder_appendToLastTupElem(t *testing.T) {
-	var b tupBuilder
+	var b TupBuilder
 
-	b.startSubTuple()
-	b.startSubTuple()
-	b.append(q.String(""))
-	b.appendToLastElemStr("hello")
-	require.Equal(t, q.Tuple{q.Tuple{q.Tuple{q.String("hello")}}}, b.get())
+	b.StartSubTuple()
+	b.StartSubTuple()
+	b.Append(q.String(""))
+	b.AppendToLastElemStr("hello")
+	require.Equal(t, q.Tuple{q.Tuple{q.Tuple{q.String("hello")}}}, b.Get())
 }

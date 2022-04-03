@@ -2,77 +2,77 @@ package parser
 
 import q "github.com/janderland/fdbq/keyval"
 
-// kvBuilder is used by Parser to manipulate a keyval.KeyValue.
+// KVBuilder is used by Parser to manipulate a keyval.KeyValue.
 // Parser doesn't interact with keyval.KeyValue directly, so
 // these methods outline all the keyval.KeyValue state changes
 // performed by the Parser.
-type kvBuilder struct {
+type KVBuilder struct {
 	kv q.KeyValue
 }
 
-func (x *kvBuilder) get() q.KeyValue {
+func (x *KVBuilder) Get() q.KeyValue {
 	return x.kv
 }
 
-func (x *kvBuilder) appendVarToDirectory() {
+func (x *KVBuilder) AppendVarToDirectory() {
 	x.kv.Key.Directory = append(x.kv.Key.Directory, q.Variable{})
 }
 
-func (x *kvBuilder) appendPartToDirectory(token string) {
+func (x *KVBuilder) AppendPartToDirectory(token string) {
 	x.kv.Key.Directory = append(x.kv.Key.Directory, q.String(token))
 }
 
-func (x *kvBuilder) appendToLastDirPart(token string) {
+func (x *KVBuilder) AppendToLastDirPart(token string) {
 	i := len(x.kv.Key.Directory) - 1
 	str := x.kv.Key.Directory[i].(q.String)
 	x.kv.Key.Directory[i] = q.String(string(str) + token)
 }
 
-func (x *kvBuilder) appendToValueVar(typ q.ValueType) {
+func (x *KVBuilder) AppendToValueVar(typ q.ValueType) {
 	x.kv.Value = append(x.kv.Value.(q.Variable), typ)
 }
 
-func (x *kvBuilder) setKeyTuple(tup q.Tuple) {
+func (x *KVBuilder) SetKeyTuple(tup q.Tuple) {
 	x.kv.Key.Tuple = tup
 }
 
-func (x *kvBuilder) setValue(val q.Value) {
+func (x *KVBuilder) SetValue(val q.Value) {
 	x.kv.Value = val
 }
 
-// tupBuilder is used by Parser to manipulate a keyval.Tuple.
+// TupBuilder is used by Parser to manipulate a keyval.Tuple.
 // Parser doesn't interact with keyval.Tuple directly, so
 // these methods outline all the keyval.Tuple state changes
 // performed by the Parser.
-type tupBuilder struct {
+type TupBuilder struct {
 	root  q.Tuple
 	depth int
 }
 
-func (x *tupBuilder) get() q.Tuple {
+func (x *TupBuilder) Get() q.Tuple {
 	return x.root
 }
 
-func (x *tupBuilder) startSubTuple() {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
+func (x *TupBuilder) StartSubTuple() {
+	x.MutateTuple(func(tup q.Tuple) q.Tuple {
 		return append(tup, q.Tuple{})
 	})
 	x.depth++
 }
 
-func (x *tupBuilder) endTuple() bool {
+func (x *TupBuilder) EndTuple() bool {
 	x.depth--
 	return x.depth == -1
 }
 
-func (x *tupBuilder) append(e q.TupElement) {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
+func (x *TupBuilder) Append(e q.TupElement) {
+	x.MutateTuple(func(tup q.Tuple) q.Tuple {
 		return append(tup, e)
 	})
 }
 
-func (x *tupBuilder) appendToLastElemStr(token string) {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
+func (x *TupBuilder) AppendToLastElemStr(token string) {
+	x.MutateTuple(func(tup q.Tuple) q.Tuple {
 		i := len(tup) - 1
 		str := tup[i].(q.String)
 		tup[i] = q.String(string(str) + token)
@@ -80,8 +80,8 @@ func (x *tupBuilder) appendToLastElemStr(token string) {
 	})
 }
 
-func (x *tupBuilder) appendToLastElemVar(typ q.ValueType) {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
+func (x *TupBuilder) AppendToLastElemVar(typ q.ValueType) {
+	x.MutateTuple(func(tup q.Tuple) q.Tuple {
 		i := len(tup) - 1
 		v := tup[i].(q.Variable)
 		tup[i] = append(v, typ)
@@ -89,7 +89,7 @@ func (x *tupBuilder) appendToLastElemVar(typ q.ValueType) {
 	})
 }
 
-func (x *tupBuilder) mutateTuple(f func(q.Tuple) q.Tuple) {
+func (x *TupBuilder) MutateTuple(f func(q.Tuple) q.Tuple) {
 	tuples := []q.Tuple{x.root}
 	tup := tuples[0]
 
