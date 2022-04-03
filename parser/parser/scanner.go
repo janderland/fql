@@ -198,7 +198,14 @@ func (x *Scanner) Token() string {
 }
 
 // Scan reads a token from the wrapped io.Reader and returns the kind of token read.
+// The Scanner is meant to work with any input and should never fail as long as the
+// io.Reader doesn't fail. io.Reader errors are wrapped and returned by this method.
 func (x *Scanner) Scan() (kind TokenKind, err error) {
+	// To keep from obscuring this method's complex logic all the low level
+	// functions propagate their errors via a panic which is recovered here.
+	// This works out nicely because all errors are fatal in this method. If
+	// this method's logic made decisions based on returned errors then this
+	// would need to change.
 	defer func() {
 		if r := recover(); r != nil {
 			if e, ok := r.(error); ok {
@@ -212,6 +219,18 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 
 	x.token.Reset()
 
+	// This loop reads runes from the wrapped io.Reader, appending
+	// them to the Scanner.token string builder. If the most recently
+	// read rune should be a part of the next token, the rune is
+	// unread and the type of the current token is returned:
+	//
+	//  if x.token.Len() > 0 {
+	//  	x.unread()
+	//      return primaryKind(x.state), nil
+	//  }
+	//
+	// This unread must be conditional to allow any kind of token to
+	// be the first.
 	for {
 		r, eof := x.read()
 		if eof {
@@ -221,6 +240,8 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			return TokenKindEnd, nil
 		}
 
+		// No matter what state the scanner is in, if the Escape rune
+		// is encountered it starts a new 2-rune escape token.
 		if x.escape {
 			x.escape = false
 			x.append(r)
@@ -235,6 +256,8 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			continue
 		}
 
+		// Check if the current rune should start a single-rune token.
+		// These kinds of tokens are always equal to a specific rune.
 		if kind := singleRuneKind(r); kind != TokenKindUnassigned {
 			newState := scannerStateUnassigned
 
@@ -278,6 +301,8 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			return kind, nil
 		}
 
+		// Check if the current rune should start a new
+		// TokenKindWhitespace token.
 		if strings.ContainsRune(runesWhitespace, r) {
 			switch x.state {
 			case scannerStateOther:
@@ -292,6 +317,10 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			}
 		}
 
+		// Check if the current rune should either start a
+		// TokenKindNewline token or promote the current
+		// TokenKindWhitespace token into a TokenKindNewline
+		// token.
 		if strings.ContainsRune(runesNewline, r) {
 			switch x.state {
 			case scannerStateWhitespace:
@@ -311,6 +340,8 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 			}
 		}
 
+		// If the current rune didn't match any of the above
+		// checks, then it should start a TokenKindOther token.
 		switch x.state {
 		case scannerStateWhitespace, scannerStateNewline:
 			if x.token.Len() == 0 {
