@@ -179,6 +179,9 @@ type Scanner struct {
 	source *bufio.Reader
 	token  *strings.Builder
 	state  scannerState
+
+	// escape is true if the next rune should be
+	// included in a TokenKindEscape token.
 	escape bool
 }
 
@@ -229,8 +232,8 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 	//      return primaryKind(x.state), nil
 	//  }
 	//
-	// This unread must be conditional to allow any kind of token to
-	// be the first.
+	// This unread is conditional because it shouldn't occur if the
+	// current rune is the first one read.
 	for {
 		r, eof := x.read()
 		if eof {
