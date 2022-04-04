@@ -12,54 +12,54 @@ import (
 	"github.com/pkg/errors"
 )
 
-type parserState int
+type state int
 
 const (
-	parserStateInitial parserState = iota
-	parserStateDirHead
-	parserStateDirTail
-	parserStateDirVarEnd
-	parserStateTupleHead
-	parserStateTupleTail
-	parserStateTupleVarHead
-	parserStateTupleVarTail
-	parserStateTupleString
-	parserStateSeparator
-	parserStateValue
-	parserStateValueVarHead
-	parserStateValueVarTail
-	parserStateFinished
+	stateInitial state = iota
+	stateDirHead
+	stateDirTail
+	stateDirVarEnd
+	stateTupleHead
+	stateTupleTail
+	stateTupleVarHead
+	stateTupleVarTail
+	stateTupleString
+	stateSeparator
+	stateValue
+	stateValueVarHead
+	stateValueVarTail
+	stateFinished
 )
 
-func parserStateName(state parserState) string {
+func parserStateName(state state) string {
 	switch state {
-	case parserStateInitial:
+	case stateInitial:
 		return "initial"
-	case parserStateDirHead:
+	case stateDirHead:
 		return "directory"
-	case parserStateDirTail:
+	case stateDirTail:
 		return "directory"
-	case parserStateDirVarEnd:
+	case stateDirVarEnd:
 		return "directory"
-	case parserStateTupleHead:
+	case stateTupleHead:
 		return "tuple"
-	case parserStateTupleTail:
+	case stateTupleTail:
 		return "tuple"
-	case parserStateTupleVarHead:
+	case stateTupleVarHead:
 		return "variable"
-	case parserStateTupleVarTail:
+	case stateTupleVarTail:
 		return "variable"
-	case parserStateTupleString:
+	case stateTupleString:
 		return "string"
-	case parserStateSeparator:
+	case stateSeparator:
 		return "query"
-	case parserStateValue:
+	case stateValue:
 		return "value"
-	case parserStateValueVarHead:
+	case stateValueVarHead:
 		return "variable"
-	case parserStateValueVarTail:
+	case stateValueVarTail:
 		return "variable"
-	case parserStateFinished:
+	case stateFinished:
 		return "finished"
 	default:
 		return fmt.Sprintf("[unknown parser state %v]", state)
@@ -129,7 +129,7 @@ func (x *Error) Error() string {
 type Parser struct {
 	scanner scanner.Scanner
 	tokens  []Token
-	state   parserState
+	state   state
 }
 
 func NewParser(s scanner.Scanner) Parser {
@@ -157,22 +157,22 @@ func (x *Parser) Parse() (q.Query, error) {
 		})
 
 		switch x.state {
-		case parserStateInitial:
+		case stateInitial:
 			switch kind {
 			case scanner.TokenKindDirSep:
-				x.state = parserStateDirHead
+				x.state = stateDirHead
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateDirTail:
+		case stateDirTail:
 			switch kind {
 			case scanner.TokenKindDirSep:
-				x.state = parserStateDirHead
+				x.state = stateDirHead
 
 			case scanner.TokenKindTupStart:
-				x.state = parserStateTupleHead
+				x.state = stateTupleHead
 				tup = internal.TupBuilder{}
 				valTup = false
 
@@ -193,50 +193,50 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateDirVarEnd:
+		case stateDirVarEnd:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				x.state = parserStateDirTail
+				x.state = stateDirTail
 				kv.AppendVarToDirectory()
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateDirHead:
+		case stateDirHead:
 			switch kind {
 			case scanner.TokenKindVarStart:
-				x.state = parserStateDirVarEnd
+				x.state = stateDirVarEnd
 
 			case scanner.TokenKindEscape, scanner.TokenKindOther:
-				x.state = parserStateDirTail
+				x.state = stateDirTail
 				kv.AppendPartToDirectory(token)
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateTupleHead:
+		case stateTupleHead:
 			switch kind {
 			case scanner.TokenKindTupStart:
 				tup.StartSubTuple()
 
 			case scanner.TokenKindTupEnd:
-				x.state = parserStateSeparator
+				x.state = stateSeparator
 
 			case scanner.TokenKindVarStart:
-				x.state = parserStateTupleVarHead
+				x.state = stateTupleVarHead
 				tup.Append(q.Variable{})
 
 			case scanner.TokenKindStrMark:
-				x.state = parserStateTupleString
+				x.state = stateTupleString
 				tup.Append(q.String(""))
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
 				break
 
 			case scanner.TokenKindOther:
-				x.state = parserStateTupleTail
+				x.state = stateTupleTail
 				if token == internal.MaybeMore {
 					tup.Append(q.MaybeMore{})
 					break
@@ -251,21 +251,21 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateTupleTail:
+		case stateTupleTail:
 			switch kind {
 			case scanner.TokenKindTupEnd:
 				if tup.EndTuple() {
 					if valTup {
-						x.state = parserStateFinished
+						x.state = stateFinished
 						kv.SetValue(tup.Get())
 						break
 					}
-					x.state = parserStateSeparator
+					x.state = stateSeparator
 					kv.SetKeyTuple(tup.Get())
 				}
 
 			case scanner.TokenKindTupSep:
-				x.state = parserStateTupleHead
+				x.state = stateTupleHead
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
 				break
@@ -274,23 +274,23 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateTupleString:
+		case stateTupleString:
 			if kind == scanner.TokenKindEnd {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 			if kind == scanner.TokenKindStrMark {
-				x.state = parserStateTupleTail
+				x.state = stateTupleTail
 				break
 			}
 			tup.AppendToLastElemStr(token)
 
-		case parserStateTupleVarHead:
+		case stateTupleVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				x.state = parserStateTupleTail
+				x.state = stateTupleTail
 
 			case scanner.TokenKindOther:
-				x.state = parserStateTupleVarTail
+				x.state = stateTupleVarTail
 				v, err := parseValueType(token)
 				if err != nil {
 					return nil, x.withTokens(err)
@@ -301,43 +301,43 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateTupleVarTail:
+		case stateTupleVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				x.state = parserStateTupleTail
+				x.state = stateTupleTail
 
 			case scanner.TokenKindVarSep:
-				x.state = parserStateTupleVarHead
+				x.state = stateTupleVarHead
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateSeparator:
+		case stateSeparator:
 			switch kind {
 			case scanner.TokenKindEnd:
 				return kv.Get().Key, nil
 
 			case scanner.TokenKindKVSep:
-				x.state = parserStateValue
+				x.state = stateValue
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateValue:
+		case stateValue:
 			switch kind {
 			case scanner.TokenKindTupStart:
-				x.state = parserStateTupleHead
+				x.state = stateTupleHead
 				tup = internal.TupBuilder{}
 				valTup = true
 
 			case scanner.TokenKindVarStart:
-				x.state = parserStateValueVarHead
+				x.state = stateValueVarHead
 				kv.SetValue(q.Variable{})
 
 			case scanner.TokenKindOther:
-				x.state = parserStateFinished
+				x.state = stateFinished
 				if token == internal.Clear {
 					kv.SetValue(q.Clear{})
 					break
@@ -352,13 +352,13 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateValueVarHead:
+		case stateValueVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				x.state = parserStateFinished
+				x.state = stateFinished
 
 			case scanner.TokenKindOther:
-				x.state = parserStateValueVarTail
+				x.state = stateValueVarTail
 				v, err := parseValueType(token)
 				if err != nil {
 					return nil, x.withTokens(err)
@@ -369,19 +369,19 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateValueVarTail:
+		case stateValueVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				x.state = parserStateFinished
+				x.state = stateFinished
 
 			case scanner.TokenKindVarSep:
-				x.state = parserStateValueVarHead
+				x.state = stateValueVarHead
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case parserStateFinished:
+		case stateFinished:
 			switch kind {
 			case scanner.TokenKindWhitespace:
 				break
