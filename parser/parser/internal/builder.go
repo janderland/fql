@@ -29,7 +29,7 @@ func (x *KeyValBuilder) AppendToLastDirPart(token string) error {
 	i := len(x.kv.Key.Directory) - 1
 	str, ok := x.kv.Key.Directory[i].(q.String)
 	if !ok {
-		return errors.Errorf("expected dir element %d to be a string, actually is %T", i, x.kv.Key.Directory[i])
+		return errors.Errorf("expected element %d to be string, actually is %T", i, x.kv.Key.Directory[i])
 	}
 	x.kv.Key.Directory[i] = q.String(string(str) + token)
 	return nil
@@ -38,7 +38,7 @@ func (x *KeyValBuilder) AppendToLastDirPart(token string) error {
 func (x *KeyValBuilder) AppendToValueVar(typ q.ValueType) error {
 	val, ok := x.kv.Value.(q.Variable)
 	if !ok {
-		return errors.Errorf("expected value to be a variable, actually is %T", x.kv.Value)
+		return errors.Errorf("expected value to be variable, actually is %T", x.kv.Value)
 	}
 	x.kv.Value = append(val, typ)
 	return nil
@@ -66,8 +66,8 @@ func (x *TupBuilder) Get() q.Tuple {
 }
 
 func (x *TupBuilder) StartSubTuple() {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
-		return append(tup, q.Tuple{})
+	_ = x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
+		return append(tup, q.Tuple{}), nil
 	})
 	x.depth++
 }
@@ -78,31 +78,37 @@ func (x *TupBuilder) EndTuple() bool {
 }
 
 func (x *TupBuilder) Append(e q.TupElement) {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
-		return append(tup, e)
+	_ = x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
+		return append(tup, e), nil
 	})
 }
 
-func (x *TupBuilder) AppendToLastElemStr(token string) {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
+func (x *TupBuilder) AppendToLastElemStr(token string) error {
+	return x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
 		i := len(tup) - 1
-		str := tup[i].(q.String)
+		str, ok := tup[i].(q.String)
+		if !ok {
+			return nil, errors.Errorf("expected element %d to be string, actually is %T", i, tup[i])
+		}
 		tup[i] = q.String(string(str) + token)
-		return tup
+		return tup, nil
 	})
 }
 
-func (x *TupBuilder) AppendToLastElemVar(typ q.ValueType) {
-	x.mutateTuple(func(tup q.Tuple) q.Tuple {
+func (x *TupBuilder) AppendToLastElemVar(typ q.ValueType) error {
+	return x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
 		i := len(tup) - 1
-		v := tup[i].(q.Variable)
+		v, ok := tup[i].(q.Variable)
+		if !ok {
+			return nil, errors.Errorf("expected element %d to be variable, actually is %T", i, tup[i])
+		}
 		tup[i] = append(v, typ)
-		return tup
+		return tup, nil
 	})
 }
 
 // TODO: Don't assign tuple into parent until EndTuple is called.
-func (x *TupBuilder) mutateTuple(f func(q.Tuple) q.Tuple) {
+func (x *TupBuilder) mutateTuple(f func(q.Tuple) (q.Tuple, error)) error {
 	tuples := []q.Tuple{x.root}
 	tup := tuples[0]
 
@@ -111,7 +117,11 @@ func (x *TupBuilder) mutateTuple(f func(q.Tuple) q.Tuple) {
 		tuples = append(tuples, tup)
 	}
 
-	tup = f(tup)
+	tup, err := f(tup)
+	if err != nil {
+		return err
+	}
+
 	tuples[len(tuples)-1] = tup
 
 	for i := len(tuples) - 1; i > 0; i-- {
@@ -119,4 +129,5 @@ func (x *TupBuilder) mutateTuple(f func(q.Tuple) q.Tuple) {
 	}
 
 	x.root = tuples[0]
+	return nil
 }

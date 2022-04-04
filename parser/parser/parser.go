@@ -284,7 +284,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = stateTupleTail
 				break
 			}
-			tup.AppendToLastElemStr(token)
+			if err := tup.AppendToLastElemStr(token); err != nil {
+				return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+			}
 
 		case stateTupleVarHead:
 			switch kind {
@@ -297,7 +299,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				if err != nil {
 					return nil, x.withTokens(err)
 				}
-				tup.AppendToLastElemVar(v)
+				if err := tup.AppendToLastElemVar(v); err != nil {
+					return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+				}
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))

@@ -3,6 +3,8 @@ package internal
 import (
 	"testing"
 
+	"github.com/stretchr/testify/assert"
+
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/stretchr/testify/require"
 )
@@ -34,6 +36,7 @@ func TestTupBuilder_appendToLastTupElem(t *testing.T) {
 	b.StartSubTuple()
 	b.StartSubTuple()
 	b.Append(q.String(""))
-	b.AppendToLastElemStr("hello")
+	err := b.AppendToLastElemStr("hello")
+	assert.NoError(t, err)
 	require.Equal(t, q.Tuple{q.Tuple{q.Tuple{q.String("hello")}}}, b.Get())
 }
