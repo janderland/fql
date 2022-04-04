@@ -2,48 +2,48 @@ package internal
 
 import q "github.com/janderland/fdbq/keyval"
 
-// KVBuilder is used by Parser to manipulate a keyval.KeyValue.
-// Parser doesn't interact with keyval.KeyValue directly, so
-// these methods outline all the keyval.KeyValue state changes
-// performed by the Parser.
-type KVBuilder struct {
+// KeyValBuilder is used by parser.Parser to construct the
+// resultant key-value. parser.Parser doesn't interact with
+// keyval.KeyValue directly, so these methods outline all
+// the key-value state changes performed by the parser.
+type KeyValBuilder struct {
 	kv q.KeyValue
 }
 
-func (x *KVBuilder) Get() q.KeyValue {
+func (x *KeyValBuilder) Get() q.KeyValue {
 	return x.kv
 }
 
-func (x *KVBuilder) AppendVarToDirectory() {
+func (x *KeyValBuilder) AppendVarToDirectory() {
 	x.kv.Key.Directory = append(x.kv.Key.Directory, q.Variable{})
 }
 
-func (x *KVBuilder) AppendPartToDirectory(token string) {
+func (x *KeyValBuilder) AppendPartToDirectory(token string) {
 	x.kv.Key.Directory = append(x.kv.Key.Directory, q.String(token))
 }
 
-func (x *KVBuilder) AppendToLastDirPart(token string) {
+func (x *KeyValBuilder) AppendToLastDirPart(token string) {
 	i := len(x.kv.Key.Directory) - 1
 	str := x.kv.Key.Directory[i].(q.String)
 	x.kv.Key.Directory[i] = q.String(string(str) + token)
 }
 
-func (x *KVBuilder) AppendToValueVar(typ q.ValueType) {
+func (x *KeyValBuilder) AppendToValueVar(typ q.ValueType) {
 	x.kv.Value = append(x.kv.Value.(q.Variable), typ)
 }
 
-func (x *KVBuilder) SetKeyTuple(tup q.Tuple) {
+func (x *KeyValBuilder) SetKeyTuple(tup q.Tuple) {
 	x.kv.Key.Tuple = tup
 }
 
-func (x *KVBuilder) SetValue(val q.Value) {
+func (x *KeyValBuilder) SetValue(val q.Value) {
 	x.kv.Value = val
 }
 
-// TupBuilder is used by Parser to manipulate a keyval.Tuple.
-// Parser doesn't interact with keyval.Tuple directly, so
-// these methods outline all the keyval.Tuple state changes
-// performed by the Parser.
+// TupBuilder is used by parser.Parser to construct tuples.
+// parser.Parser doesn't interact with keyval.Tuple directly,
+// so these methods outline all the key-value state changes
+// performed by the parser.
 type TupBuilder struct {
 	root  q.Tuple
 	depth int

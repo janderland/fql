@@ -138,7 +138,7 @@ func New(s scanner.Scanner) Parser {
 
 func (x *Parser) Parse() (q.Query, error) {
 	var (
-		kv  internal.KVBuilder
+		kv  internal.KeyValBuilder
 		tup internal.TupBuilder
 
 		valTup bool
