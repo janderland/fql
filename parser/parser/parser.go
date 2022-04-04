@@ -132,7 +132,7 @@ type Parser struct {
 	state   state
 }
 
-func NewParser(s scanner.Scanner) Parser {
+func New(s scanner.Scanner) Parser {
 	return Parser{scanner: s}
 }
 
