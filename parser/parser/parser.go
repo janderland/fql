@@ -70,7 +70,7 @@ func tokenKindName(kind scanner.TokenKind) string {
 	switch kind {
 	case scanner.TokenKindEscape:
 		return "escape"
-	case scanner.TokenKindKVSep:
+	case scanner.TokenKindKeyValSep:
 		return "key-value separator"
 	case scanner.TokenKindDirSep:
 		return "directory separator"
@@ -318,7 +318,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			case scanner.TokenKindEnd:
 				return kv.Get().Key, nil
 
-			case scanner.TokenKindKVSep:
+			case scanner.TokenKindKeyValSep:
 				x.state = stateValue
 
 			default:

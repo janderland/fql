@@ -10,7 +10,7 @@ import (
 )
 
 var (
-	tokenKVSep    = token{TokenKindKVSep, string(internal.KVSep)}
+	tokenKVSep    = token{TokenKindKeyValSep, string(internal.KeyValSep)}
 	tokenDirSep   = token{TokenKindDirSep, string(internal.DirSep)}
 	tokenTupStart = token{TokenKindTupStart, string(internal.TupStart)}
 	tokenTupEnd   = token{TokenKindTupEnd, string(internal.TupEnd)}

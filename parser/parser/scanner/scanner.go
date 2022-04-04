@@ -41,8 +41,8 @@ const (
 	// io.Reader has been read to completion.
 	TokenKindEnd
 
-	// TokenKindKVSep identifies a token equal to KVSep.
-	TokenKindKVSep
+	// TokenKindKeyValSep identifies a token equal to KeyValSep.
+	TokenKindKeyValSep
 
 	// TokenKindDirSep identifies a token equal to DirSep.
 	TokenKindDirSep
@@ -108,16 +108,6 @@ const (
 	stateOther
 )
 
-const (
-	// runesWhitespace contains the runes allowed to be
-	// in a TokenKindWhitespace token.
-	runesWhitespace = "\t "
-
-	// runesNewline, together with runesWhitespace, contains the
-	// runes allowed to be in a TokenKindNewline token.
-	runesNewline = "\n\r"
-)
-
 // singleRuneKind returns a TokenKind which identifies a token equal
 // to the given rune, if such a TokenKind exists. There are a subset
 // of TokenKind whose tokens are a single rune. One of these is
@@ -125,8 +115,8 @@ const (
 // TokenKindUnassigned is returned.
 func singleRuneKind(r rune) TokenKind {
 	switch r {
-	case internal.KVSep:
-		return TokenKindKVSep
+	case internal.KeyValSep:
+		return TokenKindKeyValSep
 	case internal.DirSep:
 		return TokenKindDirSep
 	case internal.TupStart:
@@ -307,7 +297,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 
 		// Check if the current rune should start a new
 		// TokenKindWhitespace token.
-		if strings.ContainsRune(runesWhitespace, r) {
+		if strings.ContainsRune(internal.Whitespace, r) {
 			switch x.state {
 			case stateOther:
 				x.unread()
@@ -325,7 +315,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		// TokenKindNewline token or promote the current
 		// TokenKindWhitespace token into a TokenKindNewline
 		// token.
-		if strings.ContainsRune(runesNewline, r) {
+		if strings.ContainsRune(internal.Newline, r) {
 			switch x.state {
 			case stateWhitespace:
 				x.state = stateNewline
