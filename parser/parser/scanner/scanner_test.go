@@ -107,7 +107,7 @@ func TestScanner(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			s := NewScanner(strings.NewReader(test.input))
+			s := New(strings.NewReader(test.input))
 			var tokens []token
 
 			for {
@@ -129,7 +129,7 @@ func TestScanner(t *testing.T) {
 }
 
 func TestErrRecovery(t *testing.T) {
-	s := NewScanner(&badReader{})
+	s := New(&badReader{})
 	_, err := s.Scan()
 	require.Error(t, err)
 }

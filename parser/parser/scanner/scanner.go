@@ -69,43 +69,43 @@ const (
 	TokenKindStrMark
 )
 
-type scannerState int
+type state int
 
 const (
-	// scannerStateUnassigned is used to identify a scannerState variable
+	// stateUnassigned is used to identify a state variable
 	// which hasn't been assigned to yet. For this purpose, it must
 	// be the zero-value of its type.
-	scannerStateUnassigned scannerState = iota
+	stateUnassigned state = iota
 
-	// scannerStateWhitespace is the root state of the scanner. The scanner
+	// stateWhitespace is the root state of the scanner. The scanner
 	// remains in this state as long as the current token only contains runes
 	// found in the runesWhitespace constant.
-	scannerStateWhitespace
+	stateWhitespace
 
-	// scannerStateNewline follows scannerStateWhitespace if any of the runes
+	// stateNewline follows stateWhitespace if any of the runes
 	// found in the runesNewline constant are encountered. The scanner remains
 	// in this state as long os the current token only contains runes found in
 	// the runesWhitespace or runesNewline constants.
-	scannerStateNewline
+	stateNewline
 
-	// scannerStateDirPart follows any state, save for scannerStateString, if
+	// stateDirPart follows any state, save for stateString, if
 	// a DirSep rune is encountered. During this state, the scanner doesn't
 	// separate whitespace or newlines into separate tokens. The scanner remains
 	// in this state until a TupStart is encountered.
-	scannerStateDirPart
+	stateDirPart
 
-	// scannerStateString follows any state, save for scannerStateDirPart, if a
+	// stateString follows any state, save for stateDirPart, if a
 	// StrMark rune is encountered. During this state, the scanner doesn't
 	// separate whitespace or newlines into separate tokens. The scanner remains
 	// in this state until another StrMark is encountered.
-	scannerStateString
+	stateString
 
-	// scannerStateOther follows scannerStateWhitespace or scannerStateNewline
+	// stateOther follows stateWhitespace or stateNewline
 	// if a non-significant character is encountered. The scanner remains in
 	// this state until a significant rune is encountered. Significant runes
 	// include any of the single-rune constants from special.go, or any of
 	// the runes in the constants runesWhitespace and runesNewline.
-	scannerStateOther
+	stateOther
 )
 
 const (
@@ -148,21 +148,21 @@ func singleRuneKind(r rune) TokenKind {
 	}
 }
 
-// primaryKind maps a scannerState to the TokenKind usually returned
+// primaryKind maps a state to the TokenKind usually returned
 // by Scanner.Scan during said state. If the scanner encounters an escape
 // or any of runes accepted by singleRuneKind, then the Scanner.Scan
 // method may return a different TokenKind than what this function returns.
-func primaryKind(state scannerState) TokenKind {
+func primaryKind(state state) TokenKind {
 	switch state {
-	case scannerStateWhitespace:
+	case stateWhitespace:
 		return TokenKindWhitespace
-	case scannerStateNewline:
+	case stateNewline:
 		return TokenKindNewline
-	case scannerStateDirPart:
+	case stateDirPart:
 		return TokenKindOther
-	case scannerStateString:
+	case stateString:
 		return TokenKindOther
-	case scannerStateOther:
+	case stateOther:
 		return TokenKindOther
 	default:
 		// Its expected that this panic is recovered in Scanner.Scan.
@@ -179,20 +179,20 @@ func primaryKind(state scannerState) TokenKind {
 type Scanner struct {
 	source *bufio.Reader
 	token  *strings.Builder
-	state  scannerState
+	state  state
 
 	// escape is true if the next rune should be
 	// included in a TokenKindEscape token.
 	escape bool
 }
 
-// NewScanner creates a Scanner which reads from the given io.Reader.
-func NewScanner(src io.Reader) Scanner {
+// New creates a Scanner which reads from the given io.Reader.
+func New(src io.Reader) Scanner {
 	var token strings.Builder
 	return Scanner{
 		source: bufio.NewReader(src),
 		token:  &token,
-		state:  scannerStateWhitespace,
+		state:  stateWhitespace,
 	}
 }
 
@@ -263,37 +263,37 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		// Check if the current rune should start a single-rune token.
 		// These kinds of tokens are always equal to a specific rune.
 		if kind := singleRuneKind(r); kind != TokenKindUnassigned {
-			newState := scannerStateUnassigned
+			newState := stateUnassigned
 
 			switch r {
 			case internal.DirSep:
 				switch x.state {
-				case scannerStateString:
+				case stateString:
 					break
 				default:
-					newState = scannerStateDirPart
+					newState = stateDirPart
 				}
 
 			case internal.StrMark:
 				switch x.state {
-				case scannerStateDirPart:
+				case stateDirPart:
 					break
-				case scannerStateString:
-					newState = scannerStateWhitespace
+				case stateString:
+					newState = stateWhitespace
 				default:
-					newState = scannerStateString
+					newState = stateString
 				}
 
 			default:
 				switch x.state {
-				case scannerStateString:
+				case stateString:
 					break
 				default:
-					newState = scannerStateWhitespace
+					newState = stateWhitespace
 				}
 			}
 
-			if newState != scannerStateUnassigned {
+			if newState != stateUnassigned {
 				if x.token.Len() > 0 {
 					x.unread()
 					return primaryKind(x.state), nil
@@ -309,10 +309,10 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		// TokenKindWhitespace token.
 		if strings.ContainsRune(runesWhitespace, r) {
 			switch x.state {
-			case scannerStateOther:
+			case stateOther:
 				x.unread()
 				kind := primaryKind(x.state)
-				x.state = scannerStateWhitespace
+				x.state = stateWhitespace
 				return kind, nil
 
 			default:
@@ -327,15 +327,15 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		// token.
 		if strings.ContainsRune(runesNewline, r) {
 			switch x.state {
-			case scannerStateWhitespace:
-				x.state = scannerStateNewline
+			case stateWhitespace:
+				x.state = stateNewline
 				x.append(r)
 				continue
 
-			case scannerStateOther:
+			case stateOther:
 				x.unread()
 				kind := primaryKind(x.state)
-				x.state = scannerStateNewline
+				x.state = stateNewline
 				return kind, nil
 
 			default:
@@ -347,15 +347,15 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		// If the current rune didn't match any of the above
 		// checks, then it should start a TokenKindOther token.
 		switch x.state {
-		case scannerStateWhitespace, scannerStateNewline:
+		case stateWhitespace, stateNewline:
 			if x.token.Len() == 0 {
-				x.state = scannerStateOther
+				x.state = stateOther
 				x.append(r)
 				continue
 			}
 			x.unread()
 			kind := primaryKind(x.state)
-			x.state = scannerStateOther
+			x.state = stateOther
 			return kind, nil
 
 		default:
