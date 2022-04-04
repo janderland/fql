@@ -54,7 +54,7 @@ func (x *TupBuilder) Get() q.Tuple {
 }
 
 func (x *TupBuilder) StartSubTuple() {
-	x.MutateTuple(func(tup q.Tuple) q.Tuple {
+	x.mutateTuple(func(tup q.Tuple) q.Tuple {
 		return append(tup, q.Tuple{})
 	})
 	x.depth++
@@ -66,13 +66,13 @@ func (x *TupBuilder) EndTuple() bool {
 }
 
 func (x *TupBuilder) Append(e q.TupElement) {
-	x.MutateTuple(func(tup q.Tuple) q.Tuple {
+	x.mutateTuple(func(tup q.Tuple) q.Tuple {
 		return append(tup, e)
 	})
 }
 
 func (x *TupBuilder) AppendToLastElemStr(token string) {
-	x.MutateTuple(func(tup q.Tuple) q.Tuple {
+	x.mutateTuple(func(tup q.Tuple) q.Tuple {
 		i := len(tup) - 1
 		str := tup[i].(q.String)
 		tup[i] = q.String(string(str) + token)
@@ -81,7 +81,7 @@ func (x *TupBuilder) AppendToLastElemStr(token string) {
 }
 
 func (x *TupBuilder) AppendToLastElemVar(typ q.ValueType) {
-	x.MutateTuple(func(tup q.Tuple) q.Tuple {
+	x.mutateTuple(func(tup q.Tuple) q.Tuple {
 		i := len(tup) - 1
 		v := tup[i].(q.Variable)
 		tup[i] = append(v, typ)
@@ -89,7 +89,7 @@ func (x *TupBuilder) AppendToLastElemVar(typ q.ValueType) {
 	})
 }
 
-func (x *TupBuilder) MutateTuple(f func(q.Tuple) q.Tuple) {
+func (x *TupBuilder) mutateTuple(f func(q.Tuple) q.Tuple) {
 	tuples := []q.Tuple{x.root}
 	tup := tuples[0]
 
