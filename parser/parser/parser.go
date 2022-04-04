@@ -31,7 +31,7 @@ const (
 	stateFinished
 )
 
-func parserStateName(state state) string {
+func stateName(state state) string {
 	switch state {
 	case stateInitial:
 		return "initial"
@@ -394,7 +394,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			}
 
 		default:
-			return nil, errors.Errorf("unexpected state '%v'", parserStateName(x.state))
+			return nil, errors.Errorf("unexpected state '%v'", stateName(x.state))
 		}
 	}
 }
@@ -424,11 +424,11 @@ func (x *Parser) withTokens(err error) error {
 }
 
 func (x *Parser) escapeErr(token string) error {
-	return errors.Errorf("unexpected escape '%v' while parsing %v", token, parserStateName(x.state))
+	return errors.Errorf("unexpected escape '%v' while parsing %v", token, stateName(x.state))
 }
 
 func (x *Parser) tokenErr(kind scanner.TokenKind) error {
-	return errors.Errorf("unexpected %v while parsing %v", tokenKindName(kind), parserStateName(x.state))
+	return errors.Errorf("unexpected %v while parsing %v", tokenKindName(kind), stateName(x.state))
 }
 
 func parseValueType(token string) (q.ValueType, error) {
