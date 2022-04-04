@@ -1,6 +1,9 @@
 package internal
 
-import q "github.com/janderland/fdbq/keyval"
+import (
+	q "github.com/janderland/fdbq/keyval"
+	"github.com/pkg/errors"
+)
 
 // KeyValBuilder is used by parser.Parser to construct the
 // resultant key-value. parser.Parser doesn't interact with
@@ -22,14 +25,23 @@ func (x *KeyValBuilder) AppendPartToDirectory(token string) {
 	x.kv.Key.Directory = append(x.kv.Key.Directory, q.String(token))
 }
 
-func (x *KeyValBuilder) AppendToLastDirPart(token string) {
+func (x *KeyValBuilder) AppendToLastDirPart(token string) error {
 	i := len(x.kv.Key.Directory) - 1
-	str := x.kv.Key.Directory[i].(q.String)
+	str, ok := x.kv.Key.Directory[i].(q.String)
+	if !ok {
+		return errors.Errorf("expected dir element %d to be a string, actually is %T", i, x.kv.Key.Directory[i])
+	}
 	x.kv.Key.Directory[i] = q.String(string(str) + token)
+	return nil
 }
 
-func (x *KeyValBuilder) AppendToValueVar(typ q.ValueType) {
-	x.kv.Value = append(x.kv.Value.(q.Variable), typ)
+func (x *KeyValBuilder) AppendToValueVar(typ q.ValueType) error {
+	val, ok := x.kv.Value.(q.Variable)
+	if !ok {
+		return errors.Errorf("expected value to be a variable, actually is %T", x.kv.Value)
+	}
+	x.kv.Value = append(val, typ)
+	return nil
 }
 
 func (x *KeyValBuilder) SetKeyTuple(tup q.Tuple) {
@@ -89,6 +101,7 @@ func (x *TupBuilder) AppendToLastElemVar(typ q.ValueType) {
 	})
 }
 
+// TODO: Don't assign tuple into parent until EndTuple is called.
 func (x *TupBuilder) mutateTuple(f func(q.Tuple) q.Tuple) {
 	tuples := []q.Tuple{x.root}
 	tup := tuples[0]

@@ -184,7 +184,9 @@ func (x *Parser) Parse() (q.Query, error) {
 						return nil, x.withTokens(x.escapeErr(token))
 					}
 				}
-				kv.AppendToLastDirPart(token)
+				if err := kv.AppendToLastDirPart(token); err != nil {
+					return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory part"))
+				}
 
 			case scanner.TokenKindEnd:
 				return kv.Get().Key.Directory, nil
@@ -363,7 +365,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				if err != nil {
 					return nil, x.withTokens(err)
 				}
-				kv.AppendToValueVar(v)
+				if err := kv.AppendToValueVar(v); err != nil {
+					return nil, x.withTokens(errors.Wrap(err, "failed to append to value variable"))
+				}
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
