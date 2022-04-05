@@ -9,9 +9,9 @@ import (
 	"github.com/janderland/fdbq/parser/parser/internal"
 )
 
-func Query(qry q.Query) string {
+func Query(in q.Query) string {
 	var op queryOp
-	qry.Query(&op)
+	in.Query(&op)
 	return op.str
 }
 
@@ -21,11 +21,11 @@ func value(in q.Value) string {
 	return op.str
 }
 
-func directory(dir q.Directory) string {
+func directory(in q.Directory) string {
 	var b strings.Builder
 	var op directoryOp
 
-	for _, part := range dir {
+	for _, part := range in {
 		b.WriteRune(internal.DirSep)
 		part.DirElement(&op)
 		b.WriteString(op.str)
@@ -34,12 +34,12 @@ func directory(dir q.Directory) string {
 	return b.String()
 }
 
-func tuple(tup q.Tuple) string {
+func tuple(in q.Tuple) string {
 	var b strings.Builder
 	var op tupleOp
 
 	b.WriteRune(internal.TupStart)
-	for i, element := range tup {
+	for i, element := range in {
 		if i != 0 {
 			b.WriteRune(internal.TupSep)
 		}
@@ -51,11 +51,11 @@ func tuple(tup q.Tuple) string {
 	return b.String()
 }
 
-func variable(v q.Variable) string {
+func variable(in q.Variable) string {
 	var b strings.Builder
 
 	b.WriteRune(internal.VarStart)
-	for i, vType := range v {
+	for i, vType := range in {
 		if i != 0 {
 			b.WriteRune(internal.VarSep)
 		}
