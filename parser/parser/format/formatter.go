@@ -15,11 +15,11 @@ func (x *query) ForDirectory(dir q.Directory) {
 }
 
 func (x *query) ForKey(key q.Key) {
-	x.str = Directory(key.Directory)
+	x.str = Directory(key.Directory) + Tuple(key.Tuple)
 }
 
 func (x *query) ForKeyValue(kv q.KeyValue) {
-	x.str = Directory(kv.Key.Directory)
+	x.str = Directory(kv.Key.Directory) + Tuple(kv.Key.Tuple)
 }
 
 type directory struct {
@@ -34,4 +34,58 @@ func (x *directory) ForVariable(v q.Variable) {
 
 func (x *directory) ForString(str q.String) {
 	x.str = string(str)
+}
+
+type tuple struct {
+	str string
+}
+
+var _ q.TupleOperation = &tuple{}
+
+func (x *tuple) ForTuple(q.Tuple) {
+
+}
+
+func (x *tuple) ForNil(q.Nil) {
+
+}
+
+func (x *tuple) ForInt(q.Int) {
+
+}
+
+func (x *tuple) ForUint(q.Uint) {
+
+}
+
+func (x *tuple) ForBool(q.Bool) {
+
+}
+
+func (x *tuple) ForFloat(q.Float) {
+
+}
+
+func (x *tuple) ForBigInt(q.BigInt) {
+
+}
+
+func (x *tuple) ForString(q.String) {
+
+}
+
+func (x *tuple) ForUUID(q.UUID) {
+
+}
+
+func (x *tuple) ForBytes(q.Bytes) {
+
+}
+
+func (x *tuple) ForVariable(q.Variable) {
+
+}
+
+func (x *tuple) ForMaybeMore(q.MaybeMore) {
+
 }

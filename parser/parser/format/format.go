@@ -26,6 +26,23 @@ func Directory(dir q.Directory) string {
 	return b.String()
 }
 
+func Tuple(tup q.Tuple) string {
+	var b strings.Builder
+	var fmt tuple
+
+	b.WriteRune(internal.TupStart)
+	for i, element := range tup {
+		if i != 0 {
+			b.WriteRune(internal.TupSep)
+		}
+		element.TupElement(&fmt)
+		b.WriteString(fmt.str)
+	}
+	b.WriteRune(internal.TupEnd)
+
+	return b.String()
+}
+
 func Variable(v q.Variable) string {
 	var b strings.Builder
 
