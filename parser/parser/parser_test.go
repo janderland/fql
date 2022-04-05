@@ -4,6 +4,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/janderland/fdbq/parser/parser/format"
+
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/parser/scanner"
 	"github.com/stretchr/testify/require"
@@ -251,12 +253,8 @@ func runRoundTrips(t *testing.T, tests []roundTripTest) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast)
 
-				/*
-					TODO: Enable test.
-					str, err := FormatDirectory(test.ast)
-					require.NoError(t, err)
-					require.Equal(t, test.str, str)
-				*/
+				str := format.Query(test.ast)
+				require.Equal(t, test.str, str)
 			})
 		}
 	})
