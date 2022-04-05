@@ -9,42 +9,42 @@ import (
 )
 
 func Query(qry q.Query) string {
-	var fmt query
-	qry.Query(&fmt)
-	return fmt.str
+	var op queryOp
+	qry.Query(&op)
+	return op.str
 }
 
-func Directory(dir q.Directory) string {
+func directory(dir q.Directory) string {
 	var b strings.Builder
-	var fmt directory
+	var op directoryOp
 
 	for _, part := range dir {
 		b.WriteRune(internal.DirSep)
-		part.DirElement(&fmt)
-		b.WriteString(fmt.str)
+		part.DirElement(&op)
+		b.WriteString(op.str)
 	}
 
 	return b.String()
 }
 
-func Tuple(tup q.Tuple) string {
+func tuple(tup q.Tuple) string {
 	var b strings.Builder
-	var fmt tuple
+	var op tupleOp
 
 	b.WriteRune(internal.TupStart)
 	for i, element := range tup {
 		if i != 0 {
 			b.WriteRune(internal.TupSep)
 		}
-		element.TupElement(&fmt)
-		b.WriteString(fmt.str)
+		element.TupElement(&op)
+		b.WriteString(op.str)
 	}
 	b.WriteRune(internal.TupEnd)
 
 	return b.String()
 }
 
-func Variable(v q.Variable) string {
+func variable(v q.Variable) string {
 	var b strings.Builder
 
 	b.WriteRune(internal.VarStart)
@@ -59,7 +59,7 @@ func Variable(v q.Variable) string {
 	return b.String()
 }
 
-func Hex(in q.Bytes) string {
+func hexadecimal(in q.Bytes) string {
 	var out strings.Builder
 
 	out.WriteString(internal.HexStart)
@@ -68,7 +68,7 @@ func Hex(in q.Bytes) string {
 	return out.String()
 }
 
-func String(in q.String) string {
+func str(in q.String) string {
 	var out strings.Builder
 
 	out.WriteRune(internal.StrMark)
@@ -78,7 +78,7 @@ func String(in q.String) string {
 	return out.String()
 }
 
-func UUID(in q.UUID) string {
+func uuid(in q.UUID) string {
 	var out strings.Builder
 
 	out.WriteString(hex.EncodeToString(in[:4]))
