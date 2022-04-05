@@ -15,6 +15,14 @@ func Query(in q.Query) string {
 	return op.str
 }
 
+func keyval(in q.KeyValue) string {
+	return key(in.Key) + string(internal.KeyValSep) + value(in.Value)
+}
+
+func key(in q.Key) string {
+	return directory(in.Directory) + tuple(in.Tuple)
+}
+
 func value(in q.Value) string {
 	var op valueOp
 	in.Value(&op)

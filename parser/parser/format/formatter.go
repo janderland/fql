@@ -1,8 +1,6 @@
 package format
 
 import (
-	"strings"
-
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/parser/internal"
 )
@@ -18,18 +16,11 @@ func (x *queryOp) ForDirectory(in q.Directory) {
 }
 
 func (x *queryOp) ForKey(in q.Key) {
-	x.str = directory(in.Directory) + tuple(in.Tuple)
+	x.str = key(in)
 }
 
 func (x *queryOp) ForKeyValue(in q.KeyValue) {
-	var b strings.Builder
-
-	b.WriteString(directory(in.Key.Directory))
-	b.WriteString(tuple(in.Key.Tuple))
-	b.WriteRune(internal.KeyValSep)
-	b.WriteString(value(in.Value))
-
-	x.str = b.String()
+	x.str = keyval(in)
 }
 
 type directoryOp struct {
