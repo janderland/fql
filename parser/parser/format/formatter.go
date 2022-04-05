@@ -1,6 +1,8 @@
 package format
 
 import (
+	"strings"
+
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/parser/internal"
 )
@@ -20,7 +22,14 @@ func (x *queryOp) ForKey(in q.Key) {
 }
 
 func (x *queryOp) ForKeyValue(in q.KeyValue) {
-	x.str = directory(in.Key.Directory) + tuple(in.Key.Tuple)
+	var b strings.Builder
+
+	b.WriteString(directory(in.Key.Directory))
+	b.WriteString(tuple(in.Key.Tuple))
+	b.WriteRune(internal.KeyValSep)
+	b.WriteString(value(in.Value))
+
+	x.str = b.String()
 }
 
 type directoryOp struct {
@@ -56,8 +65,8 @@ func (x *tupleOp) ForMaybeMore(q.MaybeMore) {
 	x.str = internal.MaybeMore
 }
 
-func (x *tupleOp) ForTuple(tup q.Tuple) {
-	x.str = tuple(tup)
+func (x *tupleOp) ForTuple(in q.Tuple) {
+	x.str = tuple(in)
 }
 
 func (x *tupleOp) ForInt(in q.Int) {
@@ -89,5 +98,55 @@ func (x *tupleOp) ForBytes(in q.Bytes) {
 }
 
 func (x *tupleOp) ForVariable(in q.Variable) {
+	x.str = variable(in)
+}
+
+type valueOp struct {
+	str string
+}
+
+var _ q.ValueOperation = &valueOp{}
+
+func (x *valueOp) ForNil(q.Nil) {
+	x.str = internal.Nil
+}
+
+func (x *valueOp) ForClear(q.Clear) {
+	x.str = internal.Clear
+}
+
+func (x *valueOp) ForTuple(in q.Tuple) {
+	x.str = tuple(in)
+}
+
+func (x *valueOp) ForInt(in q.Int) {
+	x.str = integer(in)
+}
+
+func (x *valueOp) ForUint(in q.Uint) {
+	x.str = unsigned(in)
+}
+
+func (x *valueOp) ForBool(in q.Bool) {
+	x.str = boolean(in)
+}
+
+func (x *valueOp) ForFloat(in q.Float) {
+	x.str = float(in)
+}
+
+func (x *valueOp) ForString(in q.String) {
+	x.str = str(in)
+}
+
+func (x *valueOp) ForUUID(in q.UUID) {
+	x.str = uuid(in)
+}
+
+func (x *valueOp) ForBytes(in q.Bytes) {
+	x.str = hexadecimal(in)
+}
+
+func (x *valueOp) ForVariable(in q.Variable) {
 	x.str = variable(in)
 }

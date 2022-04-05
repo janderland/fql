@@ -15,6 +15,12 @@ func Query(qry q.Query) string {
 	return op.str
 }
 
+func value(in q.Value) string {
+	var op valueOp
+	in.Value(&op)
+	return op.str
+}
+
 func directory(dir q.Directory) string {
 	var b strings.Builder
 	var op directoryOp
