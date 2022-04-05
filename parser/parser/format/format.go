@@ -2,6 +2,7 @@ package format
 
 import (
 	"encoding/hex"
+	"strconv"
 	"strings"
 
 	q "github.com/janderland/fdbq/keyval"
@@ -92,4 +93,24 @@ func uuid(in q.UUID) string {
 	out.WriteString(hex.EncodeToString(in[10:]))
 
 	return out.String()
+}
+
+func boolean(in q.Bool) string {
+	if in {
+		return internal.True
+	} else {
+		return internal.False
+	}
+}
+
+func integer(in q.Int) string {
+	return strconv.FormatInt(int64(in), 10)
+}
+
+func unsigned(in q.Uint) string {
+	return strconv.FormatUint(uint64(in), 10)
+}
+
+func float(in q.Float) string {
+	return strconv.FormatFloat(float64(in), 'g', 10, 64)
 }

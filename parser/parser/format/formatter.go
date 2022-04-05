@@ -1,8 +1,6 @@
 package format
 
 import (
-	"strconv"
-
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/parser/internal"
 )
@@ -45,37 +43,37 @@ type tupleOp struct {
 
 var _ q.TupleOperation = &tupleOp{}
 
-func (x *tupleOp) ForTuple(tup q.Tuple) {
-	x.str = tuple(tup)
+func (x *tupleOp) ForBigInt(q.BigInt) {
+	// TODO: Implement BigInt formatting.
+	panic("not implemented")
 }
 
 func (x *tupleOp) ForNil(q.Nil) {
 	x.str = internal.Nil
 }
 
+func (x *tupleOp) ForMaybeMore(q.MaybeMore) {
+	x.str = internal.MaybeMore
+}
+
+func (x *tupleOp) ForTuple(tup q.Tuple) {
+	x.str = tuple(tup)
+}
+
 func (x *tupleOp) ForInt(in q.Int) {
-	x.str = strconv.FormatInt(int64(in), 10)
+	x.str = integer(in)
 }
 
 func (x *tupleOp) ForUint(in q.Uint) {
-	x.str = strconv.FormatUint(uint64(in), 10)
+	x.str = unsigned(in)
 }
 
 func (x *tupleOp) ForBool(in q.Bool) {
-	if in {
-		x.str = internal.True
-	} else {
-		x.str = internal.False
-	}
+	x.str = boolean(in)
 }
 
 func (x *tupleOp) ForFloat(in q.Float) {
-	x.str = strconv.FormatFloat(float64(in), 'g', 10, 64)
-}
-
-func (x *tupleOp) ForBigInt(q.BigInt) {
-	// TODO: Implement BigInt formatting.
-	panic("not implemented")
+	x.str = float(in)
 }
 
 func (x *tupleOp) ForString(in q.String) {
@@ -92,8 +90,4 @@ func (x *tupleOp) ForBytes(in q.Bytes) {
 
 func (x *tupleOp) ForVariable(in q.Variable) {
 	x.str = variable(in)
-}
-
-func (x *tupleOp) ForMaybeMore(q.MaybeMore) {
-	x.str = internal.MaybeMore
 }
