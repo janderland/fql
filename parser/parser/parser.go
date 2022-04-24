@@ -34,33 +34,33 @@ const (
 func stateName(state state) string {
 	switch state {
 	case stateInitial:
-		return "initial"
+		return "Initial"
 	case stateDirHead:
-		return "directory"
+		return "DirHead"
 	case stateDirTail:
-		return "directory"
+		return "DirTail"
 	case stateDirVarEnd:
-		return "directory"
+		return "DirVarEnd"
 	case stateTupleHead:
-		return "tuple"
+		return "TupleHead"
 	case stateTupleTail:
-		return "tuple"
+		return "TupleTail"
 	case stateTupleVarHead:
-		return "variable"
+		return "TupleVarHead"
 	case stateTupleVarTail:
-		return "variable"
+		return "TupleVarTail"
 	case stateTupleString:
-		return "string"
+		return "String"
 	case stateSeparator:
-		return "query"
+		return "Separator"
 	case stateValue:
-		return "value"
+		return "Value"
 	case stateValueVarHead:
-		return "variable"
+		return "ValueVarHead"
 	case stateValueVarTail:
-		return "variable"
+		return "ValueVarTail"
 	case stateFinished:
-		return "finished"
+		return "Finished"
 	default:
 		return fmt.Sprintf("[unknown parser state %v]", state)
 	}
@@ -69,33 +69,33 @@ func stateName(state state) string {
 func tokenKindName(kind scanner.TokenKind) string {
 	switch kind {
 	case scanner.TokenKindEscape:
-		return "escape"
+		return "Escape"
 	case scanner.TokenKindKeyValSep:
-		return "key-value separator"
+		return "KeyValSep"
 	case scanner.TokenKindDirSep:
-		return "directory separator"
+		return "DirSep"
 	case scanner.TokenKindTupStart:
-		return "tuple start"
+		return "TupStart"
 	case scanner.TokenKindTupEnd:
-		return "tuple end"
+		return "TupEnd"
 	case scanner.TokenKindTupSep:
-		return "tuple separator"
+		return "TupSeparator"
 	case scanner.TokenKindVarStart:
-		return "variable start"
+		return "VarStart"
 	case scanner.TokenKindVarEnd:
-		return "variable end"
+		return "VarEnd"
 	case scanner.TokenKindVarSep:
-		return "variable separator"
+		return "VarSep"
 	case scanner.TokenKindStrMark:
-		return "string mark"
+		return "StrMark"
 	case scanner.TokenKindWhitespace:
-		return "whitespace"
+		return "Whitespace"
 	case scanner.TokenKindNewline:
-		return "newline"
+		return "Newline"
 	case scanner.TokenKindOther:
-		return "other"
+		return "Other"
 	case scanner.TokenKindEnd:
-		return "end of query"
+		return "End"
 	default:
 		return fmt.Sprintf("[unknown token kind %v]", kind)
 	}
@@ -224,7 +224,15 @@ func (x *Parser) Parse() (q.Query, error) {
 				tup.StartSubTuple()
 
 			case scanner.TokenKindTupEnd:
-				x.state = stateSeparator
+				if tup.EndTuple() {
+					if valTup {
+						x.state = stateFinished
+						kv.SetValue(tup.Get())
+						break
+					}
+					x.state = stateSeparator
+					kv.SetKeyTuple(tup.Get())
+				}
 
 			case scanner.TokenKindVarStart:
 				x.state = stateTupleVarHead
@@ -432,11 +440,11 @@ func (x *Parser) withTokens(err error) error {
 }
 
 func (x *Parser) escapeErr(token string) error {
-	return errors.Errorf("unexpected escape '%v' while parsing %v", token, stateName(x.state))
+	return errors.Errorf("unexpected escape '%v' at parser state '%v'", token, stateName(x.state))
 }
 
 func (x *Parser) tokenErr(kind scanner.TokenKind) error {
-	return errors.Errorf("unexpected %v while parsing %v", tokenKindName(kind), stateName(x.state))
+	return errors.Errorf("unexpected '%v' token at parser state '%v'", tokenKindName(kind), stateName(x.state))
 }
 
 func parseValueType(token string) (q.ValueType, error) {

@@ -12,15 +12,15 @@ type queryOp struct {
 var _ q.QueryOperation = &queryOp{}
 
 func (x *queryOp) ForDirectory(in q.Directory) {
-	x.str = directory(in)
+	x.str = Directory(in)
 }
 
 func (x *queryOp) ForKey(in q.Key) {
-	x.str = key(in)
+	x.str = Key(in)
 }
 
 func (x *queryOp) ForKeyValue(in q.KeyValue) {
-	x.str = keyval(in)
+	x.str = Keyval(in)
 }
 
 type directoryOp struct {
@@ -57,7 +57,7 @@ func (x *tupleOp) ForMaybeMore(q.MaybeMore) {
 }
 
 func (x *tupleOp) ForTuple(in q.Tuple) {
-	x.str = tuple(in)
+	x.str = Tuple(in)
 }
 
 func (x *tupleOp) ForInt(in q.Int) {
@@ -107,7 +107,7 @@ func (x *valueOp) ForClear(q.Clear) {
 }
 
 func (x *valueOp) ForTuple(in q.Tuple) {
-	x.str = tuple(in)
+	x.str = Tuple(in)
 }
 
 func (x *valueOp) ForInt(in q.Int) {

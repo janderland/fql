@@ -30,8 +30,6 @@ func TestDirectory(t *testing.T) {
 }
 
 func TestTuple(t *testing.T) {
-	const prefix = "/dir"
-
 	roundTrips := []struct {
 		name string
 		str  string
@@ -45,15 +43,37 @@ func TestTuple(t *testing.T) {
 		{name: "maybe more", str: "{18.2,0xffaa,...}", ast: q.Tuple{q.Float(18.2), q.Bytes{0xFF, 0xAA}, q.MaybeMore{}}},
 	}
 
-	roundTripTests := make([]roundTripTest, len(roundTrips))
-	for i, test := range roundTrips {
-		roundTripTests[i] = roundTripTest{
-			name: test.name,
-			str:  prefix + test.str,
-			ast:  q.Key{Directory: q.Directory{q.String("dir")}, Tuple: test.ast},
+	t.Run("key round trip", func(t *testing.T) {
+		for _, test := range roundTrips {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateDirTail
+
+				ast, err := p.Parse()
+				require.NoError(t, err)
+				require.Equal(t, test.ast, ast.(q.Key).Tuple)
+
+				str := format.Tuple(test.ast)
+				require.Equal(t, test.str, str)
+			})
 		}
-	}
-	runRoundTrips(t, roundTripTests)
+	})
+
+	t.Run("value round trip", func(t *testing.T) {
+		for _, test := range roundTrips {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.NoError(t, err)
+				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
+
+				str := format.Tuple(test.ast)
+				require.Equal(t, test.str, str)
+			})
+		}
+	})
 
 	parseFailures := []struct {
 		name string
@@ -65,14 +85,31 @@ func TestTuple(t *testing.T) {
 		{name: "empty element", str: "{\"hello\",, -3}"},
 	}
 
-	parseFailureTests := make([]parseFailureTest, len(parseFailures))
-	for i, test := range parseFailures {
-		parseFailureTests[i] = parseFailureTest{
-			name: test.name,
-			str:  prefix + test.str,
+	t.Run("key parse failures", func(t *testing.T) {
+		for _, test := range parseFailures {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateDirTail
+
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
 		}
-	}
-	runParseFailures(t, parseFailureTests)
+	})
+
+	t.Run("value parse failures", func(t *testing.T) {
+		for _, test := range parseFailures {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
+		}
+	})
 }
 
 func TestValue(t *testing.T) {

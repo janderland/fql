@@ -15,21 +15,21 @@ func Query(in q.Query) string {
 	return op.str
 }
 
-func keyval(in q.KeyValue) string {
-	return key(in.Key) + string(internal.KeyValSep) + value(in.Value)
+func Keyval(in q.KeyValue) string {
+	return Key(in.Key) + string(internal.KeyValSep) + Value(in.Value)
 }
 
-func key(in q.Key) string {
-	return directory(in.Directory) + tuple(in.Tuple)
+func Key(in q.Key) string {
+	return Directory(in.Directory) + Tuple(in.Tuple)
 }
 
-func value(in q.Value) string {
+func Value(in q.Value) string {
 	var op valueOp
 	in.Value(&op)
 	return op.str
 }
 
-func directory(in q.Directory) string {
+func Directory(in q.Directory) string {
 	var b strings.Builder
 	var op directoryOp
 
@@ -42,7 +42,7 @@ func directory(in q.Directory) string {
 	return b.String()
 }
 
-func tuple(in q.Tuple) string {
+func Tuple(in q.Tuple) string {
 	var b strings.Builder
 	var op tupleOp
 
