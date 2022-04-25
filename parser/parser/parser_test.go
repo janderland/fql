@@ -11,21 +11,52 @@ import (
 )
 
 func TestDirectory(t *testing.T) {
-	roundTripTests := []roundTripTest{
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  q.Directory
+	}{
 		{name: "single", str: "/hello", ast: q.Directory{q.String("hello")}},
 		{name: "multi", str: "/hello/world", ast: q.Directory{q.String("hello"), q.String("world")}},
 		{name: "variable", str: "/hello/<>/thing", ast: q.Directory{q.String("hello"), q.Variable{}, q.String("thing")}},
 	}
-	runRoundTrips(t, roundTripTests)
 
-	parseFailureTests := []parseFailureTest{
+	t.Run("key round trip", func(t *testing.T) {
+		for _, test := range roundTrips {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+
+				ast, err := p.Parse()
+				require.NoError(t, err)
+				require.Equal(t, test.ast, ast)
+
+				str := format.Directory(test.ast)
+				require.Equal(t, test.str, str)
+			})
+		}
+	})
+
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
 		{name: "empty", str: ""},
 		{name: "no paths", str: "/"},
 		{name: "no slash", str: "hello"},
 		{name: "trailing slash", str: "/hello/world/"},
 		{name: "invalid var", str: "/hello/</thing"},
 	}
-	runParseFailures(t, parseFailureTests)
+
+	t.Run("parse failures", func(t *testing.T) {
+		for _, test := range parseFailures {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
+		}
+	})
 }
 
 func TestTuple(t *testing.T) {
