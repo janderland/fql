@@ -4,9 +4,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/janderland/fdbq/parser/parser/format"
-
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/parser/parser/format"
 	"github.com/janderland/fdbq/parser/parser/scanner"
 	"github.com/stretchr/testify/require"
 )
@@ -113,8 +112,6 @@ func TestTuple(t *testing.T) {
 }
 
 func TestValue(t *testing.T) {
-	const prefix = "/dir{}="
-
 	roundTrips := []struct {
 		name string
 		str  string
@@ -125,15 +122,21 @@ func TestValue(t *testing.T) {
 		{name: "raw", str: "-16", ast: q.Int(-16)},
 	}
 
-	roundTripTests := make([]roundTripTest, len(roundTrips))
-	for i, test := range roundTrips {
-		roundTripTests[i] = roundTripTest{
-			name: test.name,
-			str:  prefix + test.str,
-			ast:  q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("dir")}}, Value: test.ast},
+	t.Run("round trip", func(t *testing.T) {
+		for _, test := range roundTrips {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.NoError(t, err)
+				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
+
+				str := format.Value(test.ast)
+				require.Equal(t, test.str, str)
+			})
 		}
-	}
-	runRoundTrips(t, roundTripTests)
+	})
 
 	parseFailures := []struct {
 		name string
@@ -142,14 +145,18 @@ func TestValue(t *testing.T) {
 		{name: "empty", str: ""},
 	}
 
-	parseFailureTests := make([]parseFailureTest, len(parseFailures))
-	for i, test := range parseFailures {
-		parseFailureTests[i] = parseFailureTest{
-			name: test.name,
-			str:  "/dir{}=" + test.str,
+	t.Run("value parse failures", func(t *testing.T) {
+		for _, test := range parseFailures {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
 		}
-	}
-	runParseFailures(t, parseFailureTests)
+	})
 }
 
 func TestVariable(t *testing.T) {
