@@ -457,6 +457,9 @@ func parseValueType(token string) (q.ValueType, error) {
 }
 
 func parseData(token string) (
+	// The interface returned by this function has
+	// the methods for both the keyval.TupElement &
+	// keyval.Value types.
 	interface {
 		TupElement(q.TupleOperation)
 		Value(q.ValueOperation)
