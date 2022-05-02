@@ -13,7 +13,7 @@ BENCHMARK_COUNT=1
 
 # help echos a CLI flags description to stdout.
 function print_help {
-  echo "$SCRIPT_NAME [--built-in CACHE_FILE] [--mounted CACHE_FILE] [--warm-ups WARM_UP_COUNT] [--iterations ITERATION_COUNT] --out OUTPUT_FILE"
+  echo "$SCRIPT_NAME [--built-in CACHE_FILE] [--mounted CACHE_FILE] [--warm-ups WARM_UP_COUNT] [--iterations ITERATION_COUNT] [--out OUTPUT_FILE]"
 }
 
 # log echos a prefix followed by the first
