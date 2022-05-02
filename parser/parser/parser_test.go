@@ -203,23 +203,21 @@ func TestVariable(t *testing.T) {
 		{name: "value", str: "<int|string>", ast: q.Variable{q.IntType, q.StringType}, val: true},
 	}
 
-	roundTripTests := make([]roundTripTest, len(roundTrips))
-	for i, test := range roundTrips {
-		if test.val {
-			roundTripTests[i] = roundTripTest{
-				name: test.name,
-				str:  "/dir{}=" + test.str,
-				ast:  q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("dir")}}, Value: test.ast},
-			}
-		} else {
-			roundTripTests[i] = roundTripTest{
-				name: test.name,
-				str:  "/dir{" + test.str + "}",
-				ast:  q.Key{Directory: q.Directory{q.String("dir")}, Tuple: q.Tuple{test.ast}},
-			}
+	t.Run("value round trip", func(t *testing.T) {
+		for _, test := range roundTrips {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.NoError(t, err)
+				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
+
+				str := format.Value(test.ast)
+				require.Equal(t, test.str, str)
+			})
 		}
-	}
-	runRoundTrips(t, roundTripTests)
+	})
 
 	parseFailures := []struct {
 		name string
@@ -230,14 +228,18 @@ func TestVariable(t *testing.T) {
 		{name: "invalid", str: "<invalid>"},
 	}
 
-	parseFailureTests := make([]parseFailureTest, len(parseFailures))
-	for i, test := range parseFailures {
-		parseFailureTests[i] = parseFailureTest{
-			name: test.name,
-			str:  "/dir{" + test.str + "}",
+	t.Run("value parse failures", func(t *testing.T) {
+		for _, test := range parseFailures {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
 		}
-	}
-	runParseFailures(t, parseFailureTests)
+	})
 }
 
 func TestData(t *testing.T) {
