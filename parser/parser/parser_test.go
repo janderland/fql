@@ -264,6 +264,7 @@ func TestData(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, test.ast, ast)
 
+			// TODO: Expose format method for data.
 			/*
 				str, err := FormatData(test.ast)
 				require.NoError(t, err)
@@ -288,6 +289,7 @@ func TestUUID(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, test.ast, ast)
 
+			// TODO: Expose format method for UUID.
 			/*
 				str := FormatUUID(test.ast)
 				require.Equal(t, test.str, str)
@@ -312,65 +314,5 @@ func TestUUID(t *testing.T) {
 		ast, err := parseUUID(test.str)
 		require.Error(t, err)
 		require.Equal(t, q.UUID{}, ast)
-	}
-}
-
-type roundTripTest struct {
-	name string
-	str  string
-	ast  q.Query
-}
-
-func runRoundTrips(t *testing.T, tests []roundTripTest) {
-	t.Run("round trips", func(t *testing.T) {
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				p := New(scanner.New(strings.NewReader(test.str)))
-				ast, err := p.Parse()
-				require.NoError(t, err)
-				require.Equal(t, test.ast, ast)
-
-				str := format.Query(test.ast)
-				require.Equal(t, test.str, str)
-			})
-		}
-	})
-}
-
-type parseFailureTest struct {
-	name string
-	str  string
-}
-
-func runParseFailures(t *testing.T, tests []parseFailureTest) {
-	t.Run("parse failures", func(t *testing.T) {
-		for _, test := range tests {
-			t.Run(test.name, func(t *testing.T) {
-				p := New(scanner.New(strings.NewReader(test.str)))
-				ast, err := p.Parse()
-				require.Error(t, err)
-				require.Nil(t, ast)
-			})
-		}
-	})
-}
-
-func TestOrdinal(t *testing.T) {
-	tests := []struct {
-		name string
-		in   int
-		out  string
-	}{
-		{name: "zero", in: 0, out: "0th"},
-		{name: "th", in: 8, out: "8th"},
-		{name: "st", in: 21, out: "21st"},
-		{name: "nd", in: 302, out: "302nd"},
-		{name: "rd", in: 53, out: "53rd"},
-	}
-
-	for _, test := range tests {
-		t.Run(test.name, func(t *testing.T) {
-			require.Equal(t, test.out, ordinal(test.in))
-		})
 	}
 }
