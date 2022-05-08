@@ -5,7 +5,7 @@ import (
 	"io"
 	"strings"
 
-	"github.com/janderland/fdbq/parser/parser/internal"
+	"github.com/janderland/fdbq/parser/internal"
 	"github.com/pkg/errors"
 )
 

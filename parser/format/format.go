@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/parser/parser/internal"
+	"github.com/janderland/fdbq/parser/internal"
 )
 
 func Query(in q.Query) string {

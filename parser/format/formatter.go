@@ -2,7 +2,7 @@ package format
 
 import (
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/parser/parser/internal"
+	"github.com/janderland/fdbq/parser/internal"
 )
 
 type queryOp struct {
