@@ -6,14 +6,13 @@ import (
 	"io"
 	"strings"
 
-	"github.com/janderland/fdbq/parser/format"
-
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/parser"
+	"github.com/janderland/fdbq/parser/format"
 	"github.com/janderland/fdbq/parser/scanner"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -34,14 +33,19 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse query")
 			}
-			op := newOp(ctx, x, eg)
-			if err := op.Do(query); err != nil {
-				return nil, err
+			if err := x.execute(ctx, eg, query); err != nil {
+				return nil, errors.Wrap(err, "failed to execute query")
 			}
 		}
 		return nil, nil
 	})
 	return err
+}
+
+func (x *App) execute(ctx context.Context, eg engine.Engine, query q.Query) error {
+	ex := executor{ctx: ctx, app: x, eg: eg}
+	query.Query(&ex)
+	return ex.err
 }
 
 func (x *App) set(eg engine.Engine, query q.KeyValue) error {
