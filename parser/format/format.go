@@ -9,22 +9,40 @@ import (
 	"github.com/janderland/fdbq/parser/internal"
 )
 
+type Cfg struct {
+	// When set to false, byte strings are formatted
+	// as their length instead of the actual string.
+	PrintBytes bool
+}
+
+// Format provides methods which convert the types
+// defined in keyval into strings. The methods with
+// an input parameter format their input into a string
+// and append the string to an internal buffer, which
+// can be retrieved or cleared via the String and
+// Reset methods.
 type Format struct {
-	str   *strings.Builder
-	bytes bool
+	str *strings.Builder
+	cfg Cfg
 }
 
-func New(printBytes bool) Format {
+func New(cfg Cfg) Format {
 	var str strings.Builder
-	return Format{str: &str, bytes: printBytes}
+	return Format{str: &str, cfg: cfg}
 }
 
+// String returns the contents of the internal buffer.
 func (x *Format) String() string {
 	return x.str.String()
 }
 
+// Reset clears the contents of the internal buffer.
+func (x *Format) Reset() {
+	x.str.Reset()
+}
+
 func (x *Format) Query(in q.Query) {
-	in.Query(&op{x})
+	in.Query(&formatQuery{x})
 }
 
 func (x *Format) KeyValue(in q.KeyValue) {
@@ -39,13 +57,13 @@ func (x *Format) Key(in q.Key) {
 }
 
 func (x *Format) Value(in q.Value) {
-	in.Value(&op{x})
+	in.Value(&formatData{x})
 }
 
 func (x *Format) Directory(in q.Directory) {
-	for _, part := range in {
+	for _, element := range in {
 		x.str.WriteRune(internal.DirSep)
-		part.DirElement(&dirOp{x})
+		element.DirElement(&formatDirElement{x})
 	}
 }
 
@@ -55,7 +73,7 @@ func (x *Format) Tuple(in q.Tuple) {
 		if i != 0 {
 			x.str.WriteRune(internal.TupSep)
 		}
-		element.TupElement(&op{x})
+		element.TupElement(&formatData{x})
 	}
 	x.str.WriteRune(internal.TupEnd)
 }
@@ -72,7 +90,7 @@ func (x *Format) Variable(in q.Variable) {
 }
 
 func (x *Format) Bytes(in q.Bytes) {
-	if x.bytes {
+	if x.cfg.PrintBytes {
 		x.str.WriteString(internal.HexStart)
 		x.str.WriteString(hex.EncodeToString(in))
 	} else {

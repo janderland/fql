@@ -4,96 +4,104 @@ import (
 	q "github.com/janderland/fdbq/keyval"
 )
 
-type dirOp struct {
+// formatDirElement is a keyval.DirectoryOperation
+// which calls the appropriate format method for the
+// given keyval.DirElement.
+type formatDirElement struct {
 	format *Format
 }
 
-var _ q.DirectoryOperation = &dirOp{}
+var _ q.DirectoryOperation = &formatDirElement{}
 
-type op struct {
-	format *Format
-}
-
-// The keyval.DirectoryOperation methods are defined
-// in their own struct so the ForString method could
-// be handled differently. In the case of a directory,
-// we want keyval.String to format without quotes.
-
-func (x *dirOp) ForString(in q.String) {
+func (x *formatDirElement) ForString(in q.String) {
 	x.format.str.WriteString(string(in))
 }
 
-func (x *dirOp) ForVariable(in q.Variable) {
+func (x *formatDirElement) ForVariable(in q.Variable) {
 	x.format.Variable(in)
 }
 
-var (
-	_ q.QueryOperation = &op{}
-	_ q.TupleOperation = &op{}
-	_ q.ValueOperation = &op{}
-)
+// formatQuery is a keyval.QueryOperation which calls the
+// appropriate Format method for the given keyval.Query.
+type formatQuery struct {
+	format *Format
+}
 
-func (x *op) ForDirectory(in q.Directory) {
+var _ q.QueryOperation = &formatQuery{}
+
+func (x *formatQuery) ForDirectory(in q.Directory) {
 	x.format.Directory(in)
 }
 
-func (x *op) ForKey(in q.Key) {
+func (x *formatQuery) ForKey(in q.Key) {
 	x.format.Key(in)
 }
 
-func (x *op) ForKeyValue(in q.KeyValue) {
+func (x *formatQuery) ForKeyValue(in q.KeyValue) {
 	x.format.KeyValue(in)
 }
 
-func (x *op) ForVariable(in q.Variable) {
+// formatData is both a keyval.TupleOperation and a
+// keyval.ValueOperation which calls the appropriate
+// Format method for the given data element.
+type formatData struct {
+	format *Format
+}
+
+var (
+	_ q.TupleOperation = &formatData{}
+	_ q.ValueOperation = &formatData{}
+)
+
+func (x *formatData) ForVariable(in q.Variable) {
 	x.format.Variable(in)
 }
 
-func (x *op) ForString(in q.String) {
+func (x *formatData) ForString(in q.String) {
 	x.format.Str(in)
 }
 
-func (x *op) ForBigInt(q.BigInt) {
+func (x *formatData) ForBigInt(q.BigInt) {
 	// TODO: Implement BigInt formatting.
 	panic("not implemented")
 }
 
-func (x *op) ForNil(in q.Nil) {
+func (x *formatData) ForNil(in q.Nil) {
 	x.format.Nil(in)
 }
 
-func (x *op) ForMaybeMore(in q.MaybeMore) {
+func (x *formatData) ForMaybeMore(in q.MaybeMore) {
 	x.format.MaybeMore(in)
 }
 
-func (x *op) ForTuple(in q.Tuple) {
+func (x *formatData) ForTuple(in q.Tuple) {
 	x.format.Tuple(in)
 }
 
-func (x *op) ForInt(in q.Int) {
+func (x *formatData) ForInt(in q.Int) {
 	x.format.Int(in)
 }
 
-func (x *op) ForUint(in q.Uint) {
+func (x *formatData) ForUint(in q.Uint) {
 	x.format.Uint(in)
 }
 
-func (x *op) ForBool(in q.Bool) {
+func (x *formatData) ForBool(in q.Bool) {
 	x.format.Bool(in)
 }
 
-func (x *op) ForFloat(in q.Float) {
+func (x *formatData) ForFloat(in q.Float) {
 	x.format.Float(in)
 }
 
-func (x *op) ForUUID(in q.UUID) {
+func (x *formatData) ForUUID(in q.UUID) {
 	x.format.UUID(in)
 }
 
-func (x *op) ForBytes(in q.Bytes) {
+func (x *formatData) ForBytes(in q.Bytes) {
 	x.format.Bytes(in)
 }
 
-func (x *op) ForClear(in q.Clear) {
+func (x *formatData) ForClear(in q.Clear) {
 	x.format.Clear(in)
 }
