@@ -18,6 +18,7 @@ type Flags struct {
 	Reverse bool
 	Filter  bool
 	Little  bool
+	Bytes   bool
 	Limit   int
 }
 
@@ -39,6 +40,7 @@ func setupFlagSet(output *os.File) (*Flags, *flag.FlagSet) {
 	fs.BoolVar(&flags.Reverse, "reverse", false, "reverse range reads")
 	fs.BoolVar(&flags.Filter, "filter", false, "filter schema transgressions")
 	fs.BoolVar(&flags.Little, "little", false, "little endian value encoding")
+	fs.BoolVar(&flags.Bytes, "bytes", false, "print byte strings")
 	fs.IntVar(&flags.Limit, "limit", 0, "range read limit")
 
 	return &flags, fs
