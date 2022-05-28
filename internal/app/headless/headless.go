@@ -73,8 +73,10 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 	if kv == nil {
 		return nil
 	}
-	str := format.Keyval(*kv)
-	if _, err := fmt.Fprintln(x.Out, str); err != nil {
+
+	f := format.New()
+	f.KeyValue(*kv)
+	if _, err := fmt.Fprintln(x.Out, f.String()); err != nil {
 		return errors.Wrap(err, "failed to print output")
 	}
 	return nil
@@ -86,8 +88,10 @@ func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue)
 		if kv.Err != nil {
 			return kv.Err
 		}
-		str := format.Keyval(kv.KV)
-		if _, err := fmt.Fprintln(x.Out, str); err != nil {
+
+		f := format.New()
+		f.KeyValue(kv.KV)
+		if _, err := fmt.Fprintln(x.Out, f.String()); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}
 	}
@@ -100,8 +104,10 @@ func (x *App) directories(ctx context.Context, eg engine.Engine, query q.Directo
 		if dir.Err != nil {
 			return dir.Err
 		}
-		str := format.Directory(convert.FromStringArray(dir.Dir.GetPath()))
-		if _, err := fmt.Fprintln(x.Out, str); err != nil {
+
+		f := format.New()
+		f.Directory(convert.FromStringArray(dir.Dir.GetPath()))
+		if _, err := fmt.Fprintln(x.Out, f.String()); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}
 	}

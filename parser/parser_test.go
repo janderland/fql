@@ -30,8 +30,9 @@ func TestDirectory(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast)
 
-				str := format.Directory(test.ast)
-				require.Equal(t, test.str, str)
+				f := format.New()
+				f.Directory(test.ast)
+				require.Equal(t, test.str, f.String())
 			})
 		}
 	})
@@ -83,8 +84,9 @@ func TestTuple(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.Key).Tuple)
 
-				str := format.Tuple(test.ast)
-				require.Equal(t, test.str, str)
+				f := format.New()
+				f.Tuple(test.ast)
+				require.Equal(t, test.str, f.String())
 			})
 		}
 	})
@@ -99,8 +101,9 @@ func TestTuple(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
 
-				str := format.Tuple(test.ast)
-				require.Equal(t, test.str, str)
+				f := format.New()
+				f.Tuple(test.ast)
+				require.Equal(t, test.str, f.String())
 			})
 		}
 	})
@@ -163,8 +166,9 @@ func TestValue(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
 
-				str := format.Value(test.ast)
-				require.Equal(t, test.str, str)
+				f := format.New()
+				f.Value(test.ast)
+				require.Equal(t, test.str, f.String())
 			})
 		}
 	})
@@ -213,8 +217,9 @@ func TestVariable(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
 
-				str := format.Value(test.ast)
-				require.Equal(t, test.str, str)
+				f := format.New()
+				f.Value(test.ast)
+				require.Equal(t, test.str, f.String())
 			})
 		}
 	})
@@ -246,7 +251,7 @@ func TestData(t *testing.T) {
 	roundTrips := []struct {
 		name string
 		str  string
-		ast  interface{}
+		ast  q.Value
 	}{
 		{name: "nil", str: "nil", ast: q.Nil{}},
 		{name: "true", str: "true", ast: q.Bool(true)},
@@ -264,12 +269,9 @@ func TestData(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, test.ast, ast)
 
-			// TODO: Expose format method for data.
-			/*
-				str, err := FormatData(test.ast)
-				require.NoError(t, err)
-				require.Equal(t, test.str, str)
-			*/
+			f := format.New()
+			f.Value(test.ast)
+			require.Equal(t, test.str, f.String())
 		})
 	}
 }
@@ -289,11 +291,9 @@ func TestUUID(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, test.ast, ast)
 
-			// TODO: Expose format method for UUID.
-			/*
-				str := FormatUUID(test.ast)
-				require.Equal(t, test.str, str)
-			*/
+			f := format.New()
+			f.UUID(test.ast)
+			require.Equal(t, test.str, f.String())
 		})
 	}
 
