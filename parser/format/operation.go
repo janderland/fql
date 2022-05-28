@@ -14,7 +14,7 @@ type formatDirElement struct {
 var _ q.DirectoryOperation = &formatDirElement{}
 
 func (x *formatDirElement) ForString(in q.String) {
-	x.format.str.WriteString(string(in))
+	x.format.Builder.WriteString(string(in))
 }
 
 func (x *formatDirElement) ForVariable(in q.Variable) {

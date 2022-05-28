@@ -19,9 +19,10 @@ import (
 )
 
 type App struct {
-	Flags flag.Flags
-	Log   zerolog.Logger
-	Out   io.Writer
+	Format format.Format
+	Flags  flag.Flags
+	Log    zerolog.Logger
+	Out    io.Writer
 }
 
 func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
@@ -74,9 +75,9 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 		return nil
 	}
 
-	f := format.New(x.Flags.Bytes)
-	f.KeyValue(*kv)
-	if _, err := fmt.Fprintln(x.Out, f.String()); err != nil {
+	x.Format.Reset()
+	x.Format.KeyValue(query)
+	if _, err := fmt.Fprintln(x.Out, x.Format.String()); err != nil {
 		return errors.Wrap(err, "failed to print output")
 	}
 	return nil
@@ -89,9 +90,9 @@ func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue)
 			return kv.Err
 		}
 
-		f := format.New(x.Flags.Bytes)
-		f.KeyValue(kv.KV)
-		if _, err := fmt.Fprintln(x.Out, f.String()); err != nil {
+		x.Format.Reset()
+		x.Format.KeyValue(kv.KV)
+		if _, err := fmt.Fprintln(x.Out, x.Format.String()); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}
 	}
@@ -105,9 +106,9 @@ func (x *App) directories(ctx context.Context, eg engine.Engine, query q.Directo
 			return dir.Err
 		}
 
-		f := format.New(x.Flags.Bytes)
-		f.Directory(convert.FromStringArray(dir.Dir.GetPath()))
-		if _, err := fmt.Fprintln(x.Out, f.String()); err != nil {
+		x.Format.Reset()
+		x.Format.Directory(convert.FromStringArray(dir.Dir.GetPath()))
+		if _, err := fmt.Fprintln(x.Out, x.Format.String()); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}
 	}
