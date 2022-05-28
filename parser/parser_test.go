@@ -30,7 +30,7 @@ func TestDirectory(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast)
 
-				f := format.New(true)
+				f := newFormat()
 				f.Directory(test.ast)
 				require.Equal(t, test.str, f.String())
 			})
@@ -84,7 +84,7 @@ func TestTuple(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.Key).Tuple)
 
-				f := format.New(true)
+				f := newFormat()
 				f.Tuple(test.ast)
 				require.Equal(t, test.str, f.String())
 			})
@@ -101,7 +101,7 @@ func TestTuple(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
 
-				f := format.New(true)
+				f := newFormat()
 				f.Tuple(test.ast)
 				require.Equal(t, test.str, f.String())
 			})
@@ -166,7 +166,7 @@ func TestValue(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
 
-				f := format.New(true)
+				f := newFormat()
 				f.Value(test.ast)
 				require.Equal(t, test.str, f.String())
 			})
@@ -217,7 +217,7 @@ func TestVariable(t *testing.T) {
 				require.NoError(t, err)
 				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
 
-				f := format.New(true)
+				f := newFormat()
 				f.Value(test.ast)
 				require.Equal(t, test.str, f.String())
 			})
@@ -269,7 +269,7 @@ func TestData(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, test.ast, ast)
 
-			f := format.New(true)
+			f := newFormat()
 			f.Value(test.ast)
 			require.Equal(t, test.str, f.String())
 		})
@@ -291,7 +291,7 @@ func TestUUID(t *testing.T) {
 			require.NoError(t, err)
 			require.Equal(t, test.ast, ast)
 
-			f := format.New(true)
+			f := newFormat()
 			f.UUID(test.ast)
 			require.Equal(t, test.str, f.String())
 		})
@@ -314,5 +314,14 @@ func TestUUID(t *testing.T) {
 		ast, err := parseUUID(test.str)
 		require.Error(t, err)
 		require.Equal(t, q.UUID{}, ast)
+	}
+}
+
+func newFormat() format.Format {
+	return format.Format{
+		Builder: &strings.Builder{},
+		Cfg: format.Cfg{
+			PrintBytes: true,
+		},
 	}
 }

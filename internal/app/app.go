@@ -4,12 +4,14 @@ import (
 	"context"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/janderland/fdbq/internal/app/headless"
+	"github.com/janderland/fdbq/parser/format"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -52,6 +54,12 @@ func run(args []string, stdout *os.File, stderr *os.File) error {
 	}
 
 	app := headless.App{
+		Format: format.Format{
+			Builder: &strings.Builder{},
+			Cfg: format.Cfg{
+				PrintBytes: flags.Bytes,
+			},
+		},
 		Flags: *flags,
 		Log:   log,
 		Out:   stdout,
