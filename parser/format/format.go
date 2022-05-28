@@ -10,12 +10,13 @@ import (
 )
 
 type Format struct {
-	str *strings.Builder
+	str   *strings.Builder
+	bytes bool
 }
 
-func New() Format {
+func New(printBytes bool) Format {
 	var str strings.Builder
-	return Format{&str}
+	return Format{str: &str, bytes: printBytes}
 }
 
 func (x *Format) String() string {
@@ -71,8 +72,13 @@ func (x *Format) Variable(in q.Variable) {
 }
 
 func (x *Format) Bytes(in q.Bytes) {
-	x.str.WriteString(internal.HexStart)
-	x.str.WriteString(hex.EncodeToString(in))
+	if x.bytes {
+		x.str.WriteString(internal.HexStart)
+		x.str.WriteString(hex.EncodeToString(in))
+	} else {
+		x.str.WriteString(strconv.FormatInt(int64(len(in)), 10))
+		x.str.WriteString(" bytes")
+	}
 }
 
 func (x *Format) Str(in q.String) {
