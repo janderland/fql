@@ -25,12 +25,7 @@ func (x *execution) ForDirectory(query q.Directory) {
 }
 
 func (x *execution) ForKey(query q.Key) {
-	if err := x.app.singleRead(x.eg, q.KeyValue{
-		Key:   query,
-		Value: q.Variable{},
-	}); err != nil {
-		x.err = errors.Wrap(err, "failed to execute as single read query")
-	}
+	x.ForKeyValue(q.KeyValue{Key: query, Value: q.Variable{}})
 }
 
 func (x *execution) ForKeyValue(query q.KeyValue) {
