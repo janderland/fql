@@ -9,27 +9,22 @@ import (
 	"github.com/pkg/errors"
 )
 
-type executor struct {
+type execution struct {
 	ctx context.Context
 	app *App
 	eg  engine.Engine
 	err error
 }
 
-var _ q.QueryOperation = &executor{}
+var _ q.QueryOperation = &execution{}
 
-func (x executor) Do(query q.Query) error {
-	query.Query(&x)
-	return x.err
-}
-
-func (x *executor) ForDirectory(query q.Directory) {
+func (x *execution) ForDirectory(query q.Directory) {
 	if err := x.app.directories(x.ctx, x.eg, query); err != nil {
 		x.err = errors.Wrap(err, "failed to execute as directory query")
 	}
 }
 
-func (x *executor) ForKey(query q.Key) {
+func (x *execution) ForKey(query q.Key) {
 	if err := x.app.singleRead(x.eg, q.KeyValue{
 		Key:   query,
 		Value: q.Variable{},
@@ -38,7 +33,7 @@ func (x *executor) ForKey(query q.Key) {
 	}
 }
 
-func (x *executor) ForKeyValue(query q.KeyValue) {
+func (x *execution) ForKeyValue(query q.KeyValue) {
 	switch c := class.Classify(query); c {
 	case class.Constant:
 		if err := x.app.set(x.eg, query); err != nil {

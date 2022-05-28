@@ -43,7 +43,7 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 }
 
 func (x *App) execute(ctx context.Context, eg engine.Engine, query q.Query) error {
-	ex := executor{ctx: ctx, app: x, eg: eg}
+	ex := execution{ctx: ctx, app: x, eg: eg}
 	query.Query(&ex)
 	return ex.err
 }
