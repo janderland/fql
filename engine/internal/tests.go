@@ -36,7 +36,7 @@ func TestEnv(t *testing.T, force bool, f func(facade.Transactor, zerolog.Logger)
 	defer func() {
 		_, err := directory.Root().Remove(db, rootPath)
 		if err != nil {
-			t.Error(errors.Wrap(err, "failed to clean root directory"))
+			t.Fatal(errors.Wrap(err, "failed to clean root directory"))
 		}
 	}()
 
