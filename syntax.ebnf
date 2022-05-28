@@ -1,53 +1,54 @@
 (*
  This document defines the syntax of the FDBQ query
  language. The meta language used is extended Backus-Naur
- form as defined in ISO/IEC 14977.
+ form as defined in ISO/IEC 14977 with two exceptions:
+ concatenation is implicit and rules terminate at newline.
 *)
 
-query = keyval | key | directory ;
+query = keyval | key | directory
 
-keyval = key, '=', ws, value ;
+keyval = key '=' ws value
 
-key = directory, tuple ;
+key = directory tuple
 
-value = 'clear' | data ;
+value = 'clear' | data
 
-directory = '/', ( '<>' | text ), [ directory ] ;
+directory = '/' ( '<>' | text ) [ directory ]
 
-tuple = '{', [ nl, elements, [ ',' ], nl ] '}' ;
+tuple = '{' [ nl elements [ ',' ] nl ] '}'
 
-elements = '...' | ( data, [ ',', nl, elements ] ) ;
+elements = '...' | ( data [ ',' nl elements ] )
 
-data = 'nil' | variable | tuple | bool | int | float | scientific | string | uuid | bytes ;
+data = 'nil' | variable | tuple | bool | int | float | scientific | string | uuid | bytes
 
-variable = '<', [ type ], '>' ;
+variable = '<' [ type ] '>'
 
-type = ( 'tuple' | 'bool' | 'int' | 'float' | 'string' | 'uuid' | 'bytes' ), [ '|', type ] ;
+type = ( 'tuple' | 'bool' | 'int' | 'float' | 'string' | 'uuid' | 'bytes' ) [ '|' type ]
 
-bool = 'true' | 'false' ;
+bool = 'true' | 'false'
 
-int = [ '-' ], number ;
+int = [ '-' ] number
 
-float = int, '.', number ;
+float = int '.' number
 
-scientific = ( int | float ), 'e', int ;
+scientific = ( int | float ) 'e' int
 
-string = '"', text, '"' ;
+string = '"' text '"'
 
-uuid = 8 * hexDigit, '-', 4 * hexDigit, '-', 4 * hexDigit, '-', 4 * hexDigit, '-', 12 * hexDigit ;
+uuid = ( 8 * hexDigit ) '-' ( 4 * hexDigit ) '-' ( 4 * hexDigit ) '-' ( 4 * hexDigit ) '-' ( 12 * hexDigit )
 
-bytes = '0x', { 2 * hexDigit } ;
+bytes = '0x' { 2 * hexDigit }
 
-number = { digit } ;
+number = { digit }
 
-text = { character } ;
+text = { character }
 
-digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9' ;
+digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 
-hexDigit = digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F' ;
+hexDigit = digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 
-character = ? Any single ASCII character from the "printable" character group (32-126). ? ;
+character = ? Any single ASCII character from the "printable" character group (32-126). ?
 
-ws = ? Any number of ASCII characters with codes 9 (Horizontal Tab) or 32 (Space). ? ;
+ws = ? Any number of ASCII characters with codes 9 (Horizontal Tab) or 32 (Space). ?
 
-nl = ? Any number of ASCII characters with codes 9 (Horizontal Tab) 10 (Line Feed) 13 (Carriage Return) or 32 (Space). ? ;
+nl = ? Any number of ASCII characters with codes 9 (Horizontal Tab) 10 (Line Feed) 13 (Carriage Return) or 32 (Space). ?
