@@ -5,6 +5,8 @@ import (
 	"text/template"
 
 	g "github.com/janderland/fdbq/internal/generate"
+	"golang.org/x/text/cases"
+	"golang.org/x/text/language"
 )
 
 func main() {
@@ -78,9 +80,9 @@ func (x operationGen) Types() []string {
 }
 
 func (x operationGen) VisitorMethod(typ string) string {
-	return "For" + strings.Title(typ)
+	return "For" + cases.Title(language.English).String(typ)
 }
 
 func (x operationGen) AcceptorMethod() string {
-	return strings.Title(x.paramName)
+	return cases.Title(language.English).String(x.paramName)
 }

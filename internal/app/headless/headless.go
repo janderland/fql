@@ -4,14 +4,16 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strings"
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/keyval/class"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/parser"
+	"github.com/janderland/fdbq/parser/format"
+	"github.com/janderland/fdbq/parser/scanner"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 )
@@ -26,8 +28,13 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 	eg := engine.Engine{Tr: db, Log: x.Log}
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
-			if err := x.query(ctx, eg, str); err != nil {
-				return nil, err
+			p := parser.New(scanner.New(strings.NewReader(str)))
+			query, err := p.Parse()
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to parse query")
+			}
+			if err := x.execute(ctx, eg, query); err != nil {
+				return nil, errors.Wrap(err, "failed to execute query")
 			}
 		}
 		return nil, nil
@@ -35,47 +42,10 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 	return err
 }
 
-func (x *App) query(ctx context.Context, eg engine.Engine, str string) error {
-	query, onlyDir, err := parser.ParseQuery(str)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse query")
-	}
-
-	if onlyDir {
-		if err := x.directories(ctx, eg, query.Key.Directory); err != nil {
-			return errors.Wrap(err, "failed to execute as directory query")
-		}
-		return nil
-	}
-
-	switch c := class.Classify(*query); c {
-	case class.Constant:
-		if err := x.set(eg, *query); err != nil {
-			return errors.Wrap(err, "failed to execute as set query")
-		}
-		return nil
-
-	case class.Clear:
-		if err := x.clear(eg, *query); err != nil {
-			return errors.Wrap(err, "failed to execute as clear query")
-		}
-		return nil
-
-	case class.SingleRead:
-		if err := x.singleRead(eg, *query); err != nil {
-			return errors.Wrap(err, "failed to execute as single read query")
-		}
-		return nil
-
-	case class.RangeRead:
-		if err := x.rangeRead(ctx, eg, *query); err != nil {
-			return errors.Wrap(err, "failed to execute as range read query")
-		}
-		return nil
-
-	default:
-		return errors.Errorf("unexpected query class '%v'", c)
-	}
+func (x *App) execute(ctx context.Context, eg engine.Engine, query q.Query) error {
+	ex := execution{ctx: ctx, app: x, eg: eg}
+	query.Query(&ex)
+	return ex.err
 }
 
 func (x *App) set(eg engine.Engine, query q.KeyValue) error {
@@ -103,10 +73,7 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 	if kv == nil {
 		return nil
 	}
-	str, err := parser.FormatKeyValue(*kv)
-	if err != nil {
-		return errors.Wrap(err, "failed to format output")
-	}
+	str := format.Keyval(*kv)
 	if _, err := fmt.Fprintln(x.Out, str); err != nil {
 		return errors.Wrap(err, "failed to print output")
 	}
@@ -119,10 +86,7 @@ func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue)
 		if kv.Err != nil {
 			return kv.Err
 		}
-		str, err := parser.FormatKeyValue(kv.KV)
-		if err != nil {
-			return errors.Wrap(err, "failed to format output")
-		}
+		str := format.Keyval(kv.KV)
 		if _, err := fmt.Fprintln(x.Out, str); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}
@@ -136,10 +100,7 @@ func (x *App) directories(ctx context.Context, eg engine.Engine, query q.Directo
 		if dir.Err != nil {
 			return dir.Err
 		}
-		str, err := parser.FormatDirectory(convert.FromStringArray(dir.Dir.GetPath()))
-		if err != nil {
-			return errors.Wrap(err, "failed to format output")
-		}
+		str := format.Directory(convert.FromStringArray(dir.Dir.GetPath()))
 		if _, err := fmt.Fprintln(x.Out, str); err != nil {
 			return errors.Wrap(err, "failed to print output")
 		}

@@ -22,25 +22,25 @@ func TestHeadless_Query(t *testing.T) {
 		{
 			name:    "set",
 			flags:   flag.Flags{Write: true},
-			queries: []string{"/my/dir(\"hi\",\"there\")=33.9"},
+			queries: []string{"/my/dir{\"hi\",\"there\"}=33.9"},
 			err:     false,
 		},
 		{
 			name:    "set error",
 			flags:   flag.Flags{Write: false},
-			queries: []string{"/my/dir(\"hi\",\"there\")=33.9"},
+			queries: []string{"/my/dir{\"hi\",\"there\"}=33.9"},
 			err:     true,
 		},
 		{
 			name:    "clear",
 			flags:   flag.Flags{Write: true},
-			queries: []string{"/my/dir(\"hi\",\"there\")=clear"},
+			queries: []string{"/my/dir{\"hi\",\"there\"}=clear"},
 			err:     false,
 		},
 		{
 			name:    "clear error",
 			flags:   flag.Flags{Write: false},
-			queries: []string{"/my/dir(\"hi\",\"there\")=clear"},
+			queries: []string{"/my/dir{\"hi\",\"there\"}=clear"},
 			err:     true,
 		},
 		{

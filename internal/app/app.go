@@ -5,9 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
+	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/janderland/fdbq/internal/app/headless"
@@ -17,7 +16,9 @@ import (
 
 func Run() {
 	if err := run(os.Args, os.Stdout, os.Stderr); err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
+		if _, err := fmt.Fprintf(os.Stderr, "%v\n", err); err != nil {
+			panic(err)
+		}
 		os.Exit(1)
 	}
 }
