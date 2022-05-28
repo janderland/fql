@@ -457,13 +457,9 @@ func parseValueType(token string) (q.ValueType, error) {
 }
 
 func parseData(token string) (
-	// The interface returned by this function has
-	// the methods for both the keyval.TupElement &
-	// keyval.Value types.
 	interface {
-		TupElement(q.TupleOperation)
-		Value(q.ValueOperation)
-		Eq(interface{}) bool
+		q.TupElement
+		q.Value
 	},
 	error,
 ) {
@@ -476,20 +472,28 @@ func parseData(token string) (
 	if token == internal.False {
 		return q.Bool(false), nil
 	}
+
 	if strings.HasPrefix(token, internal.HexStart) {
-		token = token[len(internal.HexStart):]
-		if len(token)%2 != 0 {
-			return nil, errors.New("expected even number of hex digits")
-		}
-		data, err := hex.DecodeString(token)
+		data, err := hex.DecodeString(token[len(internal.HexStart):])
 		if err != nil {
 			return nil, err
 		}
 		return q.Bytes(data), nil
 	}
+
 	if strings.Count(token, "-") == 4 {
-		return parseUUID(token)
+		var uuid q.UUID
+		_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
+		if err != nil {
+			return nil, err
+		}
+		return uuid, nil
 	}
+
+	// We attempt to parse as Int before Uint to mimic the
+	// way tuple.Unpack decodes integers: if the value fits
+	// within an int then it's parsed a such, regardless
+	// of the value's type during formatting.
 	i, err := strconv.ParseInt(token, 10, 64)
 	if err == nil {
 		return q.Int(i), nil
@@ -498,60 +502,11 @@ func parseData(token string) (
 	if err == nil {
 		return q.Uint(u), nil
 	}
+
 	f, err := strconv.ParseFloat(token, 64)
 	if err == nil {
 		return q.Float(f), nil
 	}
+
 	return nil, errors.New("unrecognized data element")
-}
-
-func parseUUID(token string) (q.UUID, error) {
-	groups := strings.Split(token, "-")
-	checkLen := func(i int, expLen int) error {
-		if len(groups[i]) != expLen {
-			return errors.Errorf("the %s group should contain %d characters rather than %d", ordinal(i+1), expLen, len(groups[i]))
-		}
-		return nil
-	}
-	if err := checkLen(0, 8); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(1, 4); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(2, 4); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(3, 4); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(4, 12); err != nil {
-		return q.UUID{}, err
-	}
-
-	var uuid q.UUID
-	_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
-	if err != nil {
-		return q.UUID{}, err
-	}
-	return uuid, nil
-}
-
-func ordinal(x int) string {
-	suffix := "th"
-	switch x % 10 {
-	case 1:
-		if x%100 != 11 {
-			suffix = "st"
-		}
-	case 2:
-		if x%100 != 12 {
-			suffix = "nd"
-		}
-	case 3:
-		if x%100 != 13 {
-			suffix = "rd"
-		}
-	}
-	return strconv.Itoa(x) + suffix
 }

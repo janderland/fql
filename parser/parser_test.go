@@ -274,28 +274,6 @@ func TestData(t *testing.T) {
 			require.Equal(t, test.str, f.String())
 		})
 	}
-}
-
-func TestUUID(t *testing.T) {
-	roundTrips := []struct {
-		name string
-		str  string
-		ast  q.UUID
-	}{
-		{name: "normal", str: "bcefd2ec-4df5-43b6-8c79-81b70b886af9", ast: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}},
-	}
-
-	for _, test := range roundTrips {
-		t.Run(test.name, func(t *testing.T) {
-			ast, err := parseUUID(test.str)
-			require.NoError(t, err)
-			require.Equal(t, test.ast, ast)
-
-			f := newFormat()
-			f.UUID(test.ast)
-			require.Equal(t, test.str, f.String())
-		})
-	}
 
 	parseFailures := []struct {
 		name string
@@ -311,9 +289,9 @@ func TestUUID(t *testing.T) {
 	}
 
 	for _, test := range parseFailures {
-		ast, err := parseUUID(test.str)
+		ast, err := parseData(test.str)
 		require.Error(t, err)
-		require.Equal(t, q.UUID{}, ast)
+		require.Nil(t, ast)
 	}
 }
 
