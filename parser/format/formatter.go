@@ -2,142 +2,93 @@ package format
 
 import (
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/parser/internal"
 )
 
-type queryOp struct {
-	str string
+type dirOp struct {
+	format *Format
 }
 
-var _ q.QueryOperation = &queryOp{}
+var _ q.DirectoryOperation = &dirOp{}
 
-func (x *queryOp) ForDirectory(in q.Directory) {
-	x.str = Directory(in)
+type op struct {
+	format *Format
 }
 
-func (x *queryOp) ForKey(in q.Key) {
-	x.str = Key(in)
+func (x *dirOp) ForString(in q.String) {
+	x.format.str.WriteString(string(in))
 }
 
-func (x *queryOp) ForKeyValue(in q.KeyValue) {
-	x.str = Keyval(in)
+func (x *dirOp) ForVariable(in q.Variable) {
+	x.format.Variable(in)
 }
 
-type directoryOp struct {
-	str string
+var (
+	_ q.QueryOperation = &op{}
+	_ q.TupleOperation = &op{}
+	_ q.ValueOperation = &op{}
+)
+
+func (x *op) ForDirectory(in q.Directory) {
+	x.format.Directory(in)
 }
 
-var _ q.DirectoryOperation = &directoryOp{}
-
-func (x *directoryOp) ForVariable(in q.Variable) {
-	x.str = variable(in)
+func (x *op) ForKey(in q.Key) {
+	x.format.Key(in)
 }
 
-func (x *directoryOp) ForString(in q.String) {
-	x.str = string(in)
+func (x *op) ForKeyValue(in q.KeyValue) {
+	x.format.KeyValue(in)
 }
 
-type tupleOp struct {
-	str string
+func (x *op) ForVariable(in q.Variable) {
+	x.format.Variable(in)
 }
 
-var _ q.TupleOperation = &tupleOp{}
+func (x *op) ForString(in q.String) {
+	x.format.Str(in)
+}
 
-func (x *tupleOp) ForBigInt(q.BigInt) {
+func (x *op) ForBigInt(q.BigInt) {
 	// TODO: Implement BigInt formatting.
 	panic("not implemented")
 }
 
-func (x *tupleOp) ForNil(q.Nil) {
-	x.str = internal.Nil
+func (x *op) ForNil(in q.Nil) {
+	x.format.Nil(in)
 }
 
-func (x *tupleOp) ForMaybeMore(q.MaybeMore) {
-	x.str = internal.MaybeMore
+func (x *op) ForMaybeMore(in q.MaybeMore) {
+	x.format.MaybeMore(in)
 }
 
-func (x *tupleOp) ForTuple(in q.Tuple) {
-	x.str = Tuple(in)
+func (x *op) ForTuple(in q.Tuple) {
+	x.format.Tuple(in)
 }
 
-func (x *tupleOp) ForInt(in q.Int) {
-	x.str = integer(in)
+func (x *op) ForInt(in q.Int) {
+	x.format.Int(in)
 }
 
-func (x *tupleOp) ForUint(in q.Uint) {
-	x.str = unsigned(in)
+func (x *op) ForUint(in q.Uint) {
+	x.format.Uint(in)
 }
 
-func (x *tupleOp) ForBool(in q.Bool) {
-	x.str = boolean(in)
+func (x *op) ForBool(in q.Bool) {
+	x.format.Bool(in)
 }
 
-func (x *tupleOp) ForFloat(in q.Float) {
-	x.str = float(in)
+func (x *op) ForFloat(in q.Float) {
+	x.format.Float(in)
 }
 
-func (x *tupleOp) ForString(in q.String) {
-	x.str = str(in)
+func (x *op) ForUUID(in q.UUID) {
+	x.format.UUID(in)
 }
 
-func (x *tupleOp) ForUUID(in q.UUID) {
-	x.str = uuid(in)
+func (x *op) ForBytes(in q.Bytes) {
+	x.format.Bytes(in)
 }
 
-func (x *tupleOp) ForBytes(in q.Bytes) {
-	x.str = hexadecimal(in)
-}
-
-func (x *tupleOp) ForVariable(in q.Variable) {
-	x.str = variable(in)
-}
-
-type valueOp struct {
-	str string
-}
-
-var _ q.ValueOperation = &valueOp{}
-
-func (x *valueOp) ForNil(q.Nil) {
-	x.str = internal.Nil
-}
-
-func (x *valueOp) ForClear(q.Clear) {
-	x.str = internal.Clear
-}
-
-func (x *valueOp) ForTuple(in q.Tuple) {
-	x.str = Tuple(in)
-}
-
-func (x *valueOp) ForInt(in q.Int) {
-	x.str = integer(in)
-}
-
-func (x *valueOp) ForUint(in q.Uint) {
-	x.str = unsigned(in)
-}
-
-func (x *valueOp) ForBool(in q.Bool) {
-	x.str = boolean(in)
-}
-
-func (x *valueOp) ForFloat(in q.Float) {
-	x.str = float(in)
-}
-
-func (x *valueOp) ForString(in q.String) {
-	x.str = str(in)
-}
-
-func (x *valueOp) ForUUID(in q.UUID) {
-	x.str = uuid(in)
-}
-
-func (x *valueOp) ForBytes(in q.Bytes) {
-	x.str = hexadecimal(in)
-}
-
-func (x *valueOp) ForVariable(in q.Variable) {
-	x.str = variable(in)
+func (x *op) ForClear(in q.Clear) {
+	x.format.Clear(in)
 }

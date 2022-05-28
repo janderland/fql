@@ -9,122 +9,118 @@ import (
 	"github.com/janderland/fdbq/parser/internal"
 )
 
-func Query(in q.Query) string {
-	var op queryOp
-	in.Query(&op)
-	return op.str
+type Format struct {
+	str *strings.Builder
 }
 
-func Keyval(in q.KeyValue) string {
-	return Key(in.Key) + string(internal.KeyValSep) + Value(in.Value)
+func New() Format {
+	var str strings.Builder
+	return Format{&str}
 }
 
-func Key(in q.Key) string {
-	return Directory(in.Directory) + Tuple(in.Tuple)
+func (x *Format) String() string {
+	return x.str.String()
 }
 
-func Value(in q.Value) string {
-	var op valueOp
-	in.Value(&op)
-	return op.str
+func (x *Format) Query(in q.Query) {
+	in.Query(&op{x})
 }
 
-func Directory(in q.Directory) string {
-	var b strings.Builder
-	var op directoryOp
+func (x *Format) KeyValue(in q.KeyValue) {
+	x.Key(in.Key)
+	x.str.WriteRune(internal.KeyValSep)
+	x.Value(in.Value)
+}
 
+func (x *Format) Key(in q.Key) {
+	x.Directory(in.Directory)
+	x.Tuple(in.Tuple)
+}
+
+func (x *Format) Value(in q.Value) {
+	in.Value(&op{x})
+}
+
+func (x *Format) Directory(in q.Directory) {
 	for _, part := range in {
-		b.WriteRune(internal.DirSep)
-		part.DirElement(&op)
-		b.WriteString(op.str)
+		x.str.WriteRune(internal.DirSep)
+		part.DirElement(&dirOp{x})
 	}
-
-	return b.String()
 }
 
-func Tuple(in q.Tuple) string {
-	var b strings.Builder
-	var op tupleOp
-
-	b.WriteRune(internal.TupStart)
+func (x *Format) Tuple(in q.Tuple) {
+	x.str.WriteRune(internal.TupStart)
 	for i, element := range in {
 		if i != 0 {
-			b.WriteRune(internal.TupSep)
+			x.str.WriteRune(internal.TupSep)
 		}
-		element.TupElement(&op)
-		b.WriteString(op.str)
+		element.TupElement(&op{x})
 	}
-	b.WriteRune(internal.TupEnd)
-
-	return b.String()
+	x.str.WriteRune(internal.TupEnd)
 }
 
-func variable(in q.Variable) string {
-	var b strings.Builder
-
-	b.WriteRune(internal.VarStart)
+func (x *Format) Variable(in q.Variable) {
+	x.str.WriteRune(internal.VarStart)
 	for i, vType := range in {
 		if i != 0 {
-			b.WriteRune(internal.VarSep)
+			x.str.WriteRune(internal.VarSep)
 		}
-		b.WriteString(string(vType))
+		x.str.WriteString(string(vType))
 	}
-	b.WriteRune(internal.VarEnd)
-
-	return b.String()
+	x.str.WriteRune(internal.VarEnd)
 }
 
-func hexadecimal(in q.Bytes) string {
-	var out strings.Builder
-
-	out.WriteString(internal.HexStart)
-	out.WriteString(hex.EncodeToString(in))
-
-	return out.String()
+func (x *Format) Bytes(in q.Bytes) {
+	x.str.WriteString(internal.HexStart)
+	x.str.WriteString(hex.EncodeToString(in))
 }
 
-func str(in q.String) string {
-	var out strings.Builder
-
-	out.WriteRune(internal.StrMark)
-	out.WriteString(string(in))
-	out.WriteRune(internal.StrMark)
-
-	return out.String()
+func (x *Format) Str(in q.String) {
+	x.str.WriteRune(internal.StrMark)
+	x.str.WriteString(string(in))
+	x.str.WriteRune(internal.StrMark)
 }
 
-func uuid(in q.UUID) string {
-	var out strings.Builder
-
-	out.WriteString(hex.EncodeToString(in[:4]))
-	out.WriteRune('-')
-	out.WriteString(hex.EncodeToString(in[4:6]))
-	out.WriteRune('-')
-	out.WriteString(hex.EncodeToString(in[6:8]))
-	out.WriteRune('-')
-	out.WriteString(hex.EncodeToString(in[8:10]))
-	out.WriteRune('-')
-	out.WriteString(hex.EncodeToString(in[10:]))
-
-	return out.String()
+func (x *Format) UUID(in q.UUID) {
+	x.str.WriteString(hex.EncodeToString(in[:4]))
+	x.str.WriteRune('-')
+	x.str.WriteString(hex.EncodeToString(in[4:6]))
+	x.str.WriteRune('-')
+	x.str.WriteString(hex.EncodeToString(in[6:8]))
+	x.str.WriteRune('-')
+	x.str.WriteString(hex.EncodeToString(in[8:10]))
+	x.str.WriteRune('-')
+	x.str.WriteString(hex.EncodeToString(in[10:]))
 }
 
-func boolean(in q.Bool) string {
+func (x *Format) Bool(in q.Bool) {
 	if in {
-		return internal.True
+		x.str.WriteString(internal.True)
 	} else {
-		return internal.False
+		x.str.WriteString(internal.False)
 	}
 }
 
-func integer(in q.Int) string {
-	return strconv.FormatInt(int64(in), 10)
+func (x *Format) Int(in q.Int) {
+	x.str.WriteString(strconv.FormatInt(int64(in), 10))
 }
 
-func unsigned(in q.Uint) string {
-	return strconv.FormatUint(uint64(in), 10)
+func (x *Format) Uint(in q.Uint) {
+	x.str.WriteString(strconv.FormatUint(uint64(in), 10))
 }
 
-func float(in q.Float) string {
-	return strconv.FormatFloat(float64(in), 'g', 10, 64)
+func (x *Format) Float(in q.Float) {
+	x.str.WriteString(strconv.FormatFloat(float64(in), 'g', 10, 64))
+}
+
+func (x *Format) Nil(_ q.Nil) {
+	x.str.WriteString(internal.Nil)
+}
+
+func (x *Format) Clear(_ q.Clear) {
+	x.str.WriteString(internal.Clear)
+}
+
+func (x *Format) MaybeMore(_ q.MaybeMore) {
+	x.str.WriteString(internal.MaybeMore)
 }
