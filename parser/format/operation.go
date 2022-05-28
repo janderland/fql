@@ -14,6 +14,11 @@ type op struct {
 	format *Format
 }
 
+// The keyval.DirectoryOperation methods are defined
+// in their own struct so the ForString method could
+// be handled differently. In the case of a directory,
+// we want keyval.String to format without quotes.
+
 func (x *dirOp) ForString(in q.String) {
 	x.format.str.WriteString(string(in))
 }
