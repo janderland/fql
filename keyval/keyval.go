@@ -108,18 +108,62 @@ type (
 
 // These are the "primitive" types.
 type (
-	Nil    struct{}
-	Int    int64
-	Uint   uint64
-	Bool   bool
-	Float  float64
+	// Nil is a "primitive" type representing an empty element
+	// when used as a TupElement. It's equivalent to an empty
+	// Bytes when used as a Value.
+	Nil struct{}
+
+	// Int is a "primitive" type implementing an int64 as either
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as an 8-byte array. Endianness depends on how the
+	// engine.Engine is configured.
+	// TODO: Mention int/uint deserialization.
+	// TODO: Mention the byte format standard.
+	Int int64
+
+	// Uint is a "primitive" type implementing an uint64 as either
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as an 8-byte array. Endianness depends on how the
+	// engine.Engine is configured.
+	// TODO: Mention int/uint deserialization.
+	// TODO: Mention the byte format standard.
+	Uint uint64
+
+	// Bool is a "primitive" type implementing a bool as either a
+	// TupElement or Value. When used as a Value, it's serialized
+	// as a single byte (0 for false, 1 for true).
+	Bool bool
+
+	// Float is a "primitive" type implementing a float64 as either
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as an 8-byte array. Endianness depends on how the
+	// engine.Engine is configured.
+	// TODO: Mention the byte format standard.
+	Float float64
+
+	// BigInt is a "primitive" type implementing a big.Int as either
+	// a TupElement or Value.
+	// TODO: Describe serialization.
 	BigInt big.Int
+
+	// String is a "primitive" type implementing a string as either
+	// a TupElement or Value.
+	// TODO: Describe serialization.
+	// TODO: Mention the byte format standard.
 	String string
-	UUID   [16]byte
-	Bytes  []byte
+
+	// UUID is a "primitive" type implementing a 16-byte string as
+	// either a TupElement or Value.
+	// TODO: Do we need to swap byte-order depending endianness?
+	UUID [16]byte
+
+	// Bytes is a "primitive" type implementing a byte string as
+	// either a TupElement or Value.
+	// TODO: Do we need to swap byte-order depending endianness?
+	Bytes []byte
 )
 
-// ValueType specifies the variable's expected type.
+// ValueType define the expected types of a Variable.
 type ValueType string
 
 const (
@@ -135,6 +179,7 @@ const (
 	TupleType  ValueType = "tuple"
 )
 
+// AllTypes returns all valid values for ValueType.
 func AllTypes() []ValueType {
 	return []ValueType{
 		AnyType,
