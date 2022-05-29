@@ -13,6 +13,7 @@ key = directory tuple
 
 value = 'clear' | data
 
+(* TODO: Required quotes for multiline dir names *)
 directory = '/' ( '<>' | text ) [ directory ]
 
 tuple = '{' [ nl elements [ ',' ] nl ] '}'
