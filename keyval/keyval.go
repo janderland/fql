@@ -1,32 +1,48 @@
 // Package keyval provides types representing key-values and utilities
-// for their inspection and manipulation. These types serve as both the
-// AST which the FDBQ parser outputs and as part of the Go API for
-// performing queries.
+// for their inspection and manipulation. These types model both queries
+// and the data returned by queries. These types can be constructed from
+// query strings by the Parser but are also designed to be easily
+// constructed directly in a Go app.
 //
 // Embedded Query Strings
 //
 // When working with SQL, programmers will often embed SQL strings in
 // the application. This requires extra tooling to catch syntax errors
 // at build time. Instead of using string literals, FDBQ allows the
-// programmer to directly construct the queries using the type-safe AST,
-// allowing some syntax errors to be caught at build time.
+// programmer to directly construct the queries using the types in this
+// package, allowing some syntax errors to be caught at build time.
 //
 // This package does not prevent all kinds of syntax errors, only
 // "structural" ones. For instance, the type system ensures tuples only
 // contain valid elements and limits what kinds of objects can be used
-// as the value of a key-value. In spite of this, an invalid query
-// can still be constructed (see package "class").
+// as the value of a key-value. In spite of this, invalid queries can
+// still be constructed (see package "class").
 //
-// Visitor Pattern
+// Operations (Visitor Pattern)
 //
 // The Directory, Tuple, & Value types would be best represented by tagged
 // unions. While Go does not natively support tagged unions, this package
-// implements equivalent functionality using interfaces. Furthermore, these
-// interfaces implement the visitor pattern which avoids the need for type
-// switches. While type switches will almost certainly result in a faster
-// runtime, the programmer must remember to handle all the types implementing
-// a given interface. The visitor pattern forces the programmer to handle all
-// relevant types via the type system.
+// implements equivalent functionality using the visitor pattern.
+//
+// Instead of implementing a type switch which handles every type in the
+// union, a visitor interface is implemented with methods handling each
+// type. The correct method is called at runtime via some generated glue
+// code. This glue code also defines an interface for the union itself,
+// allowing us to avoid using interface{}.
+//
+// Structs implementing these visitor interfaces define a parameterized
+// (generic) function for the types in the union. For this reason, they
+// are called "operations" rather than "visitors" in this codebase (see
+// package "operation").
+//
+// Data Types
+//
+// There are a special group of types defined in this package named the
+// "primitive" types. These include Nil, Int, Uint, Bool, Float, String,
+// UUID, and Bytes. All of these types can be used as a TupElement or as
+// a Value. When used as a TupElement, they are serialized by FDB tuple
+// packing. When used as a Value, they are known as a "primitive" value
+// and are serialized by FDBQ.
 package keyval
 
 import "math/big"
@@ -37,54 +53,61 @@ import "math/big"
 //go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
 
 type (
+	// Query is an interface implemented by the types which can
+	// be passed to engine.Engine as a query. This includes
+	// KeyValue, Key, & Directory.
 	Query = query
 
-	// A KeyValue is a query or result depending on the
-	// context. If the KeyValue is a result, it will not
-	// contain a Variable.
+	// KeyValue can be passed to engine.Engine as a query
+	// or be returned from engine.Engine as a query's result.
+	// When returned as a result, KeyValue will not contain a
+	// Variable, Clear, or MaybeMore.
 	KeyValue struct {
 		Key   Key
 		Value Value
 	}
 
-	// A Key represents an FDB key made up of a Directory
-	// and optionally a Tuple. A Key cannot have both an
-	// empty Directory and an empty Tuple.
+	// Key can be passed to engine.Engine as a query or be
+	// returned from engine.Engine as part of a query's result.
+	// When used as a query, it is equivalent to a KeyValue
+	// whose Value is an empty Variable. When returned as a
+	// result, it will not contain a Variable or MaybeMore.
 	Key struct {
 		Directory Directory
 		Tuple     Tuple
 	}
 
-	// A Directory is equivalent to a path used by the
-	// directory layer of the FDB API. A Directory may
-	// contain instances of string or Variable.
+	// Directory can be passed to engine.Engine as a query or
+	// be returned from engine.Engine as part of a query's
+	// result. When used as a query, only the directory layer
+	// is accessed. It may contain String or Variable.
 	Directory []DirElement
 
-	// A Tuple is similar to a tuple.Tuple. It may contain
-	// anything in a valid tuple.Tuple in addition to
-	// Variable and Tuple.
+	// Tuple may contain another Tuple, Variable, MaybeMore,
+	// or any of the "primitive" types.
 	Tuple []TupElement
 
-	// A Value represents an FDB value stored alongside
-	// a key. This type may contain nil, Int, Uint, Bool,
-	// Float, BigInt, String, UUID, Bytes, Tuple, Variable,
-	// or Clear.
+	// Value may contain Tuple, Variable, Clear, or any
+	// of the "primitive" types.
 	Value = value
 
-	// A Variable is used as a placeholder for any valid
-	// values within a type constraint.
+	// Variable
+	// TODO: Documentation
 	Variable []ValueType
 
-	// A MaybeMore is a special kind of TupElement. It
-	// may only appear as the last element of the Tuple.
-	// It designates that the Tuple will match all Tuples
-	// which contain a matching prefix.
+	// MaybeMore is a special kind of TupElement. It may only
+	// appear as the last element of the Tuple. It causes a
+	// query to access all key-values whose keys are prefixed
+	// by the query's key.
 	MaybeMore struct{}
 
-	// A Clear is a special kind of Value which designates
+	// Clear is a special kind of Value which designates
 	// a KeyValue as a clear operation.
 	Clear struct{}
+)
 
+// These are the "primitive" types.
+type (
 	Nil    struct{}
 	Int    int64
 	Uint   uint64
