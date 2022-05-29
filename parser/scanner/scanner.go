@@ -35,6 +35,7 @@ const (
 	// not identified by the given TokenKind constants. This kind of
 	// token is used to represent directory names, value types, and
 	// data elements (numbers, strings, UUIDs, etc...).
+	// TODO: Is there a better name than TokenKindOther?
 	TokenKindOther
 
 	// TokenKindEnd is returned from Scanner.Scan when the wrapped
@@ -178,10 +179,9 @@ type Scanner struct {
 
 // New creates a Scanner which reads from the given io.Reader.
 func New(src io.Reader) Scanner {
-	var token strings.Builder
 	return Scanner{
 		source: bufio.NewReader(src),
-		token:  &token,
+		token:  &strings.Builder{},
 		state:  stateWhitespace,
 	}
 }

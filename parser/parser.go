@@ -107,11 +107,23 @@ type Token struct {
 }
 
 type Error struct {
+	// Tokens is the tokens returned from
+	// the scanner.Scanner for the string
+	// being parsed.
 	Tokens []Token
-	Index  int
-	Err    error
+
+	// Index is the index of the token
+	// where the parsing failed.
+	Index int
+
+	// Err is the error encountered
+	// at the failing token.
+	Err error
 }
 
+// Error converts the Error to a string
+// made up of all the tokens with the
+// invalid token marked as such.
 func (x *Error) Error() string {
 	var msg strings.Builder
 	for i, token := range x.Tokens {
@@ -126,6 +138,8 @@ func (x *Error) Error() string {
 	return errors.Wrap(x.Err, msg.String()).Error()
 }
 
+// Parser obtains tokens from the given scanner.Scanner
+// and attempts to parse them into a keyval.Query.
 type Parser struct {
 	scanner scanner.Scanner
 	tokens  []Token
@@ -141,6 +155,9 @@ func (x *Parser) Parse() (q.Query, error) {
 		kv  internal.KeyValBuilder
 		tup internal.TupBuilder
 
+		// If true, when internal.TupBuilder ends its
+		// root tuple, the tuple is copied into the query's
+		// value. Otherwise, it's copied into the key.
 		valTup bool
 	)
 
@@ -150,6 +167,10 @@ func (x *Parser) Parse() (q.Query, error) {
 			return nil, err
 		}
 
+		// We make sure to add the token to our running
+		// list before handling it below. The withTokens
+		// method assumes the last token added is the
+		// problematic one.
 		token := x.scanner.Token()
 		x.tokens = append(x.tokens, Token{
 			Kind:  kind,
@@ -157,6 +178,9 @@ func (x *Parser) Parse() (q.Query, error) {
 		})
 
 		switch x.state {
+		// The Parser should be at stateInitial when it begins
+		// parsing a query. Because all queries begin with a
+		// TokenKindDirSep, this is the only accepted token.
 		case stateInitial:
 			switch kind {
 			case scanner.TokenKindDirSep:
@@ -166,6 +190,31 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// During stateDirHead, the Parser creates a new
+		// keyval.DirElement. If the new element is a variable,
+		// the Parser transitions to stateDirVarEnd. Otherwise,
+		// it transitions to stateDirTail.
+		// TODO: Remove the '\' from escapes.
+		case stateDirHead:
+			switch kind {
+			case scanner.TokenKindVarStart:
+				x.state = stateDirVarEnd
+				kv.AppendVarToDirectory()
+
+			case scanner.TokenKindEscape, scanner.TokenKindOther:
+				x.state = stateDirTail
+				kv.AppendPartToDirectory(token)
+
+			default:
+				return nil, x.withTokens(x.tokenErr(kind))
+			}
+
+		// During stateDirTail, the Parser finishes building
+		// the latest keyval.DirElement and then transitions
+		// to create a new element, start parsing the key's
+		// tuple, or finishes the query as a directory query.
+		// TODO: Don't allow appending after stateDirVarEnd.
+		// TODO: Remove the '\' from escapes.
 		case stateDirTail:
 			switch kind {
 			case scanner.TokenKindDirSep:
@@ -195,29 +244,24 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// stateDirVarEnd ensures that a TokenKindVarEnd
+		// follows a TokenKindVarStart which was read
+		// during the previous stateDirHead.
 		case stateDirVarEnd:
 			switch kind {
 			case scanner.TokenKindVarEnd:
 				x.state = stateDirTail
-				kv.AppendVarToDirectory()
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		case stateDirHead:
-			switch kind {
-			case scanner.TokenKindVarStart:
-				x.state = stateDirVarEnd
-
-			case scanner.TokenKindEscape, scanner.TokenKindOther:
-				x.state = stateDirTail
-				kv.AppendPartToDirectory(token)
-
-			default:
-				return nil, x.withTokens(x.tokenErr(kind))
-			}
-
+		// During stateTupleHead, the Parser creates a new
+		// keyval.TupElement current tuple, starts a new
+		// sub-tuple, or ends the current tuple. Allowing
+		// tuples to end in this state lets us parse empty
+		// tuples and ignore trailing commas on the final
+		// element.
 		case stateTupleHead:
 			switch kind {
 			case scanner.TokenKindTupStart:
@@ -261,6 +305,11 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// During stateTupleTail, the Parser either transitions state
+		// to create a new keyval.TupElement or finishes the current
+		// tuple. The tuple being constructed may be a sub-tuple. If
+		// the tuple is finished and is not a sub-tuple, the tuple
+		// is copied from its build into the query.
 		case stateTupleTail:
 			switch kind {
 			case scanner.TokenKindTupEnd:
@@ -268,10 +317,10 @@ func (x *Parser) Parse() (q.Query, error) {
 					if valTup {
 						x.state = stateFinished
 						kv.SetValue(tup.Get())
-						break
+					} else {
+						x.state = stateSeparator
+						kv.SetKeyTuple(tup.Get())
 					}
-					x.state = stateSeparator
-					kv.SetKeyTuple(tup.Get())
 				}
 
 			case scanner.TokenKindTupSep:
@@ -284,6 +333,10 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// During stateTupleString, the Parser appends tokens into
+		// the last tuple element (assumed to be a keyval.String)
+		// until a TokenKindStrMark is reached.
+		// TODO: Remove the '\' from escapes.
 		case stateTupleString:
 			if kind == scanner.TokenKindEnd {
 				return nil, x.withTokens(x.tokenErr(kind))
@@ -296,6 +349,11 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
 			}
 
+		// During stateTupleVarHead, the Parser a token converted into
+		// a keyval.ValueType to the last tuple element (assumed to be
+		// a keyval.Variable). If the token is a TokenKindVarEnd then
+		// the variable is completed and the Parser moves on to the
+		// next tuple element.
 		case stateTupleVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -315,6 +373,10 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// During stateTupleVarTail, the Parser either transitions
+		// to stateTupleVarHead to parse another value type or it
+		// completes the variable and continues on to the next
+		// tuple element.
 		case stateTupleVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -327,6 +389,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// stateSeparator occurs after the key's tuple is completed.
+		// The Parser then either begins parsing the value or
+		// returns the key as the query.
 		case stateSeparator:
 			switch kind {
 			case scanner.TokenKindEnd:
@@ -339,6 +404,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// stateValue begins the parsing of the value. The Parser
+		// either begins to parse a tuple, begins to parse a
+		// variable, or parses the tokens as a raw value.
 		case stateValue:
 			switch kind {
 			case scanner.TokenKindTupStart:
@@ -366,6 +434,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// TODO: Merge with stateTupleVarHead.
 		case stateValueVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -385,6 +454,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// TODO: Merge with stateTupleVarTail.
 		case stateValueVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -397,6 +467,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
+		// During stateFinished, the query is finished and
+		// the Parser isn't expecting any tokens except
+		// for TokenKindWhitespace.
 		case stateFinished:
 			switch kind {
 			case scanner.TokenKindWhitespace:
@@ -415,6 +488,7 @@ func (x *Parser) Parse() (q.Query, error) {
 	}
 }
 
+// withTokens wraps the given generic error with an Error.
 func (x *Parser) withTokens(err error) error {
 	out := Error{
 		Index: len(x.tokens),
@@ -457,13 +531,9 @@ func parseValueType(token string) (q.ValueType, error) {
 }
 
 func parseData(token string) (
-	// The interface returned by this function has
-	// the methods for both the keyval.TupElement &
-	// keyval.Value types.
 	interface {
-		TupElement(q.TupleOperation)
-		Value(q.ValueOperation)
-		Eq(interface{}) bool
+		q.TupElement
+		q.Value
 	},
 	error,
 ) {
@@ -476,20 +546,28 @@ func parseData(token string) (
 	if token == internal.False {
 		return q.Bool(false), nil
 	}
+
 	if strings.HasPrefix(token, internal.HexStart) {
-		token = token[len(internal.HexStart):]
-		if len(token)%2 != 0 {
-			return nil, errors.New("expected even number of hex digits")
-		}
-		data, err := hex.DecodeString(token)
+		data, err := hex.DecodeString(token[len(internal.HexStart):])
 		if err != nil {
 			return nil, err
 		}
 		return q.Bytes(data), nil
 	}
+
 	if strings.Count(token, "-") == 4 {
-		return parseUUID(token)
+		var uuid q.UUID
+		_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
+		if err != nil {
+			return nil, err
+		}
+		return uuid, nil
 	}
+
+	// We attempt to parse as Int before Uint to mimic the
+	// way tuple.Unpack decodes integers: if the value fits
+	// within an int then it's parsed a such, regardless
+	// of the value's type during formatting.
 	i, err := strconv.ParseInt(token, 10, 64)
 	if err == nil {
 		return q.Int(i), nil
@@ -498,60 +576,11 @@ func parseData(token string) (
 	if err == nil {
 		return q.Uint(u), nil
 	}
+
 	f, err := strconv.ParseFloat(token, 64)
 	if err == nil {
 		return q.Float(f), nil
 	}
+
 	return nil, errors.New("unrecognized data element")
-}
-
-func parseUUID(token string) (q.UUID, error) {
-	groups := strings.Split(token, "-")
-	checkLen := func(i int, expLen int) error {
-		if len(groups[i]) != expLen {
-			return errors.Errorf("the %s group should contain %d characters rather than %d", ordinal(i+1), expLen, len(groups[i]))
-		}
-		return nil
-	}
-	if err := checkLen(0, 8); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(1, 4); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(2, 4); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(3, 4); err != nil {
-		return q.UUID{}, err
-	}
-	if err := checkLen(4, 12); err != nil {
-		return q.UUID{}, err
-	}
-
-	var uuid q.UUID
-	_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
-	if err != nil {
-		return q.UUID{}, err
-	}
-	return uuid, nil
-}
-
-func ordinal(x int) string {
-	suffix := "th"
-	switch x % 10 {
-	case 1:
-		if x%100 != 11 {
-			suffix = "st"
-		}
-	case 2:
-		if x%100 != 12 {
-			suffix = "nd"
-		}
-	case 3:
-		if x%100 != 13 {
-			suffix = "rd"
-		}
-	}
-	return strconv.Itoa(x) + suffix
 }
