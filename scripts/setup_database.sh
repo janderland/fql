@@ -11,8 +11,12 @@ FDB_DESCRIPTION_ID=${2:-docker:docker}
 # Obtain the IP for FDB from the given hostname.
 FDB_IP=$(getent hosts "$FDB_HOSTNAME" | awk '{print $1}')
 
+# This variable is recognised by fdbcli and ensures that a fdb.cluster file in
+# the current directory won't interfere with this script.
+export FDB_CLUSTER_FILE="/etc/foundationdb/fdb.cluster"
+
 # Create the FDB cluster file.
-echo "${FDB_DESCRIPTION_ID}@${FDB_IP}:4500" > /etc/foundationdb/fdb.cluster
+echo "${FDB_DESCRIPTION_ID}@${FDB_IP}:4500" > $FDB_CLUSTER_FILE
 
 # Search for the "unreadable_configuration" message in the cluster's status. This message
 # would let us know that the database hasn't been initialized.

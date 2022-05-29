@@ -1,19 +1,7 @@
 version: "3.9"
 services:
-  verify_built:
-    container_name: "verify-built"
-    image: "docker.io/janderland/fdbq-verify:latest"
-    build:
-      context: "."
-      dockerfile: "./docker/verify/Dockerfile"
-    depends_on:
-      - "fdb"
-    working_dir: "/fdbq"
-    volumes:
-      - "cache:/cache"
-    command: ["/bin/sh", "-c", "./scripts/setup_database.sh && ./scripts/verify_codebase.sh"]
-  verify_mounted:
-    container_name: "verify-mounted"
+  verify:
+    container_name: "verify"
     image: "docker.io/janderland/fdbq-build:latest"
     depends_on:
       - "fdb"

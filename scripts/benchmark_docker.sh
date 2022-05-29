@@ -1,6 +1,16 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+echo "This script was used to compared CI Docker setups."
+echo "One setup mounted the root dir on to the container."
+echo "The other setup built the root dir into a new image"
+echo "every time CI was run. Because the MacOS integration"
+echo "for mounting Docker volumes was so bad, the latter"
+echo "was once the faster setup. The MacOS integration"
+echo "has improved so there is no need for the built-in"
+echo "setup nor this benchmarking script."
+exit 1
+
 # Change directory to repo root.
 cd "${0%/*}/.."
 
