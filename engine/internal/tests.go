@@ -1,7 +1,8 @@
 package internal
 
 import (
-	"math/rand"
+	"crypto/rand"
+	"encoding/binary"
 	"os"
 	"testing"
 
@@ -22,7 +23,7 @@ func TestEnv(t *testing.T, force bool, f func(facade.Transactor, zerolog.Logger)
 	}
 	if exists {
 		if !force {
-			t.Fatal(errors.New("test directory already exists, use '-force' flag to remove"))
+			t.Fatal(errors.Errorf("test directory '%v' already exists, use '-force' flag to remove", rootPath))
 		}
 		if _, err := directory.Root().Remove(db, rootPath); err != nil {
 			t.Fatal(errors.Wrap(err, "failed to remove directory"))
@@ -53,7 +54,17 @@ var letters = []rune("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ")
 func genRootPath() []string {
 	root := make([]rune, 6)
 	for i := range root {
-		root[i] = letters[rand.Intn(len(letters))]
+		b := make([]byte, 8)
+		_, err := rand.Read(b)
+		if err != nil {
+			panic(err)
+		}
+
+		n := int(binary.BigEndian.Uint64(b))
+		if n < 0 {
+			n = -n
+		}
+		root[i] = letters[n%len(letters)]
 	}
 	return []string{string(root)}
 }
