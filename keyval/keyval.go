@@ -121,14 +121,12 @@ type (
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as a 2-compliment 8-byte string. Endianness depends on how
 	// the engine.Engine is configured.
-	// TODO: Mention int/uint deserialization.
 	Int int64
 
 	// Uint is a "primitive" type implementing an uint64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as an 8-byte array. Endianness depends on how the
 	// engine.Engine is configured.
-	// TODO: Mention int/uint deserialization.
 	Uint uint64
 
 	// Bool is a "primitive" type implementing a bool as either a
@@ -138,30 +136,28 @@ type (
 
 	// Float is a "primitive" type implementing a float64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
-	// as an 8-byte array. Endianness depends on how the
-	// engine.Engine is configured.
-	// TODO: Mention the byte format standard.
+	// as an 8-byte array in accordance with IEEE 754. Endianness
+	// depends on how Endianness depends on how the engine.Engine
+	// is configured.
 	Float float64
 
 	// BigInt is a "primitive" type implementing a big.Int as either
 	// a TupElement or Value.
-	// TODO: Describe serialization.
 	BigInt big.Int
 
 	// String is a "primitive" type implementing a string as either
-	// a TupElement or Value.
-	// TODO: Describe serialization.
-	// TODO: Mention the byte format standard.
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as a UTF-8 encoded byte string.
 	String string
 
 	// UUID is a "primitive" type implementing a 16-byte string as
-	// either a TupElement or Value.
-	// TODO: Do we need to swap byte-order depending endianness?
+	// either a TupElement or Value. When used as a Value, it's
+	// serialized as is.
 	UUID [16]byte
 
 	// Bytes is a "primitive" type implementing a byte string as
-	// either a TupElement or Value.
-	// TODO: Do we need to swap byte-order depending endianness?
+	// either a TupElement or Value. When used as a Value, it's
+	// serialized as is.
 	Bytes []byte
 )
 
