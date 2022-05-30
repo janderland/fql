@@ -9,25 +9,13 @@ import (
 	"github.com/pkg/errors"
 )
 
-var _ q.ValueOperation = &serialization{}
-
 type serialization struct {
 	order binary.ByteOrder
 	out   []byte
 	err   error
 }
 
-func newSerialization(order binary.ByteOrder) serialization {
-	return serialization{order: order}
-}
-
-func (x *serialization) Do(v q.Value) ([]byte, error) {
-	if v == nil {
-		return nil, errors.New("value cannot be nil")
-	}
-	v.Value(x)
-	return x.out, x.err
-}
+var _ q.ValueOperation = &serialization{}
 
 func (x *serialization) ForTuple(v q.Tuple) {
 	tup, err := convert.ToFDBTuple(v)

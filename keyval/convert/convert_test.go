@@ -41,19 +41,3 @@ func TestFromFDBTuple(t *testing.T) {
 	tup = FromFDBTuple(tuple.Tuple{true, tuple.Tuple{32.8, "hi"}})
 	require.Equal(t, q.Tuple{q.Bool(true), q.Tuple{q.Float(32.8), q.String("hi")}}, tup)
 }
-
-func TestSplitAtFirstVariable(t *testing.T) {
-	prefix, variable, suffix := SplitAtFirstVariable(q.Directory{
-		q.String("one"), q.Variable{q.FloatType}, q.String("-39.9"),
-	})
-	require.Equal(t, q.Directory{q.String("one")}, prefix)
-	require.Equal(t, &q.Variable{q.FloatType}, variable)
-	require.Equal(t, q.Directory{q.String("-39.9")}, suffix)
-}
-
-func TestToTuplePrefix(t *testing.T) {
-	prefix := ToTuplePrefix(q.Tuple{
-		q.String("one"), q.Int(55), q.Variable{q.FloatType}, q.Tuple{q.Float(-39.9)},
-	})
-	require.Equal(t, q.Tuple{q.String("one"), q.Int(55)}, prefix)
-}

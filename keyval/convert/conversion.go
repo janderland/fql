@@ -15,11 +15,6 @@ type conversion struct {
 	err error
 }
 
-func (x *conversion) Do(e q.TupElement) (tuple.TupleElement, error) {
-	e.TupElement(x)
-	return x.out, x.err
-}
-
 func (x *conversion) ForTuple(in q.Tuple) {
 	x.out, x.err = ToFDBTuple(in)
 }

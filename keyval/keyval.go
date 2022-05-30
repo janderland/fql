@@ -1,5 +1,48 @@
-// Package keyval provides the key value data structure
-// and functions for inspecting the key values.
+// Package keyval provides types representing key-values and utilities
+// for their inspection and manipulation. These types model both queries
+// and the data returned by queries. These types can be constructed from
+// query strings by the Parser but are also designed to be easily
+// constructed directly in a Go app.
+//
+// Embedded Query Strings
+//
+// When working with SQL, programmers will often embed SQL strings in
+// the application. This requires extra tooling to catch syntax errors
+// at build time. Instead of using string literals, FDBQ allows the
+// programmer to directly construct the queries using the types in this
+// package, allowing some syntax errors to be caught at build time.
+//
+// This package does not prevent all kinds of syntax errors, only
+// "structural" ones. For instance, the type system ensures tuples only
+// contain valid elements and limits what kinds of objects can be used
+// as the value of a key-value. In spite of this, invalid queries can
+// still be constructed (see package "class").
+//
+// Operations (Visitor Pattern)
+//
+// The Directory, Tuple, & Value types would be best represented by tagged
+// unions. While Go does not natively support tagged unions, this package
+// implements equivalent functionality using the visitor pattern.
+//
+// Instead of implementing a type switch which handles every type in the
+// union, a visitor interface is implemented with methods handling each
+// type. The correct method is called at runtime via some generated glue
+// code. This glue code also defines an interface for the union itself,
+// allowing us to avoid using interface{}.
+//
+// Structs implementing these visitor interfaces define a parameterized
+// (generic) function for the types in the union. For this reason, they
+// are called "operations" rather than "visitors" in this codebase (see
+// package "operation").
+//
+// Data Types
+//
+// There are a special group of types defined in this package named the
+// "primitive" types. These include Nil, Int, Uint, Bool, Float, String,
+// UUID, and Bytes. All of these types can be used as a TupElement or as
+// a Value. When used as a TupElement, they are serialized by FDB tuple
+// packing. When used as a Value, they are known as a "primitive" value
+// and are serialized by FDBQ.
 package keyval
 
 import "math/big"
@@ -10,81 +53,152 @@ import "math/big"
 //go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
 
 type (
+	// Query is an interface implemented by the types which can
+	// be passed to engine.Engine as a query. This includes
+	// KeyValue, Key, & Directory.
 	Query = query
 
-	// A KeyValue is a query or result depending on the
-	// context. If the KeyValue is a result, it will not
-	// contain a Variable.
+	// KeyValue can be passed to engine.Engine as a query or be
+	// returned from engine.Engine as a query's result. When
+	// returned as a result, KeyValue will not contain a Variable,
+	// Clear, or MaybeMore.
+	// TODO: Describe the different kinds of queries.
 	KeyValue struct {
 		Key   Key
 		Value Value
 	}
 
-	// A Key represents an FDB key made up of a Directory
-	// and optionally a Tuple. A Key cannot have both an
-	// empty Directory and an empty Tuple.
+	// Key can be passed to engine.Engine as a query. When used
+	// as a query, it is equivalent to a KeyValue whose Value is
+	// an empty Variable.
 	Key struct {
 		Directory Directory
 		Tuple     Tuple
 	}
 
-	// A Directory is equivalent to a path used by the
-	// directory layer of the FDB API. A Directory may
-	// contain instances of string or Variable.
+	// Directory can be passed to engine.Engine as a directory
+	// query. These kinds of queries define a directory path
+	// schema. When executed, all directories matching the
+	// schema are returned.
 	Directory []DirElement
 
-	// A Tuple is similar to a tuple.Tuple. It may contain
-	// anything in a valid tuple.Tuple in addition to
-	// Variable and Tuple.
+	// Tuple may contain another Tuple, Variable, MaybeMore,
+	// or any of the "primitive" types.
 	Tuple []TupElement
 
-	// A Value represents an FDB value stored alongside
-	// a key. This type may contain nil, Int, Uint, Bool,
-	// Float, BigInt, String, UUID, Bytes, Tuple, Variable,
-	// or Clear.
+	// Value may contain Tuple, Variable, Clear, or any
+	// of the "primitive" types.
 	Value = value
 
-	// A Variable is used as a placeholder for any valid
-	// values within a type constraint.
+	// Variable is a placeholder which implements the DirElement,
+	// TupElement, & Value interfaces. A Query containing a Variable
+	// defines a schema. When the Query is executed, all key-values
+	// (or directories) matching the schema are returned.
 	Variable []ValueType
 
-	// A MaybeMore is a special kind of TupElement. It
-	// may only appear as the last element of the Tuple.
-	// It designates that the Tuple will match all Tuples
-	// which contain a matching prefix.
+	// MaybeMore is a special kind of TupElement. It may only
+	// appear as the last element of the Tuple. A Query containing
+	// a MaybeMore defines a schema which allows all keys prefixed
+	// by the key in the schema.
+	// TODO: Implement as a flag on Tuple.
 	MaybeMore struct{}
 
-	// A Clear is a special kind of Value which designates
-	// a KeyValue as a clear operation.
+	// Clear is a special kind of Value which designates
+	// a KeyValue as a clear query. When executed, the
+	// provided key is cleared from the DB. Clear may
+	// not be used in a query containing Variable.
 	Clear struct{}
-
-	Nil    struct{}
-	Int    int64
-	Uint   uint64
-	Bool   bool
-	Float  float64
-	BigInt big.Int
-	String string
-	UUID   [16]byte
-	Bytes  []byte
 )
 
-// ValueType specifies the variable's expected type.
+// These are the "primitive" types.
+type (
+	// Nil is a "primitive" type representing an empty element
+	// when used as a TupElement. It's equivalent to an empty
+	// Bytes when used as a Value.
+	Nil struct{}
+
+	// Int is a "primitive" type implementing an int64 as either
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as a 2-compliment 8-byte string. Endianness depends on how
+	// the engine.Engine is configured.
+	Int int64
+
+	// Uint is a "primitive" type implementing an uint64 as either
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as an 8-byte array. Endianness depends on how the
+	// engine.Engine is configured.
+	Uint uint64
+
+	// Bool is a "primitive" type implementing a bool as either a
+	// TupElement or Value. When used as a Value, it's serialized
+	// as a single byte (0 for false, 1 for true).
+	Bool bool
+
+	// Float is a "primitive" type implementing a float64 as either
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as an 8-byte array in accordance with IEEE 754. Endianness
+	// depends on how Endianness depends on how the engine.Engine
+	// is configured.
+	Float float64
+
+	// BigInt is a "primitive" type implementing a big.Int as either
+	// a TupElement or Value.
+	BigInt big.Int
+
+	// String is a "primitive" type implementing a string as either
+	// a TupElement or Value. When used as a Value, it's serialized
+	// as a UTF-8 encoded byte string.
+	String string
+
+	// UUID is a "primitive" type implementing a 16-byte string as
+	// either a TupElement or Value. When used as a Value, it's
+	// serialized as is.
+	UUID [16]byte
+
+	// Bytes is a "primitive" type implementing a byte string as
+	// either a TupElement or Value. When used as a Value, it's
+	// serialized as is.
+	Bytes []byte
+)
+
+// ValueType define the expected types of a Variable.
 type ValueType string
 
 const (
-	AnyType    ValueType = ""
-	IntType    ValueType = "int"
-	UintType   ValueType = "uint"
-	BoolType   ValueType = "bool"
-	FloatType  ValueType = "float"
+	// AnyType designates a Variable to allow any value.
+	// A Variable containing AnyType and an empty Variable
+	// are equivalent.
+	AnyType ValueType = ""
+
+	// IntType designates a Variable to allow Int values.
+	IntType ValueType = "int"
+
+	// UintType designates a Variable to allow Uint values.
+	UintType ValueType = "uint"
+
+	// BoolType designates a Variable to allow Bool values.
+	BoolType ValueType = "bool"
+
+	// FloatType designates a Variable to allow Float values.
+	FloatType ValueType = "float"
+
+	// BigIntType designates a Variable to allow BigInt values.
 	BigIntType ValueType = "bigint"
+
+	// StringType designates a Variable to allow String values.
 	StringType ValueType = "string"
-	BytesType  ValueType = "bytes"
-	UUIDType   ValueType = "uuid"
-	TupleType  ValueType = "tuple"
+
+	// BytesType designates a Variable to allow Bytes values.
+	BytesType ValueType = "bytes"
+
+	// UUIDType designates a Variable to allow UUID values.
+	UUIDType ValueType = "uuid"
+
+	// TupleType designates a Variable to allow Tuple values.
+	TupleType ValueType = "tuple"
 )
 
+// AllTypes returns all valid values for ValueType.
 func AllTypes() []ValueType {
 	return []ValueType{
 		AnyType,

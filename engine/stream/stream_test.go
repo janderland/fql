@@ -337,6 +337,22 @@ func TestStream_UnpackValues(t *testing.T) {
 	}
 }
 
+func TestSplitAtFirstVariable(t *testing.T) {
+	prefix, variable, suffix := splitAtFirstVariable(q.Directory{
+		q.String("one"), q.Variable{q.FloatType}, q.String("-39.9"),
+	})
+	require.Equal(t, q.Directory{q.String("one")}, prefix)
+	require.Equal(t, &q.Variable{q.FloatType}, variable)
+	require.Equal(t, q.Directory{q.String("-39.9")}, suffix)
+}
+
+func TestToTuplePrefix(t *testing.T) {
+	prefix := toTuplePrefix(q.Tuple{
+		q.String("one"), q.Int(55), q.Variable{q.FloatType}, q.Tuple{q.Float(-39.9)},
+	})
+	require.Equal(t, q.Tuple{q.String("one"), q.Int(55)}, prefix)
+}
+
 func testEnv(t *testing.T, f func(facade.Transaction, Stream)) {
 	internal.TestEnv(t, force, func(tr facade.Transactor, log zerolog.Logger) {
 		_, err := tr.Transact(func(tr facade.Transaction) (interface{}, error) {

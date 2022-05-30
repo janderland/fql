@@ -1,3 +1,5 @@
+// Package values provides functions for serializing and deserializing
+// values being written or read from the DB.
 package values
 
 import (
@@ -10,11 +12,17 @@ import (
 	"github.com/pkg/errors"
 )
 
+// Pack serializes keyval.Value into a bytes string for writing to the DB.
 func Pack(val q.Value, order binary.ByteOrder) ([]byte, error) {
-	s := newSerialization(order)
-	return s.Do(val)
+	if val == nil {
+		return nil, errors.New("value cannot be nil")
+	}
+	s := serialization{order: order}
+	val.Value(&s)
+	return s.out, s.err
 }
 
+// Unpack deserializes keyval.Value from a byte string read from the DB.
 func Unpack(val []byte, typ q.ValueType, order binary.ByteOrder) (q.Value, error) {
 	switch typ {
 	case q.AnyType:

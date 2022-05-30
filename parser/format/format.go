@@ -27,6 +27,7 @@ type Format struct {
 }
 
 // String returns the contents of the internal buffer.
+// TODO: Add escapes.
 func (x *Format) String() string {
 	return x.Builder.String()
 }

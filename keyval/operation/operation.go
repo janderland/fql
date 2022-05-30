@@ -3,10 +3,9 @@ package main
 import (
 	"strings"
 	"text/template"
+	"unicode"
 
 	g "github.com/janderland/fdbq/internal/generate"
-	"golang.org/x/text/cases"
-	"golang.org/x/text/language"
 )
 
 func main() {
@@ -80,9 +79,15 @@ func (x operationGen) Types() []string {
 }
 
 func (x operationGen) VisitorMethod(typ string) string {
-	return "For" + cases.Title(language.English).String(typ)
+	if len(typ) > 0 {
+		typ = string(unicode.ToUpper(rune(typ[0]))) + typ[1:]
+	}
+	return "For" + typ
 }
 
 func (x operationGen) AcceptorMethod() string {
-	return cases.Title(language.English).String(x.paramName)
+	if len(x.paramName) == 0 {
+		return ""
+	}
+	return string(unicode.ToUpper(rune(x.paramName[0]))) + x.paramName[1:]
 }

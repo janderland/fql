@@ -1,3 +1,6 @@
+// Package class validates a keyval.KeyValue and classifies it
+// by the kind of operation it performs on the DB when used
+// as a keyval.Query.
 package class
 
 import q "github.com/janderland/fdbq/keyval"
@@ -116,7 +119,7 @@ func classifyDir(dir q.Directory) subClass {
 		}
 		element.DirElement(&class)
 	}
-	return class.result
+	return class.out
 }
 
 func classifyTuple(tup q.Tuple) subClass {
@@ -127,7 +130,7 @@ func classifyTuple(tup q.Tuple) subClass {
 		}
 		element.TupElement(&class)
 	}
-	return class.result
+	return class.out
 }
 
 func classifyValue(val q.Value) subClass {
@@ -136,5 +139,5 @@ func classifyValue(val q.Value) subClass {
 	}
 	class := valClassification{}
 	val.Value(&class)
-	return class.result
+	return class.out
 }

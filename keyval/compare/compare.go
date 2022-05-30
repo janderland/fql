@@ -1,3 +1,4 @@
+// Package compare provides a function for comparing keyval.Tuple.
 package compare
 
 import (
@@ -51,9 +52,10 @@ func Tuples(pattern q.Tuple, candidate q.Tuple) []int {
 
 	// Loop over both tuples, comparing their elements.
 	for i, element := range pattern {
-		c := newComparison(i, candidate[i])
-		if mismatch := c.Do(element); mismatch != nil {
-			return mismatch
+		c := comparison{i: i, candidate: candidate[i]}
+		element.TupElement(&c)
+		if c.out != nil {
+			return c.out
 		}
 	}
 	return nil
