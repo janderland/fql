@@ -8,26 +8,26 @@ var (
 	_ q.ValueOperation     = &valClassification{}
 )
 
-type dirClassification struct{ result subClass }
+type dirClassification struct{ out subClass }
 
 func (x *dirClassification) ForString(q.String) {}
 
 func (x *dirClassification) ForVariable(q.Variable) {
-	x.result = variableSubClass
+	x.out = variableSubClass
 }
 
-type tupClassification struct{ result subClass }
+type tupClassification struct{ out subClass }
 
 func (x *tupClassification) ForTuple(e q.Tuple) {
-	x.result = classifyTuple(e)
+	x.out = classifyTuple(e)
 }
 
 func (x *tupClassification) ForVariable(q.Variable) {
-	x.result = variableSubClass
+	x.out = variableSubClass
 }
 
 func (x *tupClassification) ForMaybeMore(q.MaybeMore) {
-	x.result = variableSubClass
+	x.out = variableSubClass
 }
 
 func (x *tupClassification) ForNil(q.Nil) {}
@@ -48,18 +48,18 @@ func (x *tupClassification) ForUUID(q.UUID) {}
 
 func (x *tupClassification) ForBytes(q.Bytes) {}
 
-type valClassification struct{ result subClass }
+type valClassification struct{ out subClass }
 
 func (x *valClassification) ForTuple(e q.Tuple) {
-	x.result = classifyTuple(e)
+	x.out = classifyTuple(e)
 }
 
 func (x *valClassification) ForVariable(q.Variable) {
-	x.result = variableSubClass
+	x.out = variableSubClass
 }
 
 func (x *valClassification) ForClear(q.Clear) {
-	x.result = clearSubClass
+	x.out = clearSubClass
 }
 
 func (x *valClassification) ForNil(q.Nil) {}

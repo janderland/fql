@@ -116,7 +116,7 @@ func classifyDir(dir q.Directory) subClass {
 		}
 		element.DirElement(&class)
 	}
-	return class.result
+	return class.out
 }
 
 func classifyTuple(tup q.Tuple) subClass {
@@ -127,7 +127,7 @@ func classifyTuple(tup q.Tuple) subClass {
 		}
 		element.TupElement(&class)
 	}
-	return class.result
+	return class.out
 }
 
 func classifyValue(val q.Value) subClass {
@@ -136,5 +136,5 @@ func classifyValue(val q.Value) subClass {
 	}
 	class := valClassification{}
 	val.Value(&class)
-	return class.result
+	return class.out
 }

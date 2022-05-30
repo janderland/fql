@@ -11,8 +11,12 @@ import (
 )
 
 func Pack(val q.Value, order binary.ByteOrder) ([]byte, error) {
-	s := newSerialization(order)
-	return s.Do(val)
+	if val == nil {
+		return nil, errors.New("value cannot be nil")
+	}
+	s := serialization{order: order}
+	val.Value(&s)
+	return s.out, s.err
 }
 
 func Unpack(val []byte, typ q.ValueType, order binary.ByteOrder) (q.Value, error) {
