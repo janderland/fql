@@ -1,3 +1,4 @@
+// Package compare provides a function for comparing keyval.Tuple.
 package compare
 
 import (
