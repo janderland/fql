@@ -1,3 +1,6 @@
+// Package class validates a keyval.KeyValue and classifies it
+// by the kind of operation it performs on the DB when used
+// as a keyval.Query.
 package class
 
 import q "github.com/janderland/fdbq/keyval"
