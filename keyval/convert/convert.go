@@ -1,3 +1,5 @@
+// Package convert provides functions which convert between FDBQ types,
+// FDB types, and generic Go types.
 package convert
 
 import (
@@ -9,8 +11,8 @@ import (
 	"github.com/pkg/errors"
 )
 
-// ToStringArray attempts to convert a Directory to a string
-// array. If the Directory contains non-string elements, an
+// ToStringArray attempts to convert a keyval.Directory to a string
+// array. If the keyval.Directory contains non-string elements, an
 // error is returned.
 func ToStringArray(in q.Directory) ([]string, error) {
 	out := make([]string, len(in))
@@ -27,7 +29,7 @@ func ToStringArray(in q.Directory) ([]string, error) {
 	return out, nil
 }
 
-// FromStringArray converts a string array into a Directory.
+// FromStringArray converts a string array into a keyval.Directory.
 func FromStringArray(in []string) q.Directory {
 	out := make(q.Directory, len(in))
 
@@ -38,9 +40,9 @@ func FromStringArray(in []string) q.Directory {
 	return out
 }
 
-// ToFDBTuple converts a Tuple into a tuple.Tuple. Note that
-// the resultant tuple.Tuple will be invalid if the original
-// Tuple contains a Variable.
+// ToFDBTuple converts a keyval.Tuple into a tuple.Tuple. If the
+// keyval.Tuple contains a keyval.Variable or keyval.MaybeMore
+// then an error is returned.
 func ToFDBTuple(in q.Tuple) (tuple.Tuple, error) {
 	out := make(tuple.Tuple, len(in))
 	var err error
@@ -57,7 +59,8 @@ func ToFDBTuple(in q.Tuple) (tuple.Tuple, error) {
 	return out, nil
 }
 
-// FromFDBTuple converts a tuple.Tuple into a Tuple.
+// FromFDBTuple converts a tuple.Tuple into a keyval.Tuple.
+// This function panics if an invalid tuple.Tuple is provided.
 func FromFDBTuple(in tuple.Tuple) q.Tuple {
 	out := make(q.Tuple, len(in))
 
@@ -73,6 +76,8 @@ func FromFDBTuple(in tuple.Tuple) q.Tuple {
 	return out
 }
 
+// FromFDBElement converts a tuple.TupleElement into a keyval.TupElement.
+// This function panics if an invalid tuple.TupleElement is provided.
 func FromFDBElement(in tuple.TupleElement) q.TupElement {
 	switch in := in.(type) {
 	case tuple.Tuple:
@@ -118,33 +123,4 @@ func FromFDBElement(in tuple.TupleElement) q.TupElement {
 	default:
 		panic(errors.Errorf("cannot convert type %T", in))
 	}
-}
-
-func SplitAtFirstVariable(dir q.Directory) (q.Directory, *q.Variable, q.Directory) {
-	for i, element := range dir {
-		if variable, ok := element.(q.Variable); ok {
-			return dir[:i], &variable, dir[i+1:]
-		}
-	}
-	return dir, nil, nil
-}
-
-func ToTuplePrefix(tup q.Tuple) q.Tuple {
-	for i, element := range tup {
-		if _, ok := element.(q.Variable); ok {
-			return tup[:i]
-		}
-	}
-	return tup
-}
-
-// RemoveMaybeMore removes a MaybeMore if it exists as the last element of the given Tuple.
-func RemoveMaybeMore(tup q.Tuple) q.Tuple {
-	if len(tup) > 0 {
-		last := len(tup) - 1
-		if _, ok := tup[last].(q.MaybeMore); ok {
-			tup = tup[:last]
-		}
-	}
-	return tup
 }

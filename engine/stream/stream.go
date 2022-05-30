@@ -116,7 +116,7 @@ func (r *Stream) UnpackValues(query q.Value, valHandler internal.ValHandler, in 
 func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, out chan DirErr) {
 	log := r.Log.With().Str("stage", "open directories").Interface("query", query).Logger()
 
-	prefix, variable, suffix := convert.SplitAtFirstVariable(query)
+	prefix, variable, suffix := splitAtFirstVariable(query)
 	prefixStr, err := convert.ToStringArray(prefix)
 	if err != nil {
 		r.SendDir(out, DirErr{Err: errors.Wrapf(err, "failed to convert directory prefix to string array")})
@@ -167,8 +167,8 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan DirKVErr) {
 	log := r.Log.With().Str("stage", "read range").Interface("query", query).Logger()
 
-	prefix := convert.ToTuplePrefix(query)
-	prefix = convert.RemoveMaybeMore(prefix)
+	prefix := toTuplePrefix(query)
+	prefix = removeMaybeMore(prefix)
 	fdbPrefix, err := convert.ToFDBTuple(prefix)
 	if err != nil {
 		r.SendDirKV(out, DirKVErr{Err: errors.Wrap(err, "failed to convert prefix to FDB tuple")})
@@ -278,4 +278,32 @@ func (r *Stream) goUnpackValues(query q.Value, valHandler internal.ValHandler, i
 			}
 		}
 	}
+}
+
+func splitAtFirstVariable(dir q.Directory) (q.Directory, *q.Variable, q.Directory) {
+	for i, element := range dir {
+		if variable, ok := element.(q.Variable); ok {
+			return dir[:i], &variable, dir[i+1:]
+		}
+	}
+	return dir, nil, nil
+}
+
+func toTuplePrefix(tup q.Tuple) q.Tuple {
+	for i, element := range tup {
+		if _, ok := element.(q.Variable); ok {
+			return tup[:i]
+		}
+	}
+	return tup
+}
+
+func removeMaybeMore(tup q.Tuple) q.Tuple {
+	if len(tup) > 0 {
+		last := len(tup) - 1
+		if _, ok := tup[last].(q.MaybeMore); ok {
+			tup = tup[:last]
+		}
+	}
+	return tup
 }
