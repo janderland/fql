@@ -58,29 +58,28 @@ type (
 	// KeyValue, Key, & Directory.
 	Query = query
 
-	// KeyValue can be passed to engine.Engine as a query
-	// or be returned from engine.Engine as a query's result.
-	// When returned as a result, KeyValue will not contain a
-	// Variable, Clear, or MaybeMore.
+	// KeyValue can be passed to engine.Engine as a query or be
+	// returned from engine.Engine as a query's result. When
+	// returned as a result, KeyValue will not contain a Variable,
+	// Clear, or MaybeMore.
+	// TODO: Describe the different kinds of queries.
 	KeyValue struct {
 		Key   Key
 		Value Value
 	}
 
-	// Key can be passed to engine.Engine as a query or be
-	// returned from engine.Engine as part of a query's result.
-	// When used as a query, it is equivalent to a KeyValue
-	// whose Value is an empty Variable. When returned as a
-	// result, it will not contain a Variable or MaybeMore.
+	// Key can be passed to engine.Engine as a query. When used
+	// as a query, it is equivalent to a KeyValue whose Value is
+	// an empty Variable.
 	Key struct {
 		Directory Directory
 		Tuple     Tuple
 	}
 
-	// Directory can be passed to engine.Engine as a query or
-	// be returned from engine.Engine as part of a query's
-	// result. When used as a query, only the directory layer
-	// is accessed. It may contain String or Variable.
+	// Directory can be passed to engine.Engine as a directory
+	// query. These kinds of queries define a directory path
+	// schema. When executed, all directories matching the
+	// schema are returned.
 	Directory []DirElement
 
 	// Tuple may contain another Tuple, Variable, MaybeMore,
@@ -92,19 +91,22 @@ type (
 	Value = value
 
 	// Variable is a placeholder which implements the DirElement,
-	// TupElement, & Value interfaces. A Query containing a
-	// Variable defines a schema. When the Query is executed,
-	// all key-values matching the schema are returned.
+	// TupElement, & Value interfaces. A Query containing a Variable
+	// defines a schema. When the Query is executed, all key-values
+	// (or directories) matching the schema are returned.
 	Variable []ValueType
 
 	// MaybeMore is a special kind of TupElement. It may only
-	// appear as the last element of the Tuple. It causes a
-	// query to access all key-values whose keys are prefixed
-	// by the query's key.
+	// appear as the last element of the Tuple. A Query containing
+	// a MaybeMore defines a schema which allows all keys prefixed
+	// by the key in the schema.
+	// TODO: Implement as a flag on Tuple.
 	MaybeMore struct{}
 
 	// Clear is a special kind of Value which designates
-	// a KeyValue as a clear operation.
+	// a KeyValue as a clear query. When executed, the
+	// provided key is cleared from the DB. Clear may
+	// not be used in a query containing Variable.
 	Clear struct{}
 )
 
@@ -117,10 +119,9 @@ type (
 
 	// Int is a "primitive" type implementing an int64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
-	// as an 8-byte array. Endianness depends on how the
-	// engine.Engine is configured.
+	// as a 2-compliment 8-byte string. Endianness depends on how
+	// the engine.Engine is configured.
 	// TODO: Mention int/uint deserialization.
-	// TODO: Mention the byte format standard.
 	Int int64
 
 	// Uint is a "primitive" type implementing an uint64 as either
@@ -128,7 +129,6 @@ type (
 	// as an 8-byte array. Endianness depends on how the
 	// engine.Engine is configured.
 	// TODO: Mention int/uint deserialization.
-	// TODO: Mention the byte format standard.
 	Uint uint64
 
 	// Bool is a "primitive" type implementing a bool as either a
