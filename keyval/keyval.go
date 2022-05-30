@@ -91,8 +91,10 @@ type (
 	// of the "primitive" types.
 	Value = value
 
-	// Variable
-	// TODO: Documentation
+	// Variable is a placeholder which implements the DirElement,
+	// TupElement, & Value interfaces. A Query containing a
+	// Variable defines a schema. When the Query is executed,
+	// all key-values matching the schema are returned.
 	Variable []ValueType
 
 	// MaybeMore is a special kind of TupElement. It may only
@@ -167,16 +169,37 @@ type (
 type ValueType string
 
 const (
-	AnyType    ValueType = ""
-	IntType    ValueType = "int"
-	UintType   ValueType = "uint"
-	BoolType   ValueType = "bool"
-	FloatType  ValueType = "float"
+	// AnyType designates a Variable to allow any value.
+	// A Variable containing AnyType and an empty Variable
+	// are equivalent.
+	AnyType ValueType = ""
+
+	// IntType designates a Variable to allow Int values.
+	IntType ValueType = "int"
+
+	// UintType designates a Variable to allow Uint values.
+	UintType ValueType = "uint"
+
+	// BoolType designates a Variable to allow Bool values.
+	BoolType ValueType = "bool"
+
+	// FloatType designates a Variable to allow Float values.
+	FloatType ValueType = "float"
+
+	// BigIntType designates a Variable to allow BigInt values.
 	BigIntType ValueType = "bigint"
+
+	// StringType designates a Variable to allow String values.
 	StringType ValueType = "string"
-	BytesType  ValueType = "bytes"
-	UUIDType   ValueType = "uuid"
-	TupleType  ValueType = "tuple"
+
+	// BytesType designates a Variable to allow Bytes values.
+	BytesType ValueType = "bytes"
+
+	// UUIDType designates a Variable to allow UUID values.
+	UUIDType ValueType = "uuid"
+
+	// TupleType designates a Variable to allow Tuple values.
+	TupleType ValueType = "tuple"
 )
 
 // AllTypes returns all valid values for ValueType.
