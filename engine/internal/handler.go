@@ -10,7 +10,9 @@ import (
 )
 
 type (
-	// ValHandler processes the FDB values during a FDBQ read operation.
+	// ValHandler processes the FDB value byte-strings during a FDBQ
+	// read operation. Depending on the operation, the byte-strings
+	// aren't always deserialized.
 	ValHandler interface {
 		Handle([]byte) (q.Value, error)
 	}
