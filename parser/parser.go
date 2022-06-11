@@ -29,6 +29,14 @@ const (
 	stateFinished
 )
 
+type stringState int
+
+const (
+	stringStateDir stringState = iota
+	stringStateTup
+	stringStateVal
+)
+
 func stateName(state state) string {
 	switch state {
 	case stateInitial:
@@ -165,7 +173,7 @@ func (x *Parser) Parse() (q.Query, error) {
 		// If < 0 then the string is a directory part.
 		// If == 0 then the string is in a tuple.
 		// If > 0 then the string is for a value.
-		strContext int
+		stringState stringState
 	)
 
 	for {
@@ -209,7 +217,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				strContext = -1
+				stringState = stringStateDir
 				kv.AppendPartToDirectory("")
 
 			case scanner.TokenKindOther:
@@ -289,7 +297,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				strContext = 0
+				stringState = stringStateTup
 				tup.Append(q.String(""))
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
@@ -371,7 +379,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				strContext = 1
+				stringState = stringStateVal
 				kv.SetValue(q.String(""))
 
 			case scanner.TokenKindOther:
@@ -397,15 +405,18 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 
 			case scanner.TokenKindStrMark:
-				switch {
-				case strContext < 0:
+				switch stringState {
+				case stringStateDir:
 					x.state = stateDirTail
 
-				case strContext == 0:
+				case stringStateTup:
 					x.state = stateTupleTail
 
-				case strContext > 0:
+				case stringStateVal:
 					x.state = stateFinished
+
+				default:
+					return nil, errors.Errorf("unexpected string state '%v'", stringState)
 				}
 
 			default:
@@ -420,21 +431,24 @@ func (x *Parser) Parse() (q.Query, error) {
 					}
 				}
 
-				switch {
-				case strContext < 0:
+				switch stringState {
+				case stringStateDir:
 					if err := kv.AppendToLastDirPart(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory element"))
 					}
 
-				case strContext == 0:
+				case stringStateTup:
 					if err := tup.AppendToLastElemStr(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
 					}
 
-				case strContext > 0:
+				case stringStateVal:
 					if err := kv.AppendToValueStr(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
 					}
+
+				default:
+					return nil, errors.Errorf("unexpected string state '%v'", stringState)
 				}
 			}
 
