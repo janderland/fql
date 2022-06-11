@@ -407,8 +407,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				}
 
 			default:
-				if kind == scanner.TokenKindEscape {
-					// Get rid of the leading backslash.
+				if kind == scanner.TokenKindEscape && token[1] == internal.StrMark {
+					// Get rid of the leading backslash, but only if it's escaping
+					// a string mark. Otherwise, we'll just append it as is.
 					token = token[1:]
 				}
 

@@ -196,6 +196,58 @@ func TestValue(t *testing.T) {
 	})
 }
 
+func TestString(t *testing.T) {
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  q.String
+		val  bool
+	}{
+		{name: "empty", str: "\"\"", ast: q.String("")},
+		{name: "simple", str: "\"hi\"", ast: q.String("hi")},
+		{name: "escapes", str: "\"\\ \\\" \\d\"", ast: q.String("\\ \" \\d")},
+	}
+
+	t.Run("value round trip", func(t *testing.T) {
+		for _, test := range roundTrips {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.NoError(t, err)
+				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
+
+				f := newFormat()
+				f.Value(test.ast)
+				require.Equal(t, test.str, f.String())
+			})
+		}
+	})
+
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "unclosed", str: "<"},
+		{name: "unopened", str: ">"},
+		{name: "invalid", str: "<invalid>"},
+	}
+
+	t.Run("value parse failures", func(t *testing.T) {
+		for _, test := range parseFailures {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
+		}
+	})
+}
+
 func TestVariable(t *testing.T) {
 	roundTrips := []struct {
 		name string
