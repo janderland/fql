@@ -149,19 +149,23 @@ func (x *Parser) Parse() (q.Query, error) {
 		kv  internal.KeyValBuilder
 		tup internal.TupBuilder
 
+		// TODO: Work into the state machine.
 		// If true, when internal.TupBuilder ends its
 		// root tuple, the tuple is copied into the query's
 		// value. Otherwise, it's copied into the key.
 		valTup bool
 
+		// TODO: Work into the state machine.
 		// If true, stateVarHead & stateVarTail are building
 		// a variable for use as a value. Otherwise, the
 		// variable is for use in a tuple.
 		valVar bool
 
-		// If true, the stateString is building a string for
-		// use as a value.
-		valStr bool
+		// TODO: Work into the state machine.
+		// If < 0 then the string is a directory part.
+		// If == 0 then the string is in a tuple.
+		// If > 0 then the string is for a value.
+		strContext int
 	)
 
 	for {
@@ -202,6 +206,11 @@ func (x *Parser) Parse() (q.Query, error) {
 			case scanner.TokenKindVarStart:
 				x.state = stateDirVarEnd
 				kv.AppendVarToDirectory()
+
+			case scanner.TokenKindStrMark:
+				x.state = stateString
+				strContext = -1
+				kv.AppendPartToDirectory("")
 
 			case scanner.TokenKindOther:
 				x.state = stateDirTail
@@ -279,6 +288,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
+				strContext = 0
 				tup.Append(q.String(""))
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
@@ -360,7 +370,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				valStr = true
+				strContext = 1
 				kv.SetValue(q.String(""))
 
 			case scanner.TokenKindOther:
@@ -386,10 +396,15 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 
 			case scanner.TokenKindStrMark:
-				if valStr {
-					x.state = stateFinished
-				} else {
+				switch {
+				case strContext < 0:
+					x.state = stateDirTail
+
+				case strContext == 0:
 					x.state = stateTupleTail
+
+				case strContext > 0:
+					x.state = stateFinished
 				}
 
 			default:
@@ -399,13 +414,20 @@ func (x *Parser) Parse() (q.Query, error) {
 					token = token[1:]
 				}
 
-				if valStr {
-					if err := kv.AppendToValueStr(token); err != nil {
-						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
+				switch {
+				case strContext < 0:
+					if err := kv.AppendToLastDirPart(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory element"))
 					}
-				} else {
+
+				case strContext == 0:
 					if err := tup.AppendToLastElemStr(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+					}
+
+				case strContext > 0:
+					if err := kv.AppendToValueStr(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
 					}
 				}
 			}
