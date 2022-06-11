@@ -193,14 +193,13 @@ func (x *Parser) Parse() (q.Query, error) {
 		// keyval.DirElement. If the new element is a variable,
 		// the Parser transitions to stateDirVarEnd. Otherwise,
 		// it transitions to stateDirTail.
-		// TODO: Remove the '\' from escapes.
 		case stateDirHead:
 			switch kind {
 			case scanner.TokenKindVarStart:
 				x.state = stateDirVarEnd
 				kv.AppendVarToDirectory()
 
-			case scanner.TokenKindEscape, scanner.TokenKindOther:
+			case scanner.TokenKindOther:
 				x.state = stateDirTail
 				kv.AppendPartToDirectory(token)
 
@@ -213,7 +212,6 @@ func (x *Parser) Parse() (q.Query, error) {
 		// to create a new element, start parsing the key's
 		// tuple, or finishes the query as a directory query.
 		// TODO: Don't allow appending after stateDirVarEnd.
-		// TODO: Remove the '\' from escapes.
 		case stateDirTail:
 			switch kind {
 			case scanner.TokenKindDirSep:
@@ -224,13 +222,18 @@ func (x *Parser) Parse() (q.Query, error) {
 				tup = internal.TupBuilder{}
 				valTup = false
 
-			case scanner.TokenKindEscape, scanner.TokenKindOther:
+			case scanner.TokenKindOther:
 				if kind == scanner.TokenKindEscape {
 					switch token[1] {
 					case internal.DirSep:
 					default:
 						return nil, x.withTokens(x.escapeErr(token))
 					}
+
+					// Get rid of the leading backslash of the escape
+					// token. We do this here after the above check
+					// so the above error will include the backslash.
+					token = token[1:]
 				}
 				if err := kv.AppendToLastDirPart(token); err != nil {
 					return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory part"))
@@ -336,17 +339,23 @@ func (x *Parser) Parse() (q.Query, error) {
 		// During stateTupleString, the Parser appends tokens into
 		// the last tuple element (assumed to be a keyval.String)
 		// until a TokenKindStrMark is reached.
-		// TODO: Remove the '\' from escapes.
 		case stateTupleString:
-			if kind == scanner.TokenKindEnd {
+			switch kind {
+			case scanner.TokenKindEnd:
 				return nil, x.withTokens(x.tokenErr(kind))
-			}
-			if kind == scanner.TokenKindStrMark {
+
+			case scanner.TokenKindStrMark:
 				x.state = stateTupleTail
-				break
-			}
-			if err := tup.AppendToLastElemStr(token); err != nil {
-				return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+
+			default:
+				if kind == scanner.TokenKindEscape {
+					// Get rid of the leading backslash.
+					token = token[1:]
+				}
+
+				if err := tup.AppendToLastElemStr(token); err != nil {
+					return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+				}
 			}
 
 		// stateSeparator occurs after the key's tuple is completed.

@@ -97,7 +97,7 @@ func (x *Format) Bytes(in q.Bytes) {
 
 func (x *Format) Str(in q.String) {
 	x.Builder.WriteRune(internal.StrMark)
-	x.Builder.WriteString(string(in))
+	x.Builder.WriteString(strings.ReplaceAll(string(in), "\"", "\\\""))
 	x.Builder.WriteRune(internal.StrMark)
 }
 
