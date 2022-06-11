@@ -19,6 +19,7 @@ func TestDirectory(t *testing.T) {
 		{name: "single", str: "/hello", ast: q.Directory{q.String("hello")}},
 		{name: "multi", str: "/hello/world", ast: q.Directory{q.String("hello"), q.String("world")}},
 		{name: "variable", str: "/hello/<>/thing", ast: q.Directory{q.String("hello"), q.Variable{}, q.String("thing")}},
+		{name: "multiline", str: "/hi/\"you\nwow\"/<>", ast: q.Directory{q.String("hi"), q.String("you\nwow"), q.Variable{}}},
 	}
 
 	t.Run("key round trip", func(t *testing.T) {

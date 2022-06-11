@@ -225,6 +225,7 @@ func (x *Parser) Parse() (q.Query, error) {
 		// to create a new element, start parsing the key's
 		// tuple, or finishes the query as a directory query.
 		// TODO: Don't allow appending after stateDirVarEnd.
+		// TODO: Don't allow appending after stateString.
 		case stateDirTail:
 			switch kind {
 			case scanner.TokenKindDirSep:

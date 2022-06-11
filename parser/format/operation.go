@@ -1,7 +1,11 @@
 package format
 
 import (
+	"fmt"
+	"strings"
+
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/parser/internal"
 )
 
 // formatDirElement is a keyval.DirectoryOperation
@@ -13,8 +17,24 @@ type formatDirElement struct {
 
 var _ q.DirectoryOperation = &formatDirElement{}
 
+// quotedRunes is a string containing a set of special
+// runes. If any of these runes are found in a directory
+// element, then that element must be formatted with
+// surrounding quotes.
+var quotedRunes = internal.AllSingleRuneTokens() +
+	internal.Newline +
+	internal.Whitespace
+
 func (x *formatDirElement) ForString(in q.String) {
+	needsQuotes := strings.ContainsAny(string(in), quotedRunes)
+	if needsQuotes {
+		fmt.Printf("contains: %v", in)
+		x.format.Builder.WriteRune(internal.StrMark)
+	}
 	x.format.Builder.WriteString(string(in))
+	if needsQuotes {
+		x.format.Builder.WriteRune(internal.StrMark)
+	}
 }
 
 func (x *formatDirElement) ForVariable(in q.Variable) {

@@ -97,7 +97,7 @@ func (x *Format) Bytes(in q.Bytes) {
 
 func (x *Format) Str(in q.String) {
 	x.Builder.WriteRune(internal.StrMark)
-	x.Builder.WriteString(strings.ReplaceAll(string(in), "\"", "\\\""))
+	x.Builder.WriteString(escapeString(string(in)))
 	x.Builder.WriteRune(internal.StrMark)
 }
 
@@ -143,4 +143,8 @@ func (x *Format) Clear(_ q.Clear) {
 
 func (x *Format) MaybeMore(_ q.MaybeMore) {
 	x.Builder.WriteString(internal.MaybeMore)
+}
+
+func escapeString(in string) string {
+	return strings.ReplaceAll(in, "\"", "\\\"")
 }
