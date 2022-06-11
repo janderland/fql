@@ -72,6 +72,7 @@ func TestTuple(t *testing.T) {
 		{name: "sub tuple", str: "{\"hello\",23.3,{-3}}", ast: q.Tuple{q.String("hello"), q.Float(23.3), q.Tuple{q.Int(-3)}}},
 		{name: "uuid", str: "{{bcefd2ec-4df5-43b6-8c79-81b70b886af9}}", ast: q.Tuple{q.Tuple{q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}}}},
 		{name: "maybe more", str: "{18.2,0xffaa,...}", ast: q.Tuple{q.Float(18.2), q.Bytes{0xFF, 0xAA}, q.MaybeMore{}}},
+		{name: "escape", str: "{\"i want to say \\\"yo\\\"\"}", ast: q.Tuple{q.String("i want to say \"yo\"")}},
 	}
 
 	t.Run("key round trip", func(t *testing.T) {
@@ -154,6 +155,7 @@ func TestValue(t *testing.T) {
 		{name: "clear", str: "clear", ast: q.Clear{}},
 		{name: "tuple", str: "{-16,13.2,\"hi\"}", ast: q.Tuple{q.Int(-16), q.Float(13.2), q.String("hi")}},
 		{name: "raw", str: "-16", ast: q.Int(-16)},
+		{name: "string", str: "\"he said \\\"wowee\\\"\"", ast: q.String("he said \"wowee\"")},
 	}
 
 	t.Run("round trip", func(t *testing.T) {
@@ -178,6 +180,58 @@ func TestValue(t *testing.T) {
 		str  string
 	}{
 		{name: "empty", str: ""},
+	}
+
+	t.Run("value parse failures", func(t *testing.T) {
+		for _, test := range parseFailures {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.Error(t, err)
+				require.Nil(t, ast)
+			})
+		}
+	})
+}
+
+func TestString(t *testing.T) {
+	roundTrips := []struct {
+		name string
+		str  string
+		ast  q.String
+		val  bool
+	}{
+		{name: "empty", str: "\"\"", ast: q.String("")},
+		{name: "simple", str: "\"hi\"", ast: q.String("hi")},
+		{name: "escapes", str: "\"\\ \\\" \\d\"", ast: q.String("\\ \" \\d")},
+	}
+
+	t.Run("value round trip", func(t *testing.T) {
+		for _, test := range roundTrips {
+			t.Run(test.name, func(t *testing.T) {
+				p := New(scanner.New(strings.NewReader(test.str)))
+				p.state = stateValue
+
+				ast, err := p.Parse()
+				require.NoError(t, err)
+				require.Equal(t, test.ast, ast.(q.KeyValue).Value)
+
+				f := newFormat()
+				f.Value(test.ast)
+				require.Equal(t, test.str, f.String())
+			})
+		}
+	})
+
+	parseFailures := []struct {
+		name string
+		str  string
+	}{
+		{name: "unclosed", str: "<"},
+		{name: "unopened", str: ">"},
+		{name: "invalid", str: "<invalid>"},
 	}
 
 	t.Run("value parse failures", func(t *testing.T) {

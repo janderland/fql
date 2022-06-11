@@ -21,9 +21,9 @@ const (
 	stateDirVarEnd
 	stateTupleHead
 	stateTupleTail
-	stateTupleString
 	stateSeparator
 	stateValue
+	stateString
 	stateVarHead
 	stateVarTail
 	stateFinished
@@ -43,12 +43,12 @@ func stateName(state state) string {
 		return "TupleHead"
 	case stateTupleTail:
 		return "TupleTail"
-	case stateTupleString:
-		return "String"
 	case stateSeparator:
 		return "Separator"
 	case stateValue:
 		return "Value"
+	case stateString:
+		return "String"
 	case stateVarHead:
 		return "VarHead"
 	case stateVarTail:
@@ -158,6 +158,10 @@ func (x *Parser) Parse() (q.Query, error) {
 		// a variable for use as a value. Otherwise, the
 		// variable is for use in a tuple.
 		valVar bool
+
+		// If true, the stateString is building a string for
+		// use as a value.
+		valStr bool
 	)
 
 	for {
@@ -193,14 +197,13 @@ func (x *Parser) Parse() (q.Query, error) {
 		// keyval.DirElement. If the new element is a variable,
 		// the Parser transitions to stateDirVarEnd. Otherwise,
 		// it transitions to stateDirTail.
-		// TODO: Remove the '\' from escapes.
 		case stateDirHead:
 			switch kind {
 			case scanner.TokenKindVarStart:
 				x.state = stateDirVarEnd
 				kv.AppendVarToDirectory()
 
-			case scanner.TokenKindEscape, scanner.TokenKindOther:
+			case scanner.TokenKindOther:
 				x.state = stateDirTail
 				kv.AppendPartToDirectory(token)
 
@@ -213,7 +216,6 @@ func (x *Parser) Parse() (q.Query, error) {
 		// to create a new element, start parsing the key's
 		// tuple, or finishes the query as a directory query.
 		// TODO: Don't allow appending after stateDirVarEnd.
-		// TODO: Remove the '\' from escapes.
 		case stateDirTail:
 			switch kind {
 			case scanner.TokenKindDirSep:
@@ -224,14 +226,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				tup = internal.TupBuilder{}
 				valTup = false
 
-			case scanner.TokenKindEscape, scanner.TokenKindOther:
-				if kind == scanner.TokenKindEscape {
-					switch token[1] {
-					case internal.DirSep:
-					default:
-						return nil, x.withTokens(x.escapeErr(token))
-					}
-				}
+			case scanner.TokenKindOther:
 				if err := kv.AppendToLastDirPart(token); err != nil {
 					return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory part"))
 				}
@@ -283,7 +278,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				tup.Append(q.Variable{})
 
 			case scanner.TokenKindStrMark:
-				x.state = stateTupleString
+				x.state = stateString
 				tup.Append(q.String(""))
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
@@ -333,22 +328,6 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// During stateTupleString, the Parser appends tokens into
-		// the last tuple element (assumed to be a keyval.String)
-		// until a TokenKindStrMark is reached.
-		// TODO: Remove the '\' from escapes.
-		case stateTupleString:
-			if kind == scanner.TokenKindEnd {
-				return nil, x.withTokens(x.tokenErr(kind))
-			}
-			if kind == scanner.TokenKindStrMark {
-				x.state = stateTupleTail
-				break
-			}
-			if err := tup.AppendToLastElemStr(token); err != nil {
-				return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
-			}
-
 		// stateSeparator occurs after the key's tuple is completed.
 		// The Parser then either begins parsing the value or
 		// returns the key as the query.
@@ -379,6 +358,11 @@ func (x *Parser) Parse() (q.Query, error) {
 				valVar = true
 				kv.SetValue(q.Variable{})
 
+			case scanner.TokenKindStrMark:
+				x.state = stateString
+				valStr = true
+				kv.SetValue(q.String(""))
+
 			case scanner.TokenKindOther:
 				x.state = stateFinished
 				if token == internal.Clear {
@@ -395,11 +379,38 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// During stateVarHead, the Parser a token converted into
-		// a keyval.ValueType to the last tuple element (assumed to be
-		// a keyval.Variable). If the token is a TokenKindVarEnd then
-		// the variable is completed and the Parser moves on to the
-		// next tuple element.
+		// TODO: Document the state.
+		case stateString:
+			switch kind {
+			case scanner.TokenKindEnd:
+				return nil, x.withTokens(x.tokenErr(kind))
+
+			case scanner.TokenKindStrMark:
+				if valStr {
+					x.state = stateFinished
+				} else {
+					x.state = stateTupleTail
+				}
+
+			default:
+				if kind == scanner.TokenKindEscape && token[1] == internal.StrMark {
+					// Get rid of the leading backslash, but only if it's escaping
+					// a string mark. Otherwise, we'll just append it as is.
+					token = token[1:]
+				}
+
+				if valStr {
+					if err := kv.AppendToValueStr(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
+					}
+				} else {
+					if err := tup.AppendToLastElemStr(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+					}
+				}
+			}
+
+		// TODO: Document the state.
 		case stateVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -430,10 +441,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// During stateVarTail, the Parser either transitions
-		// to stateVarHead to parse another value type or it
-		// completes the variable and continues on to the next
-		// tuple element.
+		// TODO: Document the state.
 		case stateVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -496,9 +504,11 @@ func (x *Parser) withTokens(err error) error {
 	}
 }
 
+/*
 func (x *Parser) escapeErr(token string) error {
 	return errors.Errorf("unexpected escape '%v' at parser state '%v'", token, stateName(x.state))
 }
+*/
 
 func (x *Parser) tokenErr(kind scanner.TokenKind) error {
 	return errors.Errorf("unexpected '%v' token at parser state '%v'", tokenKindName(kind), stateName(x.state))
