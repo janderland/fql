@@ -379,9 +379,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// During stateString, the Parser appends tokens into
-		// the last tuple element (assumed to be a keyval.String)
-		// until a TokenKindStrMark is reached.
+		// TODO: Document the state.
 		case stateString:
 			switch kind {
 			case scanner.TokenKindEnd:
@@ -412,11 +410,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				}
 			}
 
-		// During stateVarHead, the Parser a token converted into
-		// a keyval.ValueType to the last tuple element (assumed to be
-		// a keyval.Variable). If the token is a TokenKindVarEnd then
-		// the variable is completed and the Parser moves on to the
-		// next tuple element.
+		// TODO: Document the state.
 		case stateVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -447,10 +441,7 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// During stateVarTail, the Parser either transitions
-		// to stateVarHead to parse another value type or it
-		// completes the variable and continues on to the next
-		// tuple element.
+		// TODO: Document the state.
 		case stateVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
