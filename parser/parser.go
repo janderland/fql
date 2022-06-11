@@ -227,18 +227,6 @@ func (x *Parser) Parse() (q.Query, error) {
 				valTup = false
 
 			case scanner.TokenKindOther:
-				if kind == scanner.TokenKindEscape {
-					switch token[1] {
-					case internal.DirSep:
-					default:
-						return nil, x.withTokens(x.escapeErr(token))
-					}
-
-					// Get rid of the leading backslash of the escape
-					// token. We do this here after the above check
-					// so the above error will include the backslash.
-					token = token[1:]
-				}
 				if err := kv.AppendToLastDirPart(token); err != nil {
 					return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory part"))
 				}
@@ -525,9 +513,11 @@ func (x *Parser) withTokens(err error) error {
 	}
 }
 
+/*
 func (x *Parser) escapeErr(token string) error {
 	return errors.Errorf("unexpected escape '%v' at parser state '%v'", token, stateName(x.state))
 }
+*/
 
 func (x *Parser) tokenErr(kind scanner.TokenKind) error {
 	return errors.Errorf("unexpected '%v' token at parser state '%v'", tokenKindName(kind), stateName(x.state))
