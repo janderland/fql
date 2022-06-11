@@ -31,7 +31,7 @@ func (x *KeyValBuilder) AppendToLastDirPart(token string) error {
 	if !ok {
 		return errors.Errorf("expected element %d to be string, actually is %T", i, x.kv.Key.Directory[i])
 	}
-	x.kv.Key.Directory[i] = q.String(string(str) + token)
+	x.kv.Key.Directory[i] = str + q.String(token)
 	return nil
 }
 
@@ -41,6 +41,15 @@ func (x *KeyValBuilder) AppendToValueVar(typ q.ValueType) error {
 		return errors.Errorf("expected value to be variable, actually is %T", x.kv.Value)
 	}
 	x.kv.Value = append(val, typ)
+	return nil
+}
+
+func (x *KeyValBuilder) AppendToValueStr(token string) error {
+	str, ok := x.kv.Value.(q.String)
+	if !ok {
+		return errors.Errorf("expected value to be string, actually is %T", x.kv.Value)
+	}
+	x.kv.Value = str + q.String(token)
 	return nil
 }
 

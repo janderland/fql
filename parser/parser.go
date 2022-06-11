@@ -158,6 +158,10 @@ func (x *Parser) Parse() (q.Query, error) {
 		// a variable for use as a value. Otherwise, the
 		// variable is for use in a tuple.
 		valVar bool
+
+		// If true, the stateString is building a string for
+		// use as a value.
+		valStr bool
 	)
 
 	for {
@@ -345,7 +349,11 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 
 			case scanner.TokenKindStrMark:
-				x.state = stateTupleTail
+				if valStr {
+					x.state = stateFinished
+				} else {
+					x.state = stateTupleTail
+				}
 
 			default:
 				if kind == scanner.TokenKindEscape {
@@ -353,8 +361,14 @@ func (x *Parser) Parse() (q.Query, error) {
 					token = token[1:]
 				}
 
-				if err := tup.AppendToLastElemStr(token); err != nil {
-					return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+				if valStr {
+					if err := kv.AppendToValueStr(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
+					}
+				} else {
+					if err := tup.AppendToLastElemStr(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+					}
 				}
 			}
 
@@ -387,6 +401,11 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = stateVarHead
 				valVar = true
 				kv.SetValue(q.Variable{})
+
+			case scanner.TokenKindStrMark:
+				x.state = stateTupleString
+				valStr = true
+				kv.SetValue(q.String(""))
 
 			case scanner.TokenKindOther:
 				x.state = stateFinished

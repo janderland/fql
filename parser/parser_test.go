@@ -155,7 +155,7 @@ func TestValue(t *testing.T) {
 		{name: "clear", str: "clear", ast: q.Clear{}},
 		{name: "tuple", str: "{-16,13.2,\"hi\"}", ast: q.Tuple{q.Int(-16), q.Float(13.2), q.String("hi")}},
 		{name: "raw", str: "-16", ast: q.Int(-16)},
-		// {name: "escape", str: "\"he said \\\"wowee\\\"\"", ast: q.String("he said \"wowee\"")},
+		{name: "string", str: "\"he said \\\"wowee\\\"\"", ast: q.String("he said \"wowee\"")},
 	}
 
 	t.Run("round trip", func(t *testing.T) {
