@@ -15,11 +15,17 @@ import (
 )
 
 type (
+	// RangeOpts specifies how a Stream executes a query.
 	RangeOpts struct {
 		Reverse bool
 		Limit   int
 	}
 
+	// Stream provides methods which build pipelines for reading
+	// a range of key-values. Ctx controls the cancellation of all
+	// operations. For the methods which spawn a goroutine, canceling
+	// Ctx will stop them. For the methods which block on sending to
+	// a channel, canceling Ctx will unblock them.
 	Stream struct {
 		Ctx context.Context
 		Log zerolog.Logger

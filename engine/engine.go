@@ -1,3 +1,4 @@
+// Package engine provides the code responsible for executing queries.
 package engine
 
 import (
@@ -16,11 +17,13 @@ import (
 	"github.com/rs/zerolog"
 )
 
+// SingleOpts specifies how an Engine.SingleRead call is executed.
 type SingleOpts struct {
 	ByteOrder binary.ByteOrder
 	Filter    bool
 }
 
+// RangeOpts specifies how an Engine.RangeRead call is executed.
 type RangeOpts struct {
 	ByteOrder binary.ByteOrder
 	Reverse   bool
@@ -28,6 +31,8 @@ type RangeOpts struct {
 	Limit     int
 }
 
+// forStream is used to pass a subset of the options to the
+// stream.Stream used in the Engine.RangeRead call.
 func (x RangeOpts) forStream() stream.RangeOpts {
 	return stream.RangeOpts{
 		Reverse: x.Reverse,
@@ -35,17 +40,24 @@ func (x RangeOpts) forStream() stream.RangeOpts {
 	}
 }
 
+// Engine provides methods which execute queries. Each method is built
+// for a single class (see package class) of query and will fail if a
+// query of the wrong class in provided. Unless Engine.Transact is
+// called, each method call is executed in its own transaction.
 type Engine struct {
 	Tr  facade.Transactor
 	Log zerolog.Logger
 }
 
+// Transact wraps a group of Engine method calls under a single transaction.
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return e.Tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		return f(Engine{Tr: tr, Log: e.Log})
 	})
 }
 
+// Set preforms a write operation for a single key-value. The given query must
+// belong to class.Constant.
 func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 	if class.Classify(query) != class.Constant {
 		return errors.New("query not constant class")
@@ -80,6 +92,8 @@ func (e *Engine) Set(query q.KeyValue, byteOrder binary.ByteOrder) error {
 	return errors.Wrap(err, "transaction failed")
 }
 
+// Clear performs a clear operation for a single key-value. The given query
+// must belong to class.Clear.
 func (e *Engine) Clear(query q.KeyValue) error {
 	if class.Classify(query) != class.Clear {
 		return errors.New("query not clear class")
@@ -112,6 +126,8 @@ func (e *Engine) Clear(query q.KeyValue) error {
 	return errors.Wrap(err, "transaction failed")
 }
 
+// SingleRead performs a read operation for a single key-value. The given query must
+// belong to class.SingleRead.
 func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, error) {
 	if class.Classify(query) != class.SingleRead {
 		return nil, errors.New("query not single-read class")
@@ -167,6 +183,9 @@ func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, err
 	}, nil
 }
 
+// RangeRead performs a read across a range of key-values. The given query must belong to class.RangeRead.
+// After an error occurs or the entire range is read, the returned channel is closed. If the provided context
+// is canceled, then the read operation will be stopped after the current FDB call finishes.
 func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
@@ -206,6 +225,11 @@ func (e *Engine) RangeRead(ctx context.Context, query q.KeyValue, opts RangeOpts
 	return out
 }
 
+// Directories reads directories from the directory layer. If the query contains a keyval.Variable,
+// multiple directories may be returned. If the query doesn't contain a keyval.Variable, at most a
+// single directory will be returned. After an error occurs or all directories have been read, the
+// returned channel is closed. If the provided context is canceled, then the read operation will
+// be stopped after the current FDB call finishes.
 func (e *Engine) Directories(ctx context.Context, query q.Directory) chan stream.DirErr {
 	out := make(chan stream.DirErr)
 
