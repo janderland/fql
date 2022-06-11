@@ -21,13 +21,11 @@ const (
 	stateDirVarEnd
 	stateTupleHead
 	stateTupleTail
-	stateTupleVarHead
-	stateTupleVarTail
 	stateTupleString
 	stateSeparator
 	stateValue
-	stateValueVarHead
-	stateValueVarTail
+	stateVarHead
+	stateVarTail
 	stateFinished
 )
 
@@ -45,20 +43,16 @@ func stateName(state state) string {
 		return "TupleHead"
 	case stateTupleTail:
 		return "TupleTail"
-	case stateTupleVarHead:
-		return "TupleVarHead"
-	case stateTupleVarTail:
-		return "TupleVarTail"
 	case stateTupleString:
 		return "String"
 	case stateSeparator:
 		return "Separator"
 	case stateValue:
 		return "Value"
-	case stateValueVarHead:
-		return "ValueVarHead"
-	case stateValueVarTail:
-		return "ValueVarTail"
+	case stateVarHead:
+		return "VarHead"
+	case stateVarTail:
+		return "VarTail"
 	case stateFinished:
 		return "Finished"
 	default:
@@ -159,6 +153,11 @@ func (x *Parser) Parse() (q.Query, error) {
 		// root tuple, the tuple is copied into the query's
 		// value. Otherwise, it's copied into the key.
 		valTup bool
+
+		// If true, stateVarHead & stateVarTail are building
+		// a variable for use as a value. Otherwise, the
+		// variable is for use in a tuple.
+		valVar bool
 	)
 
 	for {
@@ -279,7 +278,8 @@ func (x *Parser) Parse() (q.Query, error) {
 				}
 
 			case scanner.TokenKindVarStart:
-				x.state = stateTupleVarHead
+				x.state = stateVarHead
+				valVar = false
 				tup.Append(q.Variable{})
 
 			case scanner.TokenKindStrMark:
@@ -349,46 +349,6 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
 			}
 
-		// During stateTupleVarHead, the Parser a token converted into
-		// a keyval.ValueType to the last tuple element (assumed to be
-		// a keyval.Variable). If the token is a TokenKindVarEnd then
-		// the variable is completed and the Parser moves on to the
-		// next tuple element.
-		case stateTupleVarHead:
-			switch kind {
-			case scanner.TokenKindVarEnd:
-				x.state = stateTupleTail
-
-			case scanner.TokenKindOther:
-				x.state = stateTupleVarTail
-				v, err := parseValueType(token)
-				if err != nil {
-					return nil, x.withTokens(err)
-				}
-				if err := tup.AppendToLastElemVar(v); err != nil {
-					return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
-				}
-
-			default:
-				return nil, x.withTokens(x.tokenErr(kind))
-			}
-
-		// During stateTupleVarTail, the Parser either transitions
-		// to stateTupleVarHead to parse another value type or it
-		// completes the variable and continues on to the next
-		// tuple element.
-		case stateTupleVarTail:
-			switch kind {
-			case scanner.TokenKindVarEnd:
-				x.state = stateTupleTail
-
-			case scanner.TokenKindVarSep:
-				x.state = stateTupleVarHead
-
-			default:
-				return nil, x.withTokens(x.tokenErr(kind))
-			}
-
 		// stateSeparator occurs after the key's tuple is completed.
 		// The Parser then either begins parsing the value or
 		// returns the key as the query.
@@ -411,11 +371,12 @@ func (x *Parser) Parse() (q.Query, error) {
 			switch kind {
 			case scanner.TokenKindTupStart:
 				x.state = stateTupleHead
-				tup = internal.TupBuilder{}
 				valTup = true
+				tup = internal.TupBuilder{}
 
 			case scanner.TokenKindVarStart:
-				x.state = stateValueVarHead
+				x.state = stateVarHead
+				valVar = true
 				kv.SetValue(q.Variable{})
 
 			case scanner.TokenKindOther:
@@ -434,34 +395,56 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// TODO: Merge with stateTupleVarHead.
-		case stateValueVarHead:
+		// During stateVarHead, the Parser a token converted into
+		// a keyval.ValueType to the last tuple element (assumed to be
+		// a keyval.Variable). If the token is a TokenKindVarEnd then
+		// the variable is completed and the Parser moves on to the
+		// next tuple element.
+		case stateVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				x.state = stateFinished
+				if valVar {
+					x.state = stateFinished
+				} else {
+					x.state = stateTupleTail
+				}
 
 			case scanner.TokenKindOther:
-				x.state = stateValueVarTail
+				x.state = stateVarTail
 				v, err := parseValueType(token)
 				if err != nil {
 					return nil, x.withTokens(err)
 				}
-				if err := kv.AppendToValueVar(v); err != nil {
-					return nil, x.withTokens(errors.Wrap(err, "failed to append to value variable"))
+
+				if valVar {
+					if err := kv.AppendToValueVar(v); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to value variable"))
+					}
+				} else {
+					if err := tup.AppendToLastElemVar(v); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
+					}
 				}
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// TODO: Merge with stateTupleVarTail.
-		case stateValueVarTail:
+		// During stateVarTail, the Parser either transitions
+		// to stateVarHead to parse another value type or it
+		// completes the variable and continues on to the next
+		// tuple element.
+		case stateVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				x.state = stateFinished
+				if valVar {
+					x.state = stateFinished
+				} else {
+					x.state = stateTupleTail
+				}
 
 			case scanner.TokenKindVarSep:
-				x.state = stateValueVarHead
+				x.state = stateVarHead
 
 			default:
 				return nil, x.withTokens(x.tokenErr(kind))
