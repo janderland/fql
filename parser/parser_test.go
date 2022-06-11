@@ -206,7 +206,7 @@ func TestString(t *testing.T) {
 	}{
 		{name: "empty", str: "\"\"", ast: q.String("")},
 		{name: "simple", str: "\"hi\"", ast: q.String("hi")},
-		{name: "escapes", str: "\"\\ \\\" \\d\"", ast: q.String("\\ \" \\d")},
+		{name: "escapes", str: "\"\\\\ \\\" \"", ast: q.String("\\ \" ")},
 	}
 
 	t.Run("value round trip", func(t *testing.T) {
@@ -230,9 +230,7 @@ func TestString(t *testing.T) {
 		name string
 		str  string
 	}{
-		{name: "unclosed", str: "<"},
-		{name: "unopened", str: ">"},
-		{name: "invalid", str: "<invalid>"},
+		{name: "illegal escape", str: "\" \\d \""},
 	}
 
 	t.Run("value parse failures", func(t *testing.T) {

@@ -409,10 +409,15 @@ func (x *Parser) Parse() (q.Query, error) {
 				}
 
 			default:
-				if kind == scanner.TokenKindEscape && token[1] == internal.StrMark {
-					// Get rid of the leading backslash, but only if it's escaping
-					// a string mark. Otherwise, we'll just append it as is.
-					token = token[1:]
+				if kind == scanner.TokenKindEscape {
+					switch token[1] {
+					case internal.Escape, internal.StrMark:
+						// Get rid of the leading backslash.
+						token = token[1:]
+
+					default:
+						return nil, x.withTokens(x.escapeErr(token))
+					}
 				}
 
 				switch {
@@ -527,11 +532,9 @@ func (x *Parser) withTokens(err error) error {
 	}
 }
 
-/*
 func (x *Parser) escapeErr(token string) error {
 	return errors.Errorf("unexpected escape '%v' at parser state '%v'", token, stateName(x.state))
 }
-*/
 
 func (x *Parser) tokenErr(kind scanner.TokenKind) error {
 	return errors.Errorf("unexpected '%v' token at parser state '%v'", tokenKindName(kind), stateName(x.state))

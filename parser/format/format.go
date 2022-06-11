@@ -146,5 +146,7 @@ func (x *Format) MaybeMore(_ q.MaybeMore) {
 }
 
 func escapeString(in string) string {
-	return strings.ReplaceAll(in, "\"", "\\\"")
+	out := strings.ReplaceAll(in, "\\", "\\\\")
+	out = strings.ReplaceAll(out, "\"", "\\\"")
+	return out
 }
