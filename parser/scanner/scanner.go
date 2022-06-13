@@ -89,12 +89,6 @@ const (
 	// the runesWhitespace or runesNewline constants.
 	stateNewline
 
-	// stateDirPart follows any state, save for stateString, if
-	// a DirSep rune is encountered. During this state, the scanner doesn't
-	// separate whitespace or newlines into separate tokens. The scanner remains
-	// in this state until a TupStart is encountered.
-	stateDirPart
-
 	// stateString follows any state, save for stateDirPart, if a
 	// StrMark rune is encountered. During this state, the scanner doesn't
 	// separate whitespace or newlines into separate tokens. The scanner remains
@@ -149,8 +143,6 @@ func primaryKind(state state) TokenKind {
 		return TokenKindWhitespace
 	case stateNewline:
 		return TokenKindNewline
-	case stateDirPart:
-		return TokenKindOther
 	case stateString:
 		return TokenKindOther
 	case stateOther:
@@ -255,19 +247,15 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 		if kind := singleRuneKind(r); kind != TokenKindUnassigned {
 			newState := stateUnassigned
 
-			switch r {
-			case internal.DirSep:
-				switch x.state {
-				case stateString:
-					break
-				default:
-					newState = stateDirPart
-				}
+			// TODO: Simplify this branch.
+			// This branch used handle two special states,
+			// strings & directory elements. Directory
+			// elements are no longer a special state, so
+			// this branch could maybe be simplified.
 
+			switch r {
 			case internal.StrMark:
 				switch x.state {
-				case stateDirPart:
-					break
 				case stateString:
 					newState = stateWhitespace
 				default:

@@ -25,6 +25,20 @@ const (
 	StrMark   = '"'
 )
 
+func AllSingleRuneTokens() string {
+	return string([]rune{
+		KeyValSep,
+		DirSep,
+		TupStart,
+		TupSep,
+		TupEnd,
+		VarStart,
+		VarSep,
+		VarEnd,
+		StrMark,
+	})
+}
+
 const (
 	// Escape marks the start of an escape token.
 	Escape = '\\'

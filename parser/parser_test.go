@@ -19,6 +19,7 @@ func TestDirectory(t *testing.T) {
 		{name: "single", str: "/hello", ast: q.Directory{q.String("hello")}},
 		{name: "multi", str: "/hello/world", ast: q.Directory{q.String("hello"), q.String("world")}},
 		{name: "variable", str: "/hello/<>/thing", ast: q.Directory{q.String("hello"), q.Variable{}, q.String("thing")}},
+		{name: "multiline", str: "/hi/\"you\nwow\"/<>", ast: q.Directory{q.String("hi"), q.String("you\nwow"), q.Variable{}}},
 	}
 
 	t.Run("key round trip", func(t *testing.T) {
@@ -205,7 +206,7 @@ func TestString(t *testing.T) {
 	}{
 		{name: "empty", str: "\"\"", ast: q.String("")},
 		{name: "simple", str: "\"hi\"", ast: q.String("hi")},
-		{name: "escapes", str: "\"\\ \\\" \\d\"", ast: q.String("\\ \" \\d")},
+		{name: "escapes", str: "\"\\\\ \\\" \"", ast: q.String("\\ \" ")},
 	}
 
 	t.Run("value round trip", func(t *testing.T) {
@@ -229,9 +230,7 @@ func TestString(t *testing.T) {
 		name string
 		str  string
 	}{
-		{name: "unclosed", str: "<"},
-		{name: "unopened", str: ">"},
-		{name: "invalid", str: "<invalid>"},
+		{name: "illegal escape", str: "\" \\d \""},
 	}
 
 	t.Run("value parse failures", func(t *testing.T) {

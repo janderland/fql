@@ -29,6 +29,14 @@ const (
 	stateFinished
 )
 
+type stringState int
+
+const (
+	stringStateDir stringState = iota
+	stringStateTup
+	stringStateVal
+)
+
 func stateName(state state) string {
 	switch state {
 	case stateInitial:
@@ -149,19 +157,23 @@ func (x *Parser) Parse() (q.Query, error) {
 		kv  internal.KeyValBuilder
 		tup internal.TupBuilder
 
+		// TODO: Work into the state machine.
 		// If true, when internal.TupBuilder ends its
 		// root tuple, the tuple is copied into the query's
 		// value. Otherwise, it's copied into the key.
 		valTup bool
 
+		// TODO: Work into the state machine.
 		// If true, stateVarHead & stateVarTail are building
 		// a variable for use as a value. Otherwise, the
 		// variable is for use in a tuple.
 		valVar bool
 
-		// If true, the stateString is building a string for
-		// use as a value.
-		valStr bool
+		// TODO: Work into the state machine.
+		// If < 0 then the string is a directory part.
+		// If == 0 then the string is in a tuple.
+		// If > 0 then the string is for a value.
+		stringState stringState
 	)
 
 	for {
@@ -203,6 +215,11 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = stateDirVarEnd
 				kv.AppendVarToDirectory()
 
+			case scanner.TokenKindStrMark:
+				x.state = stateString
+				stringState = stringStateDir
+				kv.AppendPartToDirectory("")
+
 			case scanner.TokenKindOther:
 				x.state = stateDirTail
 				kv.AppendPartToDirectory(token)
@@ -216,6 +233,7 @@ func (x *Parser) Parse() (q.Query, error) {
 		// to create a new element, start parsing the key's
 		// tuple, or finishes the query as a directory query.
 		// TODO: Don't allow appending after stateDirVarEnd.
+		// TODO: Don't allow appending after stateString.
 		case stateDirTail:
 			switch kind {
 			case scanner.TokenKindDirSep:
@@ -279,6 +297,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
+				stringState = stringStateTup
 				tup.Append(q.String(""))
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
@@ -360,7 +379,7 @@ func (x *Parser) Parse() (q.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				valStr = true
+				stringState = stringStateVal
 				kv.SetValue(q.String(""))
 
 			case scanner.TokenKindOther:
@@ -386,27 +405,50 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 
 			case scanner.TokenKindStrMark:
-				if valStr {
-					x.state = stateFinished
-				} else {
+				switch stringState {
+				case stringStateDir:
+					x.state = stateDirTail
+
+				case stringStateTup:
 					x.state = stateTupleTail
+
+				case stringStateVal:
+					x.state = stateFinished
+
+				default:
+					return nil, errors.Errorf("unexpected string state '%v'", stringState)
 				}
 
 			default:
-				if kind == scanner.TokenKindEscape && token[1] == internal.StrMark {
-					// Get rid of the leading backslash, but only if it's escaping
-					// a string mark. Otherwise, we'll just append it as is.
-					token = token[1:]
+				if kind == scanner.TokenKindEscape {
+					switch token[1] {
+					case internal.Escape, internal.StrMark:
+						// Get rid of the leading backslash.
+						token = token[1:]
+
+					default:
+						return nil, x.withTokens(x.escapeErr(token))
+					}
 				}
 
-				if valStr {
-					if err := kv.AppendToValueStr(token); err != nil {
-						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
+				switch stringState {
+				case stringStateDir:
+					if err := kv.AppendToLastDirPart(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory element"))
 					}
-				} else {
+
+				case stringStateTup:
 					if err := tup.AppendToLastElemStr(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
 					}
+
+				case stringStateVal:
+					if err := kv.AppendToValueStr(token); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
+					}
+
+				default:
+					return nil, errors.Errorf("unexpected string state '%v'", stringState)
 				}
 			}
 
@@ -504,11 +546,9 @@ func (x *Parser) withTokens(err error) error {
 	}
 }
 
-/*
 func (x *Parser) escapeErr(token string) error {
 	return errors.Errorf("unexpected escape '%v' at parser state '%v'", token, stateName(x.state))
 }
-*/
 
 func (x *Parser) tokenErr(kind scanner.TokenKind) error {
 	return errors.Errorf("unexpected '%v' token at parser state '%v'", tokenKindName(kind), stateName(x.state))
