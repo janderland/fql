@@ -1,7 +1,6 @@
 package format
 
 import (
-	"fmt"
 	"strings"
 
 	q "github.com/janderland/fdbq/keyval"
@@ -28,7 +27,6 @@ var quotedRunes = internal.AllSingleRuneTokens() +
 func (x *formatDirElement) ForString(in q.String) {
 	needsQuotes := strings.ContainsAny(string(in), quotedRunes)
 	if needsQuotes {
-		fmt.Printf("contains: %v", in)
 		x.format.Builder.WriteRune(internal.StrMark)
 	}
 	x.format.Builder.WriteString(string(in))
