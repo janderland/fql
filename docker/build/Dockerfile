@@ -4,7 +4,7 @@ RUN yum -y --setopt=skip_missing_names_on_install=False install epel-release gcc
     yum -y --setopt=skip_missing_names_on_install=False install ShellCheck-0.3.8 &&\
     yum -y clean all
 
-ARG FDB_LIB_URL="https://www.foundationdb.org/downloads/6.2.30/rhel7/installers/foundationdb-clients-6.2.30-1.el7.x86_64.rpm"
+ARG FDB_LIB_URL="https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients-6.2.30-1.el7.x86_64.rpm"
 RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
     rpm -i ./fdb.rpm &&\
     rm ./fdb.rpm
