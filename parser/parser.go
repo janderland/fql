@@ -232,8 +232,6 @@ func (x *Parser) Parse() (q.Query, error) {
 		// the latest keyval.DirElement and then transitions
 		// to create a new element, start parsing the key's
 		// tuple, or finishes the query as a directory query.
-		// TODO: Don't allow appending after stateDirVarEnd.
-		// TODO: Don't allow appending after stateString.
 		case stateDirTail:
 			switch kind {
 			case scanner.TokenKindDirSep:
@@ -243,11 +241,6 @@ func (x *Parser) Parse() (q.Query, error) {
 				x.state = stateTupleHead
 				tup = internal.TupBuilder{}
 				valTup = false
-
-			case scanner.TokenKindOther:
-				if err := kv.AppendToLastDirPart(token); err != nil {
-					return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory part"))
-				}
 
 			case scanner.TokenKindEnd:
 				return kv.Get().Key.Directory, nil
