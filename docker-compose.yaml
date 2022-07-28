@@ -8,7 +8,6 @@ services:
     working_dir: "/fdbq"
     volumes:
       - ".:/fdbq"
-      - "cache:/cache"
     command: ["/bin/sh", "-c", "./scripts/setup_database.sh && ./scripts/verify_codebase.sh"]
   fdb:
     container_name: fdb
