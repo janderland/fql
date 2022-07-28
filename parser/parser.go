@@ -228,9 +228,8 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// During stateDirTail, the Parser finishes building
-		// the latest keyval.DirElement and then transitions
-		// to create a new element, start parsing the key's
+		// During stateDirTail the Parser transitions to create
+		// a new directory element, start parsing the key's
 		// tuple, or finishes the query as a directory query.
 		case stateDirTail:
 			switch kind {
@@ -391,7 +390,12 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// TODO: Document the state.
+		// During stateString, tokens are appended to the
+		// string currently being constructed. The string
+		// being constructed may be a directory element,
+		// tuple element, or a value. If a TokenKindStrMark
+		// is encountered, the Parser moves out of this
+		// state.
 		case stateString:
 			switch kind {
 			case scanner.TokenKindEnd:
@@ -445,7 +449,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				}
 			}
 
-		// TODO: Document the state.
+		// During stateVarHead, the Parser adds a value type
+		// to the current keyval.Variable which may be in a
+		// tuple or the value.
 		case stateVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
@@ -476,7 +482,9 @@ func (x *Parser) Parse() (q.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 			}
 
-		// TODO: Document the state.
+		// During stateVarTail, the Parser either begins
+		// parsing another value type or finishes the
+		// current keyval.Variable.
 		case stateVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
