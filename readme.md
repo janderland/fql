@@ -1,15 +1,14 @@
 # FDBQ
 
 FDBQ provides a query language and an alternative client API
-for FoundationDB. Some of the things this project aims to
-acheive are:
+for FoundationDB. Some things this project aims to achieve
+are:
 - [x] Provide a textual description of key-value schemas.
 - [x] Provide an intuitive query language for FDB.
 - [x] Provide a Go API which is structurally equivalent to
   the query language.
+- [x] Unify the directory, tuple, & core APIs.
 - [ ] Improve the ergonomics of the FoundationDB API.
-  - [ ] Simplify the directory, tuple, & core APIs via
-    a single unified API.
   - [ ] Gracefully handle multi-transaction range-reads.
   - [ ] Gracefully handle transient errors.
 - [ ] Standardize the encoding of primitives (int, float,
@@ -111,7 +110,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Read & Filter Range of Keys
+### Read Range of Keys
 
 ```fdbq
 /people{3392, <string|int>, <>}={<uint>, ...}
@@ -143,24 +142,24 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
     }
 
     if len(tup) != 3 {
-      continue
+      return nil, fmt.Errorf("invalid kv: %v", kv)
     }
 
     switch tup[0].(type) {
     default:
-      continue
+      return nil, fmt.Errorf("invalid kv: %v", kv)
     case string | int64:
     }
 
     val, err := tuple.Unpack(kv.Value)
     if err != nil {
-      continue
+      return nil, fmt.Errorf("invalid kv: %v", kv)
     }
     if len(val) == 0 {
-      continue
+      return nil, fmt.Errorf("invalid kv: %v", kv)
     }
     if _, isInt := val[0].(uint64); !isInt {
-      continue
+      return nil, fmt.Errorf("invalid kv: %v", kv)
     }
 
     results = append(results, kv)
