@@ -13,7 +13,7 @@ key = directory tuple
 
 value = 'clear' | data
 
-directory = '/' ( '<>' | word | string ) [ directory ]
+directory = '/' ( '<>' | name | string ) [ directory ]
 
 tuple = '{' [ nl elements [ ',' ] nl ] '}'
 
@@ -47,7 +47,7 @@ hexDigit = digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 
 text = ? Any number of ASCII characters 32-126 (Printable Group) other than 34 (Double Quote). ?
 
-word = ? Any number of ASCII characters 32-126 (Printable Group) other than 9 (Horizontal Tab) 10 (Line Feed) 13 (Carriage Return) or 32 (Space). ?
+name = ? Any number of ASCII characters 48-57, 65-90, 97-122 (Alpha-numeric) or 95 (Underscore). ?
 
 ws = ? Any number of ASCII characters 9 (Horizontal Tab) or 32 (Space). ?
 
