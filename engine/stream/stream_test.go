@@ -37,12 +37,10 @@ func TestStream_OpenDirectories(t *testing.T) {
 		query    q.Directory
 		initial  [][]string
 		expected [][]string
-		error    bool
 	}{
 		{
 			name:  "no exist one",
 			query: q.Directory{q.String("hello")},
-			error: false,
 		},
 		{
 			name:     "exist one",
@@ -53,7 +51,6 @@ func TestStream_OpenDirectories(t *testing.T) {
 		{
 			name:  "no exist many",
 			query: q.Directory{q.String("people"), q.Variable{}},
-			error: true,
 		},
 		{
 			name:  "exist many",
@@ -83,11 +80,7 @@ func TestStream_OpenDirectories(t *testing.T) {
 
 				ch := s.OpenDirectories(tr, test.query)
 				dirs, err := collectDirs(ch)
-				if test.error {
-					require.Error(t, err, "failed to open directories")
-				} else {
-					require.NoError(t, err, "successfully opened directories")
-				}
+				require.NoError(t, err)
 
 				var actual [][]string
 				for _, dir := range dirs {

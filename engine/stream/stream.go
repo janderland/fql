@@ -132,6 +132,9 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 	if variable != nil {
 		subDirs, err := tr.DirList(prefixStr)
 		if err != nil {
+			if errors.Is(err, directory.ErrDirNotExists) {
+				return
+			}
 			r.SendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
 			return
 		}
