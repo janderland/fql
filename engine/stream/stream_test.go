@@ -42,7 +42,7 @@ func TestStream_OpenDirectories(t *testing.T) {
 		{
 			name:  "no exist one",
 			query: q.Directory{q.String("hello")},
-			error: true,
+			error: false,
 		},
 		{
 			name:     "exist one",
