@@ -23,6 +23,29 @@ const (
 	VarSep    = '|'
 	VarEnd    = '>'
 	StrMark   = '"'
+
+	// While the following aren't currently used by
+	// the language, the following symbols have been
+	// reserved for future use.
+
+	Exclamation = '!'
+	Hashtag     = '#'
+	Dollar      = '$'
+	Percent     = '%'
+	Ampersand   = '&'
+	ParenStart  = '('
+	ParenEnd    = ')'
+	Star        = '*'
+	Plus        = '+'
+	Colon       = ':'
+	Semicolon   = ';'
+	Question    = '?'
+	At          = '@'
+	BraceStart  = '['
+	BraceEnd    = ']'
+	Caret       = '^'
+	Grave       = '`'
+	Tilde       = '~'
 )
 
 func AllSingleRuneTokens() string {

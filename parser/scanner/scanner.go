@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 	"strings"
+	"unicode"
 
 	"github.com/janderland/fdbq/parser/internal"
 	"github.com/pkg/errors"
@@ -68,6 +69,11 @@ const (
 
 	// TokenKindStrMark identifies a token equal to StrMark.
 	TokenKindStrMark
+
+	// TokenKindReserved identifies a single-rune token which
+	// isn't currently used by the language by reserved for
+	// later use.
+	TokenKindReserved
 )
 
 type state int
@@ -128,6 +134,47 @@ func singleRuneKind(r rune) TokenKind {
 		return TokenKindVarSep
 	case internal.StrMark:
 		return TokenKindStrMark
+
+	// While the following aren't currently used by
+	// the language, the following symbols have been
+	// reserved for future use.
+	case internal.Exclamation:
+		return TokenKindReserved
+	case internal.Hashtag:
+		return TokenKindReserved
+	case internal.Dollar:
+		return TokenKindReserved
+	case internal.Percent:
+		return TokenKindReserved
+	case internal.Ampersand:
+		return TokenKindReserved
+	case internal.ParenStart:
+		return TokenKindReserved
+	case internal.ParenEnd:
+		return TokenKindReserved
+	case internal.Star:
+		return TokenKindReserved
+	case internal.Plus:
+		return TokenKindReserved
+	case internal.Colon:
+		return TokenKindReserved
+	case internal.Semicolon:
+		return TokenKindReserved
+	case internal.Question:
+		return TokenKindReserved
+	case internal.At:
+		return TokenKindReserved
+	case internal.BraceStart:
+		return TokenKindReserved
+	case internal.BraceEnd:
+		return TokenKindReserved
+	case internal.Caret:
+		return TokenKindReserved
+	case internal.Grave:
+		return TokenKindReserved
+	case internal.Tilde:
+		return TokenKindReserved
+
 	default:
 		return TokenKindUnassigned
 	}
@@ -357,6 +404,12 @@ func (x *Scanner) read() (rune, bool) {
 	}
 	if err != nil {
 		panic(errors.Wrap(err, "failed to read rune"))
+	}
+	if r > unicode.MaxASCII {
+		panic(errors.Errorf("read non-ASCII rune with code '%d'", r))
+	}
+	if !unicode.IsPrint(r) && !strings.ContainsRune(internal.Whitespace+internal.Newline, r) {
+		panic(errors.Errorf("read unsupported ASCII rune with code '%d'", r))
 	}
 	return r, false
 }
