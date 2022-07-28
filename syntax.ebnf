@@ -1,7 +1,7 @@
 (*
  This document defines the syntax of the FDBQ query
  language. The meta language used is extended Backus-Naur
- form as defined in ISO/IEC 14977 with two exceptions:
+ form as defined in ISO/IEC 14977 with two modifications:
  concatenation is implicit and rules terminate at newline.
 *)
 
