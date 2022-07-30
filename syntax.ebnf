@@ -47,8 +47,7 @@ hexDigit = digit | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 
 text = ? Any number of ASCII characters 32-126 (Printable Group) other than 34 (Double Quote). ?
 
-(* TODO: As implemented, <name> can actually include more characters. *)
-name = ? Any number of ASCII characters 48-57, 65-90, 97-122 (Alpha-numeric) or 95 (Underscore). ?
+name = ? Any number of ASCII characters 48-57, 65-90, 97-122 (Alpha-numeric), 46 (Dot), 45 (Dash), or 95 (Underscore). ?
 
 ws = ? Any number of ASCII characters 9 (Horizontal Tab) or 32 (Space). ?
 

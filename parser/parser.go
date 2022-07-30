@@ -98,6 +98,8 @@ func tokenKindName(kind scanner.TokenKind) string {
 		return "Other"
 	case scanner.TokenKindEnd:
 		return "End"
+	case scanner.TokenKindReserved:
+		return "Reserved"
 	default:
 		return fmt.Sprintf("[unknown token kind %v]", kind)
 	}
