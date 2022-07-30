@@ -71,7 +71,7 @@ const (
 	TokenKindStrMark
 
 	// TokenKindReserved identifies a single-rune token which
-	// isn't currently used by the language by reserved for
+	// isn't currently used by the language but reserved for
 	// later use.
 	TokenKindReserved
 )
