@@ -21,7 +21,7 @@ language.
 
 FDBQ is available as a Docker image for running queries. The
 first argument passed to the container is the contents of
-the cluster file. The remaning arguments are passed to the
+the cluster file. The remaining arguments are passed to the
 FDBQ binary.
 
 ```bash
