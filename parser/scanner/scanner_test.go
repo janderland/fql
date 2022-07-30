@@ -134,6 +134,24 @@ func TestScanner(t *testing.T) {
 	}
 }
 
+func TestBadRunes(t *testing.T) {
+	tests := []struct {
+		name  string
+		input string
+	}{
+		{name: "non-ascii", input: "♥"},
+		{name: "non-printable", input: "\a"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			s := New(strings.NewReader(test.input))
+			_, err := s.Scan()
+			require.Error(t, err)
+		})
+	}
+}
+
 func TestErrRecovery(t *testing.T) {
 	s := New(&badReader{})
 	_, err := s.Scan()
