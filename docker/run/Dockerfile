@@ -6,5 +6,5 @@ RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
     rm ./fdb.rpm
 
 COPY fdbq /fdbq
-COPY docker/fdbq/shim.sh /shim.sh
+COPY docker/run/shim.sh /shim.sh
 ENTRYPOINT ["/shim.sh"]
