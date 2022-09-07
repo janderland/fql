@@ -9,7 +9,7 @@ RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
     rpm -i ./fdb.rpm &&\
     rm ./fdb.rpm
 
-ARG GO_URL="https://golang.org/dl/go1.16.8.linux-amd64.tar.gz"
+ARG GO_URL="https://go.dev/dl/go1.19.1.linux-amd64.tar.gz"
 RUN curl -Lo go.tar.gz $GO_URL &&\
     tar -C /usr/local -xzf ./go.tar.gz &&\
     rm ./go.tar.gz
