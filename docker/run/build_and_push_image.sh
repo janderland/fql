@@ -10,5 +10,5 @@ WORKDIR="/fdbq"
 docker run -v "$ROOT":$WORKDIR -w $WORKDIR janderland/fdbq-build:latest go build
 docker build -t "$TAG" -t $LATEST -f "$DIR"/Dockerfile "$ROOT"
 
-# docker push "$TAG" 
-# docker push $LATEST
+docker push "$TAG" 
+docker push $LATEST
