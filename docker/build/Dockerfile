@@ -19,7 +19,7 @@ ENV GOMODCACHE="/cache/gomod"
 
 ARG GOLANGCI_LINT_URL="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 RUN curl -Lo golint.sh $GOLANGCI_LINT_URL &&\
-    sh ./golint.sh -b "$(go env GOPATH)/bin" v1.42.1 &&\
+    sh ./golint.sh -b "$(go env GOPATH)/bin" v1.49.0 &&\
     rm ./golint.sh
 ENV GOLANGCI_LINT_CACHE="/cache/golangci-lint"
 
