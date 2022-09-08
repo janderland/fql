@@ -9,7 +9,7 @@ RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
     rpm -i ./fdb.rpm &&\
     rm ./fdb.rpm
 
-ARG GO_URL="https://golang.org/dl/go1.16.8.linux-amd64.tar.gz"
+ARG GO_URL="https://go.dev/dl/go1.19.1.linux-amd64.tar.gz"
 RUN curl -Lo go.tar.gz $GO_URL &&\
     tar -C /usr/local -xzf ./go.tar.gz &&\
     rm ./go.tar.gz
@@ -19,7 +19,7 @@ ENV GOMODCACHE="/cache/gomod"
 
 ARG GOLANGCI_LINT_URL="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 RUN curl -Lo golint.sh $GOLANGCI_LINT_URL &&\
-    sh ./golint.sh -b "$(go env GOPATH)/bin" v1.42.1 &&\
+    sh ./golint.sh -b "$(go env GOPATH)/bin" v1.49.0 &&\
     rm ./golint.sh
 ENV GOLANGCI_LINT_CACHE="/cache/golangci-lint"
 
