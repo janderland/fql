@@ -23,8 +23,8 @@ func init() {
 }
 
 var Fdbq = &cobra.Command{
-	Use:   "fdbq",
-	Short: "Fdbq is a query language for Foundation DB",
+	Use:   "fdbq [flags] query ...",
+	Short: "fdbq is a query language for Foundation DB",
 	RunE: func(_ *cobra.Command, args []string) error {
 		return run(flags, args, os.Stdout, os.Stderr)
 	},
