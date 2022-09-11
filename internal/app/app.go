@@ -2,7 +2,6 @@ package app
 
 import (
 	"context"
-	"fmt"
 	"os"
 	"strings"
 
@@ -14,29 +13,24 @@ import (
 	"github.com/janderland/fdbq/parser/format"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+	"github.com/spf13/cobra"
 )
 
-func Run() {
-	if err := run(os.Args, os.Stdout, os.Stderr); err != nil {
-		if _, err := fmt.Fprintf(os.Stderr, "%v\n", err); err != nil {
-			panic(err)
-		}
-		os.Exit(1)
-	}
+var flags *flag.Flags
+
+func init() {
+	flags = flag.SetupFlags(Fdbq)
 }
 
-func run(args []string, stdout *os.File, stderr *os.File) error {
-	flags, queries, err := flag.Parse(args, stderr)
-	if err != nil {
-		return errors.Wrap(err, "failed to parse args")
-	}
+var Fdbq = &cobra.Command{
+	Use:   "fdbq",
+	Short: "Fdbq is a query language for Foundation DB",
+	RunE: func(_ *cobra.Command, args []string) error {
+		return run(flags, args, os.Stdout, os.Stderr)
+	},
+}
 
-	// If Parse returns nil flags, it's assumed the help
-	// flag was given and the help message was printed.
-	if flags == nil {
-		return nil
-	}
-
+func run(flags *flag.Flags, queries []string, stdout *os.File, stderr *os.File) error {
 	log := zerolog.Nop()
 	if flags.Log {
 		writer := zerolog.ConsoleWriter{Out: stderr}
