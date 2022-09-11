@@ -1,3 +1,4 @@
+// Package parser contains objects for parsing text queries.
 package parser
 
 import (
