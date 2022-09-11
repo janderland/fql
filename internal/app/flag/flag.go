@@ -2,12 +2,9 @@ package flag
 
 import (
 	"encoding/binary"
-	"flag"
-	"fmt"
-	"os"
 
 	"github.com/janderland/fdbq/engine"
-	"github.com/pkg/errors"
+	"github.com/spf13/cobra"
 )
 
 type Flags struct {
@@ -16,45 +13,26 @@ type Flags struct {
 	Log     bool
 
 	Reverse bool
-	Filter  bool
+	Strict  bool
 	Little  bool
 	Bytes   bool
 	Limit   int
 }
 
-func setupFlagSet(output *os.File) (*Flags, *flag.FlagSet) {
+func SetupFlags(cmd *cobra.Command) *Flags {
 	var flags Flags
 
-	fs := flag.NewFlagSet("", flag.ContinueOnError)
-	fs.Usage = func() {
-		_, _ = fmt.Fprint(fs.Output(), "fdbq [flags] query1 [query2...]\n\n")
-		fs.PrintDefaults()
-	}
+	cmd.Flags().StringVarP(&flags.Cluster, "cluster", "c", "", "path to cluster file")
+	cmd.Flags().BoolVarP(&flags.Write, "write", "w", false, "allow write queries")
+	cmd.Flags().BoolVar(&flags.Log, "log", false, "perform debug logging")
 
-	fs.SetOutput(output)
+	cmd.Flags().BoolVarP(&flags.Reverse, "reverse", "r", false, "query range-reads in reverse order")
+	cmd.Flags().BoolVarP(&flags.Strict, "strict", "s", false, "throw an error if a KV is read which doesn't match the schema")
+	cmd.Flags().BoolVarP(&flags.Little, "little", "l", false, "encode/decode values as little endian")
+	cmd.Flags().BoolVarP(&flags.Bytes, "bytes", "b", false, "print full byte strings instead of just their length")
+	cmd.Flags().IntVar(&flags.Limit, "limit", 0, "limit the number of KVs read in range-reads")
 
-	fs.StringVar(&flags.Cluster, "cluster", "", "path to cluster file")
-	fs.BoolVar(&flags.Write, "write", false, "allow write queries")
-	fs.BoolVar(&flags.Log, "log", false, "perform logging")
-
-	fs.BoolVar(&flags.Reverse, "reverse", false, "reverse range reads")
-	fs.BoolVar(&flags.Filter, "filter", false, "filter schema transgressions")
-	fs.BoolVar(&flags.Little, "little", false, "little endian value encoding")
-	fs.BoolVar(&flags.Bytes, "bytes", false, "print byte strings")
-	fs.IntVar(&flags.Limit, "limit", 0, "range read limit")
-
-	return &flags, fs
-}
-
-func Parse(args []string, stderr *os.File) (*Flags, []string, error) {
-	flags, flagSet := setupFlagSet(stderr)
-	if err := flagSet.Parse(args[1:]); err != nil {
-		if errors.Is(err, flag.ErrHelp) {
-			return nil, nil, nil
-		}
-		return nil, nil, errors.Wrap(err, "failed to parse flags")
-	}
-	return flags, flagSet.Args(), nil
+	return &flags
 }
 
 func (x *Flags) ByteOrder() binary.ByteOrder {
@@ -67,7 +45,7 @@ func (x *Flags) ByteOrder() binary.ByteOrder {
 func (x *Flags) SingleOpts() engine.SingleOpts {
 	return engine.SingleOpts{
 		ByteOrder: x.ByteOrder(),
-		Filter:    x.Filter,
+		Filter:    !x.Strict,
 	}
 }
 
@@ -75,7 +53,7 @@ func (x *Flags) RangeOpts() engine.RangeOpts {
 	return engine.RangeOpts{
 		ByteOrder: x.ByteOrder(),
 		Reverse:   x.Reverse,
-		Filter:    x.Filter,
+		Filter:    x.Strict,
 		Limit:     x.Limit,
 	}
 }
