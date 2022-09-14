@@ -1,3 +1,4 @@
+// Package facade provide interfaces for FDB's transaction, directory, & tuple APIs.
 package facade
 
 import (
@@ -6,28 +7,57 @@ import (
 )
 
 type (
+	// ReadTransactor provides methods for performing read transactions and for opening
+	// & listing directories.
 	ReadTransactor interface {
+		// ReadTransact opens a new transaction. If this ReadTransactor is backed by a
+		// transaction then that transaction is reused.
 		ReadTransact(func(ReadTransaction) (interface{}, error)) (interface{}, error)
+
+		// DirOpen opens a directory under the root directory specified by the
+		// implementation.
 		DirOpen(path []string) (directory.DirectorySubspace, error)
+
+		// DirList lists the directories under the root directory specified by
+		// the implementation.
 		DirList(path []string) ([]string, error)
 	}
 
+	// ReadTransaction provides methods for reading key-values from an open transaction.
 	ReadTransaction interface {
 		ReadTransactor
+
+		// Get requests the values bytes for the given key.
 		Get(key fdb.KeyConvertible) fdb.FutureByteSlice
+
+		// GetRange performs a range-read over the given range.
 		GetRange(r fdb.Range, options fdb.RangeOptions) fdb.RangeResult
 	}
 
+	// Transactor provides methods for performing read or write transactions and for
+	// creating, opening, & listing directories.
 	Transactor interface {
 		ReadTransactor
+
+		// Transact opens a new transaction. If this Transactor is backed by a
+		// transaction then that transaction is reused.
 		Transact(func(Transaction) (interface{}, error)) (interface{}, error)
+
+		// DirCreateOrOpen opens a directory (or creates it if it doesn't exist)
+		// under the root directory specified by the implementation.
 		DirCreateOrOpen(path []string) (directory.DirectorySubspace, error)
 	}
 
+	// Transaction provides methods for reading or writing key-values from an open
+	// transaction.
 	Transaction interface {
 		ReadTransaction
 		Transactor
+
+		// Set writes a key-value.
 		Set(fdb.KeyConvertible, []byte)
+
+		// Clear deletes a key-value.
 		Clear(fdb.KeyConvertible)
 	}
 )
@@ -63,18 +93,30 @@ var (
 	_ Transaction     = &transaction{}
 )
 
+// NewReadTransactor creates a new instance of a ReadTransactor backed by a fdb.ReadTransactor.
+// Any directory operations performed by the returned ReadTransactor will use the given
+// directory.Directory as the root.
 func NewReadTransactor(tr fdb.ReadTransactor, root directory.Directory) ReadTransactor {
 	return &readTransactor{tr, root}
 }
 
+// NewReadTransaction creates a new instance of a ReadTransaction backed by a fdb.ReadTransaction.
+// Any directory operations performed by the returned ReadTransaction will use the given
+// directory.Directory as the root.
 func NewReadTransaction(tr fdb.ReadTransaction, root directory.Directory) ReadTransaction {
 	return &readTransaction{tr, root}
 }
 
+// NewTransactor creates a new instance of a Transactor backed by a fdb.Transactor.
+// Any directory operations performed by the returned Transactor will use the given
+// directory.Directory as the root.
 func NewTransactor(tr fdb.Transactor, root directory.Directory) Transactor {
 	return &transactor{NewReadTransactor(tr, root), tr, root}
 }
 
+// NewTransaction creates a new instance of a Transaction backed by a fdb.Transaction.
+// Any directory operations performed by the returned Transaction will use the given
+// directory.Directory as the root.
 func NewTransaction(tr fdb.Transaction, root directory.Directory) Transaction {
 	return &transaction{NewReadTransaction(tr, root), tr, root}
 }
