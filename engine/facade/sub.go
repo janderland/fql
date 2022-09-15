@@ -13,6 +13,8 @@ type nilSubspace struct {
 
 var _ subspace.Subspace = &nilSubspace{}
 
+// NewNilSubspace returns a nil implementation of subspace.Subspace
+// where every operation is a no-op.
 func NewNilSubspace() subspace.Subspace {
 	return &nilSubspace{NewNilExactRange(), NewNilKeyConvertible()}
 }

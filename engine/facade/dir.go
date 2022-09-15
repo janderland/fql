@@ -20,10 +20,14 @@ var (
 	_ directory.DirectorySubspace = &nilDirectorySubspace{}
 )
 
+// NewNilDirectory returns a nil implementation of directory.Directory
+// where every operation is a no-op.
 func NewNilDirectory() directory.Directory {
 	return &nilDirectory{}
 }
 
+// NewNilDirectorySubspace returns a nil implementation of directory.DirectorySubspace
+// where every operation is a no-op.
 func NewNilDirectorySubspace() directory.DirectorySubspace {
 	return &nilDirectorySubspace{NewNilSubspace(), NewNilDirectory()}
 }

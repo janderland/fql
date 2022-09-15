@@ -26,18 +26,26 @@ var (
 	_ Transaction     = &nilTransaction{}
 )
 
+// NewNilReadTransactor returns a nil implementation of ReadTransactor
+// where every operation is a no-op.
 func NewNilReadTransactor() ReadTransactor {
 	return &nilReadTransactor{}
 }
 
+// NewNilReadTransaction returns a nil implementation of ReadTransaction
+// where every operation is a no-op.
 func NewNilReadTransaction() ReadTransaction {
 	return &nilReadTransaction{}
 }
 
+// NewNilTransactor returns a nil implementation of Transactor
+// where every operation is a no-op.
 func NewNilTransactor() Transactor {
 	return &nilTransactor{NewNilReadTransactor()}
 }
 
+// NewNilTransaction returns a nil implementation of Transaction
+// where every operation is a no-op.
 func NewNilTransaction() Transaction {
 	return &nilTransaction{NewNilReadTransaction()}
 }

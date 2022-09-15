@@ -32,26 +32,38 @@ var (
 	_ fdb.FutureByteSlice = &nilFutureByteSlice{}
 )
 
+// NewNilRange returns a nil implementation of fdb.Range
+// where every operation is a no-op.
 func NewNilRange() fdb.Range {
 	return &nilRange{}
 }
 
+// NewNilSelectable returns a nil implementation of fdb.Selectable
+// where every operation is a no-op.
 func NewNilSelectable() fdb.Selectable {
 	return &nilSelectable{}
 }
 
+// NewNilExactRange returns a nil implementation of fdb.ExactRange
+// where every operation is a no-op.
 func NewNilExactRange() fdb.ExactRange {
 	return &nilExactRange{NewNilRange()}
 }
 
+// NewNilKeyConvertible returns a nil implementation of fdb.KeyConvertible
+// where every operation is a no-op.
 func NewNilKeyConvertible() fdb.KeyConvertible {
 	return &nilKeyConvertible{}
 }
 
+// NewNilFuture returns a nil implementation of fdb.Future
+// where every operation is a no-op.
 func NewNilFuture() fdb.Future {
 	return &nilFuture{}
 }
 
+// NewNilFutureByteSlice returns a nil implementation of fdb.FutureByteSlice
+// where every operation is a no-op.
 func NewNilFutureByteSlice() fdb.FutureByteSlice {
 	return &nilFutureByteSlice{NewNilFuture()}
 }

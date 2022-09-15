@@ -1,4 +1,5 @@
-// Package facade provide interfaces for FDB's transaction, directory, & tuple APIs.
+// Package facade provide interfaces for FDB APIs and both
+// real & nil implementations of these interfaces.
 package facade
 
 import (
