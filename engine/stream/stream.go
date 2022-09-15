@@ -1,3 +1,5 @@
+// Package stream provides mechanisms for reading ranges of
+// key-values and filtering them based on the given schema.
 package stream
 
 import (
@@ -31,23 +33,35 @@ type (
 		Log zerolog.Logger
 	}
 
+	// DirErr is streamed from a call to Stream.OpenDirectories.
+	// If Err is nil, the other fields should be non-nil. If Err
+	// is non-nil, the other fields should be nil.
 	DirErr struct {
 		Dir directory.DirectorySubspace
 		Err error
 	}
 
+	// DirKVErr is streamed from a call to Stream.ReadRange.
+	// If Err is nil, the other fields should be non-nil. If
+	// Err is non-nil, the other fields should be nil.
 	DirKVErr struct {
 		Dir directory.DirectorySubspace
 		KV  fdb.KeyValue
 		Err error
 	}
 
+	// KeyValErr is streamed from a call to Stream.UnpackKeys or
+	// Stream.UnpackValues. If Err is nil, the other fields should
+	// be non-nil. If Err is non-nil, the other fields should be nil.
 	KeyValErr struct {
 		KV  q.KeyValue
 		Err error
 	}
 )
 
+// SendDir sends the given DirErr onto the given channel and returns
+// true. If the context.Context associated with this Stream is canceled,
+// then nothing is sent and false is returned.
 func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 	select {
 	case <-r.Ctx.Done():
@@ -57,6 +71,9 @@ func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 	}
 }
 
+// SendDirKV sends the given DirKVErr onto the given channel and returns
+// true. If the context.Context associated with this Stream is canceled,
+// then nothing is sent and false is returned.
 func (r *Stream) SendDirKV(out chan<- DirKVErr, in DirKVErr) bool {
 	select {
 	case <-r.Ctx.Done():
@@ -66,6 +83,9 @@ func (r *Stream) SendDirKV(out chan<- DirKVErr, in DirKVErr) bool {
 	}
 }
 
+// SendKV sends the given KeyValErr onto the given channel and returns
+// true. If the context.Context associated with this Stream is canceled,
+// then nothing is sent and false is returned.
 func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	select {
 	case <-r.Ctx.Done():
@@ -75,6 +95,8 @@ func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	}
 }
 
+// OpenDirectories executes the given directory query in a separate goroutine using the given
+// transactor. When the goroutine exits, the returned channel is closed.
 func (r *Stream) OpenDirectories(tr facade.ReadTransactor, query q.Directory) chan DirErr {
 	out := make(chan DirErr)
 
@@ -86,6 +108,9 @@ func (r *Stream) OpenDirectories(tr facade.ReadTransactor, query q.Directory) ch
 	return out
 }
 
+// ReadRange executes range-reads in a separate goroutine using the given transactor. When the goroutine exits, the
+// returned channel is closed. Any errors read from the input channel are wrapped and forwarded. For each directory
+// read from the input channel, a range-read is performed using the tuple prefix defined by the given keyval.Tuple.
 func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr) chan DirKVErr {
 	out := make(chan DirKVErr)
 
@@ -97,6 +122,10 @@ func (r *Stream) ReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeO
 	return out
 }
 
+// UnpackKeys converts the channel of DirKVErr into a channel of KeyValErr in a separate goroutine.
+// When the goroutine exits, the returned channel is closed. Any errors read from the input channel
+// are wrapped and forwarded. Keys are unpacked using subspace.Subspace.Unpack and then converted to
+// FDBQ types. Values are converted to keyval.Bytes; the actual byte string remains unchanged.
 func (r *Stream) UnpackKeys(query q.Tuple, filter bool, in chan DirKVErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
@@ -108,6 +137,10 @@ func (r *Stream) UnpackKeys(query q.Tuple, filter bool, in chan DirKVErr) chan K
 	return out
 }
 
+// UnpackValues deserializes the values in a separate goroutine. When the goroutine exits, the returned channel
+// is closed. Any errors read from the input channel are wrapped and forwarded. The values of the key-values
+// provided via the input channel are expected to be of type keyval.Bytes, and are converted to the type specified
+// in the given schema.
 func (r *Stream) UnpackValues(query q.Value, valHandler internal.ValHandler, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
