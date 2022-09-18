@@ -27,11 +27,6 @@
 // this. See DirectoryOperation, TupleOperation, or ValueOperation as
 // examples of the generated code.
 //
-// Structs implementing these visitor interfaces define a parameterized
-// (generic) function for the types in the union. For this reason, they
-// are called "operations" rather than "visitors" in this codebase (see
-// package operation).
-//
 // # Primitive Types
 //
 // There are a special group of types defined in this package named the
