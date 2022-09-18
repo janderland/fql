@@ -1,3 +1,28 @@
+/*
+Operation generates the interfaces and glue-code for the visitor pattern.
+The visitor pattern is used in place of tagged-unions in this codebase
+since Go does not support that feature.
+
+Instead of implementing a type switch which handles every type in the
+union, a visitor interface is implemented with methods handling each
+type. The correct method is called at runtime via some generated glue
+code. This glue code also defines an interface for the union itself,
+allowing us to avoid using interface{}.
+
+Structs implementing these visitor interfaces define a parameterized
+(generic) function for the types in the union. For this reason, they
+are called "operations" rather than "visitors" in this codebase.
+
+Usage:
+
+	//go:generate go run ./operation [flags]
+
+Flags:
+
+	-op-name string      the name of the interface of the visitor
+	-param-name string   the name of the interface being visited
+	-types string        a comma-separated list of concrete types to visit
+*/
 package main
 
 import (

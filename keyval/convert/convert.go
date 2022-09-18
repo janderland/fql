@@ -1,5 +1,5 @@
-// Package convert provides functions which convert between FDBQ types,
-// FDB types, and generic Go types.
+// Package convert provides functions which convert between FDBQ
+// and FDB types.
 package convert
 
 import (
