@@ -36,8 +36,7 @@ const (
 	// its value. This is an invalid class of KeyValue.
 	VariableClear Class = "variable clear"
 
-	// Nil specifies that the KeyValue contains a nil. This
-	// shouldn't be confused with an instance of the Nil type.
+	// Nil specifies that the KeyValue contains a nil (not keyval.Nil).
 	// This is an invalid class of KeyValue.
 	Nil Class = "nil"
 )

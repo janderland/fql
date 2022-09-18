@@ -1,5 +1,5 @@
 // Package values provides functions for serializing and deserializing
-// values being written or read from the DB.
+// keyval.Value being written or read from the DB.
 package values
 
 import (
