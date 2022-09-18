@@ -1,10 +1,10 @@
 // Package keyval provides types representing key-values and utilities
 // for their inspection and manipulation. These types model both queries
 // and the data returned by queries. These types can be constructed from
-// query strings by the Parser but are also designed to be easily
-// constructed directly in a Go app.
+// query strings by package parser but are also designed to be easily
+// constructed directly in Go source code.
 //
-// Embedded Query Strings
+// # Embedded Query Strings
 //
 // When working with SQL, programmers will often embed SQL strings in
 // the application. This requires extra tooling to catch syntax errors
@@ -16,7 +16,7 @@
 // "structural" ones. For instance, the type system ensures tuples only
 // contain valid elements and limits what kinds of objects can be used
 // as the value of a key-value. In spite of this, invalid queries can
-// still be constructed (see package "class").
+// still be constructed (see package class).
 //
 // Operations (Visitor Pattern)
 //
@@ -33,15 +33,15 @@
 // Structs implementing these visitor interfaces define a parameterized
 // (generic) function for the types in the union. For this reason, they
 // are called "operations" rather than "visitors" in this codebase (see
-// package "operation").
+// package operation).
 //
-// Data Types
+// # Primitive Types
 //
 // There are a special group of types defined in this package named the
 // "primitive" types. These include Nil, Int, Uint, Bool, Float, String,
 // UUID, and Bytes. All of these types can be used as a TupElement or as
 // a Value. When used as a TupElement, they are serialized by FDB tuple
-// packing. When used as a Value, they are known as a "primitive" value
+// packing. When used as a Value, they are known as a "primitive" values
 // and are serialized by FDBQ.
 package keyval
 
@@ -62,7 +62,6 @@ type (
 	// returned from engine.Engine as a query's result. When
 	// returned as a result, KeyValue will not contain a Variable,
 	// Clear, or MaybeMore.
-	// TODO: Describe the different kinds of queries.
 	KeyValue struct {
 		Key   Key
 		Value Value
@@ -82,8 +81,8 @@ type (
 	// schema are returned.
 	Directory []DirElement
 
-	// Tuple may contain another Tuple, Variable, MaybeMore,
-	// or any of the "primitive" types.
+	// Tuple may contain a Tuple, Variable, MaybeMore, or any
+	// of the "primitive" types.
 	Tuple []TupElement
 
 	// Value may contain Tuple, Variable, Clear, or any
@@ -100,7 +99,7 @@ type (
 	// appear as the last element of the Tuple. A Query containing
 	// a MaybeMore defines a schema which allows all keys prefixed
 	// by the key in the schema.
-	// TODO: Implement as a flag on Tuple.
+	// TODO: Implement as a flag on Tuple?
 	MaybeMore struct{}
 
 	// Clear is a special kind of Value which designates
@@ -114,7 +113,8 @@ type (
 type (
 	// Nil is a "primitive" type representing an empty element
 	// when used as a TupElement. It's equivalent to an empty
-	// Bytes when used as a Value.
+	// Bytes when used as a Value. Go's nil value is never
+	// allowed in a Key or KeyValue. Instead, use this type.
 	Nil struct{}
 
 	// Int is a "primitive" type implementing an int64 as either
@@ -123,7 +123,7 @@ type (
 	// the engine.Engine is configured.
 	Int int64
 
-	// Uint is a "primitive" type implementing an uint64 as either
+	// Uint is a "primitive" type implementing a uint64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as an 8-byte array. Endianness depends on how the
 	// engine.Engine is configured.
@@ -137,12 +137,12 @@ type (
 	// Float is a "primitive" type implementing a float64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as an 8-byte array in accordance with IEEE 754. Endianness
-	// depends on how Endianness depends on how the engine.Engine
-	// is configured.
+	// depends on how the engine.Engine is configured.
 	Float float64
 
 	// BigInt is a "primitive" type implementing a big.Int as either
 	// a TupElement or Value.
+	// TODO: Document how BigInt is serialized.
 	BigInt big.Int
 
 	// String is a "primitive" type implementing a string as either
@@ -161,7 +161,7 @@ type (
 	Bytes []byte
 )
 
-// ValueType define the expected types of a Variable.
+// ValueType defines the expected types of a Variable.
 type ValueType string
 
 const (
