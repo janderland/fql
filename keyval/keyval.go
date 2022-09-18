@@ -21,19 +21,11 @@
 // Operations (Visitor Pattern)
 //
 // The Directory, Tuple, & Value types would be best represented by tagged
-// unions. While Go does not natively support tagged unions, this package
-// implements equivalent functionality using the visitor pattern.
-//
-// Instead of implementing a type switch which handles every type in the
-// union, a visitor interface is implemented with methods handling each
-// type. The correct method is called at runtime via some generated glue
-// code. This glue code also defines an interface for the union itself,
-// allowing us to avoid using interface{}.
-//
-// Structs implementing these visitor interfaces define a parameterized
-// (generic) function for the types in the union. For this reason, they
-// are called "operations" rather than "visitors" in this codebase (see
-// package operation).
+// unions. While Go does not natively support tagged unions, this codebase
+// implements equivalent functionality using the visitor pattern. See
+// package operation which generates the boilerplate code associated with
+// this. See DirectoryOperation, TupleOperation, or ValueOperation as
+// examples of the generated code.
 //
 // # Primitive Types
 //
