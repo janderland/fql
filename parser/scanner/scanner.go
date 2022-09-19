@@ -1,5 +1,4 @@
-// Package scanner is responsible for tokenizing query
-// strings before they are passed to the parser.
+// Package scanner tokenizes query strings.
 package scanner
 
 import (

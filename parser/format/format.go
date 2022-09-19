@@ -1,5 +1,4 @@
-// Package format is responsible for formatting key-values
-// & queries into strings.
+// Package format converts key-values into query strings.
 package format
 
 import (

@@ -1,4 +1,5 @@
-// Package engine provides the code responsible for executing queries.
+// Package engine executes queries.
+// TODO: Examples.
 package engine
 
 import (

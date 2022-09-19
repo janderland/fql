@@ -1,5 +1,5 @@
-// Package stream provides mechanisms for reading ranges of
-// key-values and filtering them based on the given schema.
+// Package stream performs range-reads and filtering.
+// TODO: Examples.
 package stream
 
 import (

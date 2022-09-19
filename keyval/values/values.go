@@ -1,5 +1,4 @@
-// Package values provides functions for serializing and deserializing
-// keyval.Value being written or read from the DB.
+// Package values serializes and deserializes values.
 package values
 
 import (

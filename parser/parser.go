@@ -1,4 +1,4 @@
-// Package parser contains objects for parsing text queries.
+// Package parser converts query strings into key-values.
 package parser
 
 import (

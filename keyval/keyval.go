@@ -1,8 +1,8 @@
-// Package keyval provides types representing key-values and utilities
-// for their inspection and manipulation. These types model both queries
-// and the data returned by queries. These types can be constructed from
-// query strings by package parser but are also designed to be easily
-// constructed directly in Go source code.
+// Package keyval contains types representing key-values and related
+// utilities. These types model both queries and the data returned by
+// queries. They can be constructed from query strings by package parser
+// but are also designed to be easily constructed directly in Go source
+// code.
 //
 // # Embedded Query Strings
 //
@@ -18,7 +18,7 @@
 // as the value of a key-value. In spite of this, invalid queries can
 // still be constructed (see package class).
 //
-// Operations (Visitor Pattern)
+// # Operations (Visitor Pattern)
 //
 // The Directory, Tuple, & Value types would be best represented by tagged
 // unions. While Go does not natively support tagged unions, this codebase
