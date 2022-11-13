@@ -73,15 +73,15 @@ func New(tr facade.Transactor, log zerolog.Logger) Engine {
 }
 
 // Transact wraps a group of Engine method calls under a single transaction.
-func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
-	return e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		return f(New(tr, e.log))
+func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
+	return x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		return f(New(tr, x.log))
 	})
 }
 
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
-func (e *Engine) Set(query keyval.KeyValue, byteOrder binary.ByteOrder) error {
+func (x *Engine) Set(query keyval.KeyValue, byteOrder binary.ByteOrder) error {
 	if class.Classify(query) != class.Constant {
 		return errors.New("query not constant class")
 	}
@@ -96,8 +96,8 @@ func (e *Engine) Set(query keyval.KeyValue, byteOrder binary.ByteOrder) error {
 		return errors.Wrap(err, "failed to pack value")
 	}
 
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("setting")
+	_, err = x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		x.log.Log().Interface("query", query).Msg("setting")
 
 		dir, err := tr.DirCreateOrOpen(path)
 		if err != nil {
@@ -117,7 +117,7 @@ func (e *Engine) Set(query keyval.KeyValue, byteOrder binary.ByteOrder) error {
 
 // Clear performs a clear operation for a single key-value. The given query
 // must belong to [class.Clear].
-func (e *Engine) Clear(query keyval.KeyValue) error {
+func (x *Engine) Clear(query keyval.KeyValue) error {
 	if class.Classify(query) != class.Clear {
 		return errors.New("query not clear class")
 	}
@@ -127,8 +127,8 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("clearing")
+	_, err = x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		x.log.Log().Interface("query", query).Msg("clearing")
 
 		dir, err := tr.DirOpen(path)
 		if err != nil {
@@ -151,7 +151,7 @@ func (e *Engine) Clear(query keyval.KeyValue) error {
 
 // SingleRead performs a read operation for a single key-value. The given query must
 // belong to [class.SingleRead].
-func (e *Engine) SingleRead(query keyval.KeyValue, opts SingleOpts) (*keyval.KeyValue, error) {
+func (x *Engine) SingleRead(query keyval.KeyValue, opts SingleOpts) (*keyval.KeyValue, error) {
 	if class.Classify(query) != class.SingleRead {
 		return nil, errors.New("query not single-read class")
 	}
@@ -167,8 +167,8 @@ func (e *Engine) SingleRead(query keyval.KeyValue, opts SingleOpts) (*keyval.Key
 	}
 
 	var valBytes []byte
-	_, err = e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		e.log.Log().Interface("query", query).Msg("single reading")
+	_, err = x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		x.log.Log().Interface("query", query).Msg("single reading")
 
 		dir, err := tr.DirOpen(path)
 		if err != nil {
@@ -206,7 +206,7 @@ func (e *Engine) SingleRead(query keyval.KeyValue, opts SingleOpts) (*keyval.Key
 // RangeRead performs a read across a range of key-values. The given query must belong to [class.RangeRead].
 // After an error occurs or the entire range is read, the returned channel is closed. If the provided context
 // is canceled, then the read operation will be stopped after the latest FDB call finishes.
-func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue, opts RangeOpts) chan stream.KeyValErr {
+func (x *Engine) RangeRead(ctx context.Context, query keyval.KeyValue, opts RangeOpts) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
 	go func() {
@@ -215,7 +215,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue, opts Rang
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		s := stream.New(ctx, e.log)
+		s := stream.New(ctx, x.log)
 
 		if class.Classify(query) != class.RangeRead {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read class")})
@@ -228,7 +228,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue, opts Rang
 			return
 		}
 
-		_, err = e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		_, err = x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.UnpackKeys(query.Key.Tuple, opts.Filter, stage2)
@@ -250,7 +250,7 @@ func (e *Engine) RangeRead(ctx context.Context, query keyval.KeyValue, opts Rang
 // single directory will be returned. After an error occurs or all directories have been read, the
 // returned channel is closed. If the provided context is canceled, then the read operation will
 // be stopped after the latest FDB call finishes.
-func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan stream.DirErr {
+func (x *Engine) Directories(ctx context.Context, query keyval.Directory) chan stream.DirErr {
 	out := make(chan stream.DirErr)
 
 	go func() {
@@ -259,9 +259,9 @@ func (e *Engine) Directories(ctx context.Context, query keyval.Directory) chan s
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		s := stream.New(ctx, e.log)
+		s := stream.New(ctx, x.log)
 
-		_, err := e.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		_, err := x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, query) {
 				s.SendDir(out, dir)
 			}
