@@ -6,6 +6,9 @@ import (
 	"io"
 	"strings"
 
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
@@ -14,8 +17,6 @@ import (
 	"github.com/janderland/fdbq/parser"
 	"github.com/janderland/fdbq/parser/format"
 	"github.com/janderland/fdbq/parser/scanner"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 )
 
 type App struct {
@@ -26,7 +27,7 @@ type App struct {
 }
 
 func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
-	eg := engine.Engine{Tr: db, Log: x.Log}
+	eg := engine.New(db, x.Log)
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
 			p := parser.New(scanner.New(strings.NewReader(str)))
