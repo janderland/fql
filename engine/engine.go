@@ -12,9 +12,10 @@
 //		Value: q.Variable{},
 //	}
 //
-//	result, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
-//		return nil, nil
-//	})
+//	result, err := eg.SingleRead(query, SingleOpts{ByteOrder: binary.BigEndian})
+//	if err != nil {
+//		panic(err)
+//	}
 package engine
 
 import (
@@ -74,7 +75,7 @@ func New(tr facade.Transactor, log zerolog.Logger) Engine {
 // Transact wraps a group of Engine method calls under a single transaction.
 func (e *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return e.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		return f(Engine{tr: tr, log: e.log})
+		return f(New(tr, e.log))
 	})
 }
 
@@ -187,9 +188,6 @@ func (e *Engine) SingleRead(query q.KeyValue, opts SingleOpts) (*q.KeyValue, err
 	})
 	if err != nil {
 		return nil, errors.Wrap(err, "transaction failed")
-	}
-	if valBytes == nil {
-		return nil, nil
 	}
 
 	value, err := valHandler.Handle(valBytes)
