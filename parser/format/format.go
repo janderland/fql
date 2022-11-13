@@ -23,19 +23,26 @@ type Cfg struct {
 // can be retrieved or cleared via the String and
 // Reset methods.
 type Format struct {
-	Builder *strings.Builder
-	Cfg     Cfg
+	builder *strings.Builder
+	cfg     Cfg
+}
+
+func New(cfg Cfg) Format {
+	return Format{
+		builder: &strings.Builder{},
+		cfg:     cfg,
+	}
 }
 
 // String returns the contents of the internal buffer.
 // TODO: Add escapes.
 func (x *Format) String() string {
-	return x.Builder.String()
+	return x.builder.String()
 }
 
 // Reset clears the contents of the internal buffer.
 func (x *Format) Reset() {
-	x.Builder.Reset()
+	x.builder.Reset()
 }
 
 // Query formats the given keyval.Query and appends
@@ -48,7 +55,7 @@ func (x *Format) Query(in q.Query) {
 // and appends it to the internal buffer.
 func (x *Format) KeyValue(in q.KeyValue) {
 	x.Key(in.Key)
-	x.Builder.WriteRune(internal.KeyValSep)
+	x.builder.WriteRune(internal.KeyValSep)
 	x.Value(in.Value)
 }
 
@@ -69,7 +76,7 @@ func (x *Format) Value(in q.Value) {
 // and appends it to the internal buffer.
 func (x *Format) Directory(in q.Directory) {
 	for _, element := range in {
-		x.Builder.WriteRune(internal.DirSep)
+		x.builder.WriteRune(internal.DirSep)
 		element.DirElement(&formatDirElement{x})
 	}
 }
@@ -77,107 +84,107 @@ func (x *Format) Directory(in q.Directory) {
 // Tuple formats the given keyval.Tuple
 // and appends it to the internal buffer.
 func (x *Format) Tuple(in q.Tuple) {
-	x.Builder.WriteRune(internal.TupStart)
+	x.builder.WriteRune(internal.TupStart)
 	for i, element := range in {
 		if i != 0 {
-			x.Builder.WriteRune(internal.TupSep)
+			x.builder.WriteRune(internal.TupSep)
 		}
 		element.TupElement(&formatData{x})
 	}
-	x.Builder.WriteRune(internal.TupEnd)
+	x.builder.WriteRune(internal.TupEnd)
 }
 
 // Variable formats the given keyval.Variable
 // and appends it to the internal buffer.
 func (x *Format) Variable(in q.Variable) {
-	x.Builder.WriteRune(internal.VarStart)
+	x.builder.WriteRune(internal.VarStart)
 	for i, vType := range in {
 		if i != 0 {
-			x.Builder.WriteRune(internal.VarSep)
+			x.builder.WriteRune(internal.VarSep)
 		}
-		x.Builder.WriteString(string(vType))
+		x.builder.WriteString(string(vType))
 	}
-	x.Builder.WriteRune(internal.VarEnd)
+	x.builder.WriteRune(internal.VarEnd)
 }
 
 // Bytes formats the given keyval.Bytes
 // and appends it to the internal buffer.
 func (x *Format) Bytes(in q.Bytes) {
-	if x.Cfg.PrintBytes {
-		x.Builder.WriteString(internal.HexStart)
-		x.Builder.WriteString(hex.EncodeToString(in))
+	if x.cfg.PrintBytes {
+		x.builder.WriteString(internal.HexStart)
+		x.builder.WriteString(hex.EncodeToString(in))
 	} else {
-		x.Builder.WriteString(strconv.FormatInt(int64(len(in)), 10))
-		x.Builder.WriteString(" bytes")
+		x.builder.WriteString(strconv.FormatInt(int64(len(in)), 10))
+		x.builder.WriteString(" bytes")
 	}
 }
 
 // Str formats the given keyval.String
 // and appends it to the internal buffer.
 func (x *Format) Str(in q.String) {
-	x.Builder.WriteRune(internal.StrMark)
-	x.Builder.WriteString(escapeString(string(in)))
-	x.Builder.WriteRune(internal.StrMark)
+	x.builder.WriteRune(internal.StrMark)
+	x.builder.WriteString(escapeString(string(in)))
+	x.builder.WriteRune(internal.StrMark)
 }
 
 // UUID formats the given keyval.UUID
 // and appends it to the internal buffer.
 func (x *Format) UUID(in q.UUID) {
-	x.Builder.WriteString(hex.EncodeToString(in[:4]))
-	x.Builder.WriteRune('-')
-	x.Builder.WriteString(hex.EncodeToString(in[4:6]))
-	x.Builder.WriteRune('-')
-	x.Builder.WriteString(hex.EncodeToString(in[6:8]))
-	x.Builder.WriteRune('-')
-	x.Builder.WriteString(hex.EncodeToString(in[8:10]))
-	x.Builder.WriteRune('-')
-	x.Builder.WriteString(hex.EncodeToString(in[10:]))
+	x.builder.WriteString(hex.EncodeToString(in[:4]))
+	x.builder.WriteRune('-')
+	x.builder.WriteString(hex.EncodeToString(in[4:6]))
+	x.builder.WriteRune('-')
+	x.builder.WriteString(hex.EncodeToString(in[6:8]))
+	x.builder.WriteRune('-')
+	x.builder.WriteString(hex.EncodeToString(in[8:10]))
+	x.builder.WriteRune('-')
+	x.builder.WriteString(hex.EncodeToString(in[10:]))
 }
 
 // Bool formats the given keyval.Bool
 // and appends it to the internal buffer.
 func (x *Format) Bool(in q.Bool) {
 	if in {
-		x.Builder.WriteString(internal.True)
+		x.builder.WriteString(internal.True)
 	} else {
-		x.Builder.WriteString(internal.False)
+		x.builder.WriteString(internal.False)
 	}
 }
 
 // Int formats the given keyval.Int
 // and appends it to the internal buffer.
 func (x *Format) Int(in q.Int) {
-	x.Builder.WriteString(strconv.FormatInt(int64(in), 10))
+	x.builder.WriteString(strconv.FormatInt(int64(in), 10))
 }
 
 // Uint formats the given keyval.Uint
 // and appends it to the internal buffer.
 func (x *Format) Uint(in q.Uint) {
-	x.Builder.WriteString(strconv.FormatUint(uint64(in), 10))
+	x.builder.WriteString(strconv.FormatUint(uint64(in), 10))
 }
 
 // Float formats the given keyval.Float
 // and appends it to the internal buffer.
 func (x *Format) Float(in q.Float) {
-	x.Builder.WriteString(strconv.FormatFloat(float64(in), 'g', 10, 64))
+	x.builder.WriteString(strconv.FormatFloat(float64(in), 'g', 10, 64))
 }
 
 // Nil formats the given keyval.Nil
 // and appends it to the internal buffer.
 func (x *Format) Nil(_ q.Nil) {
-	x.Builder.WriteString(internal.Nil)
+	x.builder.WriteString(internal.Nil)
 }
 
 // Clear formats the given keyval.Clear
 // and appends it to the internal buffer.
 func (x *Format) Clear(_ q.Clear) {
-	x.Builder.WriteString(internal.Clear)
+	x.builder.WriteString(internal.Clear)
 }
 
 // MaybeMore formats the given keyval.MaybeMore
 // and appends it to the internal buffer.
 func (x *Format) MaybeMore(_ q.MaybeMore) {
-	x.Builder.WriteString(internal.MaybeMore)
+	x.builder.WriteString(internal.MaybeMore)
 }
 
 func escapeString(in string) string {
