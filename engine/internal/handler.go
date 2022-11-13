@@ -6,7 +6,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/values"
 )
 
@@ -15,7 +15,7 @@ type (
 	// read operation. Depending on the operation, the byte-strings
 	// aren't always deserialized.
 	ValHandler interface {
-		Handle([]byte) (q.Value, error)
+		Handle([]byte) (keyval.Value, error)
 	}
 
 	// pass is a ValHandler which passes the []byte through
@@ -29,7 +29,7 @@ type (
 	// any of the given types and filter=false, then an error is
 	// returned. If filter=true, errors are not returned.
 	unpack struct {
-		variable q.Variable
+		variable keyval.Variable
 		order    binary.ByteOrder
 		filter   bool
 	}
@@ -40,14 +40,14 @@ type (
 	// then an error is returned. If filter=true, errors are not
 	// returned.
 	compare struct {
-		query  q.Value
+		query  keyval.Value
 		packed []byte
 		filter bool
 	}
 )
 
-func NewValueHandler(query q.Value, order binary.ByteOrder, filter bool) (ValHandler, error) {
-	if variable, ok := query.(q.Variable); ok {
+func NewValueHandler(query keyval.Value, order binary.ByteOrder, filter bool) (ValHandler, error) {
+	if variable, ok := query.(keyval.Variable); ok {
 		if len(variable) == 0 {
 			return &pass{}, nil
 		}
@@ -69,14 +69,14 @@ func NewValueHandler(query q.Value, order binary.ByteOrder, filter bool) (ValHan
 	}
 }
 
-func (x *pass) Handle(val []byte) (q.Value, error) {
+func (x *pass) Handle(val []byte) (keyval.Value, error) {
 	if val == nil {
 		return nil, nil
 	}
-	return q.Bytes(val), nil
+	return keyval.Bytes(val), nil
 }
 
-func (x *unpack) Handle(val []byte) (q.Value, error) {
+func (x *unpack) Handle(val []byte) (keyval.Value, error) {
 	if val == nil {
 		return nil, nil
 	}
@@ -93,7 +93,7 @@ func (x *unpack) Handle(val []byte) (q.Value, error) {
 	return nil, errors.New("unexpected value")
 }
 
-func (x *compare) Handle(val []byte) (q.Value, error) {
+func (x *compare) Handle(val []byte) (keyval.Value, error) {
 	if val == nil {
 		return nil, nil
 	}
