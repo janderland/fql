@@ -27,7 +27,7 @@ func init() {
 	flag.BoolVar(&force, "force", false, "remove test directory if it exists")
 }
 
-func TestEngine_SetSingleRead(t *testing.T) {
+func TestEngine_SetReadSingle(t *testing.T) {
 	t.Run("set and get", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi"), q.String("there")}, Tuple: q.Tuple{q.Float(33.3)}}, Value: q.Int(33)}
@@ -38,7 +38,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 			expected := query
 			query.Value = q.Variable{q.IntType}
 
-			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
+			result, err := e.ReadSingle(query, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Equal(t, &expected, result)
 		})
@@ -54,7 +54,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 			expected := query
 			query.Value = q.Variable{}
 
-			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
+			result, err := e.ReadSingle(query, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Equal(t, &expected, result)
 		})
@@ -64,7 +64,7 @@ func TestEngine_SetSingleRead(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("nothing"), q.String("here")}}, Value: q.Variable{}}
 
-			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
+			result, err := e.ReadSingle(query, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Nil(t, result)
 		})
@@ -85,12 +85,12 @@ func TestEngine_SetSingleRead(t *testing.T) {
 	t.Run("get errors", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33), q.Variable{}}}, Value: q.Nil{}}
-			result, err := e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
+			result, err := e.ReadSingle(query, SingleOpts{ByteOrder: byteOrder})
 			require.Error(t, err)
 			require.Nil(t, result)
 
 			query = q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Clear{}}
-			result, err = e.SingleRead(query, SingleOpts{ByteOrder: byteOrder})
+			result, err = e.ReadSingle(query, SingleOpts{ByteOrder: byteOrder})
 			require.Error(t, err)
 			require.Nil(t, result)
 		})
@@ -106,7 +106,7 @@ func TestEngine_Clear(t *testing.T) {
 
 			get := set
 			get.Value = q.Variable{}
-			result, err := e.SingleRead(get, SingleOpts{ByteOrder: byteOrder})
+			result, err := e.ReadSingle(get, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Equal(t, &set, result)
 
@@ -115,7 +115,7 @@ func TestEngine_Clear(t *testing.T) {
 			err = e.Clear(clear)
 			require.NoError(t, err)
 
-			result, err = e.SingleRead(get, SingleOpts{ByteOrder: byteOrder})
+			result, err = e.ReadSingle(get, SingleOpts{ByteOrder: byteOrder})
 			require.NoError(t, err)
 			require.Nil(t, result)
 		})
@@ -134,7 +134,7 @@ func TestEngine_Clear(t *testing.T) {
 	})
 }
 
-func TestEngine_RangeRead(t *testing.T) {
+func TestEngine_ReadRange(t *testing.T) {
 	t.Run("set and get", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			var expected []q.KeyValue
@@ -156,7 +156,7 @@ func TestEngine_RangeRead(t *testing.T) {
 
 			var results []q.KeyValue
 			query.Key.Tuple = q.Tuple{q.Variable{}}
-			for kve := range e.RangeRead(context.Background(), query, RangeOpts{}) {
+			for kve := range e.ReadRange(context.Background(), query, RangeOpts{}) {
 				require.NoError(t, kve.Err)
 
 				// The first element of the dir path is dropped because it
@@ -172,7 +172,7 @@ func TestEngine_RangeRead(t *testing.T) {
 	t.Run("errors", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("hi")}, Tuple: q.Tuple{q.Float(32.33)}}, Value: q.Clear{}}
-			out := e.RangeRead(context.Background(), query, RangeOpts{ByteOrder: byteOrder})
+			out := e.ReadRange(context.Background(), query, RangeOpts{ByteOrder: byteOrder})
 
 			msg := <-out
 			require.Error(t, msg.Err)

@@ -3,10 +3,11 @@ package headless
 import (
 	"context"
 
+	"github.com/pkg/errors"
+
 	"github.com/janderland/fdbq/engine"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
-	"github.com/pkg/errors"
 )
 
 type execution struct {
@@ -40,12 +41,12 @@ func (x *execution) ForKeyValue(query q.KeyValue) {
 			x.err = errors.Wrap(err, "failed to execute as clear query")
 		}
 
-	case class.SingleRead:
+	case class.ReadSingle:
 		if err := x.app.singleRead(x.eg, query); err != nil {
 			x.err = errors.Wrap(err, "failed to execute as single read query")
 		}
 
-	case class.RangeRead:
+	case class.ReadRange:
 		if err := x.app.rangeRead(x.ctx, x.eg, query); err != nil {
 			x.err = errors.Wrap(err, "failed to execute as range read query")
 		}
