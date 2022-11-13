@@ -1,4 +1,3 @@
 .idea
 /fdbq
 *.cluster
-benchmark_out.txt
