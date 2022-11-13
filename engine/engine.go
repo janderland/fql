@@ -12,7 +12,7 @@
 //		Value: keyval.Variable{},
 //	}
 //
-//	result, err := eg.SingleRead(query, SingleOpts{ByteOrder: binary.BigEndian})
+//	result, err := eg.ReadSingle(query, SingleOpts{ByteOrder: binary.BigEndian})
 //	if err != nil {
 //		panic(err)
 //	}
@@ -35,13 +35,13 @@ import (
 	"github.com/janderland/fdbq/keyval/values"
 )
 
-// SingleOpts configures how an [Engine.SingleRead] call is executed.
+// SingleOpts configures how an [Engine.ReadSingle] call is executed.
 type SingleOpts struct {
 	ByteOrder binary.ByteOrder
 	Filter    bool
 }
 
-// RangeOpts configures how an [Engine.RangeRead] call is executed.
+// RangeOpts configures how an [Engine.ReadRange] call is executed.
 type RangeOpts struct {
 	ByteOrder binary.ByteOrder
 	Reverse   bool
@@ -149,9 +149,9 @@ func (x *Engine) Clear(query keyval.KeyValue) error {
 	return errors.Wrap(err, "transaction failed")
 }
 
-// SingleRead performs a read operation for a single key-value. The given query must
+// ReadSingle performs a read operation for a single key-value. The given query must
 // belong to [class.SingleRead].
-func (x *Engine) SingleRead(query keyval.KeyValue, opts SingleOpts) (*keyval.KeyValue, error) {
+func (x *Engine) ReadSingle(query keyval.KeyValue, opts SingleOpts) (*keyval.KeyValue, error) {
 	if class.Classify(query) != class.SingleRead {
 		return nil, errors.New("query not single-read class")
 	}
@@ -203,10 +203,10 @@ func (x *Engine) SingleRead(query keyval.KeyValue, opts SingleOpts) (*keyval.Key
 	}, nil
 }
 
-// RangeRead performs a read across a range of key-values. The given query must belong to [class.RangeRead].
+// ReadRange performs a read across a range of key-values. The given query must belong to [class.RangeRead].
 // After an error occurs or the entire range is read, the returned channel is closed. If the provided context
 // is canceled, then the read operation will be stopped after the latest FDB call finishes.
-func (x *Engine) RangeRead(ctx context.Context, query keyval.KeyValue, opts RangeOpts) chan stream.KeyValErr {
+func (x *Engine) ReadRange(ctx context.Context, query keyval.KeyValue, opts RangeOpts) chan stream.KeyValErr {
 	out := make(chan stream.KeyValErr)
 
 	go func() {

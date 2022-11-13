@@ -68,7 +68,7 @@ func (x *App) clear(eg engine.Engine, query q.KeyValue) error {
 
 func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 	x.Log.Log().Interface("query", query).Msg("executing single-read query")
-	kv, err := eg.SingleRead(query, x.Flags.SingleOpts())
+	kv, err := eg.ReadSingle(query, x.Flags.SingleOpts())
 	if err != nil {
 		return err
 	}
@@ -86,7 +86,7 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 
 func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue) error {
 	x.Log.Log().Interface("query", query).Msg("executing range-read query")
-	for kv := range eg.RangeRead(ctx, query, x.Flags.RangeOpts()) {
+	for kv := range eg.ReadRange(ctx, query, x.Flags.RangeOpts()) {
 		if kv.Err != nil {
 			return kv.Err
 		}
