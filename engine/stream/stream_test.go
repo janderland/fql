@@ -10,14 +10,15 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/require"
+
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/engine/internal"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/keyval/values"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -352,7 +353,7 @@ func testEnv(t *testing.T, f func(facade.Transaction, Stream)) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			f(tr, Stream{Ctx: ctx, Log: log})
+			f(tr, Stream{ctx: ctx, log: log})
 			return nil, nil
 		})
 		if err != nil {

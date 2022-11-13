@@ -7,13 +7,14 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
+
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/engine/internal"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/compare"
 	"github.com/janderland/fdbq/keyval/convert"
-	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 )
 
 type (
@@ -24,13 +25,13 @@ type (
 	}
 
 	// Stream provides methods which build pipelines for reading
-	// a range of key-values. Ctx controls the cancellation of all
+	// a range of key-values. ctx controls the cancellation of all
 	// operations. For the methods which spawn a goroutine, canceling
-	// Ctx will stop them. For the methods which block on sending to
-	// a channel, canceling Ctx will unblock them.
+	// ctx will stop them. For the methods which block on sending to
+	// a channel, canceling ctx will unblock them.
 	Stream struct {
-		Ctx context.Context
-		Log zerolog.Logger
+		ctx context.Context
+		log zerolog.Logger
 	}
 
 	// DirErr is streamed from a call to Stream.OpenDirectories.
@@ -59,12 +60,19 @@ type (
 	}
 )
 
+func New(ctx context.Context, log zerolog.Logger) Stream {
+	return Stream{
+		ctx: ctx,
+		log: log,
+	}
+}
+
 // SendDir sends the given DirErr onto the given channel and returns
 // true. If the context.Context associated with this Stream is canceled,
 // then nothing is sent and false is returned.
 func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 	select {
-	case <-r.Ctx.Done():
+	case <-r.ctx.Done():
 		return false
 	case out <- in:
 		return true
@@ -76,7 +84,7 @@ func (r *Stream) SendDir(out chan<- DirErr, in DirErr) bool {
 // then nothing is sent and false is returned.
 func (r *Stream) SendDirKV(out chan<- DirKVErr, in DirKVErr) bool {
 	select {
-	case <-r.Ctx.Done():
+	case <-r.ctx.Done():
 		return false
 	case out <- in:
 		return true
@@ -88,7 +96,7 @@ func (r *Stream) SendDirKV(out chan<- DirKVErr, in DirKVErr) bool {
 // then nothing is sent and false is returned.
 func (r *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 	select {
-	case <-r.Ctx.Done():
+	case <-r.ctx.Done():
 		return false
 	case out <- in:
 		return true
@@ -153,7 +161,7 @@ func (r *Stream) UnpackValues(query q.Value, valHandler internal.ValHandler, in 
 }
 
 func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, out chan DirErr) {
-	log := r.Log.With().Str("stage", "open directories").Interface("query", query).Logger()
+	log := r.log.With().Str("stage", "open directories").Interface("query", query).Logger()
 
 	prefix, variable, suffix := splitAtFirstVariable(query)
 	prefixStr, err := convert.ToStringArray(prefix)
@@ -181,7 +189,7 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 		for _, subDir := range subDirs {
 			// Between each interaction with the DB, give
 			// this goroutine a chance to exit early.
-			if err := r.Ctx.Err(); err != nil {
+			if err := r.ctx.Err(); err != nil {
 				r.SendDir(out, DirErr{Err: err})
 				return
 			}
@@ -210,7 +218,7 @@ func (r *Stream) goOpenDirectories(tr facade.ReadTransactor, query q.Directory, 
 }
 
 func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts RangeOpts, in chan DirErr, out chan DirKVErr) {
-	log := r.Log.With().Str("stage", "read range").Interface("query", query).Logger()
+	log := r.log.With().Str("stage", "read range").Interface("query", query).Logger()
 
 	prefix := toTuplePrefix(query)
 	prefix = removeMaybeMore(prefix)
@@ -255,7 +263,7 @@ func (r *Stream) goReadRange(tr facade.ReadTransaction, query q.Tuple, opts Rang
 }
 
 func (r *Stream) goUnpackKeys(query q.Tuple, filter bool, in chan DirKVErr, out chan KeyValErr) {
-	log := r.Log.With().Str("stage", "unpack keys").Interface("query", query).Logger()
+	log := r.log.With().Str("stage", "unpack keys").Interface("query", query).Logger()
 
 	for msg := range in {
 		if msg.Err != nil {
@@ -298,7 +306,7 @@ func (r *Stream) goUnpackKeys(query q.Tuple, filter bool, in chan DirKVErr, out 
 }
 
 func (r *Stream) goUnpackValues(query q.Value, valHandler internal.ValHandler, in chan KeyValErr, out chan KeyValErr) {
-	log := r.Log.With().Str("stage", "unpack values").Interface("query", query).Logger()
+	log := r.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
 
 	for msg := range in {
 		if msg.Err != nil {
