@@ -3,8 +3,9 @@ package class
 import (
 	"testing"
 
-	q "github.com/janderland/fdbq/keyval"
 	"github.com/stretchr/testify/require"
+
+	q "github.com/janderland/fdbq/keyval"
 )
 
 func TestClassify(t *testing.T) {
@@ -33,7 +34,7 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
-			kind: SingleRead,
+			kind: ReadSingle,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -43,7 +44,7 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeRead,
+			kind: ReadRange,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.Variable{}, q.String("dir")},
@@ -53,7 +54,7 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeRead,
+			kind: ReadRange,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -63,7 +64,7 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
-			kind: RangeRead,
+			kind: ReadRange,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.Variable{}, q.String("dir")},

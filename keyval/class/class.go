@@ -17,17 +17,17 @@ const (
 	// be used to perform a clear operation.
 	Clear Class = "clear"
 
-	// SingleRead specifies that the KeyValue has a Variable
+	// ReadSingle specifies that the KeyValue has a Variable
 	// Value and doesn't have a Variable or MaybeMore in its Key.
 	// This kind of KeyValue can be used to perform a get operation
 	// that returns a single KeyValue.
-	SingleRead Class = "single"
+	ReadSingle Class = "single"
 
-	// RangeRead specifies that the KeyValue has a Variable
+	// ReadRange specifies that the KeyValue has a Variable
 	// or MaybeMore in its Key and doesn't have a Clear Value.
 	// This kind of KeyValue can be used to perform a get
 	// operation that returns multiple KeyValue.
-	RangeRead Class = "range"
+	ReadRange Class = "range"
 
 	// VariableClear specifies that the KeyValue has a
 	// Variable or MaybeMore in its Key and has a Clear for
@@ -80,7 +80,7 @@ func Classify(kv q.KeyValue) Class {
 		case clearSubClass:
 			return Clear
 		case variableSubClass:
-			return SingleRead
+			return ReadSingle
 		default:
 			return Constant
 		}
@@ -92,7 +92,7 @@ func Classify(kv q.KeyValue) Class {
 	if valClass == clearSubClass {
 		return VariableClear
 	}
-	return RangeRead
+	return ReadRange
 }
 
 func classifyKey(key q.Key) subClass {

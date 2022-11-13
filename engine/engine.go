@@ -150,9 +150,9 @@ func (x *Engine) Clear(query keyval.KeyValue) error {
 }
 
 // ReadSingle performs a read operation for a single key-value. The given query must
-// belong to [class.SingleRead].
+// belong to [class.ReadSingle].
 func (x *Engine) ReadSingle(query keyval.KeyValue, opts SingleOpts) (*keyval.KeyValue, error) {
-	if class.Classify(query) != class.SingleRead {
+	if class.Classify(query) != class.ReadSingle {
 		return nil, errors.New("query not single-read class")
 	}
 
@@ -203,7 +203,7 @@ func (x *Engine) ReadSingle(query keyval.KeyValue, opts SingleOpts) (*keyval.Key
 	}, nil
 }
 
-// ReadRange performs a read across a range of key-values. The given query must belong to [class.RangeRead].
+// ReadRange performs a read across a range of key-values. The given query must belong to [class.ReadRange].
 // After an error occurs or the entire range is read, the returned channel is closed. If the provided context
 // is canceled, then the read operation will be stopped after the latest FDB call finishes.
 func (x *Engine) ReadRange(ctx context.Context, query keyval.KeyValue, opts RangeOpts) chan stream.KeyValErr {
@@ -217,7 +217,7 @@ func (x *Engine) ReadRange(ctx context.Context, query keyval.KeyValue, opts Rang
 
 		s := stream.New(ctx, x.log)
 
-		if class.Classify(query) != class.RangeRead {
+		if class.Classify(query) != class.ReadRange {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read class")})
 			return
 		}
