@@ -4,10 +4,11 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/format"
 	"github.com/janderland/fdbq/parser/scanner"
-	"github.com/stretchr/testify/require"
 )
 
 func TestDirectory(t *testing.T) {
@@ -349,10 +350,7 @@ func TestData(t *testing.T) {
 }
 
 func newFormat() format.Format {
-	return format.Format{
-		Builder: &strings.Builder{},
-		Cfg: format.Cfg{
-			PrintBytes: true,
-		},
-	}
+	return format.New(format.Cfg{
+		PrintBytes: true,
+	})
 }

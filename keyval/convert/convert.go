@@ -1,5 +1,4 @@
-// Package convert provides functions which convert between FDBQ
-// and FDB types.
+// Package convert converts between FDBQ and FDB types.
 package convert
 
 import (

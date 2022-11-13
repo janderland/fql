@@ -1,5 +1,4 @@
-// Package facade provide interfaces for FDB APIs and both
-// real & nil implementations of these interfaces.
+// Package facade provide interfaces for FDB APIs.
 package facade
 
 import (

@@ -4,9 +4,10 @@ import (
 	"bytes"
 	"encoding/binary"
 
+	"github.com/pkg/errors"
+
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/values"
-	"github.com/pkg/errors"
 )
 
 type (
@@ -69,10 +70,16 @@ func NewValueHandler(query q.Value, order binary.ByteOrder, filter bool) (ValHan
 }
 
 func (x *pass) Handle(val []byte) (q.Value, error) {
+	if val == nil {
+		return nil, nil
+	}
 	return q.Bytes(val), nil
 }
 
 func (x *unpack) Handle(val []byte) (q.Value, error) {
+	if val == nil {
+		return nil, nil
+	}
 	for _, typ := range x.variable {
 		out, err := values.Unpack(val, typ, x.order)
 		if err != nil {
@@ -87,6 +94,9 @@ func (x *unpack) Handle(val []byte) (q.Value, error) {
 }
 
 func (x *compare) Handle(val []byte) (q.Value, error) {
+	if val == nil {
+		return nil, nil
+	}
 	if bytes.Equal(x.packed, val) {
 		return x.query, nil
 	}

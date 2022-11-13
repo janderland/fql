@@ -1,4 +1,4 @@
-// Package compare provides a function for comparing keyval.Tuple.
+// Package compare validates tuples against a schema.
 package compare
 
 import (

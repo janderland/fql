@@ -8,11 +8,12 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/rs/zerolog"
+	"github.com/stretchr/testify/require"
+
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/engine/internal"
 	q "github.com/janderland/fdbq/keyval"
-	"github.com/rs/zerolog"
-	"github.com/stretchr/testify/require"
 )
 
 var (
@@ -197,7 +198,7 @@ func TestEngine_Directories(t *testing.T) {
 				expected = append(expected, dir)
 			}
 
-			e := Engine{Tr: tr, Log: log}
+			e := New(tr, log)
 
 			var result []directory.DirectorySubspace
 			for msg := range e.Directories(context.Background(), query) {
@@ -211,6 +212,6 @@ func TestEngine_Directories(t *testing.T) {
 
 func testEnv(t *testing.T, f func(Engine)) {
 	internal.TestEnv(t, force, func(tr facade.Transactor, log zerolog.Logger) {
-		f(Engine{Tr: tr, Log: log})
+		f(New(tr, log))
 	})
 }

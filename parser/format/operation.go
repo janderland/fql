@@ -27,11 +27,11 @@ var quotedRunes = internal.AllSingleRuneTokens() +
 func (x *formatDirElement) ForString(in q.String) {
 	needsQuotes := strings.ContainsAny(string(in), quotedRunes)
 	if needsQuotes {
-		x.format.Builder.WriteRune(internal.StrMark)
+		x.format.builder.WriteRune(internal.StrMark)
 	}
-	x.format.Builder.WriteString(string(in))
+	x.format.builder.WriteString(string(in))
 	if needsQuotes {
-		x.format.Builder.WriteRune(internal.StrMark)
+		x.format.builder.WriteRune(internal.StrMark)
 	}
 }
 
