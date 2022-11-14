@@ -1,21 +1,4 @@
 // Package engine executes queries.
-//
-// # Example
-//
-//	eg := engine.New(fdb.MustDatabase(), zerolog.New(os.Stdout))
-//
-//	query := keyval.KeyValue{
-//		Key: keyval.Key{
-//			Directory: keyval.Directory{keyval.String("hi")},
-//			Tuple: keyval.Tuple{keyval.Float(33.3)},
-//		},
-//		Value: keyval.Variable{},
-//	}
-//
-//	result, err := eg.ReadSingle(query, SingleOpts{ByteOrder: binary.BigEndian})
-//	if err != nil {
-//		panic(err)
-//	}
 package engine
 
 import (
