@@ -4,15 +4,30 @@
 //
 //	eg := engine.New(fdb.MustDatabase(), zerolog.New(os.Stdout))
 //
-//	query := keyval.KeyValue{
-//		Key: keyval.Key{
-//			Directory: keyval.Directory{keyval.String("hi")},
-//			Tuple: keyval.Tuple{keyval.Float(33.3)},
-//		},
-//		Value: keyval.Variable{},
+//	key := keyval.Key{
+//		Directory: keyval.Directory{keyval.String("hi")},
+//		Tuple: keyval.Tuple{keyval.Float(33.3)},
 //	}
 //
-//	result, err := eg.ReadSingle(query, SingleOpts{ByteOrder: binary.BigEndian})
+//	query := keyval.KeyValue{Key: key, Value: keyval.Int(10)}
+//	if err = eg.Set(query, binary.BigEndian); err != nil {
+//		panic(err)
+//	}
+//
+//	performedSet, err := eg.Transact(func (e engine.Engine) (interface{}, error) {
+//		result, err := eg.ReadSingle(query, SingleOpts{ByteOrder: binary.BigEndian})
+//		if err != nil {
+//			return nil, err
+//		}
+//		if result == nil {
+//			return false, nil
+//		}
+//
+//		if err := eg.Set(query, binary.BigEndian); err != nil {
+//			return nil, err
+//		}
+//		return true, nil
+//	})
 //	if err != nil {
 //		panic(err)
 //	}
