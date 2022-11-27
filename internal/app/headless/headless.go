@@ -27,7 +27,9 @@ type App struct {
 }
 
 func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
-	eg := engine.New(db, x.Log)
+	eg := engine.New(db)
+	eg.Logger(x.Log)
+
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
 			p := parser.New(scanner.New(strings.NewReader(str)))

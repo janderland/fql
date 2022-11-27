@@ -2,11 +2,9 @@ package engine_test
 
 import (
 	"encoding/binary"
-	"os"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
@@ -14,10 +12,7 @@ import (
 )
 
 func Example() {
-	eg := engine.New(
-		facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()),
-		zerolog.New(os.Stdout),
-	)
+	eg := engine.New(facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
 
 	key := keyval.Key{
 		Directory: keyval.Directory{keyval.String("hello"), keyval.String("there")},

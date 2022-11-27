@@ -44,21 +44,32 @@ func (x RangeOpts) forStream() stream.RangeOpts {
 // query of the wrong class in provided. Unless [Engine.Transact] is
 // used, each method call is executed in its own transaction.
 type Engine struct {
-	tr  facade.Transactor
-	log zerolog.Logger
+	tr    facade.Transactor
+	log   zerolog.Logger
+	order binary.ByteOrder
 }
 
-func New(tr facade.Transactor, log zerolog.Logger) Engine {
+func New(tr facade.Transactor) Engine {
 	return Engine{
-		tr:  tr,
-		log: log,
+		tr:    tr,
+		log:   zerolog.Nop(),
+		order: binary.LittleEndian,
 	}
+}
+
+// Logger enables debug logging using the provided logger.
+func (x *Engine) Logger(log zerolog.Logger) {
+	x.log = log
 }
 
 // Transact wraps a group of Engine method calls under a single transaction.
 func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
-		return f(New(tr, x.log))
+		return f(Engine{
+			tr:    tr,
+			log:   x.log,
+			order: x.order,
+		})
 	})
 }
 
