@@ -80,7 +80,7 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 	}
 
 	x.Format.Reset()
-	x.Format.KeyValue(query)
+	x.Format.KeyValue(*kv)
 	if _, err := fmt.Fprintln(x.Out, x.Format.String()); err != nil {
 		return errors.Wrap(err, "failed to print output")
 	}
