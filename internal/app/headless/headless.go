@@ -38,6 +38,7 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse query")
 			}
+		
 			if err := x.execute(ctx, eg, query); err != nil {
 				return nil, errors.Wrap(err, "failed to execute query")
 			}
@@ -57,7 +58,6 @@ func (x *App) set(eg engine.Engine, query q.KeyValue) error {
 	if !x.Flags.Write {
 		return errors.New("writing isn't enabled")
 	}
-	x.Log.Log().Interface("query", query).Msg("executing set query")
 	return eg.Set(query)
 }
 
@@ -65,12 +65,10 @@ func (x *App) clear(eg engine.Engine, query q.KeyValue) error {
 	if !x.Flags.Write {
 		return errors.New("writing isn't enabled")
 	}
-	x.Log.Log().Interface("query", query).Msg("executing clear query")
 	return eg.Clear(query)
 }
 
 func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
-	x.Log.Log().Interface("query", query).Msg("executing single-read query")
 	kv, err := eg.ReadSingle(query, x.Flags.SingleOpts())
 	if err != nil {
 		return err
@@ -88,7 +86,6 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 }
 
 func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue) error {
-	x.Log.Log().Interface("query", query).Msg("executing range-read query")
 	for kv := range eg.ReadRange(ctx, query, x.Flags.RangeOpts()) {
 		if kv.Err != nil {
 			return kv.Err
@@ -104,7 +101,6 @@ func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue)
 }
 
 func (x *App) directories(ctx context.Context, eg engine.Engine, query q.Directory) error {
-	x.Log.Log().Interface("query", query).Msg("executing directory query")
 	for dir := range eg.Directories(ctx, query) {
 		if dir.Err != nil {
 			return dir.Err
