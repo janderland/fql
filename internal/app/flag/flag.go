@@ -29,7 +29,7 @@ func SetupFlags(cmd *cobra.Command) *Flags {
 
 	cmd.Flags().BoolVarP(&flags.Reverse, "reverse", "r", false, "query range-reads in reverse order")
 	cmd.Flags().BoolVarP(&flags.Strict, "strict", "s", false, "throw an error if a KV is read which doesn't match the schema")
-	cmd.Flags().BoolVarP(&flags.Little, "little", "l", false, "encode/decode values as little endian")
+	cmd.Flags().BoolVarP(&flags.Little, "little", "l", false, "encode/decode values as little endian instead of big endian")
 	cmd.Flags().BoolVarP(&flags.Bytes, "bytes", "b", false, "print full byte strings instead of just their length")
 	cmd.Flags().IntVar(&flags.Limit, "limit", 0, "limit the number of KVs read in range-reads")
 

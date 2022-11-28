@@ -51,7 +51,7 @@ func New(tr facade.Transactor) Engine {
 	return Engine{
 		tr:    tr,
 		log:   zerolog.Nop(),
-		order: binary.LittleEndian,
+		order: binary.BigEndian,
 	}
 }
 
