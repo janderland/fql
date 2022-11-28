@@ -20,16 +20,14 @@ import (
 
 // SingleOpts configures how an [Engine.ReadSingle] call is executed.
 type SingleOpts struct {
-	ByteOrder binary.ByteOrder
-	Filter    bool
+	Filter bool
 }
 
 // RangeOpts configures how an [Engine.ReadRange] call is executed.
 type RangeOpts struct {
-	ByteOrder binary.ByteOrder
-	Reverse   bool
-	Filter    bool
-	Limit     int
+	Reverse bool
+	Filter  bool
+	Limit   int
 }
 
 func (x RangeOpts) forStream() stream.RangeOpts {
@@ -62,6 +60,11 @@ func (x *Engine) Logger(log zerolog.Logger) {
 	x.log = log
 }
 
+// ByteOrder sets the endianness used for encoding/decoding values.
+func (x *Engine) ByteOrder(order binary.ByteOrder) {
+	x.order = order
+}
+
 // Transact wraps a group of Engine method calls under a single transaction.
 func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
@@ -75,7 +78,7 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
-func (x *Engine) Set(query keyval.KeyValue, byteOrder binary.ByteOrder) error {
+func (x *Engine) Set(query keyval.KeyValue) error {
 	if class.Classify(query) != class.Constant {
 		return errors.New("query not constant class")
 	}
@@ -85,7 +88,7 @@ func (x *Engine) Set(query keyval.KeyValue, byteOrder binary.ByteOrder) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	valueBytes, err := values.Pack(query.Value, byteOrder)
+	valueBytes, err := values.Pack(query.Value, x.order)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
 	}
@@ -155,7 +158,7 @@ func (x *Engine) ReadSingle(query keyval.KeyValue, opts SingleOpts) (*keyval.Key
 		return nil, errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	valHandler, err := internal.NewValueHandler(query.Value, opts.ByteOrder, opts.Filter)
+	valHandler, err := internal.NewValueHandler(query.Value, x.order, opts.Filter)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to init value handler")
 	}
@@ -216,7 +219,7 @@ func (x *Engine) ReadRange(ctx context.Context, query keyval.KeyValue, opts Rang
 			return
 		}
 
-		valHandler, err := internal.NewValueHandler(query.Value, opts.ByteOrder, opts.Filter)
+		valHandler, err := internal.NewValueHandler(query.Value, x.order, opts.Filter)
 		if err != nil {
 			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to init value handler")})
 			return

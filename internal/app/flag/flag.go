@@ -3,8 +3,9 @@ package flag
 import (
 	"encoding/binary"
 
-	"github.com/janderland/fdbq/engine"
 	"github.com/spf13/cobra"
+
+	"github.com/janderland/fdbq/engine"
 )
 
 type Flags struct {
@@ -44,16 +45,14 @@ func (x *Flags) ByteOrder() binary.ByteOrder {
 
 func (x *Flags) SingleOpts() engine.SingleOpts {
 	return engine.SingleOpts{
-		ByteOrder: x.ByteOrder(),
-		Filter:    !x.Strict,
+		Filter: !x.Strict,
 	}
 }
 
 func (x *Flags) RangeOpts() engine.RangeOpts {
 	return engine.RangeOpts{
-		ByteOrder: x.ByteOrder(),
-		Reverse:   x.Reverse,
-		Filter:    x.Strict,
-		Limit:     x.Limit,
+		Reverse: x.Reverse,
+		Filter:  x.Strict,
+		Limit:   x.Limit,
 	}
 }
