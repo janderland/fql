@@ -1,12 +1,8 @@
 package engine_test
 
 import (
-	"encoding/binary"
-	"os"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
@@ -14,10 +10,7 @@ import (
 )
 
 func Example() {
-	eg := engine.New(
-		facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()),
-		zerolog.New(os.Stdout),
-	)
+	eg := engine.New(facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
 
 	key := keyval.Key{
 		Directory: keyval.Directory{keyval.String("hello"), keyval.String("there")},
@@ -26,14 +19,14 @@ func Example() {
 
 	// /hello/there{33.3}=10
 	query := keyval.KeyValue{Key: key, Value: keyval.Int(10)}
-	if err := eg.Set(query, binary.BigEndian); err != nil {
+	if err := eg.Set(query); err != nil {
 		panic(err)
 	}
 
 	didWrite, err := eg.Transact(func(e engine.Engine) (interface{}, error) {
 		// /hello/there{33.3}=<>
 		query = keyval.KeyValue{Key: key, Value: keyval.Variable{}}
-		result, err := eg.ReadSingle(query, engine.SingleOpts{ByteOrder: binary.BigEndian})
+		result, err := eg.ReadSingle(query, engine.SingleOpts{})
 		if err != nil {
 			return nil, err
 		}
@@ -43,7 +36,7 @@ func Example() {
 
 		// /hello/there{33.3}=15
 		query = keyval.KeyValue{Key: key, Value: keyval.Int(15)}
-		if err := eg.Set(query, binary.BigEndian); err != nil {
+		if err := eg.Set(query); err != nil {
 			return nil, err
 		}
 		return true, nil
@@ -52,7 +45,7 @@ func Example() {
 		panic(err)
 	}
 
-	if didWrite != false {
+	if didWrite.(bool) {
 		panic("didWrite should be false")
 	}
 }

@@ -27,7 +27,10 @@ type App struct {
 }
 
 func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
-	eg := engine.New(db, x.Log)
+	eg := engine.New(db)
+	eg.ByteOrder(x.Flags.ByteOrder())
+	eg.Logger(x.Log)
+
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
 			p := parser.New(scanner.New(strings.NewReader(str)))
@@ -55,7 +58,7 @@ func (x *App) set(eg engine.Engine, query q.KeyValue) error {
 		return errors.New("writing isn't enabled")
 	}
 	x.Log.Log().Interface("query", query).Msg("executing set query")
-	return eg.Set(query, x.Flags.ByteOrder())
+	return eg.Set(query)
 }
 
 func (x *App) clear(eg engine.Engine, query q.KeyValue) error {
