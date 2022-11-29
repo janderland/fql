@@ -13,6 +13,7 @@ import (
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval/class"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/parser"
 	"github.com/janderland/fdbq/parser/format"
@@ -38,20 +39,48 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse query")
 			}
-		
-			if err := x.execute(ctx, eg, query); err != nil {
-				return nil, errors.Wrap(err, "failed to execute query")
+
+			if dir, ok := query.(q.Directory); ok {
+				if err := x.directories(ctx, eg, dir); err != nil {
+					return nil, err
+				}
+			}
+
+			var kv q.KeyValue
+			if key, ok := query.(q.Key); ok {
+				kv = q.KeyValue{Key: key, Value: q.Variable{}}
+			} else {
+				kv = query.(q.KeyValue)
+			}
+
+			switch c := class.Classify(kv); c {
+			case class.Constant:
+				if err := x.set(eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as set query")
+				}
+
+			case class.Clear:
+				if err := x.clear(eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as clear query")
+				}
+
+			case class.ReadSingle:
+				if err := x.singleRead(eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as single read query")
+				}
+
+			case class.ReadRange:
+				if err := x.rangeRead(ctx, eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as range read query")
+				}
+
+			default:
+				return nil, errors.Errorf("unexpected query class '%v'", c)
 			}
 		}
 		return nil, nil
 	})
 	return err
-}
-
-func (x *App) execute(ctx context.Context, eg engine.Engine, query q.Query) error {
-	ex := execution{ctx: ctx, app: x, eg: eg}
-	query.Query(&ex)
-	return ex.err
 }
 
 func (x *App) set(eg engine.Engine, query q.KeyValue) error {
