@@ -13,6 +13,7 @@ import (
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval/class"
 	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/parser"
 	"github.com/janderland/fdbq/parser/format"
@@ -38,8 +39,43 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to parse query")
 			}
-			if err := x.execute(ctx, eg, query); err != nil {
-				return nil, errors.Wrap(err, "failed to execute query")
+
+			if dir, ok := query.(q.Directory); ok {
+				if err := x.directories(ctx, eg, dir); err != nil {
+					return nil, err
+				}
+			}
+
+			var kv q.KeyValue
+			if key, ok := query.(q.Key); ok {
+				kv = q.KeyValue{Key: key, Value: q.Variable{}}
+			} else {
+				kv = query.(q.KeyValue)
+			}
+
+			switch c := class.Classify(kv); c {
+			case class.Constant:
+				if err := x.set(eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as set query")
+				}
+
+			case class.Clear:
+				if err := x.clear(eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as clear query")
+				}
+
+			case class.ReadSingle:
+				if err := x.singleRead(eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as single read query")
+				}
+
+			case class.ReadRange:
+				if err := x.rangeRead(ctx, eg, kv); err != nil {
+					return nil, errors.Wrap(err, "failed to execute as range read query")
+				}
+
+			default:
+				return nil, errors.Errorf("unexpected query class '%v'", c)
 			}
 		}
 		return nil, nil
@@ -47,17 +83,10 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 	return err
 }
 
-func (x *App) execute(ctx context.Context, eg engine.Engine, query q.Query) error {
-	ex := execution{ctx: ctx, app: x, eg: eg}
-	query.Query(&ex)
-	return ex.err
-}
-
 func (x *App) set(eg engine.Engine, query q.KeyValue) error {
 	if !x.Flags.Write {
 		return errors.New("writing isn't enabled")
 	}
-	x.Log.Log().Interface("query", query).Msg("executing set query")
 	return eg.Set(query)
 }
 
@@ -65,12 +94,10 @@ func (x *App) clear(eg engine.Engine, query q.KeyValue) error {
 	if !x.Flags.Write {
 		return errors.New("writing isn't enabled")
 	}
-	x.Log.Log().Interface("query", query).Msg("executing clear query")
 	return eg.Clear(query)
 }
 
 func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
-	x.Log.Log().Interface("query", query).Msg("executing single-read query")
 	kv, err := eg.ReadSingle(query, x.Flags.SingleOpts())
 	if err != nil {
 		return err
@@ -88,7 +115,6 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 }
 
 func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue) error {
-	x.Log.Log().Interface("query", query).Msg("executing range-read query")
 	for kv := range eg.ReadRange(ctx, query, x.Flags.RangeOpts()) {
 		if kv.Err != nil {
 			return kv.Err
@@ -104,7 +130,6 @@ func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue)
 }
 
 func (x *App) directories(ctx context.Context, eg engine.Engine, query q.Directory) error {
-	x.Log.Log().Interface("query", query).Msg("executing directory query")
 	for dir := range eg.Directories(ctx, query) {
 		if dir.Err != nil {
 			return dir.Err
