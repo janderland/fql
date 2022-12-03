@@ -29,7 +29,7 @@ func (x *formatDirElement) ForString(in q.String) {
 	if needsQuotes {
 		x.format.builder.WriteRune(internal.StrMark)
 	}
-	x.format.builder.WriteString(string(in))
+	x.format.builder.WriteString(escapeString(string(in)))
 	if needsQuotes {
 		x.format.builder.WriteRune(internal.StrMark)
 	}
