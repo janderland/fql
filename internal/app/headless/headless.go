@@ -44,6 +44,7 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 				if err := x.directories(ctx, eg, dir); err != nil {
 					return nil, err
 				}
+				continue
 			}
 
 			var kv q.KeyValue
