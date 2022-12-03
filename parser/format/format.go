@@ -35,7 +35,6 @@ func New(cfg Cfg) Format {
 }
 
 // String returns the contents of the internal buffer.
-// TODO: Add escapes.
 func (x *Format) String() string {
 	return x.builder.String()
 }
