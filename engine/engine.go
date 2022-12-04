@@ -37,10 +37,10 @@ func (x RangeOpts) forStream() stream.RangeOpts {
 	}
 }
 
-// Engine provides methods which execute queries. Each method is built
-// for a single class of query (see [class.Class]) and will fail if a
-// query of the wrong class in provided. Unless [Engine.Transact] is
-// used, each method call is executed in its own transaction.
+// Engine provides methods which execute queries. Each valid [class.Class]
+// has a corresponding method for executing that class of query. The methods
+// will fail if a query of the wrong class in provided. Unless [Engine.Transact]
+// is used, each query is executed in its own transaction.
 type Engine struct {
 	tr    facade.Transactor
 	log   zerolog.Logger
@@ -55,17 +55,21 @@ func New(tr facade.Transactor) Engine {
 	}
 }
 
-// Logger enables debug logging using the provided logger.
+// Logger enables debug logging using the provided logger. This method
+// must not be called concurrently with other methods.
 func (x *Engine) Logger(log zerolog.Logger) {
 	x.log = log
 }
 
-// ByteOrder sets the endianness used for encoding/decoding values.
+// ByteOrder sets the endianness used for encoding/decoding values. This
+// method must not be called concurrently with other methods.
 func (x *Engine) ByteOrder(order binary.ByteOrder) {
 	x.order = order
 }
 
-// Transact wraps a group of Engine method calls under a single transaction.
+// Transact wraps a group of Engine method calls under a single transaction. The newly
+// created Engine inherits the logger & byte order of the parent engine. Any changes to
+// the logger or byte order of the new Engine has no effect on the parent Engine.
 func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		return f(Engine{
