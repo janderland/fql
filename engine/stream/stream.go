@@ -34,7 +34,7 @@ type (
 		log zerolog.Logger
 	}
 
-	// DirErr is streamed from a call to Stream.OpenDirectories.
+	// DirErr is streamed from a call to [Stream.OpenDirectories].
 	// If Err is nil, the other fields should be non-nil. If Err
 	// is non-nil, the other fields should be nil.
 	DirErr struct {
@@ -42,7 +42,7 @@ type (
 		Err error
 	}
 
-	// DirKVErr is streamed from a call to Stream.ReadRange.
+	// DirKVErr is streamed from a call to [Stream.ReadRange].
 	// If Err is nil, the other fields should be non-nil. If
 	// Err is non-nil, the other fields should be nil.
 	DirKVErr struct {
@@ -51,8 +51,8 @@ type (
 		Err error
 	}
 
-	// KeyValErr is streamed from a call to Stream.UnpackKeys or
-	// Stream.UnpackValues. If Err is nil, the other fields should
+	// KeyValErr is streamed from a call to [Stream.UnpackKeys] or
+	// [Stream.UnpackValues]. If Err is nil, the other fields should
 	// be non-nil. If Err is non-nil, the other fields should be nil.
 	KeyValErr struct {
 		KV  keyval.KeyValue
@@ -60,6 +60,8 @@ type (
 	}
 )
 
+// New constructs a new Stream. The context provides a way
+// to cancel any pipelines created with this Stream.
 func New(ctx context.Context, log zerolog.Logger) Stream {
 	return Stream{
 		ctx: ctx,
@@ -104,7 +106,8 @@ func (x *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 }
 
 // OpenDirectories executes the given directory query in a separate goroutine using the given
-// transactor. When the goroutine exits, the returned channel is closed.
+// transactor. When the goroutine exits, the returned channel is closed. If the associated
+// context.Context is canceled, then the goroutine exits after the latest FDB call.
 func (x *Stream) OpenDirectories(tr facade.ReadTransactor, query keyval.Directory) chan DirErr {
 	out := make(chan DirErr)
 
@@ -119,6 +122,7 @@ func (x *Stream) OpenDirectories(tr facade.ReadTransactor, query keyval.Director
 // ReadRange executes range-reads in a separate goroutine using the given transactor. When the goroutine exits, the
 // returned channel is closed. Any errors read from the input channel are wrapped and forwarded. For each directory
 // read from the input channel, a range-read is performed using the tuple prefix defined by the given keyval.Tuple.
+// If the associated context.Context is canceled, then the goroutine exits after the latest FDB call.
 func (x *Stream) ReadRange(tr facade.ReadTransaction, query keyval.Tuple, opts RangeOpts, in chan DirErr) chan DirKVErr {
 	out := make(chan DirKVErr)
 
