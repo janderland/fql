@@ -121,7 +121,7 @@ func (x *Stream) OpenDirectories(tr facade.ReadTransactor, query keyval.Director
 
 // ReadRange executes range-reads in a separate goroutine using the given transactor. When the goroutine exits, the
 // returned channel is closed. Any errors read from the input channel are wrapped and forwarded. For each directory
-// read from the input channel, a range-read is performed using the tuple prefix defined by the given keyval.Tuple.
+// read from the input channel, a range-read is performed using the tuple prefix defined by the given [keyval.Tuple].
 // If the associated context.Context is canceled, then the goroutine exits after the latest FDB call.
 func (x *Stream) ReadRange(tr facade.ReadTransaction, query keyval.Tuple, opts RangeOpts, in chan DirErr) chan DirKVErr {
 	out := make(chan DirKVErr)
@@ -137,7 +137,7 @@ func (x *Stream) ReadRange(tr facade.ReadTransaction, query keyval.Tuple, opts R
 // UnpackKeys converts the channel of DirKVErr into a channel of KeyValErr in a separate goroutine.
 // When the goroutine exits, the returned channel is closed. Any errors read from the input channel
 // are wrapped and forwarded. Keys are unpacked using subspace.Subspace.Unpack and then converted to
-// FDBQ types. Values are converted to keyval.Bytes; the actual byte string remains unchanged.
+// FDBQ types. Values are converted to [keyval.Bytes]; the actual byte string remains unchanged.
 func (x *Stream) UnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
@@ -151,7 +151,7 @@ func (x *Stream) UnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr) c
 
 // UnpackValues deserializes the values in a separate goroutine. When the goroutine exits, the returned channel
 // is closed. Any errors read from the input channel are wrapped and forwarded. The values of the key-values
-// provided via the input channel are expected to be of type keyval.Bytes, and are converted to the type specified
+// provided via the input channel are expected to be of type [keyval.Bytes], and are converted to the type specified
 // in the given schema.
 func (x *Stream) UnpackValues(query keyval.Value, valHandler internal.ValHandler, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
