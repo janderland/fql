@@ -174,37 +174,7 @@ func (x *Stream) goOpenDirectories(tr facade.ReadTransactor, query keyval.Direct
 		return
 	}
 
-	if variable != nil {
-		subDirs, err := tr.DirList(prefixStr)
-		if err != nil {
-			if errors.Is(err, directory.ErrDirNotExists) {
-				return
-			}
-			x.SendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
-			return
-		}
-		if len(subDirs) == 0 {
-			log.Log().Msg("no subdirectories")
-			return
-		}
-
-		log.Log().Strs("sub dirs", subDirs).Msg("found subdirectories")
-
-		for _, subDir := range subDirs {
-			// Between each interaction with the DB, give
-			// this goroutine a chance to exit early.
-			if err := x.ctx.Err(); err != nil {
-				x.SendDir(out, DirErr{Err: err})
-				return
-			}
-
-			var dir keyval.Directory
-			dir = append(dir, prefix...)
-			dir = append(dir, keyval.String(subDir))
-			dir = append(dir, suffix...)
-			x.goOpenDirectories(tr, dir, out)
-		}
-	} else {
+	if variable == nil {
 		dir, err := tr.DirOpen(prefixStr)
 		if err != nil {
 			if errors.Is(err, directory.ErrDirNotExists) {
@@ -218,6 +188,37 @@ func (x *Stream) goOpenDirectories(tr facade.ReadTransactor, query keyval.Direct
 		if !x.SendDir(out, DirErr{Dir: dir}) {
 			return
 		}
+		return
+	}
+
+	subDirs, err := tr.DirList(prefixStr)
+	if err != nil {
+		if errors.Is(err, directory.ErrDirNotExists) {
+			return
+		}
+		x.SendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
+		return
+	}
+	if len(subDirs) == 0 {
+		log.Log().Msg("no subdirectories")
+		return
+	}
+
+	log.Log().Strs("sub dirs", subDirs).Msg("found subdirectories")
+
+	for _, subDir := range subDirs {
+		// Between each interaction with the DB, give
+		// this goroutine a chance to exit early.
+		if err := x.ctx.Err(); err != nil {
+			x.SendDir(out, DirErr{Err: err})
+			return
+		}
+
+		var dir keyval.Directory
+		dir = append(dir, prefix...)
+		dir = append(dir, keyval.String(subDir))
+		dir = append(dir, suffix...)
+		x.goOpenDirectories(tr, dir, out)
 	}
 }
 
