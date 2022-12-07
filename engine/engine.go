@@ -216,7 +216,7 @@ func (x *Engine) ReadRange(ctx context.Context, query keyval.KeyValue, opts Rang
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		s := stream.New(ctx, x.log)
+		s := stream.New(ctx, stream.Log(x.log))
 
 		if class.Classify(query) != class.ReadRange {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read class")})
@@ -260,7 +260,7 @@ func (x *Engine) Directories(ctx context.Context, query keyval.Directory) chan s
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		s := stream.New(ctx, x.log)
+		s := stream.New(ctx, stream.Log(x.log))
 
 		_, err := x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, query) {

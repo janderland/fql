@@ -18,20 +18,10 @@ import (
 )
 
 type (
-	// RangeOpts specifies how a Stream executes a query.
+	// RangeOpts configures how a Stream performs a range read.
 	RangeOpts struct {
 		Reverse bool
 		Limit   int
-	}
-
-	// Stream provides methods which build pipelines for reading
-	// a range of key-values. ctx controls the cancellation of all
-	// operations. For the methods which spawn a goroutine, canceling
-	// ctx will stop them. For the methods which block on sending to
-	// a channel, canceling ctx will unblock them.
-	Stream struct {
-		ctx context.Context
-		log zerolog.Logger
 	}
 
 	// DirErr is streamed from a call to [Stream.OpenDirectories].
@@ -58,14 +48,33 @@ type (
 		KV  keyval.KeyValue
 		Err error
 	}
+
+	// Option can be passed as a trailing argument to the New function
+	// to modify properties of the created Stream.
+	Option func(*Stream)
+
+	// Stream provides methods which build pipelines for reading
+	// a range of key-values.
+	Stream struct {
+		ctx context.Context
+		log zerolog.Logger
+	}
 )
 
 // New constructs a new Stream. The context provides a way
 // to cancel any pipelines created with this Stream.
-func New(ctx context.Context, log zerolog.Logger) Stream {
-	return Stream{
-		ctx: ctx,
-		log: log,
+func New(ctx context.Context, opts ...Option) Stream {
+	s := Stream{ctx: ctx, log: zerolog.Nop()}
+	for _, option := range opts {
+		option(&s)
+	}
+	return s
+}
+
+// Log configures the logger that a Stream will use.
+func Log(log zerolog.Logger) Option {
+	return func(s *Stream) {
+		s.log = log
 	}
 }
 
@@ -185,9 +194,7 @@ func (x *Stream) goOpenDirectories(tr facade.ReadTransactor, query keyval.Direct
 		}
 
 		log.Log().Strs("dir", dir.GetPath()).Msg("sending directory")
-		if !x.SendDir(out, DirErr{Dir: dir}) {
-			return
-		}
+		x.SendDir(out, DirErr{Dir: dir})
 		return
 	}
 
