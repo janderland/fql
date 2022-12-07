@@ -228,24 +228,18 @@ func (x *Engine) ReadRange(ctx context.Context, query keyval.KeyValue, opts Rang
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		s := stream.New(ctx, stream.Logger(x.log))
+		s := stream.New(ctx, stream.Logger(x.log), stream.ByteOrder(x.order))
 
 		if class.Classify(query) != class.ReadRange {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read class")})
 			return
 		}
 
-		valHandler, err := internal.NewValueHandler(query.Value, x.order, opts.Filter)
-		if err != nil {
-			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to init value handler")})
-			return
-		}
-
-		_, err = x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		_, err := x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.UnpackKeys(query.Key.Tuple, opts.Filter, stage2)
-			for kve := range s.UnpackValues(query.Value, valHandler, stage3) {
+			for kve := range s.UnpackValues(query.Value, opts.Filter, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil

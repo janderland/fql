@@ -315,10 +315,7 @@ func TestStream_UnpackValues(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			testEnv(t, func(_ facade.Transaction, s Stream) {
-				valHandler, err := internal.NewValueHandler(test.query, byteOrder, true)
-				require.NoError(t, err, "failed to create value handler")
-
-				ch := s.UnpackValues(test.query, valHandler, sendKVs(t, s, test.initial))
+				ch := s.UnpackValues(test.query, true, sendKVs(t, s, test.initial))
 				kvs, err := collectKVs(ch)
 				require.NoError(t, err, "failed to unpack values")
 

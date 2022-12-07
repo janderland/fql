@@ -4,6 +4,7 @@ package stream
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -56,15 +57,20 @@ type (
 	// Stream provides methods which build pipelines for reading
 	// a range of key-values.
 	Stream struct {
-		ctx context.Context
-		log zerolog.Logger
+		ctx   context.Context
+		log   zerolog.Logger
+		order binary.ByteOrder
 	}
 )
 
 // New constructs a new Stream. The context provides a way
 // to cancel any pipelines created with this Stream.
 func New(ctx context.Context, opts ...Option) Stream {
-	s := Stream{ctx: ctx, log: zerolog.Nop()}
+	s := Stream{
+		ctx:   ctx,
+		log:   zerolog.Nop(),
+		order: binary.BigEndian,
+	}
 	for _, option := range opts {
 		option(&s)
 	}
@@ -75,6 +81,14 @@ func New(ctx context.Context, opts ...Option) Stream {
 func Logger(log zerolog.Logger) Option {
 	return func(s *Stream) {
 		s.log = log
+	}
+}
+
+// ByteOrder sets the endianness used for encoding/decoding values. This
+// method must not be called concurrently with other methods.
+func ByteOrder(order binary.ByteOrder) Option {
+	return func(s *Stream) {
+		s.order = order
 	}
 }
 
@@ -162,12 +176,12 @@ func (x *Stream) UnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr) c
 // is closed. Any errors read from the input channel are wrapped and forwarded. The values of the key-values
 // provided via the input channel are expected to be of type [keyval.Bytes], and are converted to the type specified
 // in the given schema.
-func (x *Stream) UnpackValues(query keyval.Value, valHandler internal.ValHandler, in chan KeyValErr) chan KeyValErr {
+func (x *Stream) UnpackValues(query keyval.Value, filter bool, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		x.goUnpackValues(query, valHandler, in, out)
+		x.goUnpackValues(query, filter, in, out)
 	}()
 
 	return out
@@ -317,8 +331,14 @@ func (x *Stream) goUnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr,
 	}
 }
 
-func (x *Stream) goUnpackValues(query keyval.Value, valHandler internal.ValHandler, in chan KeyValErr, out chan KeyValErr) {
+func (x *Stream) goUnpackValues(query keyval.Value, filter bool, in chan KeyValErr, out chan KeyValErr) {
 	log := x.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
+
+	valHandler, err := internal.NewValueHandler(query, x.order, filter)
+	if err != nil {
+		x.SendKV(out, KeyValErr{Err: err})
+		return
+	}
 
 	for msg := range in {
 		if msg.Err != nil {
