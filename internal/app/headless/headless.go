@@ -28,9 +28,7 @@ type App struct {
 }
 
 func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
-	eg := engine.New(db)
-	eg.ByteOrder(x.Flags.ByteOrder())
-	eg.Logger(x.Log)
+	eg := engine.New(db, engine.ByteOrder(x.Flags.ByteOrder()), engine.Logger(x.Log))
 
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {

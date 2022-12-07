@@ -71,8 +71,8 @@ func New(ctx context.Context, opts ...Option) Stream {
 	return s
 }
 
-// Log configures the logger that a Stream will use.
-func Log(log zerolog.Logger) Option {
+// Logger configures the logger that a Stream will use.
+func Logger(log zerolog.Logger) Option {
 	return func(s *Stream) {
 		s.log = log
 	}

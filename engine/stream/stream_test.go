@@ -353,7 +353,7 @@ func testEnv(t *testing.T, f func(facade.Transaction, Stream)) {
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 
-			f(tr, New(ctx, Log(log)))
+			f(tr, New(ctx, Logger(log)))
 			return nil, nil
 		})
 		if err != nil {
