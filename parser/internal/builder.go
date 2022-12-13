@@ -1,8 +1,9 @@
 package internal
 
 import (
-	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
+
+	q "github.com/janderland/fdbq/keyval"
 )
 
 // KeyValBuilder is used by parser.Parser to construct the
@@ -13,18 +14,24 @@ type KeyValBuilder struct {
 	kv q.KeyValue
 }
 
+// Get returns the [keyval.KeyValue] being constructed.
 func (x *KeyValBuilder) Get() q.KeyValue {
 	return x.kv
 }
 
+// AppendVarToDirectory appends a keyval.Variable to the end of the directory.
 func (x *KeyValBuilder) AppendVarToDirectory() {
 	x.kv.Key.Directory = append(x.kv.Key.Directory, q.Variable{})
 }
 
+// AppendPartToDirectory appends a keyval.String to the end of the directory.
 func (x *KeyValBuilder) AppendPartToDirectory(token string) {
 	x.kv.Key.Directory = append(x.kv.Key.Directory, q.String(token))
 }
 
+// AppendToLastDirPart appends the given string to the last element of the
+// directory, which is assumed to be a keyval.String. If the last element is
+// not a keyval.String then this method panics.
 func (x *KeyValBuilder) AppendToLastDirPart(token string) error {
 	i := len(x.kv.Key.Directory) - 1
 	str, ok := x.kv.Key.Directory[i].(q.String)
@@ -35,6 +42,9 @@ func (x *KeyValBuilder) AppendToLastDirPart(token string) error {
 	return nil
 }
 
+// AppendToValueVar appends the given keyval.ValueType to the keyval.Variable
+// assigned as the value. If the value is not a keyval.Variable then this
+// method panics.
 func (x *KeyValBuilder) AppendToValueVar(typ q.ValueType) error {
 	val, ok := x.kv.Value.(q.Variable)
 	if !ok {
@@ -44,6 +54,8 @@ func (x *KeyValBuilder) AppendToValueVar(typ q.ValueType) error {
 	return nil
 }
 
+// AppendToValueStr appends the given string to the keyval.String assigned
+// as the value. If the value is not a keyval.String then this method panics.
 func (x *KeyValBuilder) AppendToValueStr(token string) error {
 	str, ok := x.kv.Value.(q.String)
 	if !ok {
@@ -53,10 +65,12 @@ func (x *KeyValBuilder) AppendToValueStr(token string) error {
 	return nil
 }
 
+// SetKeyTuple sets the tuple portion of the keyval.Key.
 func (x *KeyValBuilder) SetKeyTuple(tup q.Tuple) {
 	x.kv.Key.Tuple = tup
 }
 
+// SetValue sets the value portion of the keyval.KeyValue.
 func (x *KeyValBuilder) SetValue(val q.Value) {
 	x.kv.Value = val
 }
@@ -70,10 +84,17 @@ type TupBuilder struct {
 	depth int
 }
 
+// Get returns the [keyval.Tuple] being constructed.
 func (x *TupBuilder) Get() q.Tuple {
 	return x.root
 }
 
+// StartSubTuple starts a new sub-tuple which will be appended
+// to the currently constructed tuple. This sub-tuple will be
+// treated as the currently constructed tuple and all subsequent
+// method calls will be applied to this sub-tuple. When the
+// sub-tuple is completed, EndTuple can be called and
+// construction of the previous tuple will be resumed.
 func (x *TupBuilder) StartSubTuple() {
 	_ = x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
 		return append(tup, q.Tuple{}), nil
@@ -81,17 +102,26 @@ func (x *TupBuilder) StartSubTuple() {
 	x.depth++
 }
 
+// EndTuple completes the currently constructed tuple and
+// assigns it as a sub-tuple of the previously constructed
+// tuple. The previously constructed tuple becomes the
+// currently constructed tuple and all subsequent method
+// calls will be applied to it.
 func (x *TupBuilder) EndTuple() bool {
 	x.depth--
 	return x.depth == -1
 }
 
+// Append appends the given element to the keyval.Tuple.
 func (x *TupBuilder) Append(e q.TupElement) {
 	_ = x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
 		return append(tup, e), nil
 	})
 }
 
+// AppendToLastElemStr appends the given string to the keyval.String
+// assigned as the last element of the currently constructed tuple.
+// If the last element is not a keyval.String, then this method panics.
 func (x *TupBuilder) AppendToLastElemStr(token string) error {
 	return x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
 		i := len(tup) - 1
@@ -104,6 +134,9 @@ func (x *TupBuilder) AppendToLastElemStr(token string) error {
 	})
 }
 
+// AppendToLastElemVar appends the given keyval.ValueType to the keyval.Variable
+// assigned as the last element of the currently constructed tuple. If the last
+// element is not a keyval.Variable then this method panics.
 func (x *TupBuilder) AppendToLastElemVar(typ q.ValueType) error {
 	return x.mutateTuple(func(tup q.Tuple) (q.Tuple, error) {
 		i := len(tup) - 1
