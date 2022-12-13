@@ -4,22 +4,37 @@ package keyval
 
 type (
 	TupleOperation interface {
+		// ForTuple performs the TupleOperation if the given TupElement is of type Tuple.
 		ForTuple(Tuple)
+		// ForNil performs the TupleOperation if the given TupElement is of type Nil.
 		ForNil(Nil)
+		// ForInt performs the TupleOperation if the given TupElement is of type Int.
 		ForInt(Int)
+		// ForUint performs the TupleOperation if the given TupElement is of type Uint.
 		ForUint(Uint)
+		// ForBool performs the TupleOperation if the given TupElement is of type Bool.
 		ForBool(Bool)
+		// ForFloat performs the TupleOperation if the given TupElement is of type Float.
 		ForFloat(Float)
+		// ForBigInt performs the TupleOperation if the given TupElement is of type BigInt.
 		ForBigInt(BigInt)
+		// ForString performs the TupleOperation if the given TupElement is of type String.
 		ForString(String)
+		// ForUUID performs the TupleOperation if the given TupElement is of type UUID.
 		ForUUID(UUID)
+		// ForBytes performs the TupleOperation if the given TupElement is of type Bytes.
 		ForBytes(Bytes)
+		// ForVariable performs the TupleOperation if the given TupElement is of type Variable.
 		ForVariable(Variable)
+		// ForMaybeMore performs the TupleOperation if the given TupElement is of type MaybeMore.
 		ForMaybeMore(MaybeMore)
 	}
 
 	TupElement interface {
+		// TupElement executes the given TupleOperation on this TupElement.
 		TupElement(TupleOperation)
+
+		// Eq returns true if the given value is equal to this TupElement.
 		Eq(interface{}) bool
 	}
 )

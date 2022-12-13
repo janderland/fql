@@ -4,13 +4,19 @@ package keyval
 
 type (
 	QueryOperation interface {
+		// ForDirectory performs the QueryOperation if the given query is of type Directory.
 		ForDirectory(Directory)
+		// ForKey performs the QueryOperation if the given query is of type Key.
 		ForKey(Key)
+		// ForKeyValue performs the QueryOperation if the given query is of type KeyValue.
 		ForKeyValue(KeyValue)
 	}
 
 	query interface {
+		// Query executes the given QueryOperation on this query.
 		Query(QueryOperation)
+
+		// Eq returns true if the given value is equal to this query.
 		Eq(interface{}) bool
 	}
 )

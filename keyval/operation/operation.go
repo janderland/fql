@@ -61,12 +61,16 @@ func (x operationGen) Template() *template.Template {
 type (
 	{{.OpName}} interface {
 		{{range $i, $type := .Types -}}
+		// {{$.VisitorMethod $type}} performs the {{$.OpName}} if the given {{$.ParamName}} is of type {{$type}}.
 		{{$.VisitorMethod $type}}({{$type}})
 		{{end}}
 	}
 
 	{{.ParamName}} interface {
+		// {{.AcceptorMethod}} executes the given {{.OpName}} on this {{.ParamName}}.
 		{{.AcceptorMethod}}({{.OpName}})
+
+		// Eq returns true if the given value is equal to this {{.ParamName}}.
 		Eq(interface{}) bool
 	}
 )

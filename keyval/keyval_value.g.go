@@ -4,21 +4,35 @@ package keyval
 
 type (
 	ValueOperation interface {
+		// ForTuple performs the ValueOperation if the given value is of type Tuple.
 		ForTuple(Tuple)
+		// ForNil performs the ValueOperation if the given value is of type Nil.
 		ForNil(Nil)
+		// ForInt performs the ValueOperation if the given value is of type Int.
 		ForInt(Int)
+		// ForUint performs the ValueOperation if the given value is of type Uint.
 		ForUint(Uint)
+		// ForBool performs the ValueOperation if the given value is of type Bool.
 		ForBool(Bool)
+		// ForFloat performs the ValueOperation if the given value is of type Float.
 		ForFloat(Float)
+		// ForString performs the ValueOperation if the given value is of type String.
 		ForString(String)
+		// ForUUID performs the ValueOperation if the given value is of type UUID.
 		ForUUID(UUID)
+		// ForBytes performs the ValueOperation if the given value is of type Bytes.
 		ForBytes(Bytes)
+		// ForVariable performs the ValueOperation if the given value is of type Variable.
 		ForVariable(Variable)
+		// ForClear performs the ValueOperation if the given value is of type Clear.
 		ForClear(Clear)
 	}
 
 	value interface {
+		// Value executes the given ValueOperation on this value.
 		Value(ValueOperation)
+
+		// Eq returns true if the given value is equal to this value.
 		Eq(interface{}) bool
 	}
 )
