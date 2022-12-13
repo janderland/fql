@@ -9,7 +9,7 @@ import (
 
 	"github.com/pkg/errors"
 
-	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/internal"
 	"github.com/janderland/fdbq/parser/scanner"
 )
@@ -164,7 +164,7 @@ func New(s scanner.Scanner) Parser {
 // Parse consumes all the tokens from the given
 // [scanner.Scanner] and either returns a [keyval.Query]
 // or the first error encountered during parsing.
-func (x *Parser) Parse() (q.Query, error) {
+func (x *Parser) Parse() (keyval.Query, error) {
 	var (
 		kv  internal.KeyValBuilder
 		tup internal.TupBuilder
@@ -297,12 +297,12 @@ func (x *Parser) Parse() (q.Query, error) {
 			case scanner.TokenKindVarStart:
 				x.state = stateVarHead
 				valVar = false
-				tup.Append(q.Variable{})
+				tup.Append(keyval.Variable{})
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
 				stringState = stringStateTup
-				tup.Append(q.String(""))
+				tup.Append(keyval.String(""))
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
 				break
@@ -310,7 +310,7 @@ func (x *Parser) Parse() (q.Query, error) {
 			case scanner.TokenKindOther:
 				x.state = stateTupleTail
 				if token == internal.MaybeMore {
-					tup.Append(q.MaybeMore{})
+					tup.Append(keyval.MaybeMore{})
 					break
 				}
 				data, err := parseData(token)
@@ -379,17 +379,17 @@ func (x *Parser) Parse() (q.Query, error) {
 			case scanner.TokenKindVarStart:
 				x.state = stateVarHead
 				valVar = true
-				kv.SetValue(q.Variable{})
+				kv.SetValue(keyval.Variable{})
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
 				stringState = stringStateVal
-				kv.SetValue(q.String(""))
+				kv.SetValue(keyval.String(""))
 
 			case scanner.TokenKindOther:
 				x.state = stateFinished
 				if token == internal.Clear {
-					kv.SetValue(q.Clear{})
+					kv.SetValue(keyval.Clear{})
 					break
 				}
 				data, err := parseData(token)
@@ -567,30 +567,30 @@ func (x *Parser) tokenErr(kind scanner.TokenKind) error {
 	return errors.Errorf("unexpected '%v' token at parser state '%v'", tokenKindName(kind), stateName(x.state))
 }
 
-func parseValueType(token string) (q.ValueType, error) {
-	for _, v := range q.AllTypes() {
+func parseValueType(token string) (keyval.ValueType, error) {
+	for _, v := range keyval.AllTypes() {
 		if string(v) == token {
 			return v, nil
 		}
 	}
-	return q.AnyType, errors.Errorf("unrecognized value type")
+	return keyval.AnyType, errors.Errorf("unrecognized value type")
 }
 
 func parseData(token string) (
 	interface {
-		q.TupElement
-		q.Value
+		keyval.TupElement
+		keyval.Value
 	},
 	error,
 ) {
 	if token == internal.Nil {
-		return q.Nil{}, nil
+		return keyval.Nil{}, nil
 	}
 	if token == internal.True {
-		return q.Bool(true), nil
+		return keyval.Bool(true), nil
 	}
 	if token == internal.False {
-		return q.Bool(false), nil
+		return keyval.Bool(false), nil
 	}
 
 	if strings.HasPrefix(token, internal.HexStart) {
@@ -598,11 +598,11 @@ func parseData(token string) (
 		if err != nil {
 			return nil, err
 		}
-		return q.Bytes(data), nil
+		return keyval.Bytes(data), nil
 	}
 
 	if strings.Count(token, "-") == 4 {
-		var uuid q.UUID
+		var uuid keyval.UUID
 		_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
 		if err != nil {
 			return nil, err
@@ -616,16 +616,16 @@ func parseData(token string) (
 	// of the value's type during formatting.
 	i, err := strconv.ParseInt(token, 10, 64)
 	if err == nil {
-		return q.Int(i), nil
+		return keyval.Int(i), nil
 	}
 	u, err := strconv.ParseUint(token, 10, 64)
 	if err == nil {
-		return q.Uint(u), nil
+		return keyval.Uint(u), nil
 	}
 
 	f, err := strconv.ParseFloat(token, 64)
 	if err == nil {
-		return q.Float(f), nil
+		return keyval.Float(f), nil
 	}
 
 	return nil, errors.New("unrecognized data element")
