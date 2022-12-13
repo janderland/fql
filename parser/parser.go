@@ -7,10 +7,11 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/pkg/errors"
+
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/internal"
 	"github.com/janderland/fdbq/parser/scanner"
-	"github.com/pkg/errors"
 )
 
 type state int
@@ -106,11 +107,17 @@ func tokenKindName(kind scanner.TokenKind) string {
 	}
 }
 
+// Token is a categorized piece of the query string
+// returned from [scanner.Scanner].
 type Token struct {
 	Kind  scanner.TokenKind
 	Token string
 }
 
+// Error represents a problem encountered during parsing.
+// Included with the error is the entire list of tokens
+// returned by the [scanner.Scanner] and the index of the
+// token which caused the parsing error.
 type Error struct {
 	// Tokens is the tokens returned from
 	// the scanner.Scanner for the string
@@ -126,9 +133,8 @@ type Error struct {
 	Err error
 }
 
-// Error converts the Error to a string
-// made up of all the tokens with the
-// invalid token marked as such.
+// Error returns a string made up of all the tokens
+// with the invalid token marked as such.
 func (x *Error) Error() string {
 	var msg strings.Builder
 	for i, token := range x.Tokens {
@@ -143,7 +149,7 @@ func (x *Error) Error() string {
 	return errors.Wrap(x.Err, msg.String()).Error()
 }
 
-// Parser obtains tokens from the given scanner.Scanner
+// Parser obtains tokens from the given [scanner.Scanner]
 // and attempts to parse them into a keyval.Query.
 type Parser struct {
 	scanner scanner.Scanner
@@ -155,24 +161,27 @@ func New(s scanner.Scanner) Parser {
 	return Parser{scanner: s}
 }
 
+// Parse consumes all the tokens from the given
+// [scanner.Scanner] and either returns a [keyval.Query]
+// or the first error encountered during parsing.
 func (x *Parser) Parse() (q.Query, error) {
 	var (
 		kv  internal.KeyValBuilder
 		tup internal.TupBuilder
 
-		// TODO: Work into the state machine.
+		// TODO: Work into the state machine?
 		// If true, when internal.TupBuilder ends its
 		// root tuple, the tuple is copied into the query's
 		// value. Otherwise, it's copied into the key.
 		valTup bool
 
-		// TODO: Work into the state machine.
+		// TODO: Work into the state machine?
 		// If true, stateVarHead & stateVarTail are building
 		// a variable for use as a value. Otherwise, the
 		// variable is for use in a tuple.
 		valVar bool
 
-		// TODO: Work into the state machine.
+		// TODO: Work into the state machine?
 		// If < 0 then the string is a directory part.
 		// If == 0 then the string is in a tuple.
 		// If > 0 then the string is for a value.
