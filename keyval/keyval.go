@@ -1,6 +1,6 @@
 // Package keyval contains types representing key-values and related
 // utilities. These types model both queries and the data returned by
-// queries. They can be constructed from query strings by package parser
+// queries. They can be constructed from query strings using [parser.Parser]
 // but are also designed to be easily constructed directly in Go source
 // code.
 //
@@ -23,7 +23,7 @@
 // The Directory, Tuple, & Value types would be best represented by tagged
 // unions. While Go does not natively support tagged unions, this codebase
 // implements equivalent functionality using the visitor pattern. See
-// package operation which generates the boilerplate code associated with
+// package [operation] which generates the boilerplate code associated with
 // this. See DirectoryOperation, TupleOperation, or ValueOperation as
 // examples of the generated code.
 //
@@ -42,16 +42,18 @@ import "math/big"
 //go:generate go run ./operation -op-name Query     -param-name query      -types Directory,Key,KeyValue
 //go:generate go run ./operation -op-name Directory -param-name DirElement -types String,Variable
 //go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
+
+// TODO: Add BigInt to value types.
 //go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
 
 type (
 	// Query is an interface implemented by the types which can
-	// be passed to engine.Engine as a query. This includes
+	// be passed to [engine.Engine] as a query. This includes
 	// KeyValue, Key, & Directory.
 	Query = query
 
-	// KeyValue can be passed to engine.Engine as a query or be
-	// returned from engine.Engine as a query's result. When
+	// KeyValue can be passed to [engine.Engine] as a query or be
+	// returned from [engine.Engine] as a query's result. When
 	// returned as a result, KeyValue will not contain a Variable,
 	// Clear, or MaybeMore.
 	KeyValue struct {
@@ -59,7 +61,7 @@ type (
 		Value Value
 	}
 
-	// Key can be passed to engine.Engine as a query. When used
+	// Key can be passed to [engine.Engine] as a query. When used
 	// as a query, it is equivalent to a KeyValue whose Value is
 	// an empty Variable.
 	Key struct {
@@ -67,7 +69,7 @@ type (
 		Tuple     Tuple
 	}
 
-	// Directory can be passed to engine.Engine as a directory
+	// Directory can be passed to [engine.Engine] as a directory
 	// query. These kinds of queries define a directory path
 	// schema. When executed, all directories matching the
 	// schema are returned.
@@ -91,7 +93,7 @@ type (
 	// appear as the last element of the Tuple. A Query containing
 	// a MaybeMore defines a schema which allows all keys prefixed
 	// by the key in the schema.
-	// TODO: Implement as a flag on Tuple?
+	// TODO: Implement as a flag on Tuple.
 	MaybeMore struct{}
 
 	// Clear is a special kind of Value which designates
@@ -112,13 +114,13 @@ type (
 	// Int is a "primitive" type implementing an int64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as a 2-compliment 8-byte string. Endianness depends on how
-	// the engine.Engine is configured.
+	// the [engine.Engine] is configured.
 	Int int64
 
 	// Uint is a "primitive" type implementing a uint64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as an 8-byte array. Endianness depends on how the
-	// engine.Engine is configured.
+	// [engine.Engine] is configured.
 	Uint uint64
 
 	// Bool is a "primitive" type implementing a bool as either a
@@ -129,7 +131,7 @@ type (
 	// Float is a "primitive" type implementing a float64 as either
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as an 8-byte array in accordance with IEEE 754. Endianness
-	// depends on how the engine.Engine is configured.
+	// depends on how the [engine.Engine] is configured.
 	Float float64
 
 	// BigInt is a "primitive" type implementing a big.Int as either
