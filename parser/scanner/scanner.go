@@ -7,8 +7,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/janderland/fdbq/parser/internal"
 	"github.com/pkg/errors"
+
+	"github.com/janderland/fdbq/parser/internal"
 )
 
 // TokenKind represents the kind of token read during a call to Scanner.Scan.

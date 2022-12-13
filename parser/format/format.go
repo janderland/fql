@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	q "github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/parser/internal"
 )
 
@@ -46,13 +46,13 @@ func (x *Format) Reset() {
 
 // Query formats the given keyval.Query and appends
 // it to the internal buffer.
-func (x *Format) Query(in q.Query) {
+func (x *Format) Query(in keyval.Query) {
 	in.Query(&formatQuery{x})
 }
 
 // KeyValue formats the given keyval.KeyValue
 // and appends it to the internal buffer.
-func (x *Format) KeyValue(in q.KeyValue) {
+func (x *Format) KeyValue(in keyval.KeyValue) {
 	x.Key(in.Key)
 	x.builder.WriteRune(internal.KeyValSep)
 	x.Value(in.Value)
@@ -60,20 +60,20 @@ func (x *Format) KeyValue(in q.KeyValue) {
 
 // Key formats the given keyval.Key
 // and appends it to the internal buffer.
-func (x *Format) Key(in q.Key) {
+func (x *Format) Key(in keyval.Key) {
 	x.Directory(in.Directory)
 	x.Tuple(in.Tuple)
 }
 
 // Value formats the given keyval.Value
 // and appends it to the internal buffer.
-func (x *Format) Value(in q.Value) {
+func (x *Format) Value(in keyval.Value) {
 	in.Value(&formatData{x})
 }
 
 // Directory formats the given keyval.Directory
 // and appends it to the internal buffer.
-func (x *Format) Directory(in q.Directory) {
+func (x *Format) Directory(in keyval.Directory) {
 	for _, element := range in {
 		x.builder.WriteRune(internal.DirSep)
 		element.DirElement(&formatDirElement{x})
@@ -82,7 +82,7 @@ func (x *Format) Directory(in q.Directory) {
 
 // Tuple formats the given keyval.Tuple
 // and appends it to the internal buffer.
-func (x *Format) Tuple(in q.Tuple) {
+func (x *Format) Tuple(in keyval.Tuple) {
 	x.builder.WriteRune(internal.TupStart)
 	for i, element := range in {
 		if i != 0 {
@@ -95,7 +95,7 @@ func (x *Format) Tuple(in q.Tuple) {
 
 // Variable formats the given keyval.Variable
 // and appends it to the internal buffer.
-func (x *Format) Variable(in q.Variable) {
+func (x *Format) Variable(in keyval.Variable) {
 	x.builder.WriteRune(internal.VarStart)
 	for i, vType := range in {
 		if i != 0 {
@@ -108,7 +108,7 @@ func (x *Format) Variable(in q.Variable) {
 
 // Bytes formats the given keyval.Bytes
 // and appends it to the internal buffer.
-func (x *Format) Bytes(in q.Bytes) {
+func (x *Format) Bytes(in keyval.Bytes) {
 	if x.cfg.PrintBytes {
 		x.builder.WriteString(internal.HexStart)
 		x.builder.WriteString(hex.EncodeToString(in))
@@ -120,7 +120,7 @@ func (x *Format) Bytes(in q.Bytes) {
 
 // Str formats the given keyval.String
 // and appends it to the internal buffer.
-func (x *Format) Str(in q.String) {
+func (x *Format) Str(in keyval.String) {
 	x.builder.WriteRune(internal.StrMark)
 	x.builder.WriteString(escapeString(string(in)))
 	x.builder.WriteRune(internal.StrMark)
@@ -128,7 +128,7 @@ func (x *Format) Str(in q.String) {
 
 // UUID formats the given keyval.UUID
 // and appends it to the internal buffer.
-func (x *Format) UUID(in q.UUID) {
+func (x *Format) UUID(in keyval.UUID) {
 	x.builder.WriteString(hex.EncodeToString(in[:4]))
 	x.builder.WriteRune('-')
 	x.builder.WriteString(hex.EncodeToString(in[4:6]))
@@ -142,7 +142,7 @@ func (x *Format) UUID(in q.UUID) {
 
 // Bool formats the given keyval.Bool
 // and appends it to the internal buffer.
-func (x *Format) Bool(in q.Bool) {
+func (x *Format) Bool(in keyval.Bool) {
 	if in {
 		x.builder.WriteString(internal.True)
 	} else {
@@ -152,37 +152,37 @@ func (x *Format) Bool(in q.Bool) {
 
 // Int formats the given keyval.Int
 // and appends it to the internal buffer.
-func (x *Format) Int(in q.Int) {
+func (x *Format) Int(in keyval.Int) {
 	x.builder.WriteString(strconv.FormatInt(int64(in), 10))
 }
 
 // Uint formats the given keyval.Uint
 // and appends it to the internal buffer.
-func (x *Format) Uint(in q.Uint) {
+func (x *Format) Uint(in keyval.Uint) {
 	x.builder.WriteString(strconv.FormatUint(uint64(in), 10))
 }
 
 // Float formats the given keyval.Float
 // and appends it to the internal buffer.
-func (x *Format) Float(in q.Float) {
+func (x *Format) Float(in keyval.Float) {
 	x.builder.WriteString(strconv.FormatFloat(float64(in), 'g', 10, 64))
 }
 
 // Nil formats the given keyval.Nil
 // and appends it to the internal buffer.
-func (x *Format) Nil(_ q.Nil) {
+func (x *Format) Nil(_ keyval.Nil) {
 	x.builder.WriteString(internal.Nil)
 }
 
 // Clear formats the given keyval.Clear
 // and appends it to the internal buffer.
-func (x *Format) Clear(_ q.Clear) {
+func (x *Format) Clear(_ keyval.Clear) {
 	x.builder.WriteString(internal.Clear)
 }
 
 // MaybeMore formats the given keyval.MaybeMore
 // and appends it to the internal buffer.
-func (x *Format) MaybeMore(_ q.MaybeMore) {
+func (x *Format) MaybeMore(_ keyval.MaybeMore) {
 	x.builder.WriteString(internal.MaybeMore)
 }
 

@@ -4,6 +4,7 @@ package stream
 
 import (
 	"context"
+	"encoding/binary"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -18,23 +19,13 @@ import (
 )
 
 type (
-	// RangeOpts specifies how a Stream executes a query.
+	// RangeOpts configures how a Stream performs a range read.
 	RangeOpts struct {
 		Reverse bool
 		Limit   int
 	}
 
-	// Stream provides methods which build pipelines for reading
-	// a range of key-values. ctx controls the cancellation of all
-	// operations. For the methods which spawn a goroutine, canceling
-	// ctx will stop them. For the methods which block on sending to
-	// a channel, canceling ctx will unblock them.
-	Stream struct {
-		ctx context.Context
-		log zerolog.Logger
-	}
-
-	// DirErr is streamed from a call to Stream.OpenDirectories.
+	// DirErr is streamed from a call to [Stream.OpenDirectories].
 	// If Err is nil, the other fields should be non-nil. If Err
 	// is non-nil, the other fields should be nil.
 	DirErr struct {
@@ -42,7 +33,7 @@ type (
 		Err error
 	}
 
-	// DirKVErr is streamed from a call to Stream.ReadRange.
+	// DirKVErr is streamed from a call to [Stream.ReadRange].
 	// If Err is nil, the other fields should be non-nil. If
 	// Err is non-nil, the other fields should be nil.
 	DirKVErr struct {
@@ -51,19 +42,53 @@ type (
 		Err error
 	}
 
-	// KeyValErr is streamed from a call to Stream.UnpackKeys or
-	// Stream.UnpackValues. If Err is nil, the other fields should
+	// KeyValErr is streamed from a call to [Stream.UnpackKeys] or
+	// [Stream.UnpackValues]. If Err is nil, the other fields should
 	// be non-nil. If Err is non-nil, the other fields should be nil.
 	KeyValErr struct {
 		KV  keyval.KeyValue
 		Err error
 	}
+
+	// Option can be passed as a trailing argument to the New function
+	// to modify properties of the created Stream.
+	Option func(*Stream)
+
+	// Stream provides methods which build pipelines for reading
+	// a range of key-values.
+	Stream struct {
+		ctx   context.Context
+		log   zerolog.Logger
+		order binary.ByteOrder
+	}
 )
 
-func New(ctx context.Context, log zerolog.Logger) Stream {
-	return Stream{
-		ctx: ctx,
-		log: log,
+// New constructs a new Stream. The context provides a way
+// to cancel any pipelines created with this Stream.
+func New(ctx context.Context, opts ...Option) Stream {
+	s := Stream{
+		ctx:   ctx,
+		log:   zerolog.Nop(),
+		order: binary.BigEndian,
+	}
+	for _, option := range opts {
+		option(&s)
+	}
+	return s
+}
+
+// Logger configures the logger that a Stream will use.
+func Logger(log zerolog.Logger) Option {
+	return func(s *Stream) {
+		s.log = log
+	}
+}
+
+// ByteOrder sets the endianness used for encoding/decoding values. This
+// method must not be called concurrently with other methods.
+func ByteOrder(order binary.ByteOrder) Option {
+	return func(s *Stream) {
+		s.order = order
 	}
 }
 
@@ -104,7 +129,8 @@ func (x *Stream) SendKV(out chan<- KeyValErr, in KeyValErr) bool {
 }
 
 // OpenDirectories executes the given directory query in a separate goroutine using the given
-// transactor. When the goroutine exits, the returned channel is closed.
+// transactor. When the goroutine exits, the returned channel is closed. If the associated
+// context.Context is canceled, then the goroutine exits after the latest FDB call.
 func (x *Stream) OpenDirectories(tr facade.ReadTransactor, query keyval.Directory) chan DirErr {
 	out := make(chan DirErr)
 
@@ -118,7 +144,8 @@ func (x *Stream) OpenDirectories(tr facade.ReadTransactor, query keyval.Director
 
 // ReadRange executes range-reads in a separate goroutine using the given transactor. When the goroutine exits, the
 // returned channel is closed. Any errors read from the input channel are wrapped and forwarded. For each directory
-// read from the input channel, a range-read is performed using the tuple prefix defined by the given keyval.Tuple.
+// read from the input channel, a range-read is performed using the tuple prefix defined by the given [keyval.Tuple].
+// If the associated context.Context is canceled, then the goroutine exits after the latest FDB call.
 func (x *Stream) ReadRange(tr facade.ReadTransaction, query keyval.Tuple, opts RangeOpts, in chan DirErr) chan DirKVErr {
 	out := make(chan DirKVErr)
 
@@ -133,7 +160,7 @@ func (x *Stream) ReadRange(tr facade.ReadTransaction, query keyval.Tuple, opts R
 // UnpackKeys converts the channel of DirKVErr into a channel of KeyValErr in a separate goroutine.
 // When the goroutine exits, the returned channel is closed. Any errors read from the input channel
 // are wrapped and forwarded. Keys are unpacked using subspace.Subspace.Unpack and then converted to
-// FDBQ types. Values are converted to keyval.Bytes; the actual byte string remains unchanged.
+// FDBQ types. Values are converted to [keyval.Bytes]; the actual byte string remains unchanged.
 func (x *Stream) UnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
@@ -147,14 +174,14 @@ func (x *Stream) UnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr) c
 
 // UnpackValues deserializes the values in a separate goroutine. When the goroutine exits, the returned channel
 // is closed. Any errors read from the input channel are wrapped and forwarded. The values of the key-values
-// provided via the input channel are expected to be of type keyval.Bytes, and are converted to the type specified
+// provided via the input channel are expected to be of type [keyval.Bytes], and are converted to the type specified
 // in the given schema.
-func (x *Stream) UnpackValues(query keyval.Value, valHandler internal.ValHandler, in chan KeyValErr) chan KeyValErr {
+func (x *Stream) UnpackValues(query keyval.Value, filter bool, in chan KeyValErr) chan KeyValErr {
 	out := make(chan KeyValErr)
 
 	go func() {
 		defer close(out)
-		x.goUnpackValues(query, valHandler, in, out)
+		x.goUnpackValues(query, filter, in, out)
 	}()
 
 	return out
@@ -170,37 +197,7 @@ func (x *Stream) goOpenDirectories(tr facade.ReadTransactor, query keyval.Direct
 		return
 	}
 
-	if variable != nil {
-		subDirs, err := tr.DirList(prefixStr)
-		if err != nil {
-			if errors.Is(err, directory.ErrDirNotExists) {
-				return
-			}
-			x.SendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
-			return
-		}
-		if len(subDirs) == 0 {
-			log.Log().Msg("no subdirectories")
-			return
-		}
-
-		log.Log().Strs("sub dirs", subDirs).Msg("found subdirectories")
-
-		for _, subDir := range subDirs {
-			// Between each interaction with the DB, give
-			// this goroutine a chance to exit early.
-			if err := x.ctx.Err(); err != nil {
-				x.SendDir(out, DirErr{Err: err})
-				return
-			}
-
-			var dir keyval.Directory
-			dir = append(dir, prefix...)
-			dir = append(dir, keyval.String(subDir))
-			dir = append(dir, suffix...)
-			x.goOpenDirectories(tr, dir, out)
-		}
-	} else {
+	if variable == nil {
 		dir, err := tr.DirOpen(prefixStr)
 		if err != nil {
 			if errors.Is(err, directory.ErrDirNotExists) {
@@ -211,9 +208,38 @@ func (x *Stream) goOpenDirectories(tr facade.ReadTransactor, query keyval.Direct
 		}
 
 		log.Log().Strs("dir", dir.GetPath()).Msg("sending directory")
-		if !x.SendDir(out, DirErr{Dir: dir}) {
+		x.SendDir(out, DirErr{Dir: dir})
+		return
+	}
+
+	subDirs, err := tr.DirList(prefixStr)
+	if err != nil {
+		if errors.Is(err, directory.ErrDirNotExists) {
 			return
 		}
+		x.SendDir(out, DirErr{Err: errors.Wrap(err, "failed to list directories")})
+		return
+	}
+	if len(subDirs) == 0 {
+		log.Log().Msg("no subdirectories")
+		return
+	}
+
+	log.Log().Strs("sub dirs", subDirs).Msg("found subdirectories")
+
+	for _, subDir := range subDirs {
+		// Between each interaction with the DB, give
+		// this goroutine a chance to exit early.
+		if err := x.ctx.Err(); err != nil {
+			x.SendDir(out, DirErr{Err: err})
+			return
+		}
+
+		var dir keyval.Directory
+		dir = append(dir, prefix...)
+		dir = append(dir, keyval.String(subDir))
+		dir = append(dir, suffix...)
+		x.goOpenDirectories(tr, dir, out)
 	}
 }
 
@@ -305,8 +331,14 @@ func (x *Stream) goUnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr,
 	}
 }
 
-func (x *Stream) goUnpackValues(query keyval.Value, valHandler internal.ValHandler, in chan KeyValErr, out chan KeyValErr) {
+func (x *Stream) goUnpackValues(query keyval.Value, filter bool, in chan KeyValErr, out chan KeyValErr) {
 	log := x.log.With().Str("stage", "unpack values").Interface("query", query).Logger()
+
+	valHandler, err := internal.NewValueHandler(query, x.order, filter)
+	if err != nil {
+		x.SendKV(out, KeyValErr{Err: err})
+		return
+	}
 
 	for msg := range in {
 		if msg.Err != nil {

@@ -37,35 +37,51 @@ func (x RangeOpts) forStream() stream.RangeOpts {
 	}
 }
 
-// Engine provides methods which execute queries. Each method is built
-// for a single class of query (see [class.Class]) and will fail if a
-// query of the wrong class in provided. Unless [Engine.Transact] is
-// used, each method call is executed in its own transaction.
+// Option can be passed as a trailing argument to the New function
+// to modify properties of the created Engine.
+type Option func(*Engine)
+
+// Engine provides methods which execute queries. Each valid [class.Class]
+// has a corresponding method for executing that class of query. The methods
+// will fail if a query of the wrong class in provided. Unless [Engine.Transact]
+// is used, each query is executed in its own transaction.
 type Engine struct {
 	tr    facade.Transactor
 	log   zerolog.Logger
 	order binary.ByteOrder
 }
 
-func New(tr facade.Transactor) Engine {
-	return Engine{
+func New(tr facade.Transactor, opts ...Option) Engine {
+	eg := Engine{
 		tr:    tr,
 		log:   zerolog.Nop(),
 		order: binary.BigEndian,
 	}
+	for _, option := range opts {
+		option(&eg)
+	}
+	return eg
 }
 
-// Logger enables debug logging using the provided logger.
-func (x *Engine) Logger(log zerolog.Logger) {
-	x.log = log
+// Logger enables debug logging using the provided logger. This method
+// must not be called concurrently with other methods.
+func Logger(log zerolog.Logger) Option {
+	return func(eg *Engine) {
+		eg.log = log
+	}
 }
 
-// ByteOrder sets the endianness used for encoding/decoding values.
-func (x *Engine) ByteOrder(order binary.ByteOrder) {
-	x.order = order
+// ByteOrder sets the endianness used for encoding/decoding values. This
+// method must not be called concurrently with other methods.
+func ByteOrder(order binary.ByteOrder) Option {
+	return func(eg *Engine) {
+		eg.order = order
+	}
 }
 
-// Transact wraps a group of Engine method calls under a single transaction.
+// Transact wraps a group of Engine method calls under a single transaction. The newly
+// created Engine inherits the logger & byte order of the parent engine. Any changes to
+// the logger or byte order of the new Engine has no effect on the parent Engine.
 func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, error) {
 	return x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
 		return f(Engine{
@@ -212,24 +228,18 @@ func (x *Engine) ReadRange(ctx context.Context, query keyval.KeyValue, opts Rang
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		s := stream.New(ctx, x.log)
+		s := stream.New(ctx, stream.Logger(x.log), stream.ByteOrder(x.order))
 
 		if class.Classify(query) != class.ReadRange {
 			s.SendKV(out, stream.KeyValErr{Err: errors.New("query not range-read class")})
 			return
 		}
 
-		valHandler, err := internal.NewValueHandler(query.Value, x.order, opts.Filter)
-		if err != nil {
-			s.SendKV(out, stream.KeyValErr{Err: errors.Wrap(err, "failed to init value handler")})
-			return
-		}
-
-		_, err = x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
+		_, err := x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			stage1 := s.OpenDirectories(tr, query.Key.Directory)
 			stage2 := s.ReadRange(tr, query.Key.Tuple, opts.forStream(), stage1)
 			stage3 := s.UnpackKeys(query.Key.Tuple, opts.Filter, stage2)
-			for kve := range s.UnpackValues(query.Value, valHandler, stage3) {
+			for kve := range s.UnpackValues(query.Value, opts.Filter, stage3) {
 				s.SendKV(out, kve)
 			}
 			return nil, nil
@@ -256,7 +266,7 @@ func (x *Engine) Directories(ctx context.Context, query keyval.Directory) chan s
 		ctx, cancel := context.WithCancel(ctx)
 		defer cancel()
 
-		s := stream.New(ctx, x.log)
+		s := stream.New(ctx, stream.Logger(x.log))
 
 		_, err := x.tr.ReadTransact(func(tr facade.ReadTransaction) (interface{}, error) {
 			for dir := range s.OpenDirectories(tr, query) {

@@ -195,8 +195,7 @@ func TestEngine_Directories(t *testing.T) {
 				expected = append(expected, dir)
 			}
 
-			e := New(tr)
-			e.Logger(log)
+			e := New(tr, Logger(log))
 
 			var result []directory.DirectorySubspace
 			for msg := range e.Directories(context.Background(), query) {
@@ -210,8 +209,6 @@ func TestEngine_Directories(t *testing.T) {
 
 func testEnv(t *testing.T, f func(Engine)) {
 	internal.TestEnv(t, force, func(tr facade.Transactor, log zerolog.Logger) {
-		e := New(tr)
-		e.Logger(log)
-		f(e)
+		f(New(tr, Logger(log)))
 	})
 }

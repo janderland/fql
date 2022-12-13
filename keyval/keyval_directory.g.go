@@ -4,12 +4,17 @@ package keyval
 
 type (
 	DirectoryOperation interface {
+		// ForString performs the DirectoryOperation if the given DirElement is of type String.
 		ForString(String)
+		// ForVariable performs the DirectoryOperation if the given DirElement is of type Variable.
 		ForVariable(Variable)
 	}
 
 	DirElement interface {
+		// DirElement executes the given DirectoryOperation on this DirElement.
 		DirElement(DirectoryOperation)
+
+		// Eq returns true if the given value is equal to this DirElement.
 		Eq(interface{}) bool
 	}
 )
