@@ -42,7 +42,7 @@ import "math/big"
 // TODO: Add BigInt to value types.
 //go:generate go run ./operation -op-name Query     -param-name query      -types Directory,Key,KeyValue
 //go:generate go run ./operation -op-name Directory -param-name DirElement -types String,Variable
-//go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
+//go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
 //go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
 
 type (
