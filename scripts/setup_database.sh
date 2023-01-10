@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-set -exuo pipefail
+set -xu
 
 # The first argument is the hostname of the FDB container.
 FDB_HOSTNAME=${1:-fdb}
@@ -20,15 +20,13 @@ echo "${FDB_DESCRIPTION_ID}@${FDB_IP}:4500" > $FDB_CLUSTER_FILE
 
 # Search for the "unreadable_configuration" message in the cluster's status. This message
 # would let us know that the database hasn't been initialized.
-JQ_CODE=$(
-  jq -e '.cluster.messages[] | select(.name | contains("unreadable_configuration"))' \
-    <(fdbcli --exec 'status json') >&2
-  echo $?
-)
+jq -e '.cluster.messages[] | select(.name | contains("unreadable_configuration"))' <(fdbcli --exec 'status json') >&2
+JQ_CODE=$?
 
 # jq should only return codes between 0 & 4 inclusive. Our particular query never
 # returns 'null' or 'false', so we shouldn't see code 1. Codes 2 & 3 occur on
-# system & compile errors respectively, so the only valid codes are 0 & 4.
+# system & compile errors respectively, so the only valid codes are 0 & 4. If the
+# code is not 0 or 4 then something unexpected happened so return early.
 # https://stedolan.github.io/jq/manual/#Invokingjq
 if [[ $JQ_CODE -lt 0 || ( $JQ_CODE -gt 0 && $JQ_CODE -lt 4 ) || $JQ_CODE -gt 4 ]]; then
   exit "$JQ_CODE"
@@ -39,3 +37,7 @@ fi
 if [[ $JQ_CODE -eq 0 ]]; then
   fdbcli --exec "configure new single memory"
 fi
+
+# If we make it this far then jq should have returned code 4
+# which means there's no need to configure the database and
+# the script can exit.
