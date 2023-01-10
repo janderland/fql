@@ -8,7 +8,13 @@ services:
     working_dir: "/fdbq"
     volumes:
       - ".:/fdbq"
-    command: ["/bin/sh", "-c", "./scripts/setup_database.sh && ./scripts/verify_codebase.sh"]
+    command:
+      - "/bin/sh"
+      - "-c"
+      - |
+        ./scripts/verify_generation.sh &&\
+        ./scripts/setup_database.sh &&\
+        ./scripts/verify_codebase.sh
   fdb:
     container_name: "fdb"
     image: "foundationdb/foundationdb:6.2.30"

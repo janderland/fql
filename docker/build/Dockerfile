@@ -2,6 +2,7 @@ FROM centos:7
 
 RUN yum -y --setopt=skip_missing_names_on_install=False install epel-release gcc-4.8.5 &&\
     yum -y --setopt=skip_missing_names_on_install=False install ShellCheck-0.3.8 &&\
+    yum -y --setopt=skip_missing_names_on_install=False install git-1.8.3.1 &&\
     yum -y clean all
 
 ARG FDB_LIB_URL="https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients-6.2.30-1.el7.x86_64.rpm"
