@@ -10,7 +10,7 @@ services:
       - ".:/fdbq"
     command: ["/bin/sh", "-c", "./scripts/setup_database.sh && ./scripts/verify_codebase.sh"]
   fdb:
-    container_name: fdb
+    container_name: "fdb"
     image: "foundationdb/foundationdb:6.2.30"
     ports:
       - "4500:4500"
