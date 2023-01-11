@@ -1,8 +1,10 @@
 #!/usr/bin/env bash
-set -exuo pipefail
+set -euo pipefail
 
 # Change directory to repo root.
 cd "${0%/*}/.."
+
+set -x
 
 # Lint shell scripts.
 find . -type f -iname '*.sh' -print0 | xargs -0 shellcheck
