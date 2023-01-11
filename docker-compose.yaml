@@ -11,10 +11,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - |
-        ./scripts/verify_generation.sh &&\
-        ./scripts/setup_database.sh &&\
-        ./scripts/verify_codebase.sh
+      - "${COMMAND}"
   fdb:
     container_name: "fdb"
     image: "foundationdb/foundationdb:6.2.30"
