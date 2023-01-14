@@ -3,6 +3,14 @@ services:
   verify:
     container_name: "verify"
     image: "docker.io/janderland/fdbq-build:latest"
+    build:
+      context: "./docker/build"
+      args:
+        FDB_LIB_URL: "${FDB_LIB_URL}"
+        GO_URL: "${GO_URL}"
+        GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
+        HADOLINT_URL: "${HADOLINT_URL}"
+        JQ_URL: "${JQ_URL}"
     depends_on:
       - "fdb"
     working_dir: "/fdbq"
