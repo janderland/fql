@@ -4,6 +4,7 @@ set -eo pipefail
 # Change directory to repo root.
 cd "${0%/*}"
 
+# Parse the flags.
 while [[ $# -gt 0 ]]; do
   case $1 in
     --generated)
@@ -11,25 +12,18 @@ while [[ $# -gt 0 ]]; do
       shift
       ;;
 
-    --build)
-      BUILD="x"
-      shift
-      ;;
+    *)
+      echo "ERR! Invalid flag '$1'"
+      exit 1
   esac
 done
 
-if [[ -n "$BUILD" ]]; then
-  set -x
-  COMMAND="" docker compose build
-  set +x
-fi
-
-COMMAND=()
+CMD_ARR=()
 if [[ -n "$GENERATED" ]]; then
-  COMMAND+=('./scripts/verify_generation.sh &&')
+  CMD_ARR+=('./scripts/verify_generation.sh &&')
 fi
-COMMAND+=('./scripts/setup_database.sh &&')
-COMMAND+=('./scripts/verify_codebase.sh')
+CMD_ARR+=('./scripts/setup_database.sh &&')
+CMD_ARR+=('./scripts/verify_codebase.sh')
 
 set -x
-COMMAND="${COMMAND[*]}" docker compose up verify --attach verify --exit-code-from verify
+COMMAND="${CMD_ARR[*]}" docker compose up verify --attach verify --exit-code-from verify
