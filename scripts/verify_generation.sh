@@ -11,9 +11,9 @@ if [[ -n "$STATUS" ]]; then
 fi
 
 # Run generation and check for differences.
-set -x
-go generate ./...
-set +x
+(set -x;
+  go generate ./...
+)
 
 STATUS="$(git status --short)"
 if [[ -n "$STATUS" ]]; then

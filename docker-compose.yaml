@@ -1,7 +1,10 @@
 version: "3.9"
 services:
-  verify:
-    container_name: "verify"
+
+  # The build service is responsible for building,
+  # linting, and testing the code.
+  build:
+    container_name: "build"
     image: "docker.io/janderland/fdbq-build:latest"
     build:
       context: "./docker/build"
@@ -19,11 +22,26 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "${COMMAND}"
+      - "${BUILD_COMMAND}"
+
+  # The fdbq service allows us to build and test the
+  # fdbq Docker image.
+  fdbq:
+    container_name: "fdbq"
+    image: "docker.io/janderland/fdbq:${FDBQ_TAG}"
+    build:
+      context: "./docker/run"
+      args:
+        FDB_LIB_URL: "${FDB_LIB_URL}"
+    depends_on:
+      - "fdb"
+    command: |
+      'docker:docker@$$(getent hosts fdb | cut -d" " -f1):4500' ${FDBQ_COMMAND}
+
+  # The fdb service provides a single-node cluster
+  # for integration testing.
   fdb:
     container_name: "fdb"
     image: "foundationdb/foundationdb:6.2.30"
     ports:
       - "4500:4500"
-volumes:
-  cache:
