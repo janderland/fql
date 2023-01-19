@@ -10,7 +10,7 @@ cd "${0%/*}"
 # Parse the flags.
 
 function help_msg {
-  echo "docker.sh is a facade for 'docker compose'."
+  echo "build.sh is a facade for 'docker compose'."
   echo "It runs a set of optional tasks in the order"
   echo "specified below. This is the same script used"
   echo "by CI/CD to build, test, and package FDBQ."
@@ -97,6 +97,7 @@ while [[ $# -gt 0 ]]; do
     --help)
       help_msg
       exit 0
+      ;;
 
     --)
       shift 1
