@@ -135,7 +135,7 @@ function join_by {
 #
 # TODO: Figure out a way around this.
 # We use this function on the fdbq args passed during
-# the ./docker -- <args> usecase. While passing these
+# the ./build.sh -- <args> usecase. While passing these
 # args as an environment variable into the Docker
 # compose file, they seem to be evaluated by a shell
 # and stripped of their first layer of quotes. This
