@@ -52,27 +52,68 @@ while [[ $# -gt 0 ]]; do
 done
 
 
+# Define helper functions.
+
+# join_by joins the elements of the $2 array into a
+# single string, placing $1 between each element.
+
+function join_by {
+  local sep="$1"
+  local out="$2"
+  if shift 2; then
+    for arg in "$@"; do
+      out="$out $sep $arg"
+    done
+  fi
+  echo "$out"
+}
+
+
+# escape_quotes adds an extra layer of single quotes
+# around it's arguments. Any single quotes included
+# in the arguments are escaped with backslashes.
+#
+# TODO: Figure out a way around this.
+# We use this function on the fdbq args passed during
+# the ./docker -- <args> usecase. While passing these
+# args as an environment variable into the Docker
+# compose file, they seem to be evaluated by a shell
+# and stripped of their first layer of quotes. This
+# function protects against that.
+
+function escape_quotes {
+  out=()
+  for arg in "$@"; do
+    out+=("$(printf "'%s'" "${arg//'/\\'}")")
+  done
+  echo "${out[@]}" 
+}
+
+
 # Build variables required by the docker compose command.
 
 BUILD_TASKS=()
 
 if [[ -n "$VERIFY_GENERATION" ]]; then
-  BUILD_TASKS+=('./scripts/verify_generation.sh &&')
+  BUILD_TASKS+=('./scripts/verify_generation.sh')
 fi
 
 if [[ -n "$VERIFY_CODEBASE" ]]; then
-  BUILD_TASKS+=('./scripts/setup_database.sh &&')
+  BUILD_TASKS+=('./scripts/setup_database.sh')
   BUILD_TASKS+=('./scripts/verify_codebase.sh')
 fi
 
-export BUILD_COMMAND="${BUILD_TASKS[*]}"
-echo "BUILD_COMMAND=${BUILD_TASKS[*]}"
+BUILD_COMMAND="$(join_by ' && ' "${BUILD_TASKS[@]}")"
+echo "BUILD_COMMAND=${BUILD_COMMAND}"
+export BUILD_COMMAND
 
-export FDBQ_COMMAND="${FDBQ_ARGS[*]}"
-echo "FDBQ_COMMAND=${FDBQ_ARGS[*]}"
+FDBQ_COMMAND="$(escape_quotes "${FDBQ_ARGS[@]}")"
+echo "FDBQ_COMMAND=${FDBQ_COMMAND}"
+export FDBQ_COMMAND
 
-export FDBQ_TAG="latest"
+FDBQ_TAG="latest"
 echo "FDBQ_TAG=latest"
+export FDBQ_TAG
 
 
 # Run the requested commands.
