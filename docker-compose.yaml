@@ -30,7 +30,8 @@ services:
     container_name: "fdbq"
     image: "docker.io/janderland/fdbq:${FDBQ_TAG}"
     build:
-      context: "./docker/run"
+      context: "."
+      dockerfile: "./docker/run/Dockerfile"
       args:
         FDB_LIB_URL: "${FDB_LIB_URL}"
     depends_on:
