@@ -8,8 +8,7 @@ set -eo pipefail
 # single string, placing $1 between each element.
 
 function join_array {
-  local sep="$1"
-  local out="$2"
+  local sep="$1" out="$2"
   if shift 2; then
     for arg in "$@"; do
       out="$out $sep $arg"
@@ -173,6 +172,10 @@ fi
 BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"
 echo "BUILD_COMMAND=${BUILD_COMMAND}"
 export BUILD_COMMAND
+
+BUILD_TAG="latest"
+echo "BUILD_TAG=latest"
+export BUILD_TAG
 
 FDBQ_COMMAND="$(escape_quotes "${FDBQ_ARGS[@]}")"
 echo "FDBQ_COMMAND=${FDBQ_COMMAND}"

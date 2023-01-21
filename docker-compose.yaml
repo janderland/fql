@@ -5,7 +5,7 @@ services:
   # linting, and testing the code.
   build:
     container_name: "build"
-    image: "docker.io/janderland/fdbq-build:latest"
+    image: "docker.io/janderland/fdbq-build:${BUILD_TAG}"
     build:
       context: "./docker/build"
       args:
