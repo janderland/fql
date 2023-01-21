@@ -41,6 +41,14 @@ function escape_quotes {
 }
 
 
+# src_version returns a unique string for each version of
+# the FDBQ source code.
+
+function src_version {
+  git rev-parse --short HEAD
+}
+
+
 # Change directory to repo root.
 
 cd "${0%/*}"
@@ -173,16 +181,16 @@ BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"
 echo "BUILD_COMMAND=${BUILD_COMMAND}"
 export BUILD_COMMAND
 
-BUILD_TAG="latest"
-echo "BUILD_TAG=latest"
+BUILD_TAG="$(src_version)"
+echo "BUILD_TAG=${BUILD_TAG}"
 export BUILD_TAG
 
 FDBQ_COMMAND="$(escape_quotes "${FDBQ_ARGS[@]}")"
 echo "FDBQ_COMMAND=${FDBQ_COMMAND}"
 export FDBQ_COMMAND
 
-FDBQ_TAG="latest"
-echo "FDBQ_TAG=latest"
+FDBQ_TAG="$(src_version)"
+echo "FDBQ_TAG=${FDBQ_TAG}"
 export FDBQ_TAG
 
 
