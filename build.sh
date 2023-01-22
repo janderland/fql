@@ -2,60 +2,6 @@
 set -eo pipefail
 
 
-# Define helper functions.
-
-# join_array joins the elements of the $2 array into a
-# single string, placing $1 between each element.
-
-function join_array {
-  local sep="$1" out="$2"
-  if shift 2; then
-    for arg in "$@"; do
-      out="$out $sep $arg"
-    done
-  fi
-  echo "$out"
-}
-
-
-# escape_quotes adds an extra layer of single quotes
-# around it's arguments. Any single quotes included
-# in the arguments are escaped with backslashes.
-#
-# TODO: Figure out a way around this.
-# We need this function because the './build.sh -- args'
-# usecase passes 'args' as arguments to a Docker container
-# via the shell version of the CMD directive. This is done
-# by the docker-compose.yaml file when running the 'fdbq'
-# service. The list version of the CMD directive cannot be
-# used because this script passes these args via an env
-# var, and there is no way to convert an env var to a YAML
-# list in the docker-compose.yaml file.
-
-function escape_quotes {
-  out=()
-  for arg in "$@"; do
-    out+=("$(printf "'%s'" "${arg//'/\\'}")")
-  done
-  echo "${out[@]}" 
-}
-
-
-# src_version returns a unique string for each version of
-# the FDBQ source code.
-
-function src_version {
-  git rev-parse --short HEAD
-}
-
-
-# Change directory to repo root.
-
-cd "${0%/*}"
-
-
-# Parse the flags.
-
 function help_msg {
   echo "build.sh is a facade for 'docker compose'."
   echo "It runs a set of optional tasks in the order"
@@ -109,8 +55,74 @@ function help_msg {
   echo "the docker images for the changes to take effect."
 }
 
+
+# join_array joins the elements of the $2 array into a
+# single string, placing $1 between each element.
+
+function join_array {
+  local sep="$1" out="$2"
+  if shift 2; then
+    for arg in "$@"; do
+      out="$out $sep $arg"
+    done
+  fi
+  echo "$out"
+}
+
+
+# escape_quotes adds an extra layer of single quotes
+# around it's arguments. Any single quotes included
+# in the arguments are escaped with backslashes.
+#
+# TODO: Figure out a way around this.
+# We need this function because the './build.sh -- args'
+# usecase passes 'args' as arguments to a Docker container
+# via the shell version of the CMD directive. This is done
+# by the docker-compose.yaml file when running the 'fdbq'
+# service. The list version of the CMD directive cannot be
+# used because this script passes these args via an env
+# var, and there is no way to convert an env var to a YAML
+# list in the docker-compose.yaml file.
+
+function escape_quotes {
+  out=()
+  for arg in "$@"; do
+    out+=("$(printf "'%s'" "${arg//'/\\'}")")
+  done
+  echo "${out[@]}"
+}
+
+
+# commit_hash returns the hash for the current
+# Git commit.
+
+function commit_hash {
+  git rev-parse --short HEAD
+}
+
+
+# fdb_version returns the version of the FDB
+# library specified in the .env file.
+
+function fdb_version {
+  local regex='FDB_LIB_URL=[^'$'\n'']*([0-9]+\.[0-9]+\.[0-9]+)'
+  if ! [[ "$(cat .env)" =~ $regex ]]; then
+    echo "ERR! Couldn't find FDB version in .env file." >&2
+    exit 1
+  fi
+  echo "${BASH_REMATCH[1]}"
+}
+
+
+# Change directory to repo root.
+
+cd "${0%/*}"
+
+
+# Parse the flags.
+
 if [[ $# -eq 0 ]]; then
-  echo "ERR! At least one flag must be provided."
+  echo "ERR! At least one flag must be provided." >&2
   echo
   help_msg
   exit 1
@@ -181,7 +193,7 @@ BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"
 echo "BUILD_COMMAND=${BUILD_COMMAND}"
 export BUILD_COMMAND
 
-BUILD_TAG="$(src_version)"
+BUILD_TAG="$(commit_hash)"
 echo "BUILD_TAG=${BUILD_TAG}"
 export BUILD_TAG
 
@@ -189,7 +201,7 @@ FDBQ_COMMAND="$(escape_quotes "${FDBQ_ARGS[@]}")"
 echo "FDBQ_COMMAND=${FDBQ_COMMAND}"
 export FDBQ_COMMAND
 
-FDBQ_TAG="$(src_version)"
+FDBQ_TAG="$(commit_hash)_fdb.$(fdb_version)"
 echo "FDBQ_TAG=${FDBQ_TAG}"
 export FDBQ_TAG
 
