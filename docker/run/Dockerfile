@@ -1,4 +1,5 @@
-FROM janderland/fdbq-build:latest AS build
+ARG BUILD_TAG
+FROM janderland/fdbq-build:${BUILD_TAG} AS build
 
 COPY . /src
 WORKDIR /src

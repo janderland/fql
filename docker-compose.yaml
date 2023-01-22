@@ -34,6 +34,7 @@ services:
       dockerfile: "./docker/run/Dockerfile"
       args:
         FDB_LIB_URL: "${FDB_LIB_URL}"
+        BUILD_TAG: "${BUILD_TAG}"
     depends_on:
       - "fdb"
     command: |
