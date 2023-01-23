@@ -24,7 +24,7 @@ echo "FDB_CLUSTER_FILE: $(cat $FDB_CLUSTER_FILE)"
 
 # Search for the "unreadable_configuration" message in the cluster's status. This message
 # would let us know that the database hasn't been initialized.
-jq -e '.cluster.messages[] | select(.name | contains("unreadable_configuration"))' <(fdbcli --exec 'status json') >&2
+jq -e '.cluster.messages[] | select(.name | contains("unreadable_configuration"))' <(fdbcli --exec 'status json')
 JQ_CODE=$?
 
 # jq should only return codes between 0 & 4 inclusive. Our particular query never
@@ -40,11 +40,9 @@ fi
 # If this is a new instance of FDB, configure the database.
 # https://apple.github.io/foundationdb/administration.html#re-creating-a-database
 if [[ $JQ_CODE -eq 0 ]]; then
-  set -x
-  fdbcli --exec "configure new single memory"
-  set +x
+  (set -x; fdbcli --exec "configure new single memory")
 fi
 
 # If we make it this far then jq should have returned code 4
-# which means there's no need to configure the database and
-# the script can exit.
+# which means there's no need to configure the database or
+# the if above configured the DB, so the script can exit.
