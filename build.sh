@@ -61,7 +61,7 @@ function print_help {
 
 function fail {
   local RED='\033[0;31m' NO_COLOR='\033[0m'
-  printf "${RED}ERR! ${1}${NO_COLOR}\n" >&2
+  echo -e "${RED}ERR! ${1}${NO_COLOR}" >&2
   exit 1
 }
 
@@ -73,7 +73,7 @@ function join_array {
   local sep="$1" out="$2"
   if shift 2; then
     for arg in "$@"; do
-      out="$out $sep $arg"
+      out="${out}${sep}${arg}"
     done
   fi
   echo "$out"
