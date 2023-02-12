@@ -39,7 +39,7 @@ function print_help {
   echo "Note that this is the same FDB instance used by"
   echo "the 'verify' task."
   echo
-  echo "  ./docker.sh -- --write '/my/dir{\"hi\"}=nil'"
+  echo "  ./build.sh -- --write '/my/dir{\"hi\"}=nil'"
   echo
   echo "After this, the script ends. If any of the"
   echo "requested tasks fail then the script exits"
@@ -48,7 +48,7 @@ function print_help {
   echo "Multiple image names can be specified on the"
   echo "'--build' flag by separating them with commas."
   echo
-  echo "  ./docker.sh --build build,fdbq"
+  echo "  ./build.sh --build build,fdbq"
   echo
   echo "When building Docker images, the dependencies of"
   echo "the Dockerfile are specified in the '.env' file."
