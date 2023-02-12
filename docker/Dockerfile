@@ -1,4 +1,5 @@
-FROM centos:7
+# 'builder' includes all build & testing dependencies.
+FROM centos:7 AS builder
 
 RUN yum -y --setopt=skip_missing_names_on_install=False install epel-release gcc-4.8.5 &&\
     yum -y --setopt=skip_missing_names_on_install=False install ShellCheck-0.3.8 &&\
@@ -32,3 +33,24 @@ RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\
 ARG JQ_URL
 RUN curl -Lo /usr/local/bin/jq $JQ_URL &&\
     chmod +x /usr/local/bin/jq
+
+
+# 'gobuild' executes 'go build'.
+FROM builder AS gobuild
+
+COPY . /src
+WORKDIR /src
+RUN go build -o /fdbq
+
+
+# The final stage builds the 'fdbq' image.
+FROM centos:7
+
+ARG FDB_LIB_URL
+RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
+    rpm -i ./fdb.rpm              &&\
+    rm ./fdb.rpm
+
+COPY --from=gobuild /fdbq /fdbq
+COPY ./docker/shim.sh /shim.sh
+ENTRYPOINT ["/shim.sh"]

@@ -7,7 +7,8 @@ services:
     container_name: "build"
     image: "docker.io/janderland/fdbq-build:${BUILD_TAG}"
     build:
-      context: "./docker/build"
+      context: "./docker"
+      target: "builder"
       args:
         FDB_LIB_URL: "${FDB_LIB_URL}"
         GO_URL: "${GO_URL}"
@@ -31,10 +32,13 @@ services:
     image: "docker.io/janderland/fdbq:${FDBQ_TAG}"
     build:
       context: "."
-      dockerfile: "./docker/run/Dockerfile"
+      dockerfile: "./docker/Dockerfile"
       args:
         FDB_LIB_URL: "${FDB_LIB_URL}"
-        BUILD_TAG: "${BUILD_TAG}"
+        GO_URL: "${GO_URL}"
+        GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
+        HADOLINT_URL: "${HADOLINT_URL}"
+        JQ_URL: "${JQ_URL}"
     depends_on:
       - "fdb"
     command: |
