@@ -283,7 +283,7 @@ func TestStream_UnpackValues(t *testing.T) {
 		},
 		{
 			name:  "variable",
-			query: q.Variable{q.IntType, q.BigIntType, q.TupleType},
+			query: q.Variable{q.IntType, q.UUIDType, q.TupleType},
 			initial: []q.KeyValue{
 				{Value: packWithPanic(q.String("hello world"))},
 				{Value: packWithPanic(q.Int(55))},

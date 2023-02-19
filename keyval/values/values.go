@@ -14,7 +14,9 @@ import (
 
 // UnexpectedValueTypeErr is returned by Unpack if the provided keyval.ValueType is
 // not implemented. This error should only occur if a bug is present in the code.
-type UnexpectedValueTypeErr error
+type UnexpectedValueTypeErr struct {
+	error
+}
 
 // Pack serializes keyval.Value into a bytes string for writing to the DB.
 func Pack(val keyval.Value, order binary.ByteOrder) ([]byte, error) {
@@ -77,6 +79,6 @@ func Unpack(val []byte, typ keyval.ValueType, order binary.ByteOrder) (keyval.Va
 		return convert.FromFDBTuple(tup), errors.Wrap(err, "failed to unpack tuple")
 
 	default:
-		return nil, UnexpectedValueTypeErr(errors.Errorf("unknown ValueType '%v'", typ))
+		return nil, UnexpectedValueTypeErr{errors.Errorf("unknown ValueType '%v'", typ)}
 	}
 }
