@@ -628,7 +628,7 @@ func parseData(token string) (
 
 	// We attempt to parse as Int before Uint to mimic the
 	// way tuple.Unpack decodes integers: if the value fits
-	// within an int then it's parsed a such, regardless
+	// within an int then it's parsed as such, regardless
 	// of the value's type during formatting.
 	i, iErr := strconv.ParseInt(token, 10, 64)
 	if iErr == nil {

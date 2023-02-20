@@ -1,11 +1,10 @@
 package convert
 
 import (
-	"math/big"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
+
+	q "github.com/janderland/fdbq/keyval"
 )
 
 var _ q.TupleOperation = &conversion{}
@@ -37,9 +36,12 @@ func (x *conversion) ForFloat(in q.Float) {
 	x.out = float64(in)
 }
 
+// TODO: Add support for BigInt.
+/*
 func (x *conversion) ForBigInt(in q.BigInt) {
 	x.out = big.Int(in)
 }
+*/
 
 func (x *conversion) ForString(in q.String) {
 	x.out = string(in)

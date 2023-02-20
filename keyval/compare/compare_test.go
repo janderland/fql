@@ -1,12 +1,11 @@
 package compare
 
 import (
-	"math"
-	"math/big"
 	"testing"
 
-	q "github.com/janderland/fdbq/keyval"
 	"github.com/stretchr/testify/require"
+
+	q "github.com/janderland/fdbq/keyval"
 )
 
 func TestTuples(t *testing.T) {
@@ -18,7 +17,6 @@ func TestTuples(t *testing.T) {
 			q.Float(-55.93),
 			q.Bool(true),
 			q.Nil{},
-			q.BigInt(*big.NewInt(math.MaxInt64)),
 		}
 		pattern := make(q.Tuple, len(candidate))
 		require.Equal(t, copy(pattern, candidate), len(candidate))
@@ -62,7 +60,7 @@ func TestTuples(t *testing.T) {
 		}
 		candidate2 := q.Tuple{
 			q.Int(-8742),
-			q.Tuple{q.String("nowhere"), q.BigInt(*big.NewInt(55))},
+			q.Tuple{q.String("nowhere"), q.Int(55)},
 			q.String("goodbye world"),
 			q.Int(555),
 		}
