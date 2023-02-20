@@ -41,7 +41,7 @@ func TestFloat_Eq(t *testing.T) {
 	assert.False(t, x.Eq(Bool(true)))
 }
 
-// TOOD: Add support for BigInt.
+// TODO: Add support for BigInt.
 /*
 func TestBigInt_Eq(t *testing.T) {
 	x := BigInt(*big.NewInt(25))
