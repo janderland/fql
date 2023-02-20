@@ -596,7 +596,7 @@ func parseData(token string) (
 	if strings.HasPrefix(token, internal.HexStart) {
 		data, err := hex.DecodeString(token[len(internal.HexStart):])
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrapf(err, "token begins with '%s' but cannot be parsed as a hex string", internal.HexStart)
 		}
 		return keyval.Bytes(data), nil
 	}
@@ -605,28 +605,39 @@ func parseData(token string) (
 		var uuid keyval.UUID
 		_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
 		if err != nil {
-			return nil, err
+			return nil, errors.Wrap(err, "token contains four '-' but cannot be parsed as a UUID")
 		}
 		return uuid, nil
+	}
+
+	if strings.ContainsRune(token, '.') {
+		data, err := strconv.ParseFloat(token, 64)
+		if err != nil {
+			return nil, errors.Wrap(err, "token contains a '.' but cannot be parsed as a float")
+		}
+		return keyval.Float(data), nil
+	}
+
+	if strings.HasPrefix(token, "-") {
+		data, err := strconv.ParseInt(token, 10, 64)
+		if err != nil {
+			return nil, errors.Wrap(err, "token starts with a '-' but cannot be parsed as an int")
+		}
+		return keyval.Int(data), nil
 	}
 
 	// We attempt to parse as Int before Uint to mimic the
 	// way tuple.Unpack decodes integers: if the value fits
 	// within an int then it's parsed a such, regardless
 	// of the value's type during formatting.
-	i, err := strconv.ParseInt(token, 10, 64)
-	if err == nil {
+	i, iErr := strconv.ParseInt(token, 10, 64)
+	if iErr == nil {
 		return keyval.Int(i), nil
 	}
-	u, err := strconv.ParseUint(token, 10, 64)
-	if err == nil {
+	u, uErr := strconv.ParseUint(token, 10, 64)
+	if uErr == nil {
 		return keyval.Uint(u), nil
 	}
-
-	f, err := strconv.ParseFloat(token, 64)
-	if err == nil {
-		return keyval.Float(f), nil
-	}
-
-	return nil, errors.New("unrecognized data element")
+	err := errors.Errorf("while parsing int - %s, while parsing uint - %s", iErr, uErr)
+	return nil, errors.Wrap(err, "failed to parse token as int or uint")
 }
