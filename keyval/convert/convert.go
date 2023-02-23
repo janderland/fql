@@ -2,12 +2,11 @@
 package convert
 
 import (
-	"math/big"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/tuple"
-	q "github.com/janderland/fdbq/keyval"
 	"github.com/pkg/errors"
+
+	q "github.com/janderland/fdbq/keyval"
 )
 
 // ToStringArray attempts to convert a keyval.Directory to a string
@@ -100,10 +99,13 @@ func FromFDBElement(in tuple.TupleElement) q.TupElement {
 	case uint:
 		return q.Uint(in)
 
-	case big.Int:
-		return q.BigInt(in)
-	case *big.Int:
-		return q.BigInt(*in)
+		// TODO: Add support for BigInt.
+		/*
+			case big.Int:
+				return q.BigInt(in)
+			case *big.Int:
+				return q.BigInt(*in)
+		*/
 
 	case float64:
 		return q.Float(in)

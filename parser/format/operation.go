@@ -79,11 +79,6 @@ func (x *formatData) ForString(in q.String) {
 	x.format.Str(in)
 }
 
-func (x *formatData) ForBigInt(q.BigInt) {
-	// TODO: Implement BigInt formatting.
-	panic("not implemented")
-}
-
 func (x *formatData) ForNil(in q.Nil) {
 	x.format.Nil(in)
 }

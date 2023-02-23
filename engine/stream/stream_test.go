@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/binary"
 	"flag"
-	"math/big"
 	"strings"
 	"testing"
 
@@ -112,7 +111,7 @@ func TestStream_ReadRange(t *testing.T) {
 			initial: []q.KeyValue{
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(123), q.String("hello"), q.Float(-50.6)}}, Value: q.Nil{}},
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(321), q.String("goodbye"), q.Float(50.6)}}, Value: q.Nil{}},
-				{Key: q.Key{Directory: q.Directory{q.String("second")}, Tuple: q.Tuple{q.Int(-69), q.BigInt(*big.NewInt(-55)), q.Tuple{q.String("world")}}}, Value: q.Nil{}},
+				{Key: q.Key{Directory: q.Directory{q.String("second")}, Tuple: q.Tuple{q.Int(-69), q.Int(-55), q.Tuple{q.String("world")}}}, Value: q.Nil{}},
 			},
 			expected: []q.KeyValue{
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(123), q.String("hello"), q.Float(-50.6)}}, Value: q.Bytes{}},
@@ -191,7 +190,7 @@ func TestStream_UnpackKeys(t *testing.T) {
 			initial: []q.KeyValue{
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(123), q.String("hello"), q.Float(-50.6)}}, Value: q.Nil{}},
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(321), q.String("goodbye"), q.Float(50.6)}}, Value: q.Nil{}},
-				{Key: q.Key{Directory: q.Directory{q.String("second")}, Tuple: q.Tuple{q.Int(-69), q.BigInt(*big.NewInt(-55)), q.Tuple{q.String("world")}}}, Value: q.Nil{}},
+				{Key: q.Key{Directory: q.Directory{q.String("second")}, Tuple: q.Tuple{q.Int(-69), q.Int(-55), q.Tuple{q.String("world")}}}, Value: q.Nil{}},
 			},
 			expected: []q.KeyValue{
 				{Key: q.Key{Directory: q.Directory{q.String("first")}, Tuple: q.Tuple{q.Int(123), q.String("hello"), q.Float(-50.6)}}, Value: q.Bytes(nil)},
@@ -283,7 +282,7 @@ func TestStream_UnpackValues(t *testing.T) {
 		},
 		{
 			name:  "variable",
-			query: q.Variable{q.IntType, q.BigIntType, q.TupleType},
+			query: q.Variable{q.IntType, q.UUIDType, q.TupleType},
 			initial: []q.KeyValue{
 				{Value: packWithPanic(q.String("hello world"))},
 				{Value: packWithPanic(q.Int(55))},

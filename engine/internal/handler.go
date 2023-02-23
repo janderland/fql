@@ -83,6 +83,9 @@ func (x *unpack) Handle(val []byte) (keyval.Value, error) {
 	for _, typ := range x.variable {
 		out, err := values.Unpack(val, typ, x.order)
 		if err != nil {
+			if _, ok := err.(values.UnexpectedValueTypeErr); ok {
+				return nil, err
+			}
 			continue
 		}
 		return out, nil

@@ -37,12 +37,10 @@
 // and are serialized by FDBQ.
 package keyval
 
-import "math/big"
-
-// TODO: Add BigInt to value types.
+// TODO: Add BigInt to Tuple and Value.
 //go:generate go run ./operation -op-name Query     -param-name query      -types Directory,Key,KeyValue
 //go:generate go run ./operation -op-name Directory -param-name DirElement -types String,Variable
-//go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,BigInt,String,UUID,Bytes,Variable,MaybeMore
+//go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,MaybeMore
 //go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
 
 type (
@@ -133,10 +131,13 @@ type (
 	// depends on how the [engine.Engine] is configured.
 	Float float64
 
-	// BigInt is a "primitive" type implementing a big.Int as either
-	// a TupElement or Value.
-	// TODO: Document how BigInt is serialized.
-	BigInt big.Int
+	// TODO: Add support for BigInt.
+	/*
+		// BigInt is a "primitive" type implementing a big.Int as either
+		// a TupElement or Value.
+		// TODO: Document how BigInt is serialized.
+		BigInt big.Int
+	*/
 
 	// String is a "primitive" type implementing a string as either
 	// a TupElement or Value. When used as a Value, it's serialized
@@ -175,8 +176,11 @@ const (
 	// FloatType designates a Variable to allow Float values.
 	FloatType ValueType = "float"
 
-	// BigIntType designates a Variable to allow BigInt values.
-	BigIntType ValueType = "bigint"
+	// TODO: Add support for BigInt.
+	/*
+		// BigIntType designates a Variable to allow BigInt values.
+		BigIntType ValueType = "bigint"
+	*/
 
 	// StringType designates a Variable to allow String values.
 	StringType ValueType = "string"
@@ -199,7 +203,8 @@ func AllTypes() []ValueType {
 		UintType,
 		BoolType,
 		FloatType,
-		BigIntType,
+		// TODO: Add support for BigInt.
+		// BigIntType,
 		StringType,
 		BytesType,
 		UUIDType,

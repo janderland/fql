@@ -40,7 +40,10 @@ func (x *tupClassification) ForBool(q.Bool) {}
 
 func (x *tupClassification) ForFloat(q.Float) {}
 
+// TODO: Add support for BigInt.
+/*
 func (x *tupClassification) ForBigInt(q.BigInt) {}
+*/
 
 func (x *tupClassification) ForString(q.String) {}
 

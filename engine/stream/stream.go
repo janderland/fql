@@ -1,5 +1,4 @@
 // Package stream performs range-reads and filtering.
-// TODO: Examples.
 package stream
 
 import (
