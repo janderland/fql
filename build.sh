@@ -192,17 +192,13 @@ BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"
 echo "BUILD_COMMAND=${BUILD_COMMAND}"
 export BUILD_COMMAND
 
-BUILD_TAG="$(commit_hash)"
-echo "BUILD_TAG=${BUILD_TAG}"
-export BUILD_TAG
-
 FDBQ_COMMAND="$(escape_quotes "${FDBQ_ARGS[@]}")"
 echo "FDBQ_COMMAND=${FDBQ_COMMAND}"
 export FDBQ_COMMAND
 
-FDBQ_TAG="$(commit_hash)_fdb.$(fdb_version)"
-echo "FDBQ_TAG=${FDBQ_TAG}"
-export FDBQ_TAG
+DOCKER_TAG="$(commit_hash)_fdb.$(fdb_version)"
+echo "DOCKER_TAG=${DOCKER_TAG}"
+export DOCKER_TAG
 
 
 # Run the requested commands.

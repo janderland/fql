@@ -5,7 +5,7 @@ services:
   # linting, and testing the code.
   build:
     container_name: "build"
-    image: "docker.io/janderland/fdbq-build:${BUILD_TAG}"
+    image: "docker.io/janderland/fdbq-build:${DOCKER_TAG}"
     build:
       context: "./docker"
       target: "builder"
@@ -29,7 +29,7 @@ services:
   # fdbq Docker image.
   fdbq:
     container_name: "fdbq"
-    image: "docker.io/janderland/fdbq:${FDBQ_TAG}"
+    image: "docker.io/janderland/fdbq:${DOCKER_TAG}"
     build:
       context: "."
       dockerfile: "./docker/Dockerfile"
@@ -48,6 +48,6 @@ services:
   # for integration testing.
   fdb:
     container_name: "fdb"
-    image: "foundationdb/foundationdb:6.2.30"
+    image: "${FDB_DOCKER_IMAGE}"
     ports:
       - "4500:4500"
