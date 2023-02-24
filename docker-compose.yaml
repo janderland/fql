@@ -27,7 +27,6 @@ services:
       - "fdb"
     working_dir: "/fdbq"
     volumes:
-      - "cache:/cache"
       - ".:/fdbq"
     command:
       - "/bin/sh"
