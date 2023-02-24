@@ -196,7 +196,7 @@ FDBQ_COMMAND="$(escape_quotes "${FDBQ_ARGS[@]}")"
 echo "FDBQ_COMMAND=${FDBQ_COMMAND}"
 export FDBQ_COMMAND
 
-DOCKER_TAG="$(commit_hash)"
+DOCKER_TAG="$(commit_hash)_fdb.$(fdb_version)"
 echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
 
