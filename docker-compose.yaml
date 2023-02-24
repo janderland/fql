@@ -1,11 +1,13 @@
 version: "3.9"
-
-volumes:
-  # This volume preserves the Go build cache and
-  # module cache between build executions.
-  cache:
-
 services:
+
+  # The fdb service provides a single-node cluster
+  # for integration testing.
+  fdb:
+    container_name: "fdb"
+    image: "${FDB_DOCKER_IMAGE}"
+    ports:
+      - "4500:4500"
 
   # The build service is responsible for building,
   # linting, and testing the code.
@@ -50,11 +52,3 @@ services:
       - "fdb"
     command: |
       'docker:docker@$$(getent hosts fdb | cut -d" " -f1):4500' ${FDBQ_COMMAND}
-
-  # The fdb service provides a single-node cluster
-  # for integration testing.
-  fdb:
-    container_name: "fdb"
-    image: "${FDB_DOCKER_IMAGE}"
-    ports:
-      - "4500:4500"
