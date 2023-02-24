@@ -1,4 +1,10 @@
 version: "3.9"
+
+volumes:
+  # This volume preserves the Go build cache and
+  # module cache between build executions.
+  cache:
+
 services:
 
   # The build service is responsible for building,
@@ -19,6 +25,7 @@ services:
       - "fdb"
     working_dir: "/fdbq"
     volumes:
+      - "cache:/cache"
       - ".:/fdbq"
     command:
       - "/bin/sh"
