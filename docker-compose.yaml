@@ -48,6 +48,6 @@ services:
   # for integration testing.
   fdb:
     container_name: "fdb"
-    image: "foundationdb/foundationdb:6.2.30"
+    image: "${FDB_DOCKER_IMAGE}"
     ports:
       - "4500:4500"
