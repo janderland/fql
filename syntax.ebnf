@@ -51,4 +51,4 @@ name = ? Any number of ASCII characters 48-57, 65-90, 97-122 (Alpha-numeric), 46
 
 ws = ? Any number of ASCII characters 9 (Horizontal Tab) or 32 (Space). ?
 
-nl = ? Any number of ASCII characters 9 (Horizontal Tab) 10 (Line Feed) 13 (Carriage Return) or 32 (Space). ?
+nl = ? Any number of ASCII characters 9 (Horizontal Tab), 10 (Line Feed), 13 (Carriage Return), or 32 (Space). ?
