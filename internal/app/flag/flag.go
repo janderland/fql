@@ -52,7 +52,7 @@ func (x *Flags) SingleOpts() engine.SingleOpts {
 func (x *Flags) RangeOpts() engine.RangeOpts {
 	return engine.RangeOpts{
 		Reverse: x.Reverse,
-		Filter:  x.Strict,
+		Filter:  !x.Strict,
 		Limit:   x.Limit,
 	}
 }
