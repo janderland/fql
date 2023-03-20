@@ -1,21 +1,17 @@
 # FDBQ
 
 FDBQ provides a query language and an alternative client API
-for FoundationDB. Some things this project aims to achieve
+for Foundation DB. Some things this project aims to achieve
 are:
 - [x] Provide a textual description of key-value schemas.
 - [x] Provide an intuitive query language for FDB.
 - [x] Provide a Go API which is structurally equivalent to
   the query language.
-- [x] Unify the directory, tuple, & core APIs.
 - [ ] Improve the ergonomics of the FoundationDB API.
   - [ ] Gracefully handle multi-transaction range-reads.
   - [ ] Gracefully handle transient errors.
 - [ ] Standardize the encoding of primitives (int, float,
   bool) as FDB values.
-
-Here is the [syntax definition](syntax.ebnf) for the query
-language.
 
 ## Docker
 
@@ -43,12 +39,51 @@ CFILE='docker:docker@$(getent hosts fdb | cut -d" " -f1):4500'
 docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
 ```
 
-## Examples
+## Language
+
+Here is the [syntax definition](syntax.ebnf) for the query
+language. Currently, FDBQ is focused on reading & writing
+key-values created using the directory and tuple layers.
+Reading or writing keys of abitrary byte strings is not
+supported.
+
+FDBQ queries are a textual representation of a specific
+key-value or a schema describing the structure of many
+key-values. These queries have the ability to write
+a key-value, read one or more key-values, and list
+directories.
+
+### Components
+
+#### Directories
+
+A directory is specified as a sequence of strings preceeded
+by forward slashes:
+
+```fdbq
+/my/dir/path_way
+```
+
+The strings of the directory do not need quotes if they only
+contain alphanumericals, underscores, dashes, or periods. To
+use other symbols, the strings must be quoted:
+
+```
+/my/"dir@--\o/"/path_way
+```
+
+The quote character may be backslash escaped:
+
+```
+/my/"\"dir\""/path_way
+```
+
+### Queries
 
 The following examples showcase FDBQ queries and the
 equivalent FDB API calls implemented in Go.
 
-### Set
+#### Set
 
 ```fdbq
 /my/dir{"hello", "world"}=42
@@ -68,7 +103,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Clear
+#### Clear
 
 ```fdbq
 /my/dir{"hello", "world"}=clear
@@ -89,7 +124,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Get Single Key
+#### Get Single Key
 
 ```fdbq
 /my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}
@@ -110,7 +145,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Read Range of Keys
+#### Read Range of Keys
 
 ```fdbq
 /people{3392, <string|int>, <>}={<uint>, ...}
@@ -168,7 +203,7 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-### Read & Filter Directory Paths
+#### Read & Filter Directory Paths
 
 ```fdbq
 /root/<>/items/<>
