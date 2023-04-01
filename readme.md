@@ -97,7 +97,7 @@ in a pair of curly braces. The elements may be a tuple or any of the primitive
 types.
 
 ```fdbq
-{"one", 2, 3.0, { "subtuple" }, 5825d3f8-de5b-40c6-ac32-47ea8b98f7b4}
+{"one", 2, 0x03, { "subtuple" }, 5825d3f8-de5b-40c6-ac32-47ea8b98f7b4}
 ```
 
 Any combination of spaces, tabs, and newlines is allowed after the opening  
