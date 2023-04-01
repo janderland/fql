@@ -13,7 +13,22 @@ Some things this project aims to achieve are:
 
 ## Building & Running
 
-### Docker
+### Without Docker
+
+With the Foundation DB client library (>= v6.2.0) and Go (>= 1.20) installed,
+you can simply run `go build` in the root of this repo.
+
+### Docker Environment
+
+Building, linting, and testing can all be performed in a Docker environment. 
+This allows any host to perform these operations with only Docker as a 
+dependency. The [build.sh](build.sh) script can be used to perform these 
+operations. This is the same script used by the CI/CD workflow for this repo.
+
+To build, lint, & test the current state of the codebase, run `./build.sh 
+--verify`. To learn more about the build script, run `./build.sh --help`.
+
+### Docker Image
 
 FDBQ is available as a Docker image for executing queries. The first argument
 passed to the container is the contents of the cluster file. The remaining
@@ -29,6 +44,8 @@ docker run docker.io/janderland/fdbq 'my_cluster:baoeA32@172.20.3.33:4500' -log 
 The cluster file contents (first argument) is evaluated by Bash within the
 container before being written to disk, which allows for converting hostnames
 into IPs.
+
+TODO: Find an alternative which doesn't evaluate arbitrary bash.
 
 ```bash
 # The cluster file contents includes a bit of Bash which
@@ -49,7 +66,10 @@ FDBQ queries are a textual representation of a specific key-value or a schema
 describing the structure of many key-values. These queries have the ability to
 write a key-value, read one or more key-values, and list directories.
 
-### Language Components
+### Components & Structure
+
+This section will explain the components and structure of an FDBQ query. The 
+semantic meaning of these queries will be explained below in the [Kinds of Queries](#kinds-of-queries) section.
 
 #### Primitives
 
@@ -57,17 +77,16 @@ FDBQ utilizes textual representations of the element types supported by the
 tuple layer. These are known as primitives. Besides as tuple elements,
 primitives can also be used as the value portion of a key-value.
 
-```fdbq
-17
--23
-33.4
-nil
-true
-false
-"string"
-0xa2bff2438312aac032
-5a5ebefd-2193-47e2-8def-f464fc698e31
-```
+| Type | Example |
+---
+| `nil`    | `nil` |
+| `int`    | `17`  |
+| `uint`   | `-14` |
+| `bool`   | `true` |
+| `float`  | `33.4` |
+| `string` | `"string"` |
+| `bytes`  | `0xa2bff2438312aac032` |
+| `uuid`   | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 
 #### Directories
 
@@ -79,7 +98,7 @@ slash:
 ```
 
 The strings of the directory do not need quotes if they only contain
-alphanumerical, underscores, dashes, or periods. To use other symbols, the
+alphanumericals, underscores, dashes, or periods. To use other symbols, the
 strings must be quoted:
 
 ```
@@ -102,6 +121,12 @@ types.
 {"one", 2, 0x03, { "subtuple" }, 5825d3f8-de5b-40c6-ac32-47ea8b98f7b4}
 ```
 
+The last element of a tuple may be the `...` token.
+
+```fdbq
+{0xFF, "thing", ...}
+```
+
 Any combination of spaces, tabs, and newlines is allowed after the opening  
 brace and commas.
 
@@ -111,22 +136,6 @@ brace and commas.
   2,
   3,
 }
-```
-
-#### Variables
-
-A variable may be used in place of a primitive to define a schema. The 
-variable may include a list of primitive types separated by pipes:
-
-```fdbq
-<int|float|bytes>
-```
-
-An empty variable is the same as specifying the 'any' type:
-
-```fdbq
-<any>
-<>
 ```
 
 #### Key-Values
@@ -144,10 +153,26 @@ The value following the '=' symbol may be any of the primitives or a tuple:
 /my/dir{22.3, -8}={"another", "tuple"}
 ```
 
+#### Variables
+
+A variable may be used in place of a directory element, tuple element, or
+value.
+
+```fdbq
+/my/dir/<>{"first", <>, "third"}=<>
+```
+
+If the variable is a directory element or tuple element, it may contain a 
+list of primitive types separated by pipes.
+
+```fdbq
+/my/dir{"that", <int|float|bytes>}=<any>
+```
+
 ### Kinds of Queries
 
-The following examples showcase FDBQ queries and the equivalent FDB API calls
-implemented in Go.
+The following examples showcase the various kinds of FDBQ queries, their 
+semantic meaning, and the equivalent FDB API calls implemented in Go.
 
 #### Set
 
@@ -304,3 +329,5 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   return results, nil
 })
 ```
+
+## Project Roadmap
