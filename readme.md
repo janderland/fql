@@ -77,7 +77,7 @@ slash:
 ```
 
 The strings of the directory do not need quotes if they only contain
-alphanumericals, underscores, dashes, or periods. To use other symbols, the
+alphanumerical, underscores, dashes, or periods. To use other symbols, the
 strings must be quoted:
 
 ```
@@ -126,7 +126,7 @@ The value following the '=' symbol may be any of the primitives or a tuple:
 /my/dir{22.3, -8}={"another", "tuple"}
 ```
 
-### Queries
+### Kinds of Queries
 
 The following examples showcase FDBQ queries and the equivalent FDB API calls
 implemented in Go.
