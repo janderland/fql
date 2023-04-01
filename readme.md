@@ -155,6 +155,12 @@ The value following the equal symbol may be any of the primitives or a tuple:
 /my/dir{22.3, -8}={"another", "tuple"}
 ```
 
+The value can also be the `clear` token.
+
+```fdbq
+/some/where{"home", "town", 88.3}=clear
+```
+
 #### Variables
 
 A variable may be used in place of a directory element, tuple element, or value.
