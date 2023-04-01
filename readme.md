@@ -20,13 +20,14 @@ you can simply run `go build` in the root of this repo.
 
 ### Docker Environment
 
-Building, linting, and testing can all be performed in a Docker environment. 
-This allows any host to perform these operations with only Docker as a 
-dependency. The [build.sh](build.sh) script can be used to perform these 
+Building, linting, and testing can all be performed in a Docker environment.
+This allows any host to perform these operations with only Docker as a
+dependency. The [build.sh](build.sh) script can be used to perform these
 operations. This is the same script used by the CI/CD workflow for this repo.
 
-To build, lint, & test the current state of the codebase, run `./build.sh 
---verify`. To learn more about the build script, run `./build.sh --help`.
+To build, lint, & test the current state of the codebase,
+run `./build.sh --verify`. To learn more about the build script,
+run `./build.sh --help`.
 
 ### Docker Image
 
@@ -68,8 +69,9 @@ write a key-value, read one or more key-values, and list directories.
 
 ### Components & Structure
 
-This section will explain the components and structure of an FDBQ query. The 
-semantic meaning of these queries will be explained below in the [Kinds of Queries](#kinds-of-queries) section.
+This section will explain the components and structure of an FDBQ query. The
+semantic meaning of these queries will be explained below in
+the [Kinds of Queries](#kinds-of-queries) section.
 
 #### Primitives
 
@@ -77,15 +79,15 @@ FDBQ utilizes textual representations of the element types supported by the
 tuple layer. These are known as primitives. Besides as tuple elements,
 primitives can also be used as the value portion of a key-value.
 
-| Type | Example |
----
-| `nil`    | `nil` |
-| `int`    | `17`  |
-| `uint`   | `-14` |
-| `bool`   | `true` |
-| `float`  | `33.4` |
-| `string` | `"string"` |
-| `bytes`  | `0xa2bff2438312aac032` |
+| Type     | Example                                |
+|----------|----------------------------------------|
+| `nil`    | `nil`                                  |
+| `int`    | `17`                                   |
+| `uint`   | `-14`                                  |
+| `bool`   | `true`                                 |
+| `float`  | `33.4`                                 |
+| `string` | `"string"`                             |
+| `bytes`  | `0xa2bff2438312aac032`                 |
 | `uuid`   | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 
 #### Directories
@@ -155,15 +157,14 @@ The value following the '=' symbol may be any of the primitives or a tuple:
 
 #### Variables
 
-A variable may be used in place of a directory element, tuple element, or
-value.
+A variable may be used in place of a directory element, tuple element, or value.
 
 ```fdbq
 /my/dir/<>{"first", <>, "third"}=<>
 ```
 
-If the variable is a directory element or tuple element, it may contain a 
-list of primitive types separated by pipes.
+If the variable is a directory element or tuple element, it may contain a list
+of primitive types separated by pipes.
 
 ```fdbq
 /my/dir{"that", <int|float|bytes>}=<any>
@@ -171,7 +172,7 @@ list of primitive types separated by pipes.
 
 ### Kinds of Queries
 
-The following examples showcase the various kinds of FDBQ queries, their 
+The following examples showcase the various kinds of FDBQ queries, their
 semantic meaning, and the equivalent FDB API calls implemented in Go.
 
 #### Set
