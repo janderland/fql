@@ -1,24 +1,21 @@
 # FDBQ
 
-FDBQ provides a query language and an alternative client API
-for Foundation DB. Some things this project aims to achieve
-are:
+FDBQ provides a query language and an alternative client API for Foundation DB.
+Some things this project aims to achieve are:
+
 - [x] Provide a textual description of key-value schemas.
 - [x] Provide an intuitive query language for FDB.
-- [x] Provide a Go API which is structurally equivalent to
-  the query language.
+- [x] Provide a Go API which is structurally equivalent to the query language.
 - [ ] Improve the ergonomics of the FoundationDB API.
-  - [ ] Gracefully handle multi-transaction range-reads.
-  - [ ] Gracefully handle transient errors.
-- [ ] Standardize the encoding of primitives (int, float,
-  bool) as FDB values.
+    - [ ] Gracefully handle multi-transaction range-reads.
+    - [ ] Gracefully handle transient errors.
+- [ ] Standardize the encoding of primitives (int, float, bool) as FDB values.
 
 ## Docker
 
-FDBQ is available as a Docker image for running queries. The
-first argument passed to the container is the contents of
-the cluster file. The remaining arguments are passed to the
-FDBQ binary.
+FDBQ is available as a Docker image for running queries. The first argument
+passed to the container is the contents of the cluster file. The remaining
+arguments are passed to the FDBQ binary.
 
 ```bash
 # 'my_cluster:baoeA32@172.20.3.33:4500' is used as the contents
@@ -27,9 +24,9 @@ FDBQ binary.
 docker run docker.io/janderland/fdbq 'my_cluster:baoeA32@172.20.3.33:4500' -log '/my/dir{<>}=42'
 ```
 
-The cluster file contents (first argument) is evaluated by
-Bash within the container before being written to disk,
-which allows for converting hostnames into IPs.
+The cluster file contents (first argument) is evaluated by Bash within the
+container before being written to disk, which allows for converting hostnames
+into IPs.
 
 ```bash
 # The cluster file contents includes a bit of Bash which
@@ -41,32 +38,28 @@ docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
 
 ## Query Language
 
-Here is the [syntax definition](syntax.ebnf) for the query
-language. Currently, FDBQ is focused on reading & writing
-key-values created using the directory and tuple layers.
-Reading or writing keys of abitrary byte strings is not
-supported.
+Here is the [syntax definition](syntax.ebnf) for the query language. Currently,
+FDBQ is focused on reading & writing key-values created using the directory and
+tuple layers. Reading or writing keys of abitrary byte strings is not supported.
 
-FDBQ queries are a textual representation of a specific
-key-value or a schema describing the structure of many
-key-values. These queries have the ability to write
-a key-value, read one or more key-values, and list
-directories.
+FDBQ queries are a textual representation of a specific key-value or a schema
+describing the structure of many key-values. These queries have the ability to
+write a key-value, read one or more key-values, and list directories.
 
 ### Language Components
 
 #### Directories
 
-A directory is specified as a sequence of strings, each
-prefixed by a forward slash:
+A directory is specified as a sequence of strings, each prefixed by a forward
+slash:
 
 ```fdbq
 /my/dir/path_way
 ```
 
-The strings of the directory do not need quotes if they only
-contain alphanumericals, underscores, dashes, or periods. To
-use other symbols, the strings must be quoted:
+The strings of the directory do not need quotes if they only contain
+alphanumericals, underscores, dashes, or periods. To use other symbols, the
+strings must be quoted:
 
 ```
 /my/"dir@--\o/"/path_way
@@ -80,8 +73,8 @@ The quote character may be backslash escaped:
 
 ### Queries
 
-The following examples showcase FDBQ queries and the
-equivalent FDB API calls implemented in Go.
+The following examples showcase FDBQ queries and the equivalent FDB API calls
+implemented in Go.
 
 #### Set
 
@@ -89,7 +82,7 @@ equivalent FDB API calls implemented in Go.
 /my/dir{"hello", "world"}=42
 ```
 
-```Go
+```go
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.CreateOrOpen(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -109,7 +102,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 /my/dir{"hello", "world"}=clear
 ```
 
-```Go
+```go
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -130,7 +123,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 /my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}
 ```
 
-```Go
+```go
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -151,7 +144,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 /people{3392, <string|int>, <>}={<uint>, ...}
 ```
 
-```Go
+```go
 db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"people"}, nil)
   if err != nil {
@@ -209,7 +202,7 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 /root/<>/items/<>
 ```
 
-```Go
+```go
 db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   root, err := directory.Open(tr, []string{"root"}, nil)
   if err != nil {
