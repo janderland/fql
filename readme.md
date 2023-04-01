@@ -11,7 +11,7 @@ Some things this project aims to achieve are:
     - [ ] Gracefully handle transient errors.
 - [ ] Standardize the encoding of primitives (int, float, bool) as FDB values.
 
-## Docker
+## Building & Running
 
 FDBQ is available as a Docker image for running queries. The first argument
 passed to the container is the contents of the cluster file. The remaining
@@ -40,13 +40,32 @@ docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
 
 Here is the [syntax definition](syntax.ebnf) for the query language. Currently,
 FDBQ is focused on reading & writing key-values created using the directory and
-tuple layers. Reading or writing keys of abitrary byte strings is not supported.
+tuple layers. Reading or writing keys of arbitrary byte strings is not 
+supported.
 
 FDBQ queries are a textual representation of a specific key-value or a schema
 describing the structure of many key-values. These queries have the ability to
 write a key-value, read one or more key-values, and list directories.
 
 ### Language Components
+
+#### Primitives
+
+FDBQ utilizes textual representations of the element types supported by the 
+tuple layer. These are known as primitives. Besides as tuple elements, 
+primitives can also be used as the value portion of a key-value.
+
+```fdbq
+17
+-23
+33.4
+nil
+true
+false
+"string"
+0xa2bff2438312aac032
+5a5ebefd-2193-47e2-8def-f464fc698e31
+```
 
 #### Directories
 
