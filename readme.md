@@ -170,7 +170,10 @@ A variable may be used in place of a directory element, tuple element, or value.
 ```
 
 If the variable is a directory element or tuple element, it may contain a list
-of primitive types separated by pipes.
+of primitive types separated by pipes, except for the `nil` type. The 
+variable may also contain the `any` type which is equivalent to specifying 
+every type. Specifying no types is also equivalent to specifying the `any` 
+type.
 
 ```fdbq
 /my/dir{"that", <int|float|bytes>}=<any>
