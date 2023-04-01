@@ -13,7 +13,9 @@ Some things this project aims to achieve are:
 
 ## Building & Running
 
-FDBQ is available as a Docker image for running queries. The first argument
+### Docker
+
+FDBQ is available as a Docker image for executing queries. The first argument
 passed to the container is the contents of the cluster file. The remaining
 arguments are passed to the FDBQ binary.
 
@@ -109,6 +111,22 @@ brace and commas.
   2,
   3,
 }
+```
+
+#### Variables
+
+A variable may be used in place of a primitive to define a schema. The 
+variable may include a list of primitive types separated by pipes:
+
+```fdbq
+<int|float|bytes>
+```
+
+An empty variable is the same as specifying the 'any' type:
+
+```fdbq
+<any>
+<>
 ```
 
 #### Key-Values
