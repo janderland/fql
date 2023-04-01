@@ -142,14 +142,14 @@ brace and commas.
 
 #### Key-Values
 
-A key-value is specified as a directory, tuple, '=' symbol, and value appended
+A key-value is specified as a directory, tuple, equal symbol, and value appended
 together:
 
 ```fdbq
 /my/dir{"this", 0}=0xabcf03
 ```
 
-The value following the '=' symbol may be any of the primitives or a tuple:
+The value following the equal symbol may be any of the primitives or a tuple:
 
 ```fdbq
 /my/dir{22.3, -8}={"another", "tuple"}
