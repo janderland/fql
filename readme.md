@@ -40,7 +40,7 @@ docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
 
 Here is the [syntax definition](syntax.ebnf) for the query language. Currently,
 FDBQ is focused on reading & writing key-values created using the directory and
-tuple layers. Reading or writing keys of arbitrary byte strings is not 
+tuple layers. Reading or writing keys of arbitrary byte strings is not
 supported.
 
 FDBQ queries are a textual representation of a specific key-value or a schema
@@ -51,8 +51,8 @@ write a key-value, read one or more key-values, and list directories.
 
 #### Primitives
 
-FDBQ utilizes textual representations of the element types supported by the 
-tuple layer. These are known as primitives. Besides as tuple elements, 
+FDBQ utilizes textual representations of the element types supported by the
+tuple layer. These are known as primitives. Besides as tuple elements,
 primitives can also be used as the value portion of a key-value.
 
 ```fdbq
@@ -92,8 +92,8 @@ The quote character may be backslash escaped:
 
 #### Tuples
 
-A tuple is specified as a sequence of elements, separated by commas, wrapped 
-in a pair of curly braces. The elements may be a tuple or any of the primitive 
+A tuple is specified as a sequence of elements, separated by commas, wrapped in
+a pair of curly braces. The elements may be a tuple or any of the primitive
 types.
 
 ```fdbq
@@ -101,7 +101,7 @@ types.
 ```
 
 Any combination of spaces, tabs, and newlines is allowed after the opening  
-brace and commas. 
+brace and commas.
 
 ```fdbq
 {
@@ -113,8 +113,8 @@ brace and commas.
 
 #### Key-Values
 
-A key-value is specified as a directory, tuple, '=' symbol, and value 
-appended together:
+A key-value is specified as a directory, tuple, '=' symbol, and value appended
+together:
 
 ```fdbq
 /my/dir{"this", 0}=0xabcf03
