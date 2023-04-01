@@ -39,7 +39,7 @@ CFILE='docker:docker@$(getent hosts fdb | cut -d" " -f1):4500'
 docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
 ```
 
-## Language
+## Query Language
 
 Here is the [syntax definition](syntax.ebnf) for the query
 language. Currently, FDBQ is focused on reading & writing
@@ -53,12 +53,12 @@ key-values. These queries have the ability to write
 a key-value, read one or more key-values, and list
 directories.
 
-### Components
+### Language Components
 
 #### Directories
 
-A directory is specified as a sequence of strings preceeded
-by forward slashes:
+A directory is specified as a sequence of strings, each
+prefixed by a forward slash:
 
 ```fdbq
 /my/dir/path_way
