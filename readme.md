@@ -15,7 +15,7 @@ Some things this project aims to achieve are:
 
 ### Without Docker
 
-With the Foundation DB client library (>= v6.2.0) and Go (>= 1.20) installed,
+With the Foundation DB client library (>= v6.2.0) and Go (>= v1.20) installed,
 you can simply run `go build` in the root of this repo.
 
 ### Docker Environment
@@ -169,10 +169,10 @@ A variable may be used in place of a directory element, tuple element, or value.
 /my/dir/<>{"first", <>, "third"}=<>
 ```
 
-If the variable is a directory element or tuple element, it may contain a list
-of primitive types separated by pipes, except for the `nil` type. The 
-variable may also contain the `any` type which is equivalent to specifying 
-every type. Specifying no types is also equivalent to specifying the `any` 
+If the variable is a tuple element or value, it may contain a list of primitive
+types separated by pipes, except for the `nil` type. The variable may also
+contain the `any` type which is equivalent to specifying every type. Specifying
+no types is also equivalent to specifying the `any`
 type.
 
 ```fdbq
