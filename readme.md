@@ -3,20 +3,23 @@
 FDBQ provides a query language and an alternative client API for Foundation DB.
 Some things this project aims to achieve are:
 
+- [x] Provide a query language for FDB.
 - [x] Provide a textual description of key-value schemas.
-- [x] Provide an intuitive query language for FDB.
 - [x] Provide a Go API which is structurally equivalent to the query language.
-- [ ] Improve the ergonomics of the FoundationDB API.
+- [ ] Standardize the encoding of [primitives](#primitives) as FDB values.
+- [ ] Simplify the ergonomics of the FoundationDB API.
     - [ ] Gracefully handle multi-transaction range-reads.
     - [ ] Gracefully handle transient errors.
-- [ ] Standardize the encoding of primitives (int, float, bool) as FDB values.
+- [ ] Provide an environment for exploring FDB data.
+- [ ] Save and load subsets of FDB data with a single-file format.
 
 ## Building & Running
 
 ### Without Docker
 
 With the Foundation DB client library (>= v6.2.0) and Go (>= v1.20) installed,
-you can simply run `go build` in the root of this repo.
+you can simply run `go build` in the root of this repo. This will create an
+`fdbq` binary in the root of the repo.
 
 ### Docker Environment
 
@@ -181,10 +184,13 @@ type.
 
 ### Kinds of Queries
 
-This section showcases the various kinds of FDBQ queries, their semantic 
+This section showcases the various kinds of FDBQ queries, their semantic
 meaning, and the equivalent FDB API calls implemented in Go.
 
 #### Set
+
+Set queries write a single key-value. The query must not contain the `clear`
+or `...` tokens, nor a variable.
 
 ```fdbq
 /my/dir{"hello", "world"}=42
@@ -205,6 +211,9 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 ```
 
 #### Clear
+
+Clear queries delete a single key-value. The query must contain the `clear`
+token as it's value and must not contain the `...` token or variables.
 
 ```fdbq
 /my/dir{"hello", "world"}=clear
