@@ -234,7 +234,21 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-#### Get Single Key
+#### Read Single Key
+
+Read-Single queries read a single key-value. These queries must not have the 
+`...` token or a variable in its key. The value must be a variable.  
+Deserialization is attempted for each type in the order specified by the 
+variable. The first successful deserialization is used as the output. If the 
+value cannot be deserialized as any of the type specified then the key-value 
+is not returned.
+
+```fdbq
+/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<int>
+```
+
+As a shorthand, these query may be specified without the `=` token or value. 
+The follow query is equivalent to the one above:
 
 ```fdbq
 /my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}
