@@ -80,7 +80,7 @@ tuple layer. These are known as primitives. Besides as tuple elements,
 primitives can also be used as the value portion of a key-value.
 
 | Type     | Example                                |
-|----------|----------------------------------------|
+|:---------|:---------------------------------------|
 | `nil`    | `nil`                                  |
 | `int`    | `17`                                   |
 | `uint`   | `-14`                                  |
@@ -181,8 +181,8 @@ type.
 
 ### Kinds of Queries
 
-The following examples showcase the various kinds of FDBQ queries, their
-semantic meaning, and the equivalent FDB API calls implemented in Go.
+This section showcases the various kinds of FDBQ queries, their semantic 
+meaning, and the equivalent FDB API calls implemented in Go.
 
 #### Set
 
