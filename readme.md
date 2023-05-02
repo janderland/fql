@@ -260,7 +260,7 @@ the value cannot be deserialized as any of the types specified then the
 key-value is not returned.
 
 ```fdbq
-/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<int|float>
+/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<int|string>
 ```
 
 ```go
@@ -273,8 +273,14 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
     return nil, err
   }
 
-  return tr.Get(dir.Pack(tuple.Tuple{99.8,
+  val := tr.MustGet(dir.Pack(tuple.Tuple{99.8,
     tuple.UUID{0x7d, 0xfb, 0x10, 0xd1, 0x24, 0x93, 0x4f, 0xb5, 0x92, 0x8e, 0x88, 0x9f, 0xdc, 0x6a, 0x71, 0x36}))
+  
+     
+  if len(val) == 8 {
+      return binary.LittleEndian.Uint64(val), nil
+  }
+  return string(val), nil
 })
 ```
 
