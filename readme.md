@@ -11,7 +11,7 @@ Some things this project aims to achieve are:
     - [ ] Gracefully handle multi-transaction range-reads.
     - [ ] Gracefully handle transient errors.
 - [ ] Provide an environment for exploring FDB data.
-- [ ] Save and load subsets of FDB data with a single-file format.
+- [ ] Import/Export subsets of FDB data.
 
 ## Building & Running
 
@@ -26,11 +26,10 @@ you can simply run `go build` in the root of this repo. This will create an
 Building, linting, and testing can all be performed in a Docker environment.
 This allows any host to perform these operations with only Docker as a
 dependency. The [build.sh](build.sh) script can be used to perform these
-operations. This is the same script used by the CI/CD workflow for this repo.
+operations. This is the same script used by the CI/CD workflow of this repo.
 
-To build, lint, & test the current state of the codebase,
-run `./build.sh --verify`. To learn more about the build script,
-run `./build.sh --help`.
+To build, lint, & test the current state of the codebase, run `./build.sh 
+--verify`. To learn more about the build script, run `./build.sh --help`.
 
 ### Docker Image
 
@@ -63,7 +62,7 @@ docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
 
 Here is the [syntax definition](syntax.ebnf) for the query language. Currently,
 FDBQ is focused on reading & writing key-values created using the directory and
-tuple layers. Reading or writing keys of arbitrary byte strings is not
+tuple layers. Reading or writing keys of arbitrary byte strings is not 
 supported.
 
 FDBQ queries are a textual representation of a specific key-value or a schema
@@ -73,25 +72,43 @@ write a key-value, read one or more key-values, and list directories.
 ### Components & Structure
 
 This section will explain the components and structure of an FDBQ query. The
-semantic meaning of these queries will be explained below in
-the [Kinds of Queries](#kinds-of-queries) section.
+semantic meaning of these queries will be explained below in the [Kinds of 
+Queries](#kinds-of-queries) section.
 
 #### Primitives
 
 FDBQ utilizes textual representations of the element types supported by the
-tuple layer. These are known as primitives. Besides as tuple elements,
+tuple layer. These types are known as primitives. Besides as tuple elements,
 primitives can also be used as the value portion of a key-value.
 
 | Type     | Example                                |
 |:---------|:---------------------------------------|
 | `nil`    | `nil`                                  |
-| `int`    | `17`                                   |
-| `uint`   | `-14`                                  |
+| `int`    | `-14`                                  |
+| `uint`   | `7`                                    |
 | `bool`   | `true`                                 |
 | `float`  | `33.4`                                 |
 | `string` | `"string"`                             |
 | `bytes`  | `0xa2bff2438312aac032`                 |
 | `uuid`   | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
+
+When primitives are used as tuple elements, they are encoded using the tuple 
+layer. When they are used as the value portion of a key-value, they are 
+encoded by FDBQ as outlined below.
+
+| Type     | Encoding                          |
+|:---------|:----------------------------------|
+| `nil`    | `nil`                             |
+| `int`    | 64-bit, endianness configurable   |
+| `uint`   | 64-bit, endianness configurable   |
+| `bool`   | single bit, `0` means false       |
+| `float`  | IEEE 754, endianness configurable |
+| `string` | ASCII byte string                 |
+| `bytes`  | As provided                       |
+| `uuid`   | 16-byte string                    |
+
+Even though a big int encoding is supported by the tuple layer, FDBQ does 
+not currently support using big ints.
 
 #### Directories
 
@@ -175,8 +192,7 @@ A variable may be used in place of a directory element, tuple element, or value.
 If the variable is a tuple element or value, it may contain a list of primitive
 types separated by pipes, except for the `nil` type. The variable may also
 contain the `any` type which is equivalent to specifying every type. Specifying
-no types is also equivalent to specifying the `any`
-type.
+no types is also equivalent to specifying the `any` type.
 
 ```fdbq
 /my/dir{"that", <int|float|bytes>}=<any>
@@ -236,22 +252,15 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 #### Read Single Key
 
-Read-Single queries read a single key-value. These queries must not have the 
-`...` token or a variable in its key. The value must be a variable.  
-Deserialization is attempted for each type in the order specified by the 
-variable. The first successful deserialization is used as the output. If the 
-value cannot be deserialized as any of the type specified then the key-value 
-is not returned.
+Read-Single queries read a single key-value. These queries must not have the
+`...` token or a variable in their key. The value must be a variable.  
+Deserialization of the value is attempted for each type in the order specified
+by the variable. The first successful deserialization is used as the output. If
+the value cannot be deserialized as any of the types specified then the
+key-value is not returned.
 
 ```fdbq
-/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<int>
-```
-
-As a shorthand, these query may be specified without the `=` token or value. 
-The follow query is equivalent to the one above:
-
-```fdbq
-/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}
+/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<int|float>
 ```
 
 ```go
@@ -267,6 +276,16 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   return tr.Get(dir.Pack(tuple.Tuple{99.8,
     tuple.UUID{0x7d, 0xfb, 0x10, 0xd1, 0x24, 0x93, 0x4f, 0xb5, 0x92, 0x8e, 0x88, 0x9f, 0xdc, 0x6a, 0x71, 0x36}))
 })
+```
+
+As a shorthand, these query may be specified without the `=` token or value. 
+This implies an empty variable as the value. In the code block below, the 
+three queries are equivalent.
+
+```fdbq
+/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}
+/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<>
+/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<any>
 ```
 
 #### Read Range of Keys
@@ -362,5 +381,3 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   return results, nil
 })
 ```
-
-## Project Roadmap
