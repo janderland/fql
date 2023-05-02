@@ -252,12 +252,12 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 #### Read Single Key
 
-Read-Single queries read a single key-value. These queries must not have the
+Read-single queries read a single key-value. These queries must not have the
 `...` token or a variable in their key. The value must be a variable.  
 Deserialization of the value is attempted for each type in the order specified
 by the variable. The first successful deserialization is used as the output. If
 the value cannot be deserialized as any of the types specified then the
-key-value is not returned.
+key-value is not returned or an error is returned, depending on configuration.
 
 ```fdbq
 /my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<int|string>
@@ -295,6 +295,15 @@ three queries are equivalent.
 ```
 
 #### Read Range of Keys
+
+Read-many queries read a range of values based on a key prefix. These 
+queries have a `...` token or a variable in their key. If a key-value is 
+encountered which does not match the schema defined by the query then the
+key-value is not returned or an error is returned, depending on configuration.
+These queries are implemented using FDB's range-read mechanism with 
+additional filtering performed on the client. Care must be taken with these 
+queries as they may result in large amounts of data being sent to the 
+client and most of the data being filtered out.
 
 ```fdbq
 /people{3392, <string|int>, <>}={<uint>, ...}
@@ -352,7 +361,10 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-#### Read & Filter Directory Paths
+#### List Directory Paths
+
+If only a directory is provided as a query, then the directory layer is queried.
+Empty variables may be included as placeholders for any directory name.
 
 ```fdbq
 /root/<>/items/<>
