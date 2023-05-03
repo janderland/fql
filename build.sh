@@ -32,7 +32,7 @@ script takes care of starting an FDB cluster and providing the
 cluster file as the first argument. Note that this is the same
 FDB instance used by the 'verify' task.
 
-  ./build.sh -- --write '/my/dir{\"hi\"}=nil'
+  ./build.sh -- --write '/my/dir{"hi"}=nil'
 
 After this, the script ends. If any of the requested tasks fail
 then the script exits immediately.
