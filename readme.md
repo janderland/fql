@@ -6,7 +6,6 @@ Some things this project aims to achieve are:
 - [x] Provide a query language for FDB.
 - [x] Provide a textual description of key-value schemas.
 - [x] Provide a Go API which is structurally equivalent to the query language.
-- [ ] Standardize the encoding of [primitives](#primitives) as FDB values.
 - [ ] Simplify the ergonomics of the FoundationDB API.
     - [ ] Gracefully handle multi-transaction range-reads.
     - [ ] Gracefully handle transient errors.
@@ -106,6 +105,9 @@ encoded by FDBQ as outlined below.
 | `string` | ASCII byte string                 |
 | `bytes`  | As provided                       |
 | `uuid`   | 16-byte string                    |
+
+Ideally, the encoding of these primitives would align with common community 
+practices to maximize usefulness. Let me know if you believe it doesn't.
 
 Even though a big int encoding is supported by the tuple layer, FDBQ does 
 not currently support using big ints.
