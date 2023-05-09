@@ -34,6 +34,7 @@ services:
       context: "."
       dockerfile: "./docker/Dockerfile"
       args:
+        FDBQ_VER: "${DOCKER_TAG}"
         FDB_LIB_URL: "${FDB_LIB_URL}"
         GO_URL: "${GO_URL}"
         GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
