@@ -43,18 +43,20 @@ arguments are passed to the FDBQ binary.
 docker run docker.io/janderland/fdbq 'my_cluster:baoeA32@172.20.3.33:4500' -log '/my/dir{<>}=42'
 ```
 
-The cluster file contents (first argument) is evaluated by Bash within the
-container before being written to disk, which allows for converting hostnames
-into IPs.
-
-TODO: Find an alternative which doesn't evaluate arbitrary bash.
+Within the cluster file contents (first argument), any instances of a 
+hostname wrapped in curly braces (e.g. '{my_hostname}') are replaced by the 
+equivalent IP address. FDB doesn't support connecting to a cluster via 
+hostnames, so this functional provides a workaround. This can simplify 
+connecting to a Docker instance of FDB.
 
 ```bash
-# The cluster file contents includes a bit of Bash which
-# converts the hostname 'fdb' to an IP address before
-# writing the cluster file on to the container's disk.
-CFILE='docker:docker@$(getent hosts fdb | cut -d" " -f1):4500'
-docker run docker.io/janderland/fdbq $CFILE -log '/my/dir{<>}=42'
+docker network create my_net
+docker run --network my_net --name fdb -d foundationdb/foundationdb
+
+# The substring '{fdb}' in the first argument will be replaced with
+# the IP address of the FDB container started above before the cluster
+# file is written to disk.
+docker run --network my_net docker.io/janderland/fdbq 'docker:docker@{fdb}:4500' -log '/my/dir{<>}=42'
 ```
 
 ## Query Language
