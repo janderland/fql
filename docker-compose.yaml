@@ -42,7 +42,7 @@ services:
     depends_on:
       - "fdb"
     command: |
-      'docker:docker@$$(getent hosts fdb | cut -d" " -f1):4500' ${FDBQ_COMMAND}
+      'docker:docker@{fdb}:4500' ${FDBQ_COMMAND}
 
   # The fdb service provides a single-node cluster
   # for integration testing.
