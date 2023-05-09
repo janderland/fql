@@ -16,15 +16,24 @@ import (
 	"github.com/janderland/fdbq/parser/format"
 )
 
-var flags *flag.Flags
+var (
+	// Version is meant to be set via build flags
+	// and defines the version printed for the
+	// `-v` flag.
+	Version string
+
+	flags *flag.Flags
+)
 
 func init() {
 	flags = flag.SetupFlags(Fdbq)
 }
 
 var Fdbq = &cobra.Command{
-	Use:   "fdbq [flags] query ...",
-	Short: "fdbq is a query language for Foundation DB",
+	Use:     "fdbq [flags] query ...",
+	Short:   "fdbq is a query language for Foundation DB",
+	Version: Version,
+
 	RunE: func(_ *cobra.Command, args []string) error {
 		log := zerolog.Nop()
 		if flags.Log {

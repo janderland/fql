@@ -40,7 +40,9 @@ FROM builder AS gobuild
 
 COPY . /src
 WORKDIR /src
-RUN go build -o /fdbq
+
+ARG FDBQ_VER
+RUN go build -o /fdbq -ldflags="-X 'github.com/janderland/fdbq/internal/app.Version=${FDBQ_VER}'"
 
 
 # The final stage builds the 'fdbq' image.
