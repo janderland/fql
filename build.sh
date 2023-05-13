@@ -105,6 +105,7 @@ function commit_hash {
 function fdb_version {
   if [[ -n "$FDB_VER" ]]; then
     echo "$FDB_VER"
+    return 0
   fi
 
   local regex='FDB_VER=([^'$'\n'']*)'
