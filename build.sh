@@ -98,10 +98,17 @@ function commit_hash {
 
 
 # fdb_version returns the version of the FDB
-# library specified in the .env file.
+# library specified by the variable FDB_VERSION.
+# If FDB_VERSION is not defined then the .env
+# file is read to obtain the version.
 
 function fdb_version {
-  local regex='FDB_LIB_URL=[^'$'\n'']*([0-9]+\.[0-9]+\.[0-9]+)'
+  if [[ -n "$FDB_VER" ]]; then
+    echo "$FDB_VER"
+    return 0
+  fi
+
+  local regex='FDB_VER=([^'$'\n'']*)'
   if ! [[ "$(cat .env)" =~ $regex ]]; then
     fail "Couldn't find FDB version in .env file."
   fi
