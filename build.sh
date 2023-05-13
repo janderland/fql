@@ -107,7 +107,7 @@ function fdb_version {
     echo "$FDB_VER"
   fi
 
-  local regex='FDB_VER=(.*)'
+  local regex='FDB_VER=([^'$'\n'']*)'
   if ! [[ "$(cat .env)" =~ $regex ]]; then
     fail "Couldn't find FDB version in .env file."
   fi
