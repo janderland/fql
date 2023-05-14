@@ -89,16 +89,23 @@ function escape_quotes {
 }
 
 
-# commit_hash returns the hash for the current
-# Git commit.
+# commit_hash returns the latest tag for the current
+# Git commit. If there are no tags associated with
+# the commit then the short hash is returned.
 
 function commit_hash {
+  local tag=""
+  if tag="$(git describe --tags)"; then
+    echo "$tag"
+    return 0
+  fi
+
   git rev-parse --short HEAD
 }
 
 
 # fdb_version returns the version of the FDB
-# library specified by the variable FDB_VERSION.
+# library specified by the env var FDB_VERSION.
 # If FDB_VERSION is not defined then the .env
 # file is read to obtain the version.
 
