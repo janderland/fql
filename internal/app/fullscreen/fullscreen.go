@@ -64,7 +64,11 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEnter:
-			m.list.PushFront(fmt.Sprintf("/my/dir{%d, %f}=nil", m.count, rand.Float32()))
+			if rand.Float32() > 0.5 {
+				m.list.PushFront(fmt.Sprintf("/my/dir{%d, %f}=nil", m.count, rand.Float32()))
+			} else {
+				m.list.PushFront(fmt.Errorf("this is a failure: %d things wrong", m.count))
+			}
 			m.count++
 		}
 
@@ -95,7 +99,15 @@ func (m Model) View() string {
 			break
 		}
 
-		m.lines[i] = item.Value.(string)
+		switch val := item.Value.(type) {
+		case string:
+			m.lines[i] = val
+		case error:
+			m.lines[i] = fmt.Sprintf("ERR! %v", val)
+		default:
+			m.lines[i] = fmt.Sprintf("ERR! unexpected item value '%T'", val)
+		}
+
 		item = item.Next()
 	}
 
