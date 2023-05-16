@@ -1,7 +1,11 @@
 package main
 
 import (
+	"container/list"
+	"fmt"
 	"log"
+	"math/rand"
+	"strings"
 
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
@@ -21,10 +25,12 @@ type Style struct {
 }
 
 type Model struct {
-	style Style
+	list  list.List
+	lines []string
+	count int
 
+	style Style
 	input textinput.Model
-	err   error
 }
 
 func newModel() Model {
@@ -56,6 +62,10 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyCtrlC:
 			return m, tea.Quit
+
+		case tea.KeyEnter:
+			m.list.PushFront(fmt.Sprintf("/my/dir{%d, %f}=nil", m.count, rand.Float32()))
+			m.count++
 		}
 
 	case tea.WindowSizeMsg:
@@ -65,6 +75,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		m.style.results.Height(msg.Height - m.style.results.GetVerticalFrameSize() - inputHeight)
 		m.style.results.Width(msg.Width - m.style.results.GetHorizontalFrameSize())
+		m.lines = make([]string, m.style.results.GetHeight())
 
 		// I think -2 is due to a bug with how the textinput bubble renders padding.
 		m.input.Width = msg.Width - m.style.input.GetHorizontalFrameSize() - len(m.input.Prompt) - cursorChar - 2
@@ -77,15 +88,27 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
+	i := -1
+	item := m.list.Front()
+	for i = range m.lines {
+		if item == nil {
+			break
+		}
+
+		m.lines[i] = item.Value.(string)
+		item = item.Next()
+	}
+
+	var results strings.Builder
+	if i >= 0 {
+		for j := i; j >= 0; j-- {
+			results.WriteString(m.lines[j])
+			results.WriteRune('\n')
+		}
+	}
+
 	return lip.JoinVertical(lip.Left,
-		m.style.results.Render(""),
+		m.style.results.Render(results.String()),
 		m.style.input.Render(m.input.View()),
 	)
-}
-
-func max(a, b int) int {
-	if a > b {
-		return a
-	}
-	return b
 }
