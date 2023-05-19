@@ -46,15 +46,15 @@ func (x *Model) View() string {
 	i := 0
 	for item := x.list.Front(); item != nil; item = item.Next() {
 		x.lines[i] = view(item.Value)
+		i++
 
-		if i == len(x.lines)-1 {
+		if i == len(x.lines) {
 			break
 		}
-		i++
 	}
 
 	var results strings.Builder
-	for j := i; j >= 0; j-- {
+	for j := i - 1; j >= 0; j-- {
 		results.WriteString(x.lines[j])
 		results.WriteRune('\n')
 	}
