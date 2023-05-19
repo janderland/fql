@@ -100,54 +100,7 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEnter:
-			inputStr := m.input.Value()
-			return m, func() tea.Msg {
-				p := parser.New(scanner.New(strings.NewReader(inputStr)))
-				query, err := p.Parse()
-				if err != nil {
-					return err
-				}
-
-				if _, ok := query.(keyval.Directory); ok {
-					// TODO: Directory
-					return errors.New("directory queries unsupported")
-				}
-
-				var kv keyval.KeyValue
-				if key, ok := query.(keyval.Key); ok {
-					kv = keyval.KeyValue{Key: key, Value: keyval.Variable{}}
-				} else {
-					kv = query.(keyval.KeyValue)
-				}
-
-				switch c := class.Classify(kv); c {
-				case class.Constant:
-					if err := m.eg.Set(kv); err != nil {
-						return err
-					}
-					return nil
-
-				case class.Clear:
-					if err := m.eg.Clear(kv); err != nil {
-						return err
-					}
-					return nil
-
-				case class.ReadSingle:
-					out, err := m.eg.ReadSingle(kv, engine.SingleOpts{})
-					if err != nil {
-						return err
-					}
-					return *out
-
-				case class.ReadRange:
-					// TODO: ReadRange
-					return errors.New("read range queries not supported")
-
-				default:
-					return errors.Errorf("unexpected query class '%v'", c)
-				}
-			}
+			return m, doQuery(m.eg, m.input.Value())
 		}
 
 	case keyval.KeyValue, error:
@@ -212,4 +165,54 @@ func (m Model) View() string {
 		m.style.results.Render(results.String()),
 		m.style.input.Render(m.input.View()),
 	)
+}
+
+func doQuery(eg engine.Engine, str string) func() tea.Msg {
+	return func() tea.Msg {
+		p := parser.New(scanner.New(strings.NewReader(str)))
+		query, err := p.Parse()
+		if err != nil {
+			return err
+		}
+
+		if _, ok := query.(keyval.Directory); ok {
+			// TODO: Directory
+			return errors.New("directory queries unsupported")
+		}
+
+		var kv keyval.KeyValue
+		if key, ok := query.(keyval.Key); ok {
+			kv = keyval.KeyValue{Key: key, Value: keyval.Variable{}}
+		} else {
+			kv = query.(keyval.KeyValue)
+		}
+
+		switch c := class.Classify(kv); c {
+		case class.Constant:
+			if err := eg.Set(kv); err != nil {
+				return err
+			}
+			return nil
+
+		case class.Clear:
+			if err := eg.Clear(kv); err != nil {
+				return err
+			}
+			return nil
+
+		case class.ReadSingle:
+			out, err := eg.ReadSingle(kv, engine.SingleOpts{})
+			if err != nil {
+				return err
+			}
+			return *out
+
+		case class.ReadRange:
+			// TODO: ReadRange
+			return errors.New("read range queries not supported")
+
+		default:
+			return errors.Errorf("unexpected query class '%v'", c)
+		}
+	}
 }
