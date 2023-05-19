@@ -5,15 +5,19 @@ import (
 	"sync"
 )
 
-type StreamBuffer[T any] struct {
+type StreamBuffer interface {
+	Get() (*list.List, bool)
+}
+
+type streamBuffer[T any] struct {
 	stream chan T
 	buffer *list.List
 	mutex  *sync.Mutex
 	done   bool
 }
 
-func New[T any](in chan T) *StreamBuffer[T] {
-	sb := StreamBuffer[T]{
+func New[T any](in chan T) StreamBuffer {
+	sb := streamBuffer[T]{
 		stream: in,
 		buffer: list.New(),
 		mutex:  new(sync.Mutex),
@@ -22,7 +26,7 @@ func New[T any](in chan T) *StreamBuffer[T] {
 	return &sb
 }
 
-func (x *StreamBuffer[T]) Get() (*list.List, bool) {
+func (x *streamBuffer[T]) Get() (*list.List, bool) {
 	x.mutex.Lock()
 	defer x.mutex.Unlock()
 
@@ -31,7 +35,7 @@ func (x *StreamBuffer[T]) Get() (*list.List, bool) {
 	return out, x.done
 }
 
-func (x *StreamBuffer[T]) read() {
+func (x *streamBuffer[T]) read() {
 	for item := range x.stream {
 		x.mutex.Lock()
 		x.buffer.PushFront(item)

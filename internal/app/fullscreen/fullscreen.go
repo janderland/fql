@@ -2,9 +2,11 @@ package main
 
 import (
 	"container/list"
+	"context"
 	"fmt"
 	"log"
 	"strings"
+	"time"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -15,8 +17,11 @@ import (
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/engine/stream"
+	"github.com/janderland/fdbq/internal/app/fullscreen/buffer"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
+	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/parser"
 	"github.com/janderland/fdbq/parser/format"
 	"github.com/janderland/fdbq/parser/scanner"
@@ -100,11 +105,23 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEnter:
+			m.list = list.New()
 			return m, doQuery(m.eg, m.input.Value())
 		}
 
+	case buffer.StreamBuffer:
+		buf, done := msg.Get()
+		for item := buf.Front(); item != nil; item = item.Next() {
+			m.list.PushFront(item.Value)
+		}
+		if !done {
+			return m, tea.Tick(50*time.Millisecond, func(_ time.Time) tea.Msg {
+				return msg
+			})
+		}
+		return m, nil
+
 	case keyval.KeyValue, error:
-		m.list = list.New()
 		m.list.PushFront(msg)
 		return m, nil
 
@@ -142,10 +159,31 @@ func (m Model) View() string {
 			f.Reset()
 			f.KeyValue(val)
 			m.lines[i] = f.String()
+
+		case stream.KeyValErr:
+			if val.Err != nil {
+				m.lines[i] = fmt.Sprintf("ERR! %v", val)
+			} else {
+				f.Reset()
+				f.KeyValue(val.KV)
+				m.lines[i] = f.String()
+			}
+
+		case stream.DirErr:
+			if val.Err != nil {
+				m.lines[i] = fmt.Sprintf("ERR! %v", val)
+			} else {
+				f.Reset()
+				f.Directory(convert.FromStringArray(val.Dir.GetPath()))
+				m.lines[i] = f.String()
+			}
+
 		case string:
 			m.lines[i] = fmt.Sprintf("# %s", val)
+
 		case error:
 			m.lines[i] = fmt.Sprintf("ERR! %v", val)
+
 		default:
 			m.lines[i] = fmt.Sprintf("ERR! unexpected item value '%T'", val)
 		}
@@ -175,9 +213,8 @@ func doQuery(eg engine.Engine, str string) func() tea.Msg {
 			return err
 		}
 
-		if _, ok := query.(keyval.Directory); ok {
-			// TODO: Directory
-			return errors.New("directory queries unsupported")
+		if query, ok := query.(keyval.Directory); ok {
+			return buffer.New(eg.Directories(context.Background(), query))
 		}
 
 		var kv keyval.KeyValue
@@ -192,13 +229,13 @@ func doQuery(eg engine.Engine, str string) func() tea.Msg {
 			if err := eg.Set(kv); err != nil {
 				return err
 			}
-			return nil
+			return "key set"
 
 		case class.Clear:
 			if err := eg.Clear(kv); err != nil {
 				return err
 			}
-			return nil
+			return "key cleared"
 
 		case class.ReadSingle:
 			out, err := eg.ReadSingle(kv, engine.SingleOpts{})
@@ -208,8 +245,7 @@ func doQuery(eg engine.Engine, str string) func() tea.Msg {
 			return *out
 
 		case class.ReadRange:
-			// TODO: ReadRange
-			return errors.New("read range queries not supported")
+			return buffer.New(eg.ReadRange(context.Background(), kv, engine.RangeOpts{}))
 
 		default:
 			return errors.Errorf("unexpected query class '%v'", c)
