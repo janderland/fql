@@ -1,7 +1,6 @@
 package main
 
 import (
-	"container/list"
 	"context"
 	"fmt"
 	"log"
@@ -17,13 +16,11 @@ import (
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
-	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/internal/app/fullscreen/buffer"
+	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
-	"github.com/janderland/fdbq/keyval/convert"
 	"github.com/janderland/fdbq/parser"
-	"github.com/janderland/fdbq/parser/format"
 	"github.com/janderland/fdbq/parser/scanner"
 )
 
@@ -61,13 +58,10 @@ type Style struct {
 }
 
 type Model struct {
-	eg engine.Engine
-
-	list  *list.List
-	lines []string
-
-	style Style
-	input textinput.Model
+	style   Style
+	results results.Model
+	input   textinput.Model
+	eg      engine.Engine
 }
 
 func newModel(eg engine.Engine) Model {
@@ -85,123 +79,67 @@ func newModel(eg engine.Engine) Model {
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
 		},
-		eg:    eg,
-		list:  list.New(),
-		input: input,
+		results: results.New(),
+		input:   input,
+		eg:      eg,
 	}
 }
 
-func (m Model) Init() tea.Cmd {
+func (x Model) Init() tea.Cmd {
 	return textinput.Blink
 }
 
-func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	log.Printf("msg: %T %v", msg, msg)
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
 		case tea.KeyCtrlC:
-			return m, tea.Quit
+			return x, tea.Quit
 
 		case tea.KeyEnter:
-			m.list = list.New()
-			return m, doQuery(m.eg, m.input.Value())
+			x.results.Reset()
+			return x, doQuery(x.eg, x.input.Value())
 		}
 
 	case buffer.StreamBuffer:
 		buf, done := msg.Get()
-		for item := buf.Front(); item != nil; item = item.Next() {
-			m.list.PushFront(item.Value)
-		}
+		x.results.PushMany(buf)
 		if !done {
-			return m, tea.Tick(50*time.Millisecond, func(_ time.Time) tea.Msg {
+			return x, tea.Tick(50*time.Millisecond, func(_ time.Time) tea.Msg {
 				return msg
 			})
 		}
-		return m, nil
+		return x, nil
 
 	case keyval.KeyValue, error:
-		m.list.PushFront(msg)
-		return m, nil
+		x.results.Push(msg)
+		return x, nil
 
 	case tea.WindowSizeMsg:
 		const inputLine = 1
 		const cursorChar = 1
-		inputHeight := m.style.input.GetVerticalFrameSize() + inputLine
+		inputHeight := x.style.input.GetVerticalFrameSize() + inputLine
 
-		m.style.results.Height(msg.Height - m.style.results.GetVerticalFrameSize() - inputHeight)
-		m.style.results.Width(msg.Width - m.style.results.GetHorizontalFrameSize())
-		m.lines = make([]string, m.style.results.GetHeight()-m.style.results.GetVerticalFrameSize())
+		x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
+		x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
+		x.results.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
 
 		// I think -2 is due to a bug with how the textinput bubble renders padding.
-		m.input.Width = msg.Width - m.style.input.GetHorizontalFrameSize() - len(m.input.Prompt) - cursorChar - 2
-		m.style.input.Width(msg.Width - m.style.input.GetHorizontalFrameSize())
+		x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
+		x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
 	}
 
 	var cmd tea.Cmd
-	m.input, cmd = m.input.Update(msg)
-	return m, cmd
+	x.input, cmd = x.input.Update(msg)
+	return x, cmd
 }
 
-func (m Model) View() string {
-	f := format.New(format.Cfg{})
-	item := m.list.Front()
-	i := -1
-
-	for i = range m.lines {
-		if item == nil {
-			break
-		}
-
-		switch val := item.Value.(type) {
-		case keyval.KeyValue:
-			f.Reset()
-			f.KeyValue(val)
-			m.lines[i] = f.String()
-
-		case stream.KeyValErr:
-			if val.Err != nil {
-				m.lines[i] = fmt.Sprintf("ERR! %v", val)
-			} else {
-				f.Reset()
-				f.KeyValue(val.KV)
-				m.lines[i] = f.String()
-			}
-
-		case stream.DirErr:
-			if val.Err != nil {
-				m.lines[i] = fmt.Sprintf("ERR! %v", val)
-			} else {
-				f.Reset()
-				f.Directory(convert.FromStringArray(val.Dir.GetPath()))
-				m.lines[i] = f.String()
-			}
-
-		case string:
-			m.lines[i] = fmt.Sprintf("# %s", val)
-
-		case error:
-			m.lines[i] = fmt.Sprintf("ERR! %v", val)
-
-		default:
-			m.lines[i] = fmt.Sprintf("ERR! unexpected item value '%T'", val)
-		}
-
-		item = item.Next()
-	}
-
-	var results strings.Builder
-	if i >= 0 {
-		for j := i; j >= 0; j-- {
-			results.WriteString(m.lines[j])
-			results.WriteRune('\n')
-		}
-	}
-
+func (x Model) View() string {
 	return lip.JoinVertical(lip.Left,
-		m.style.results.Render(results.String()),
-		m.style.input.Render(m.input.View()),
+		x.style.results.Render(x.results.View()),
+		x.style.input.Render(x.input.View()),
 	)
 }
 
