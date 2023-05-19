@@ -4,16 +4,47 @@ import (
 	"container/list"
 	"fmt"
 	"log"
-	"math/rand"
 	"strings"
 
+	"github.com/apple/foundationdb/bindings/go/src/fdb"
+	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	lip "github.com/charmbracelet/lipgloss"
+	"github.com/pkg/errors"
+
+	"github.com/janderland/fdbq/engine"
+	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/keyval"
+	"github.com/janderland/fdbq/keyval/class"
+	"github.com/janderland/fdbq/parser"
+	"github.com/janderland/fdbq/parser/format"
+	"github.com/janderland/fdbq/parser/scanner"
 )
 
 func main() {
-	p := tea.NewProgram(newModel(), tea.WithAltScreen())
+	if err := fdb.APIVersion(620); err != nil {
+		panic(err)
+	}
+
+	db, err := fdb.OpenDefault()
+	if err != nil {
+		panic(err)
+	}
+
+	eg := engine.New(facade.NewTransactor(db, directory.Root()))
+
+	file, err := tea.LogToFile("log.txt", "fdbq")
+	if err != nil {
+		panic(err)
+	}
+	defer func() {
+		if err := file.Close(); err != nil {
+			fmt.Println(errors.Wrap(err, "failed to close log file"))
+		}
+	}()
+
+	p := tea.NewProgram(newModel(eg), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
 		log.Fatal(err)
 	}
@@ -25,15 +56,16 @@ type Style struct {
 }
 
 type Model struct {
-	list  list.List
+	eg engine.Engine
+
+	list  *list.List
 	lines []string
-	count int
 
 	style Style
 	input textinput.Model
 }
 
-func newModel() Model {
+func newModel(eg engine.Engine) Model {
 	input := textinput.New()
 	input.Placeholder = "Query"
 	input.Focus()
@@ -48,6 +80,8 @@ func newModel() Model {
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
 		},
+		eg:    eg,
+		list:  list.New(),
 		input: input,
 	}
 }
@@ -57,6 +91,8 @@ func (m Model) Init() tea.Cmd {
 }
 
 func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
+	log.Printf("msg: %T %v", msg, msg)
+
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch msg.Type {
@@ -64,13 +100,60 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			return m, tea.Quit
 
 		case tea.KeyEnter:
-			if rand.Float32() > 0.5 {
-				m.list.PushFront(fmt.Sprintf("/my/dir{%d, %f}=nil", m.count, rand.Float32()))
-			} else {
-				m.list.PushFront(fmt.Errorf("this is a failure: %d things wrong", m.count))
+			inputStr := m.input.Value()
+			return m, func() tea.Msg {
+				p := parser.New(scanner.New(strings.NewReader(inputStr)))
+				query, err := p.Parse()
+				if err != nil {
+					return err
+				}
+
+				if _, ok := query.(keyval.Directory); ok {
+					// TODO: Directory
+					return errors.New("directory queries unsupported")
+				}
+
+				var kv keyval.KeyValue
+				if key, ok := query.(keyval.Key); ok {
+					kv = keyval.KeyValue{Key: key, Value: keyval.Variable{}}
+				} else {
+					kv = query.(keyval.KeyValue)
+				}
+
+				switch c := class.Classify(kv); c {
+				case class.Constant:
+					if err := m.eg.Set(kv); err != nil {
+						return err
+					}
+					return nil
+
+				case class.Clear:
+					if err := m.eg.Clear(kv); err != nil {
+						return err
+					}
+					return nil
+
+				case class.ReadSingle:
+					out, err := m.eg.ReadSingle(kv, engine.SingleOpts{})
+					if err != nil {
+						return err
+					}
+					return *out
+
+				case class.ReadRange:
+					// TODO: ReadRange
+					return errors.New("read range queries not supported")
+
+				default:
+					return errors.Errorf("unexpected query class '%v'", c)
+				}
 			}
-			m.count++
 		}
+
+	case keyval.KeyValue, error:
+		m.list = list.New()
+		m.list.PushFront(msg)
+		return m, nil
 
 	case tea.WindowSizeMsg:
 		const inputLine = 1
@@ -92,16 +175,22 @@ func (m Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m Model) View() string {
-	i := -1
+	f := format.New(format.Cfg{})
 	item := m.list.Front()
+	i := -1
+
 	for i = range m.lines {
 		if item == nil {
 			break
 		}
 
 		switch val := item.Value.(type) {
+		case keyval.KeyValue:
+			f.Reset()
+			f.KeyValue(val)
+			m.lines[i] = f.String()
 		case string:
-			m.lines[i] = val
+			m.lines[i] = fmt.Sprintf("# %s", val)
 		case error:
 			m.lines[i] = fmt.Sprintf("ERR! %v", val)
 		default:
