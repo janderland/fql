@@ -9,6 +9,7 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	lip "github.com/charmbracelet/lipgloss"
@@ -90,7 +91,9 @@ func (x Model) Init() tea.Cmd {
 }
 
 func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	log.Printf("msg: %T %v", msg, msg)
+	if _, ok := msg.(cursor.BlinkMsg); !ok {
+		log.Printf("msg: %T %v", msg, msg)
+	}
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -113,7 +116,7 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		return x, nil
 
-	case keyval.KeyValue, error:
+	case error, string, keyval.KeyValue:
 		x.results.Push(msg)
 		return x, nil
 
@@ -179,6 +182,9 @@ func doQuery(eg engine.Engine, str string) func() tea.Msg {
 			out, err := eg.ReadSingle(kv, engine.SingleOpts{})
 			if err != nil {
 				return err
+			}
+			if out == nil {
+				return "no results"
 			}
 			return *out
 
