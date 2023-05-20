@@ -134,9 +134,13 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
 	}
 
-	var cmd tea.Cmd
-	x.input, cmd = x.input.Update(msg)
-	return x, cmd
+	var (
+		inputCmd   tea.Cmd
+		resultsCmd tea.Cmd
+	)
+	x.input, inputCmd = x.input.Update(msg)
+	x.results, resultsCmd = x.results.Update(msg)
+	return x, tea.Batch(inputCmd, resultsCmd)
 }
 
 func (x Model) View() string {
