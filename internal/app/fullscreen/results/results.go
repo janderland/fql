@@ -247,13 +247,6 @@ func (x *Model) height() int {
 	return len(x.lines)
 }
 
-func (x *Model) cursorValue() any {
-	if x.startCursor == nil {
-		return nil
-	}
-	return x.startCursor.Value
-}
-
 func (x *Model) view(item any) string {
 	switch val := item.(type) {
 	case error:
@@ -265,20 +258,12 @@ func (x *Model) view(item any) string {
 	case keyval.KeyValue:
 		x.format.Reset()
 		x.format.KeyValue(val)
-		out := x.format.String()
-		if x.cursorValue() == item {
-			out = "* " + out
-		}
-		return out
+		return x.format.String()
 
 	case directory.DirectorySubspace:
 		x.format.Reset()
 		x.format.Directory(convert.FromStringArray(val.GetPath()))
-		out := x.format.String()
-		if x.cursorValue() == item {
-			out = "* " + out
-		}
-		return out
+		return x.format.String()
 
 	case stream.KeyValErr:
 		if val.Err != nil {
