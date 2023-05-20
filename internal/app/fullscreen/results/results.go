@@ -53,6 +53,11 @@ func defaultKeyMap() keyMap {
 	}
 }
 
+type result struct {
+	i     int
+	value any
+}
+
 type Model struct {
 	keyMap keyMap
 	format format.Format
@@ -79,8 +84,11 @@ func (x *Model) Height(height int) {
 }
 
 func (x *Model) PushMany(list *list.List) {
-	for item := list.Front(); item != nil; item = item.Next() {
-		x.list.PushFront(item.Value)
+	for cursor := list.Front(); cursor != nil; cursor = cursor.Next() {
+		x.list.PushFront(result{
+			i:     x.list.Len(),
+			value: cursor.Value,
+		})
 	}
 }
 
@@ -104,7 +112,8 @@ func (x *Model) View() string {
 			break
 		}
 
-		x.lines[i] = x.view(cursor.Value)
+		res := cursor.Value.(result)
+		x.lines[i] = fmt.Sprintf("%d  %s", res.i, x.view(res.value))
 		cursor = cursor.Next()
 	}
 
