@@ -62,8 +62,10 @@ type Model struct {
 	keyMap keyMap
 	format format.Format
 	list   *list.List
-	cursor *list.Element
 	lines  []string
+
+	startCursor *list.Element
+	endCursor   *list.Element
 }
 
 func New() Model {
@@ -76,11 +78,13 @@ func New() Model {
 
 func (x *Model) Reset() {
 	x.list = list.New()
-	x.cursor = nil
+	x.startCursor = nil
+	x.endCursor = nil
 }
 
 func (x *Model) Height(height int) {
 	x.lines = make([]string, height)
+	x.updateCursors()
 }
 
 func (x *Model) PushMany(list *list.List) {
@@ -89,6 +93,28 @@ func (x *Model) PushMany(list *list.List) {
 			i:     x.list.Len(),
 			value: cursor.Value,
 		})
+	}
+	x.updateCursors()
+}
+
+func (x *Model) updateCursors() {
+	if x.list.Len() == 0 {
+		return
+	}
+
+	x.endCursor = x.list.Back()
+	for i := 0; i < x.height(); i++ {
+		if x.endCursor.Prev() == nil {
+			break
+		}
+
+		// As we move the end cursor back through
+		// the list, if we encounter the start
+		// cursor then move it along with us.
+		if x.startCursor == x.endCursor {
+			x.startCursor = x.endCursor.Prev()
+		}
+		x.endCursor = x.endCursor.Prev()
 	}
 }
 
@@ -101,7 +127,7 @@ func (x *Model) View() string {
 		return ""
 	}
 
-	cursor := x.cursor
+	cursor := x.startCursor
 	if cursor == nil {
 		cursor = x.list.Front()
 	}
@@ -133,29 +159,32 @@ func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, x.keyMap.PageDown):
-			if x.cursor == nil {
+			if x.startCursor == nil {
 				break
 			}
 			for i := 0; i < x.height()/2; i++ {
-				x.cursor = x.cursor.Prev()
-				if x.cursor == nil {
+				x.startCursor = x.startCursor.Prev()
+				if x.startCursor == nil {
 					break
 				}
 			}
 
 		case key.Matches(msg, x.keyMap.PageUp):
-			if x.list.Front() == nil {
+			if x.list.Len() == 0 {
 				break
 			}
-			if x.cursor == nil {
-				x.cursor = x.list.Front()
+			if x.startCursor == nil {
+				x.startCursor = x.list.Front()
 			}
 			for i := 0; i < x.height()/2; i++ {
-				newCursor := x.cursor.Next()
+				if x.startCursor == x.endCursor {
+					break
+				}
+				newCursor := x.startCursor.Next()
 				if newCursor == nil {
 					break
 				}
-				x.cursor = newCursor
+				x.startCursor = newCursor
 			}
 
 		case key.Matches(msg, x.keyMap.HalfPageDown):
@@ -219,10 +248,10 @@ func (x *Model) height() int {
 }
 
 func (x *Model) cursorValue() any {
-	if x.cursor == nil {
+	if x.startCursor == nil {
 		return nil
 	}
-	return x.cursor.Value
+	return x.startCursor.Value
 }
 
 func (x *Model) view(item any) string {
