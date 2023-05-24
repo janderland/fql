@@ -62,14 +62,13 @@ type Model struct {
 	keyMap keyMap
 	format format.Format
 
+	// height is the max number of lines
+	// that will be rendered.
+	height int
+
 	// builder is used by the View method
 	// to construct the final output.
 	builder *strings.Builder
-
-	// lines is a frame buffer used by the View
-	// method. The length of this slice determines
-	// the max number of lines rendered.
-	lines []string
 
 	// list contains all the scrollable items.
 	// Newer items are placed at the front.
@@ -102,7 +101,7 @@ func (x *Model) Reset() {
 }
 
 func (x *Model) Height(height int) {
-	x.lines = make([]string, height)
+	x.height = height
 	x.updateCursors()
 }
 
@@ -121,6 +120,7 @@ func (x *Model) Push(val any) {
 		i:     x.list.Len(),
 		value: val,
 	})
+	x.updateCursors()
 }
 
 func (x *Model) updateCursors() {
@@ -129,7 +129,7 @@ func (x *Model) updateCursors() {
 	}
 
 	x.endCursor = x.list.Back()
-	for i := 0; i < x.height(); i++ {
+	for i := 0; i < x.height; i++ {
 		if x.endCursor.Prev() == nil {
 			break
 		}
@@ -145,7 +145,7 @@ func (x *Model) updateCursors() {
 }
 
 func (x *Model) View() string {
-	if x.height() == 0 {
+	if x.height == 0 || x.list.Len() == 0 {
 		return ""
 	}
 
@@ -158,24 +158,21 @@ func (x *Model) View() string {
 		cursor = x.list.Front()
 	}
 
-	i := 0
-	for i = range x.lines {
-		if cursor == nil {
+	for i := 0; i < x.height; i++ {
+		if cursor.Next() == nil {
 			break
 		}
-
-		res := cursor.Value.(result)
-		x.lines[i] = fmt.Sprintf("%d  %s", res.i, x.view(res.value))
 		cursor = cursor.Next()
 	}
 
 	x.builder.Reset()
-	for j := i; j >= 0; j-- {
-		x.builder.WriteString(x.lines[j])
-		x.builder.WriteRune('\n')
-	}
-	for j := i + 1; j < x.height(); j++ {
-		x.builder.WriteRune('\n')
+	for i := 0; i < x.height; i++ {
+		if cursor == nil {
+			break
+		}
+		res := cursor.Value.(result)
+		x.builder.WriteString(fmt.Sprintf("%d  %s\n", res.i, x.view(res.value)))
+		cursor = cursor.Prev()
 	}
 	return x.builder.String()
 }
@@ -188,7 +185,7 @@ func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if x.cursor == nil {
 				break
 			}
-			for i := 0; i < x.height()/2; i++ {
+			for i := 0; i < x.height/2; i++ {
 				x.cursor = x.cursor.Prev()
 				if x.cursor == nil {
 					break
@@ -202,7 +199,7 @@ func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if x.cursor == nil {
 				x.cursor = x.list.Front()
 			}
-			for i := 0; i < x.height()/2; i++ {
+			for i := 0; i < x.height/2; i++ {
 				if x.cursor == x.endCursor {
 					break
 				}
@@ -267,10 +264,6 @@ func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	}
 
 	return *x, nil
-}
-
-func (x *Model) height() int {
-	return len(x.lines)
 }
 
 func (x *Model) view(item any) string {
