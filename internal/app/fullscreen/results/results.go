@@ -178,6 +178,41 @@ func (x *Model) View() string {
 	return x.builder.String()
 }
 
+func (x *Model) view(item any) string {
+	switch val := item.(type) {
+	case error:
+		return fmt.Sprintf("ERR! %s", val)
+
+	case string:
+		return fmt.Sprintf("# %s", val)
+
+	case keyval.KeyValue:
+		x.format.Reset()
+		x.format.KeyValue(val)
+		return x.format.String()
+
+	case directory.DirectorySubspace:
+		x.format.Reset()
+		x.format.Directory(convert.FromStringArray(val.GetPath()))
+		return x.format.String()
+
+	case stream.KeyValErr:
+		if val.Err != nil {
+			return x.view(val.Err)
+		}
+		return x.view(val.KV)
+
+	case stream.DirErr:
+		if val.Err != nil {
+			return x.view(val.Err)
+		}
+		return x.view(val.Dir)
+
+	default:
+		return fmt.Sprintf("ERR! unexpected %T", val)
+	}
+}
+
 func (x *Model) Update(msg tea.Msg) Model {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -265,39 +300,4 @@ func (x *Model) Update(msg tea.Msg) Model {
 	}
 
 	return *x
-}
-
-func (x *Model) view(item any) string {
-	switch val := item.(type) {
-	case error:
-		return fmt.Sprintf("ERR! %s", val)
-
-	case string:
-		return fmt.Sprintf("# %s", val)
-
-	case keyval.KeyValue:
-		x.format.Reset()
-		x.format.KeyValue(val)
-		return x.format.String()
-
-	case directory.DirectorySubspace:
-		x.format.Reset()
-		x.format.Directory(convert.FromStringArray(val.GetPath()))
-		return x.format.String()
-
-	case stream.KeyValErr:
-		if val.Err != nil {
-			return x.view(val.Err)
-		}
-		return x.view(val.KV)
-
-	case stream.DirErr:
-		if val.Err != nil {
-			return x.view(val.Err)
-		}
-		return x.view(val.Dir)
-
-	default:
-		return fmt.Sprintf("ERR! unexpected %T", val)
-	}
 }
