@@ -61,24 +61,43 @@ type result struct {
 type Model struct {
 	keyMap keyMap
 	format format.Format
-	list   *list.List
-	lines  []string
 
-	startCursor *list.Element
-	endCursor   *list.Element
+	// builder is used by the View method
+	// to construct the final output.
+	builder *strings.Builder
+
+	// lines is a frame buffer used by the View
+	// method. The length of this slice determines
+	// the max number of lines rendered.
+	lines []string
+
+	// list contains all the scrollable items.
+	// Newer items are placed at the front.
+	list *list.List
+
+	// cursor points at the newest item
+	// that will be displayed.
+	cursor *list.Element
+
+	// endCursor points at the oldest item
+	// which cursor is allowed to scroll to.
+	// This prevents scrolling past the
+	// final page.
+	endCursor *list.Element
 }
 
 func New() Model {
 	return Model{
-		keyMap: defaultKeyMap(),
-		format: format.New(format.Cfg{}),
-		list:   list.New(),
+		keyMap:  defaultKeyMap(),
+		format:  format.New(format.Cfg{}),
+		builder: &strings.Builder{},
+		list:    list.New(),
 	}
 }
 
 func (x *Model) Reset() {
 	x.list = list.New()
-	x.startCursor = nil
+	x.cursor = nil
 	x.endCursor = nil
 }
 
@@ -97,6 +116,13 @@ func (x *Model) PushMany(list *list.List) {
 	x.updateCursors()
 }
 
+func (x *Model) Push(val any) {
+	x.list.PushFront(result{
+		i:     x.list.Len(),
+		value: val,
+	})
+}
+
 func (x *Model) updateCursors() {
 	if x.list.Len() == 0 {
 		return
@@ -111,15 +137,11 @@ func (x *Model) updateCursors() {
 		// As we move the end cursor back through
 		// the list, if we encounter the start
 		// cursor then move it along with us.
-		if x.startCursor == x.endCursor {
-			x.startCursor = x.endCursor.Prev()
+		if x.cursor == x.endCursor {
+			x.cursor = x.endCursor.Prev()
 		}
 		x.endCursor = x.endCursor.Prev()
 	}
-}
-
-func (x *Model) Push(item any) {
-	x.list.PushFront(item)
 }
 
 func (x *Model) View() string {
@@ -127,7 +149,11 @@ func (x *Model) View() string {
 		return ""
 	}
 
-	cursor := x.startCursor
+	// If we have scrolled back through
+	// the list then start our local
+	// cursor there. Otherwise, start
+	// at the front of the list.
+	cursor := x.cursor
 	if cursor == nil {
 		cursor = x.list.Front()
 	}
@@ -143,15 +169,15 @@ func (x *Model) View() string {
 		cursor = cursor.Next()
 	}
 
-	var results strings.Builder
+	x.builder.Reset()
 	for j := i; j >= 0; j-- {
-		results.WriteString(x.lines[j])
-		results.WriteRune('\n')
+		x.builder.WriteString(x.lines[j])
+		x.builder.WriteRune('\n')
 	}
 	for j := i + 1; j < x.height(); j++ {
-		results.WriteRune('\n')
+		x.builder.WriteRune('\n')
 	}
-	return results.String()
+	return x.builder.String()
 }
 
 func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
@@ -159,12 +185,12 @@ func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, x.keyMap.PageDown):
-			if x.startCursor == nil {
+			if x.cursor == nil {
 				break
 			}
 			for i := 0; i < x.height()/2; i++ {
-				x.startCursor = x.startCursor.Prev()
-				if x.startCursor == nil {
+				x.cursor = x.cursor.Prev()
+				if x.cursor == nil {
 					break
 				}
 			}
@@ -173,18 +199,18 @@ func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 			if x.list.Len() == 0 {
 				break
 			}
-			if x.startCursor == nil {
-				x.startCursor = x.list.Front()
+			if x.cursor == nil {
+				x.cursor = x.list.Front()
 			}
 			for i := 0; i < x.height()/2; i++ {
-				if x.startCursor == x.endCursor {
+				if x.cursor == x.endCursor {
 					break
 				}
-				newCursor := x.startCursor.Next()
+				newCursor := x.cursor.Next()
 				if newCursor == nil {
 					break
 				}
-				x.startCursor = newCursor
+				x.cursor = newCursor
 			}
 
 		case key.Matches(msg, x.keyMap.HalfPageDown):
