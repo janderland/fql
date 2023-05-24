@@ -107,20 +107,21 @@ func (x *Model) Height(height int) {
 
 func (x *Model) PushMany(list *list.List) {
 	for cursor := list.Front(); cursor != nil; cursor = cursor.Next() {
-		x.list.PushFront(result{
-			i:     x.list.Len(),
-			value: cursor.Value,
-		})
+		x.push(cursor.Value)
 	}
 	x.updateCursors()
 }
 
 func (x *Model) Push(val any) {
+	x.push(val)
+	x.updateCursors()
+}
+
+func (x *Model) push(val any) {
 	x.list.PushFront(result{
-		i:     x.list.Len(),
+		i:     x.list.Len() + 1,
 		value: val,
 	})
-	x.updateCursors()
 }
 
 func (x *Model) updateCursors() {
@@ -177,7 +178,7 @@ func (x *Model) View() string {
 	return x.builder.String()
 }
 
-func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
+func (x *Model) Update(msg tea.Msg) Model {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -263,7 +264,7 @@ func (x *Model) Update(msg tea.Msg) (Model, tea.Cmd) {
 		}
 	}
 
-	return *x, nil
+	return *x
 }
 
 func (x *Model) view(item any) string {
