@@ -218,86 +218,64 @@ func (x *Model) Update(msg tea.Msg) Model {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, x.keyMap.PageDown):
-			if x.cursor == nil {
-				break
-			}
-			for i := 0; i < x.height/2; i++ {
-				x.cursor = x.cursor.Prev()
-				if x.cursor == nil {
-					break
-				}
-			}
+			x.scrollDown(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.PageUp):
-			if x.list.Len() == 0 {
-				break
-			}
-			if x.cursor == nil {
-				x.cursor = x.list.Front()
-			}
-			for i := 0; i < x.height/2; i++ {
-				if x.cursor == x.endCursor {
-					break
-				}
-				newCursor := x.cursor.Next()
-				if newCursor == nil {
-					break
-				}
-				x.cursor = newCursor
-			}
+			x.scrollUp(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.HalfPageDown):
-			/*
-				lines := m.HalfViewDown()
-				if m.HighPerformanceRendering {
-					cmd = ViewDown(m, lines)
-				}
-			*/
+			x.scrollDown(x.height / 2)
 
 		case key.Matches(msg, x.keyMap.HalfPageUp):
-			/*
-				lines := m.HalfViewUp()
-				if m.HighPerformanceRendering {
-					cmd = ViewUp(m, lines)
-				}
-			*/
+			x.scrollUp(x.height / 2)
 
 		case key.Matches(msg, x.keyMap.Down):
-			/*
-				lines := m.LineDown(1)
-				if m.HighPerformanceRendering {
-					cmd = ViewDown(m, lines)
-				}
-			*/
+			x.scrollDown(1)
 
 		case key.Matches(msg, x.keyMap.Up):
-			/*
-				lines := m.LineUp(1)
-				if m.HighPerformanceRendering {
-					cmd = ViewUp(m, lines)
-				}
-			*/
+			x.scrollUp(1)
 		}
 
 	case tea.MouseMsg:
 		switch msg.Type {
-		case tea.MouseWheelUp:
-			/*
-				lines := m.LineUp(m.MouseWheelDelta)
-				if m.HighPerformanceRendering {
-					cmd = ViewUp(m, lines)
-				}
-			*/
-
 		case tea.MouseWheelDown:
-			/*
-				lines := m.LineDown(m.MouseWheelDelta)
-				if m.HighPerformanceRendering {
-					cmd = ViewDown(m, lines)
-				}
-			*/
+			x.scrollDown(1)
+
+		case tea.MouseWheelUp:
+			x.scrollUp(1)
 		}
 	}
 
 	return *x
+}
+
+func (x *Model) scrollDown(lines int) {
+	if x.cursor == nil {
+		return
+	}
+	for i := 0; i < lines; i++ {
+		x.cursor = x.cursor.Prev()
+		if x.cursor == nil {
+			break
+		}
+	}
+}
+
+func (x *Model) scrollUp(lines int) {
+	if x.list.Len() == 0 {
+		return
+	}
+	if x.cursor == nil {
+		x.cursor = x.list.Front()
+	}
+	for i := 0; i < lines; i++ {
+		if x.cursor == x.endCursor {
+			break
+		}
+		newCursor := x.cursor.Next()
+		if newCursor == nil {
+			break
+		}
+		x.cursor = newCursor
+	}
 }
