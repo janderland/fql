@@ -50,7 +50,7 @@ END
 }
 
 
-# fail print $1 to stderr and exits with code 1.
+# fail prints $1 to stderr and exits with code 1.
 
 function fail {
   local RED='\033[0;31m' NO_COLOR='\033[0m'
@@ -105,8 +105,8 @@ function commit_hash {
 
 
 # fdb_version returns the version of the FDB
-# library specified by the env var FDB_VERSION.
-# If FDB_VERSION is not defined then the .env
+# library specified by the env var FDB_VER.
+# If FDB_VER is not defined then the .env
 # file is read to obtain the version.
 
 function fdb_version {
