@@ -127,9 +127,11 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
 		x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
-		x.results.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
 
-		// I think -2 is due to a bug with how the textinput bubble renders padding.
+		// TODO: I don't know why this +1 is needed.
+		x.results.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize() + 1)
+
+		// TODO: I think -2 is due to a bug with how the textinput bubble renders padding.
 		x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
 		x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
 	}
