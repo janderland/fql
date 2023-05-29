@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/pkg/errors"
 	"github.com/stretchr/testify/require"
 
@@ -43,10 +44,9 @@ func TestSingleLine(t *testing.T) {
 	})
 	require.Equal(t, "1  /dir{23}=10\n", x.View())
 
-	// TODO: Actually mock the GetPath method.
 	x.Reset()
-	x.Push(facade.NewNilDirectorySubspace())
-	require.Equal(t, "1  \n", x.View())
+	x.Push(dir([]string{"dir"}))
+	require.Equal(t, "1  /dir\n", x.View())
 
 	x.Reset()
 	x.Push(stream.KeyValErr{
@@ -66,12 +66,11 @@ func TestSingleLine(t *testing.T) {
 	})
 	require.Equal(t, "1  ERR! error\n", x.View())
 
-	// TODO: Actually mock the GetPath method.
 	x.Reset()
 	x.Push(stream.DirErr{
-		Dir: facade.NewNilDirectorySubspace(),
+		Dir: dir([]string{"dir"}),
 	})
-	require.Equal(t, "1  \n", x.View())
+	require.Equal(t, "1  /dir\n", x.View())
 
 	x.Reset()
 	x.Push(stream.DirErr{
@@ -103,4 +102,17 @@ func setup() Model {
 		x.Push(fmt.Sprintf("%d", i))
 	}
 	return x
+}
+
+func dir(path []string) directory.DirectorySubspace {
+	return &mockDir{facade.NewNilDirectorySubspace(), path}
+}
+
+type mockDir struct {
+	directory.DirectorySubspace
+	path []string
+}
+
+func (x *mockDir) GetPath() []string {
+	return x.path
 }
