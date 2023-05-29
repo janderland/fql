@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"strings"
 	"time"
@@ -37,15 +36,17 @@ func main() {
 
 	eg := engine.New(facade.NewTransactor(db, directory.Root()))
 
-	file, err := tea.LogToFile("log.txt", "fdbq")
-	if err != nil {
-		panic(err)
-	}
-	defer func() {
-		if err := file.Close(); err != nil {
-			fmt.Println(errors.Wrap(err, "failed to close log file"))
+	/*
+		file, err := tea.LogToFile("log.txt", "fdbq")
+		if err != nil {
+			panic(err)
 		}
-	}()
+		defer func() {
+			if err := file.Close(); err != nil {
+				fmt.Println(errors.Wrap(err, "failed to close log file"))
+			}
+		}()
+	*/
 
 	p := tea.NewProgram(newModel(eg), tea.WithAltScreen())
 	if _, err := p.Run(); err != nil {
