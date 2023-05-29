@@ -159,7 +159,7 @@ func (x *Model) View() string {
 		cursor = x.list.Front()
 	}
 
-	for i := 0; i < x.height; i++ {
+	for i := 0; i < x.height-1; i++ {
 		if cursor.Next() == nil {
 			break
 		}
