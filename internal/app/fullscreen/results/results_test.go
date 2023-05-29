@@ -24,63 +24,77 @@ func TestHeight(t *testing.T) {
 }
 
 func TestSingleLine(t *testing.T) {
-	x := New()
-	x.Height(1)
-
-	x.Push(errors.New("error"))
-	require.Equal(t, "1  ERR! error\n", x.View())
-
-	x.Reset()
-	x.Push("string")
-	require.Equal(t, "1  # string\n", x.View())
-
-	x.Reset()
-	x.Push(keyval.KeyValue{
-		Key: keyval.Key{
-			Directory: keyval.Directory{keyval.String("dir")},
-			Tuple:     keyval.Tuple{keyval.Int(23)},
+	tests := []struct {
+		input    any
+		expected string
+	}{
+		{
+			errors.New("error"),
+			"1  ERR! error\n",
 		},
-		Value: keyval.Int(10),
-	})
-	require.Equal(t, "1  /dir{23}=10\n", x.View())
-
-	x.Reset()
-	x.Push(dir([]string{"dir"}))
-	require.Equal(t, "1  /dir\n", x.View())
-
-	x.Reset()
-	x.Push(stream.KeyValErr{
-		KV: keyval.KeyValue{
-			Key: keyval.Key{
-				Directory: keyval.Directory{keyval.String("dir")},
-				Tuple:     keyval.Tuple{keyval.Int(23)},
+		{
+			"string",
+			"1  # string\n",
+		},
+		{
+			keyval.KeyValue{
+				Key: keyval.Key{
+					Directory: keyval.Directory{keyval.String("dir")},
+					Tuple:     keyval.Tuple{keyval.Int(23)},
+				},
+				Value: keyval.Int(10),
 			},
-			Value: keyval.Int(10),
+			"1  /dir{23}=10\n",
 		},
-	})
-	require.Equal(t, "1  /dir{23}=10\n", x.View())
+		{
+			dir([]string{"dir"}),
+			"1  /dir\n",
+		},
+		{
+			stream.KeyValErr{
+				KV: keyval.KeyValue{
+					Key: keyval.Key{
+						Directory: keyval.Directory{keyval.String("dir")},
+						Tuple:     keyval.Tuple{keyval.Int(23)},
+					},
+					Value: keyval.Int(10),
+				},
+			},
+			"1  /dir{23}=10\n",
+		},
+		{
+			stream.KeyValErr{
+				Err: errors.New("error"),
+			},
+			"1  ERR! error\n",
+		},
+		{
+			stream.DirErr{
+				Dir: dir([]string{"dir"}),
+			},
+			"1  /dir\n",
+		},
+		{
+			stream.DirErr{
+				Err: errors.New("error"),
+			},
+			"1  ERR! error\n",
+		},
+		{
+			[]uint8{},
+			"1  ERR! unexpected []uint8\n",
+		},
+	}
 
-	x.Reset()
-	x.Push(stream.KeyValErr{
-		Err: errors.New("error"),
-	})
-	require.Equal(t, "1  ERR! error\n", x.View())
+	for _, test := range tests {
+		t.Run(fmt.Sprintf("%T", test.input), func(t *testing.T) {
+			x := New()
+			x.Height(1)
 
-	x.Reset()
-	x.Push(stream.DirErr{
-		Dir: dir([]string{"dir"}),
-	})
-	require.Equal(t, "1  /dir\n", x.View())
-
-	x.Reset()
-	x.Push(stream.DirErr{
-		Err: errors.New("error"),
-	})
-	require.Equal(t, "1  ERR! error\n", x.View())
-
-	x.Reset()
-	x.Push([]uint8{})
-	require.Equal(t, "1  ERR! unexpected []uint8\n", x.View())
+			x.Push(test.input)
+			require.Equal(t, test.expected, x.View())
+		})
+	}
 }
 
 func TestScroll(t *testing.T) {
