@@ -23,6 +23,19 @@ func TestHeight(t *testing.T) {
 	require.Equal(t, 50, strings.Count(x.View(), "\n"))
 }
 
+func TestReset(t *testing.T) {
+	x := setup()
+	x.Height(50)
+
+	x.Reset()
+	require.Empty(t, x.View())
+
+	for i := 0; i < 10; i++ {
+		x.Push("")
+	}
+	require.Equal(t, 10, strings.Count(x.View(), "\n"))
+}
+
 func TestSingleLine(t *testing.T) {
 	tests := []struct {
 		input    any
