@@ -20,7 +20,7 @@ func TestHeight(t *testing.T) {
 	require.Empty(t, x.View())
 
 	x.Height(50)
-	require.Equal(t, 50, strings.Count(x.View(), "\n"))
+	require.Equal(t, 50, lineCount(x.View()))
 }
 
 func TestReset(t *testing.T) {
@@ -33,7 +33,7 @@ func TestReset(t *testing.T) {
 	for i := 0; i < 10; i++ {
 		x.Push("")
 	}
-	require.Equal(t, 10, strings.Count(x.View(), "\n"))
+	require.Equal(t, 10, lineCount(x.View()))
 }
 
 func TestSingleLine(t *testing.T) {
@@ -43,11 +43,11 @@ func TestSingleLine(t *testing.T) {
 	}{
 		{
 			errors.New("error"),
-			"1  ERR! error\n",
+			"1  ERR! error",
 		},
 		{
 			"string",
-			"1  # string\n",
+			"1  # string",
 		},
 		{
 			keyval.KeyValue{
@@ -57,11 +57,11 @@ func TestSingleLine(t *testing.T) {
 				},
 				Value: keyval.Int(10),
 			},
-			"1  /dir{23}=10\n",
+			"1  /dir{23}=10",
 		},
 		{
 			dir([]string{"dir"}),
-			"1  /dir\n",
+			"1  /dir",
 		},
 		{
 			stream.KeyValErr{
@@ -73,29 +73,29 @@ func TestSingleLine(t *testing.T) {
 					Value: keyval.Int(10),
 				},
 			},
-			"1  /dir{23}=10\n",
+			"1  /dir{23}=10",
 		},
 		{
 			stream.KeyValErr{
 				Err: errors.New("error"),
 			},
-			"1  ERR! error\n",
+			"1  ERR! error",
 		},
 		{
 			stream.DirErr{
 				Dir: dir([]string{"dir"}),
 			},
-			"1  /dir\n",
+			"1  /dir",
 		},
 		{
 			stream.DirErr{
 				Err: errors.New("error"),
 			},
-			"1  ERR! error\n",
+			"1  ERR! error",
 		},
 		{
 			[]uint8{},
-			"1  ERR! unexpected []uint8\n",
+			"1  ERR! unexpected []uint8",
 		},
 	}
 
@@ -116,21 +116,30 @@ func TestScroll(t *testing.T) {
 
 	var expected strings.Builder
 	for i := 96; i <= 100; i++ {
-		expected.WriteString(fmt.Sprintf("%d  # %d\n", i, i))
+		if i != 96 {
+			expected.WriteRune('\n')
+		}
+		expected.WriteString(fmt.Sprintf("%d  # %d", i, i))
 	}
 	require.Equal(t, expected.String(), x.View())
 
 	x.scrollUp(10)
 	expected.Reset()
 	for i := 86; i <= 90; i++ {
-		expected.WriteString(fmt.Sprintf("%d  # %d\n", i, i))
+		if i != 86 {
+			expected.WriteRune('\n')
+		}
+		expected.WriteString(fmt.Sprintf("%d  # %d", i, i))
 	}
 	require.Equal(t, expected.String(), x.View())
 
 	x.scrollDown(9)
 	expected.Reset()
 	for i := 95; i <= 99; i++ {
-		expected.WriteString(fmt.Sprintf("%d  # %d\n", i, i))
+		if i != 95 {
+			expected.WriteRune('\n')
+		}
+		expected.WriteString(fmt.Sprintf("%d  # %d", i, i))
 	}
 	require.Equal(t, expected.String(), x.View())
 }
@@ -141,6 +150,10 @@ func setup() Model {
 		x.Push(fmt.Sprintf("%d", i))
 	}
 	return x
+}
+
+func lineCount(str string) int {
+	return len(strings.Split(str, "\n"))
 }
 
 func dir(path []string) directory.DirectorySubspace {

@@ -172,7 +172,10 @@ func (x *Model) View() string {
 			break
 		}
 		res := cursor.Value.(result)
-		x.builder.WriteString(fmt.Sprintf("%d  %s\n", res.i, x.view(res.value)))
+		if i != 0 {
+			x.builder.WriteRune('\n')
+		}
+		x.builder.WriteString(fmt.Sprintf("%d  %s", res.i, x.view(res.value)))
 		cursor = cursor.Prev()
 	}
 	return x.builder.String()
