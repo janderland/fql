@@ -8,7 +8,6 @@ import (
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	lip "github.com/charmbracelet/lipgloss"
@@ -92,9 +91,11 @@ func (x Model) Init() tea.Cmd {
 }
 
 func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if _, ok := msg.(cursor.BlinkMsg); !ok {
-		log.Printf("msg: %T %v", msg, msg)
-	}
+	/*
+		if _, ok := msg.(cursor.BlinkMsg); !ok {
+			log.Printf("msg: %T %v", msg, msg)
+		}
+	*/
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
