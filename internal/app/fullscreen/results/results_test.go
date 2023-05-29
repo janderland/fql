@@ -111,16 +111,28 @@ func TestSingleLine(t *testing.T) {
 }
 
 func TestScroll(t *testing.T) {
-	t.Run("up", func(t *testing.T) {
-		x := setup()
-		x.Height(5)
+	x := setup()
+	x.Height(5)
 
-		var expected strings.Builder
-		for i := 96; i <= 100; i++ {
-			expected.WriteString(fmt.Sprintf("%d  # %d\n", i, i))
-		}
-		require.Equal(t, expected.String(), x.View())
-	})
+	var expected strings.Builder
+	for i := 96; i <= 100; i++ {
+		expected.WriteString(fmt.Sprintf("%d  # %d\n", i, i))
+	}
+	require.Equal(t, expected.String(), x.View())
+
+	x.scrollUp(10)
+	expected.Reset()
+	for i := 86; i <= 90; i++ {
+		expected.WriteString(fmt.Sprintf("%d  # %d\n", i, i))
+	}
+	require.Equal(t, expected.String(), x.View())
+
+	x.scrollDown(9)
+	expected.Reset()
+	for i := 95; i <= 99; i++ {
+		expected.WriteString(fmt.Sprintf("%d  # %d\n", i, i))
+	}
+	require.Equal(t, expected.String(), x.View())
 }
 
 func setup() Model {
