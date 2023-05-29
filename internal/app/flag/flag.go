@@ -13,6 +13,7 @@ type Flags struct {
 	Write   bool
 	Log     bool
 
+	Queries []string
 	Reverse bool
 	Strict  bool
 	Little  bool
@@ -27,6 +28,7 @@ func SetupFlags(cmd *cobra.Command) *Flags {
 	cmd.Flags().BoolVarP(&flags.Write, "write", "w", false, "allow write queries")
 	cmd.Flags().BoolVar(&flags.Log, "log", false, "perform debug logging")
 
+	cmd.Flags().StringArrayVarP(&flags.Queries, "query", "q", nil, "execute query non-interactively")
 	cmd.Flags().BoolVarP(&flags.Reverse, "reverse", "r", false, "query range-reads in reverse order")
 	cmd.Flags().BoolVarP(&flags.Strict, "strict", "s", false, "throw an error if a KV is read which doesn't match the schema")
 	cmd.Flags().BoolVarP(&flags.Little, "little", "l", false, "encode/decode values as little endian instead of big endian")

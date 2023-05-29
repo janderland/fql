@@ -34,7 +34,7 @@ var Fdbq = &cobra.Command{
 	Short:   "fdbq is a query language for Foundation DB",
 	Version: Version,
 
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(_ *cobra.Command, _ []string) error {
 		log := zerolog.Nop()
 		if flags.Log {
 			writer := zerolog.ConsoleWriter{Out: os.Stderr}
@@ -52,13 +52,12 @@ var Fdbq = &cobra.Command{
 		}
 
 		app := headless.App{
-			Format: format.New(format.Cfg{
-				PrintBytes: flags.Bytes,
-			}),
-			Flags: *flags,
-			Log:   log,
-			Out:   os.Stdout,
+			Transactor: facade.NewTransactor(db, directory.Root()),
+			Format:     format.New(format.Cfg{PrintBytes: flags.Bytes}),
+			Flags:      *flags,
+			Log:        log,
+			Out:        os.Stdout,
 		}
-		return app.Run(context.Background(), facade.NewTransactor(db, directory.Root()), args)
+		return app.Run(context.Background(), flags.Queries)
 	},
 }

@@ -21,14 +21,15 @@ import (
 )
 
 type App struct {
-	Format format.Format
-	Flags  flag.Flags
-	Log    zerolog.Logger
-	Out    io.Writer
+	Transactor facade.Transactor
+	Format     format.Format
+	Flags      flag.Flags
+	Log        zerolog.Logger
+	Out        io.Writer
 }
 
-func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
-	eg := engine.New(db, engine.ByteOrder(x.Flags.ByteOrder()), engine.Logger(x.Log))
+func (x *App) Run(ctx context.Context, queries []string) error {
+	eg := engine.New(x.Transactor, engine.ByteOrder(x.Flags.ByteOrder()), engine.Logger(x.Log))
 
 	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
