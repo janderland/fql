@@ -7,10 +7,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
-	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
@@ -21,17 +19,14 @@ import (
 )
 
 type App struct {
-	Transactor facade.Transactor
-	Format     format.Format
-	Flags      flag.Flags
-	Log        zerolog.Logger
-	Out        io.Writer
+	Engine engine.Engine
+	Format format.Format
+	Flags  flag.Flags
+	Out    io.Writer
 }
 
 func (x *App) Run(ctx context.Context, queries []string) error {
-	eg := engine.New(x.Transactor, engine.ByteOrder(x.Flags.ByteOrder()), engine.Logger(x.Log))
-
-	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
+	_, err := x.Engine.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
 			p := parser.New(scanner.New(strings.NewReader(str)))
 			query, err := p.Parse()

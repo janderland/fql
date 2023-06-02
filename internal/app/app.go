@@ -10,8 +10,10 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
+	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
+	"github.com/janderland/fdbq/internal/app/fullscreen"
 	"github.com/janderland/fdbq/internal/app/headless"
 	"github.com/janderland/fdbq/parser/format"
 )
@@ -51,13 +53,30 @@ var Fdbq = &cobra.Command{
 			return errors.Wrap(err, "failed to connect to DB")
 		}
 
-		app := headless.App{
-			Transactor: facade.NewTransactor(db, directory.Root()),
-			Format:     format.New(format.Cfg{PrintBytes: flags.Bytes}),
-			Flags:      *flags,
-			Log:        log,
-			Out:        os.Stdout,
+		eg := engine.New(
+			facade.NewTransactor(db, directory.Root()),
+			engine.ByteOrder(flags.ByteOrder()),
+			engine.Logger(log),
+		)
+
+		kvFmt := format.New(format.Cfg{PrintBytes: flags.Bytes})
+
+		if len(flags.Queries) != 0 {
+			app := headless.App{
+				Engine: eg,
+				Format: kvFmt,
+				Flags:  *flags,
+				Out:    os.Stdout,
+			}
+			return app.Run(context.Background(), flags.Queries)
 		}
-		return app.Run(context.Background(), flags.Queries)
+		app := fullscreen.App{
+			Engine: eg,
+			Format: kvFmt,
+			Flags:  *flags,
+			Log:    log,
+			Out:    os.Stdout,
+		}
+		return app.Run(context.Background())
 	},
 }

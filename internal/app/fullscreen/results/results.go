@@ -85,10 +85,10 @@ type Model struct {
 	endCursor *list.Element
 }
 
-func New() Model {
+func New(kvFmt format.Format) Model {
 	return Model{
 		keyMap:  defaultKeyMap(),
-		format:  format.New(format.Cfg{}),
+		format:  kvFmt,
 		builder: &strings.Builder{},
 		list:    list.New(),
 	}

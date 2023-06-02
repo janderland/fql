@@ -1,76 +1,46 @@
-package main
+package fullscreen
 
 import (
 	"context"
-	"log"
+	"io"
 	"strings"
 	"time"
 
-	"github.com/apple/foundationdb/bindings/go/src/fdb"
-	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	lip "github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
+	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
-	"github.com/janderland/fdbq/engine/facade"
+	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/janderland/fdbq/internal/app/fullscreen/buffer"
 	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
 	"github.com/janderland/fdbq/parser"
+	"github.com/janderland/fdbq/parser/format"
 	"github.com/janderland/fdbq/parser/scanner"
 )
 
-func main() {
-	if err := fdb.APIVersion(620); err != nil {
-		panic(err)
-	}
-
-	db, err := fdb.OpenDefault()
-	if err != nil {
-		panic(err)
-	}
-
-	eg := engine.New(facade.NewTransactor(db, directory.Root()))
-
-	/*
-		file, err := tea.LogToFile("log.txt", "fdbq")
-		if err != nil {
-			panic(err)
-		}
-		defer func() {
-			if err := file.Close(); err != nil {
-				fmt.Println(errors.Wrap(err, "failed to close log file"))
-			}
-		}()
-	*/
-
-	p := tea.NewProgram(newModel(eg), tea.WithAltScreen())
-	if _, err := p.Run(); err != nil {
-		log.Fatal(err)
-	}
+type App struct {
+	Engine engine.Engine
+	Format format.Format
+	Flags  flag.Flags
+	Log    zerolog.Logger
+	Out    io.Writer
 }
 
-type Style struct {
-	results lip.Style
-	input   lip.Style
-}
-
-type Model struct {
-	style   Style
-	results results.Model
-	input   textinput.Model
-	eg      engine.Engine
-}
-
-func newModel(eg engine.Engine) Model {
+func (x *App) Run(ctx context.Context) error {
 	input := textinput.New()
 	input.Placeholder = "Query"
 	input.Focus()
 
-	return Model{
+	model := Model{
+		eg:    x.Engine,
+		log:   x.Log,
+		flags: x.Flags,
+
 		style: Style{
 			results: lip.NewStyle().
 				Border(lip.RoundedBorder()).
@@ -80,10 +50,32 @@ func newModel(eg engine.Engine) Model {
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
 		},
-		results: results.New(),
+		results: results.New(x.Format),
 		input:   input,
-		eg:      eg,
 	}
+
+	_, err := tea.NewProgram(
+		model,
+		tea.WithContext(ctx),
+		tea.WithOutput(x.Out),
+		tea.WithAltScreen(),
+	).Run()
+	return err
+}
+
+type Style struct {
+	results lip.Style
+	input   lip.Style
+}
+
+type Model struct {
+	eg    engine.Engine
+	log   zerolog.Logger
+	flags flag.Flags
+
+	style   Style
+	results results.Model
+	input   textinput.Model
 }
 
 func (x Model) Init() tea.Cmd {
