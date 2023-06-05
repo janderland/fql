@@ -1,7 +1,7 @@
 package app
 
 import (
-	"context"
+	"io"
 	"os"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -32,16 +32,14 @@ func init() {
 }
 
 var Fdbq = &cobra.Command{
-	Use:     "fdbq [flags] query ...",
+	Use:     "fdbq [flags]",
 	Short:   "fdbq is a query language for Foundation DB",
 	Version: Version,
 
-	RunE: func(_ *cobra.Command, _ []string) error {
-		log := zerolog.Nop()
-		if flags.Log {
-			writer := zerolog.ConsoleWriter{Out: os.Stderr}
-			writer.FormatLevel = func(_ interface{}) string { return "" }
-			log = zerolog.New(writer).With().Timestamp().Logger()
+	RunE: func(cmd *cobra.Command, _ []string) error {
+		log, err := logger()
+		if err != nil {
+			return err
 		}
 
 		log.Log().Str("cluster file", flags.Cluster).Msg("connecting to DB")
@@ -58,25 +56,49 @@ var Fdbq = &cobra.Command{
 			engine.ByteOrder(flags.ByteOrder()),
 			engine.Logger(log),
 		)
+		fmt := format.New(flags.FormatCfg())
+		out := os.Stdout
 
-		kvFmt := format.New(format.Cfg{PrintBytes: flags.Bytes})
-
-		if len(flags.Queries) != 0 {
+		if !flags.Fullscreen() {
 			app := headless.App{
 				Engine: eg,
-				Format: kvFmt,
-				Flags:  *flags,
-				Out:    os.Stdout,
+				Format: fmt,
+				Out:    out,
+
+				Write:      flags.Write,
+				SingleOpts: flags.SingleOpts(),
+				RangeOpts:  flags.RangeOpts(),
 			}
-			return app.Run(context.Background(), flags.Queries)
+			return app.Run(cmd.Context(), flags.Queries)
 		}
 		app := fullscreen.App{
 			Engine: eg,
-			Format: kvFmt,
-			Flags:  *flags,
+			Format: fmt,
 			Log:    log,
-			Out:    os.Stdout,
+			Out:    out,
 		}
-		return app.Run(context.Background())
+		return app.Run(cmd.Context())
 	},
+}
+
+func logger() (zerolog.Logger, error) {
+	if !flags.Log {
+		return zerolog.Nop(), nil
+	}
+
+	var writer io.Writer
+	if flags.Fullscreen() {
+		writer = zerolog.ConsoleWriter{
+			Out:         os.Stderr,
+			FormatLevel: func(_ interface{}) string { return "" },
+		}
+	} else {
+		file, err := os.Open("log.txt")
+		if err != nil {
+			return zerolog.Nop(), errors.Wrap(err, "failed to open logging file")
+		}
+		writer = file
+	}
+
+	return zerolog.New(writer).With().Timestamp().Logger(), nil
 }

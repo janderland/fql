@@ -13,7 +13,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
-	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/janderland/fdbq/internal/app/fullscreen/buffer"
 	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/keyval"
@@ -26,7 +25,6 @@ import (
 type App struct {
 	Engine engine.Engine
 	Format format.Format
-	Flags  flag.Flags
 	Log    zerolog.Logger
 	Out    io.Writer
 }
@@ -37,9 +35,8 @@ func (x *App) Run(ctx context.Context) error {
 	input.Focus()
 
 	model := Model{
-		eg:    x.Engine,
-		log:   x.Log,
-		flags: x.Flags,
+		eg:  x.Engine,
+		log: x.Log,
 
 		style: Style{
 			results: lip.NewStyle().
@@ -69,9 +66,8 @@ type Style struct {
 }
 
 type Model struct {
-	eg    engine.Engine
-	log   zerolog.Logger
-	flags flag.Flags
+	eg  engine.Engine
+	log zerolog.Logger
 
 	style   Style
 	results results.Model

@@ -2,11 +2,26 @@ package flag
 
 import (
 	"encoding/binary"
+	"io"
 
+	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/janderland/fdbq/engine"
+	"github.com/janderland/fdbq/parser/format"
 )
+
+type App struct {
+	Engine engine.Engine
+	Format format.Format
+	Log    zerolog.Logger
+	Out    io.Writer
+
+	Write      bool
+	Order      binary.ByteOrder
+	SingleOpts engine.SingleOpts
+	RangeOpts  engine.RangeOpts
+}
 
 type Flags struct {
 	Cluster string
@@ -57,4 +72,14 @@ func (x *Flags) RangeOpts() engine.RangeOpts {
 		Filter:  !x.Strict,
 		Limit:   x.Limit,
 	}
+}
+
+func (x *Flags) FormatCfg() format.Cfg {
+	return format.Cfg{
+		PrintBytes: x.Bytes,
+	}
+}
+
+func (x *Flags) Fullscreen() bool {
+	return len(x.Queries) == 0
 }
