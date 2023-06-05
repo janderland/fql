@@ -88,16 +88,16 @@ func logger() (zerolog.Logger, error) {
 
 	var writer io.Writer
 	if flags.Fullscreen() {
-		writer = zerolog.ConsoleWriter{
-			Out:         os.Stderr,
-			FormatLevel: func(_ interface{}) string { return "" },
-		}
-	} else {
-		file, err := os.Open("log.txt")
+		file, err := os.Create("log.txt")
 		if err != nil {
 			return zerolog.Nop(), errors.Wrap(err, "failed to open logging file")
 		}
 		writer = file
+	} else {
+		writer = zerolog.ConsoleWriter{
+			Out:         os.Stderr,
+			FormatLevel: func(_ interface{}) string { return "" },
+		}
 	}
 
 	return zerolog.New(writer).With().Timestamp().Logger(), nil
