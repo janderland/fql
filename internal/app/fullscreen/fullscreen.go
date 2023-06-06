@@ -12,7 +12,6 @@ import (
 	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
-	"github.com/janderland/fdbq/internal/app/fullscreen/buffer"
 	"github.com/janderland/fdbq/internal/app/fullscreen/manager"
 	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/keyval"
@@ -68,9 +67,10 @@ func (x *App) Run(ctx context.Context) error {
 }
 
 type Model struct {
-	qm   manager.QueryManager
-	log  zerolog.Logger
-	mode Mode
+	qm     manager.QueryManager
+	log    zerolog.Logger
+	mode   Mode
+	latest time.Time
 
 	border  Border
 	results results.Model
@@ -104,6 +104,9 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		case tea.KeyCtrlC:
 			return x, tea.Quit
 
+		case tea.KeyEnter:
+			return x, x.qm.Query(x.input.Value())
+
 		case tea.KeyRunes:
 			if msg.String() == "i" && x.mode == Scroll {
 				x.mode = Input
@@ -117,14 +120,18 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				x.input.Blur()
 				return x, nil
 			}
-
-		case tea.KeyEnter:
-			x.results.Reset()
-			return x, x.qm.Query(x.input.Value())
 		}
 
-	case buffer.StreamBuffer:
-		buf, done := msg.Get()
+	case manager.AsyncQueryMsg:
+		if x.latest.After(msg.StartedAt) {
+			return x, nil
+		}
+		if x.latest.Before(msg.StartedAt) {
+			x.results.Reset()
+		}
+		x.latest = msg.StartedAt
+
+		buf, done := msg.Buffer.Get()
 		x.results.PushMany(buf)
 		if !done {
 			return x, tea.Tick(50*time.Millisecond, func(_ time.Time) tea.Msg {
@@ -134,6 +141,7 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return x, nil
 
 	case error, string, keyval.KeyValue:
+		x.results.Reset()
 		x.results.Push(msg)
 		return x, nil
 

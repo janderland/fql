@@ -3,6 +3,7 @@ package manager
 import (
 	"context"
 	"strings"
+	"time"
 
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/pkg/errors"
@@ -14,6 +15,11 @@ import (
 	"github.com/janderland/fdbq/parser"
 	"github.com/janderland/fdbq/parser/scanner"
 )
+
+type AsyncQueryMsg struct {
+	StartedAt time.Time
+	Buffer    buffer.StreamBuffer
+}
 
 type QueryManager struct {
 	eg         engine.Engine
@@ -44,7 +50,10 @@ func (x *QueryManager) Query(str string) func() tea.Msg {
 		}
 
 		if query, ok := query.(keyval.Directory); ok {
-			return buffer.New(x.eg.Directories(x.newChildCtx(), query))
+			return AsyncQueryMsg{
+				StartedAt: time.Now(),
+				Buffer:    buffer.New(x.eg.Directories(x.newChildCtx(), query)),
+			}
 		}
 
 		var kv keyval.KeyValue
@@ -78,7 +87,10 @@ func (x *QueryManager) Query(str string) func() tea.Msg {
 			return *out
 
 		case class.ReadRange:
-			return buffer.New(x.eg.ReadRange(x.newChildCtx(), kv, x.rangeOpts))
+			return AsyncQueryMsg{
+				StartedAt: time.Now(),
+				Buffer:    buffer.New(x.eg.ReadRange(x.newChildCtx(), kv, x.rangeOpts)),
+			}
 
 		default:
 			return errors.Errorf("unexpected query class '%v'", c)
