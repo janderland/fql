@@ -3,24 +3,20 @@ package fullscreen
 import (
 	"context"
 	"io"
-	"strings"
 	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	lip "github.com/charmbracelet/lipgloss"
-	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/internal/app/fullscreen/buffer"
+	"github.com/janderland/fdbq/internal/app/fullscreen/manager"
 	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/keyval/class"
-	"github.com/janderland/fdbq/parser"
 	"github.com/janderland/fdbq/parser/format"
-	"github.com/janderland/fdbq/parser/scanner"
 )
 
 type App struct {
@@ -28,6 +24,10 @@ type App struct {
 	Format format.Format
 	Log    zerolog.Logger
 	Out    io.Writer
+
+	Write      bool
+	SingleOpts engine.SingleOpts
+	RangeOpts  engine.RangeOpts
 }
 
 func (x *App) Run(ctx context.Context) error {
@@ -36,7 +36,12 @@ func (x *App) Run(ctx context.Context) error {
 	input.Focus()
 
 	model := Model{
-		eg:   x.Engine,
+		qm: manager.New(
+			ctx,
+			x.Engine,
+			x.SingleOpts,
+			x.RangeOpts),
+
 		log:  x.Log,
 		mode: Input,
 
@@ -63,7 +68,7 @@ func (x *App) Run(ctx context.Context) error {
 }
 
 type Model struct {
-	eg   engine.Engine
+	qm   manager.QueryManager
 	log  zerolog.Logger
 	mode Mode
 
@@ -115,7 +120,7 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 		case tea.KeyEnter:
 			x.results.Reset()
-			return x, doQuery(x.eg, x.input.Value())
+			return x, x.qm.Query(x.input.Value())
 		}
 
 	case buffer.StreamBuffer:
@@ -187,55 +192,4 @@ func (x Model) View() string {
 		x.border.results.Render(x.results.View()),
 		x.border.input.Render(x.input.View()),
 	)
-}
-
-func doQuery(eg engine.Engine, str string) func() tea.Msg {
-	return func() tea.Msg {
-		p := parser.New(scanner.New(strings.NewReader(str)))
-		query, err := p.Parse()
-		if err != nil {
-			return err
-		}
-
-		if query, ok := query.(keyval.Directory); ok {
-			return buffer.New(eg.Directories(context.Background(), query))
-		}
-
-		var kv keyval.KeyValue
-		if key, ok := query.(keyval.Key); ok {
-			kv = keyval.KeyValue{Key: key, Value: keyval.Variable{}}
-		} else {
-			kv = query.(keyval.KeyValue)
-		}
-
-		switch c := class.Classify(kv); c {
-		case class.Constant:
-			if err := eg.Set(kv); err != nil {
-				return err
-			}
-			return "key set"
-
-		case class.Clear:
-			if err := eg.Clear(kv); err != nil {
-				return err
-			}
-			return "key cleared"
-
-		case class.ReadSingle:
-			out, err := eg.ReadSingle(kv, engine.SingleOpts{})
-			if err != nil {
-				return err
-			}
-			if out == nil {
-				return "no results"
-			}
-			return *out
-
-		case class.ReadRange:
-			return buffer.New(eg.ReadRange(context.Background(), kv, engine.RangeOpts{}))
-
-		default:
-			return errors.Errorf("unexpected query class '%v'", c)
-		}
-	}
 }

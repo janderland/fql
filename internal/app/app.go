@@ -54,8 +54,8 @@ var Fdbq = &cobra.Command{
 		eg := engine.New(
 			facade.NewTransactor(db, directory.Root()),
 			engine.ByteOrder(flags.ByteOrder()),
-			engine.Logger(log),
-		)
+			engine.Logger(log))
+
 		fmt := format.New(flags.FormatCfg())
 		out := os.Stdout
 
@@ -76,6 +76,10 @@ var Fdbq = &cobra.Command{
 			Format: fmt,
 			Log:    log,
 			Out:    out,
+
+			Write:      flags.Write,
+			SingleOpts: flags.SingleOpts(),
+			RangeOpts:  flags.RangeOpts(),
 		}
 		return app.Run(cmd.Context())
 	},
