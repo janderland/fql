@@ -136,6 +136,28 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return x.updateSize(msg), nil
 	}
 
+	return x.updateChildren(msg)
+}
+
+func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
+	const inputLine = 1
+	const cursorChar = 1
+	inputHeight := x.border.input.GetVerticalFrameSize() + inputLine
+
+	x.border.results.Height(msg.Height - x.border.results.GetVerticalFrameSize() - inputHeight)
+	x.border.results.Width(msg.Width - x.border.results.GetHorizontalFrameSize())
+
+	// TODO: I don't know why this +2 is needed.
+	x.results.Height(x.border.results.GetHeight() - x.border.results.GetVerticalFrameSize() + 2)
+
+	// TODO: I think -2 is due to a bug with how the textinput bubble renders padding.
+	x.input.Width = msg.Width - x.border.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
+	x.border.input.Width(msg.Width - x.border.input.GetHorizontalFrameSize())
+
+	return x
+}
+
+func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -158,24 +180,6 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		x.results = x.results.Update(msg)
 		return x, cmd
 	}
-}
-
-func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
-	const inputLine = 1
-	const cursorChar = 1
-	inputHeight := x.border.input.GetVerticalFrameSize() + inputLine
-
-	x.border.results.Height(msg.Height - x.border.results.GetVerticalFrameSize() - inputHeight)
-	x.border.results.Width(msg.Width - x.border.results.GetHorizontalFrameSize())
-
-	// TODO: I don't know why this +2 is needed.
-	x.results.Height(x.border.results.GetHeight() - x.border.results.GetVerticalFrameSize() + 2)
-
-	// TODO: I think -2 is due to a bug with how the textinput bubble renders padding.
-	x.input.Width = msg.Width - x.border.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
-	x.border.input.Width(msg.Width - x.border.input.GetHorizontalFrameSize())
-
-	return x
 }
 
 func (x Model) View() string {
