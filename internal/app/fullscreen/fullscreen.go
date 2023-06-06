@@ -36,10 +36,11 @@ func (x *App) Run(ctx context.Context) error {
 	input.Focus()
 
 	model := Model{
-		eg:  x.Engine,
-		log: x.Log,
+		eg:   x.Engine,
+		log:  x.Log,
+		mode: Input,
 
-		style: Style{
+		border: Border{
 			results: lip.NewStyle().
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
@@ -61,18 +62,26 @@ func (x *App) Run(ctx context.Context) error {
 	return err
 }
 
-type Style struct {
-	results lip.Style
-	input   lip.Style
-}
-
 type Model struct {
-	eg  engine.Engine
-	log zerolog.Logger
+	eg   engine.Engine
+	log  zerolog.Logger
+	mode Mode
 
-	style   Style
+	border  Border
 	results results.Model
 	input   textinput.Model
+}
+
+type Mode int
+
+const (
+	Input Mode = iota
+	Scroll
+)
+
+type Border struct {
+	results lip.Style
+	input   lip.Style
 }
 
 func (x Model) Init() tea.Cmd {
@@ -89,6 +98,20 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyCtrlC:
 			return x, tea.Quit
+
+		case tea.KeyRunes:
+			if msg.String() == "i" && x.mode == Scroll {
+				x.mode = Input
+				x.input.Focus()
+				return x, textinput.Blink
+			}
+
+		case tea.KeyEscape:
+			if x.mode == Input {
+				x.mode = Scroll
+				x.input.Blur()
+				return x, nil
+			}
 
 		case tea.KeyEnter:
 			x.results.Reset()
@@ -112,29 +135,47 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		const inputLine = 1
 		const cursorChar = 1
-		inputHeight := x.style.input.GetVerticalFrameSize() + inputLine
+		inputHeight := x.border.input.GetVerticalFrameSize() + inputLine
 
-		x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
-		x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
+		x.border.results.Height(msg.Height - x.border.results.GetVerticalFrameSize() - inputHeight)
+		x.border.results.Width(msg.Width - x.border.results.GetHorizontalFrameSize())
 
 		// TODO: I don't know why this +2 is needed.
-		x.results.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize() + 2)
+		x.results.Height(x.border.results.GetHeight() - x.border.results.GetVerticalFrameSize() + 2)
 
 		// TODO: I think -2 is due to a bug with how the textinput bubble renders padding.
-		x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
-		x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
+		x.input.Width = msg.Width - x.border.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
+		x.border.input.Width(msg.Width - x.border.input.GetHorizontalFrameSize())
 	}
 
 	var cmd tea.Cmd
-	x.input, cmd = x.input.Update(msg)
-	x.results = x.results.Update(msg)
-	return x, cmd
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.Type {
+		case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
+			x.results = x.results.Update(msg)
+			return x, nil
+		}
+
+		switch x.mode {
+		case Input:
+			x.input, cmd = x.input.Update(msg)
+		case Scroll:
+			x.results = x.results.Update(msg)
+		}
+		return x, cmd
+
+	default:
+		x.input, cmd = x.input.Update(msg)
+		x.results = x.results.Update(msg)
+		return x, cmd
+	}
 }
 
 func (x Model) View() string {
 	return lip.JoinVertical(lip.Left,
-		x.style.results.Render(x.results.View()),
-		x.style.input.Render(x.input.View()),
+		x.border.results.Render(x.results.View()),
+		x.border.input.Render(x.input.View()),
 	)
 }
 
