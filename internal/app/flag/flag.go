@@ -2,26 +2,12 @@ package flag
 
 import (
 	"encoding/binary"
-	"io"
 
-	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/parser/format"
 )
-
-type App struct {
-	Engine engine.Engine
-	Format format.Format
-	Log    zerolog.Logger
-	Out    io.Writer
-
-	Write      bool
-	Order      binary.ByteOrder
-	SingleOpts engine.SingleOpts
-	RangeOpts  engine.RangeOpts
-}
 
 type Flags struct {
 	Cluster string
