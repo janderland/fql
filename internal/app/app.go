@@ -20,10 +20,14 @@ import (
 )
 
 var (
-	// Version is meant to be set via build flags
-	// and defines the version printed for the
+	// Version can be set via build flags and
+	// defines the version printed for the
 	// `-v` flag.
 	Version string
+
+	// APIVersion can be set via the build flags
+	// and defines the API version FDB uses.
+	APIVersion = 620
 
 	flags *flag.Flags
 )
@@ -37,7 +41,11 @@ var Fdbq = &cobra.Command{
 	Short:   "fdbq is a query language for Foundation DB",
 	Version: Version,
 
-	RunE: func(cmd *cobra.Command, _ []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.New("unexpected positional args")
+		}
+
 		log := zerolog.Nop()
 		if flags.Log {
 			var writer io.Writer = zerolog.ConsoleWriter{
@@ -60,7 +68,7 @@ var Fdbq = &cobra.Command{
 		}
 
 		log.Log().Str("cluster file", flags.Cluster).Msg("connecting to DB")
-		if err := fdb.APIVersion(620); err != nil {
+		if err := fdb.APIVersion(APIVersion); err != nil {
 			return errors.Wrap(err, "failed to set FDB API version")
 		}
 		db, err := fdb.OpenDatabase(flags.Cluster)
@@ -76,28 +84,28 @@ var Fdbq = &cobra.Command{
 		fmt := format.New(flags.FormatCfg())
 		out := os.Stdout
 
-		if !flags.Fullscreen() {
-			app := headless.App{
+		if flags.Fullscreen() {
+			app := fullscreen.App{
 				Engine: eg,
 				Format: fmt,
+				Log:    log,
 				Out:    out,
 
 				Write:      flags.Write,
 				SingleOpts: flags.SingleOpts(),
 				RangeOpts:  flags.RangeOpts(),
 			}
-			return app.Run(cmd.Context(), flags.Queries)
+			return app.Run(cmd.Context())
 		}
-		app := fullscreen.App{
+		app := headless.App{
 			Engine: eg,
 			Format: fmt,
-			Log:    log,
 			Out:    out,
 
 			Write:      flags.Write,
 			SingleOpts: flags.SingleOpts(),
 			RangeOpts:  flags.RangeOpts(),
 		}
-		return app.Run(cmd.Context())
+		return app.Run(cmd.Context(), flags.Queries)
 	},
 }

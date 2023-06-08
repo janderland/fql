@@ -21,23 +21,45 @@ type AsyncQueryMsg struct {
 	Buffer    buffer.StreamBuffer
 }
 
+type Option func(*QueryManager)
+
 type QueryManager struct {
 	eg         engine.Engine
 	singleOpts engine.SingleOpts
 	rangeOpts  engine.RangeOpts
+	write      bool
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
-func New(ctx context.Context, eg engine.Engine, singleOpts engine.SingleOpts, rangeOpts engine.RangeOpts) QueryManager {
-	return QueryManager{
-		eg:         eg,
-		singleOpts: singleOpts,
-		rangeOpts:  rangeOpts,
-
+func New(ctx context.Context, eg engine.Engine, opts ...Option) QueryManager {
+	x := QueryManager{
+		eg:     eg,
 		ctx:    ctx,
 		cancel: func() {},
+	}
+	for _, option := range opts {
+		option(&x)
+	}
+	return x
+}
+
+func WithSingleOpts(opts engine.SingleOpts) Option {
+	return func(x *QueryManager) {
+		x.singleOpts = opts
+	}
+}
+
+func WithRangeOpts(opts engine.RangeOpts) Option {
+	return func(x *QueryManager) {
+		x.rangeOpts = opts
+	}
+}
+
+func WithWrite(write bool) Option {
+	return func(x *QueryManager) {
+		x.write = write
 	}
 }
 

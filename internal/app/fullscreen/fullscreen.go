@@ -38,8 +38,9 @@ func (x *App) Run(ctx context.Context) error {
 		qm: manager.New(
 			ctx,
 			x.Engine,
-			x.SingleOpts,
-			x.RangeOpts),
+			manager.WithSingleOpts(x.SingleOpts),
+			manager.WithRangeOpts(x.RangeOpts),
+			manager.WithWrite(x.Write)),
 
 		log:  x.Log,
 		mode: Input,
@@ -128,8 +129,8 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 		if x.latest.Before(msg.StartedAt) {
 			x.results.Reset()
+			x.latest = msg.StartedAt
 		}
-		x.latest = msg.StartedAt
 
 		buf, done := msg.Buffer.Get()
 		x.results.PushMany(buf)
