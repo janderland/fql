@@ -42,6 +42,13 @@ func New(ctx context.Context, eg engine.Engine, singleOpts engine.SingleOpts, ra
 }
 
 func (x *QueryManager) Query(str string) func() tea.Msg {
+	// Cancel previous query before starting a new one.
+	x.cancel()
+
+	// Create a new context for the new query.
+	var childCtx context.Context
+	childCtx, x.cancel = context.WithCancel(x.ctx)
+
 	return func() tea.Msg {
 		p := parser.New(scanner.New(strings.NewReader(str)))
 		query, err := p.Parse()
@@ -52,7 +59,7 @@ func (x *QueryManager) Query(str string) func() tea.Msg {
 		if query, ok := query.(keyval.Directory); ok {
 			return AsyncQueryMsg{
 				StartedAt: time.Now(),
-				Buffer:    buffer.New(x.eg.Directories(x.newChildCtx(), query)),
+				Buffer:    buffer.New(x.eg.Directories(childCtx, query)),
 			}
 		}
 
@@ -89,20 +96,11 @@ func (x *QueryManager) Query(str string) func() tea.Msg {
 		case class.ReadRange:
 			return AsyncQueryMsg{
 				StartedAt: time.Now(),
-				Buffer:    buffer.New(x.eg.ReadRange(x.newChildCtx(), kv, x.rangeOpts)),
+				Buffer:    buffer.New(x.eg.ReadRange(childCtx, kv, x.rangeOpts)),
 			}
 
 		default:
 			return errors.Errorf("unexpected query class '%v'", c)
 		}
 	}
-}
-
-func (x *QueryManager) newChildCtx() context.Context {
-	// Cancel the old child before creating a new one.
-	x.cancel()
-
-	var ctx context.Context
-	ctx, x.cancel = context.WithCancel(x.ctx)
-	return ctx
 }
