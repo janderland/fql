@@ -94,12 +94,18 @@ func (x *QueryManager) Query(str string) func() tea.Msg {
 
 		switch c := class.Classify(kv); c {
 		case class.Constant:
+			if !x.write {
+				return errors.New("writing isn't enabled")
+			}
 			if err := x.eg.Set(kv); err != nil {
 				return err
 			}
 			return "key set"
 
 		case class.Clear:
+			if !x.write {
+				return errors.New("writing isn't enabled")
+			}
 			if err := x.eg.Clear(kv); err != nil {
 				return err
 			}
