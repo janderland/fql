@@ -45,7 +45,7 @@ var Fdbq = &cobra.Command{
 				FormatLevel: func(_ interface{}) string { return "" },
 			}
 			if flags.Fullscreen() {
-				file, err := os.Create("log.txt")
+				file, err := os.Create(flags.LogFile)
 				if err != nil {
 					return errors.Wrap(err, "failed to open logging file")
 				}

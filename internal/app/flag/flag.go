@@ -13,6 +13,7 @@ type Flags struct {
 	Cluster string
 	Write   bool
 	Log     bool
+	LogFile string
 
 	Queries []string
 	Reverse bool
@@ -28,6 +29,7 @@ func SetupFlags(cmd *cobra.Command) *Flags {
 	cmd.Flags().StringVarP(&flags.Cluster, "cluster", "c", "", "path to cluster file")
 	cmd.Flags().BoolVarP(&flags.Write, "write", "w", false, "allow write queries")
 	cmd.Flags().BoolVar(&flags.Log, "log", false, "perform debug logging")
+	cmd.Flags().StringVar(&flags.LogFile, "log-file", "log.txt", "logging file when in fullscreen")
 
 	cmd.Flags().StringArrayVarP(&flags.Queries, "query", "q", nil, "execute query non-interactively")
 	cmd.Flags().BoolVarP(&flags.Reverse, "reverse", "r", false, "query range-reads in reverse order")
