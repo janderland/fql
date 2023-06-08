@@ -1,6 +1,7 @@
 package app
 
 import (
+	"fmt"
 	"io"
 	"os"
 
@@ -37,9 +38,25 @@ var Fdbq = &cobra.Command{
 	Version: Version,
 
 	RunE: func(cmd *cobra.Command, _ []string) error {
-		log, err := logger()
-		if err != nil {
-			return err
+		log := zerolog.Nop()
+		if flags.Log {
+			var writer io.Writer = zerolog.ConsoleWriter{
+				Out:         os.Stderr,
+				FormatLevel: func(_ interface{}) string { return "" },
+			}
+			if flags.Fullscreen() {
+				file, err := os.Create("log.txt")
+				if err != nil {
+					return errors.Wrap(err, "failed to open logging file")
+				}
+				defer func() {
+					if err := file.Close(); err != nil {
+						fmt.Println(errors.Wrap(err, "failed to close logging file"))
+					}
+				}()
+				writer = file
+			}
+			log = zerolog.New(writer).With().Timestamp().Logger()
 		}
 
 		log.Log().Str("cluster file", flags.Cluster).Msg("connecting to DB")
@@ -83,26 +100,4 @@ var Fdbq = &cobra.Command{
 		}
 		return app.Run(cmd.Context())
 	},
-}
-
-func logger() (zerolog.Logger, error) {
-	if !flags.Log {
-		return zerolog.Nop(), nil
-	}
-
-	var writer io.Writer
-	if flags.Fullscreen() {
-		file, err := os.Create("log.txt")
-		if err != nil {
-			return zerolog.Nop(), errors.Wrap(err, "failed to open logging file")
-		}
-		writer = file
-	} else {
-		writer = zerolog.ConsoleWriter{
-			Out:         os.Stderr,
-			FormatLevel: func(_ interface{}) string { return "" },
-		}
-	}
-
-	return zerolog.New(writer).With().Timestamp().Logger(), nil
 }
