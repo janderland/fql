@@ -5,47 +5,48 @@ import (
 	"os"
 	"testing"
 
-	"github.com/janderland/fdbq/engine/facade"
-	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 	"github.com/stretchr/testify/require"
+
+	"github.com/janderland/fdbq/engine"
+	"github.com/janderland/fdbq/engine/facade"
 )
 
 func TestHeadless_Query(t *testing.T) {
 	tests := []struct {
 		name    string
-		flags   flag.Flags
+		write   bool
 		queries []string
 		err     bool
 	}{
 		{
 			name:    "set",
-			flags:   flag.Flags{Write: true},
+			write:   true,
 			queries: []string{"/my/dir{\"hi\",\"there\"}=33.9"},
 			err:     false,
 		},
 		{
 			name:    "set error",
-			flags:   flag.Flags{Write: false},
+			write:   false,
 			queries: []string{"/my/dir{\"hi\",\"there\"}=33.9"},
 			err:     true,
 		},
 		{
 			name:    "clear",
-			flags:   flag.Flags{Write: true},
+			write:   true,
 			queries: []string{"/my/dir{\"hi\",\"there\"}=clear"},
 			err:     false,
 		},
 		{
 			name:    "clear error",
-			flags:   flag.Flags{Write: false},
+			write:   false,
 			queries: []string{"/my/dir{\"hi\",\"there\"}=clear"},
 			err:     true,
 		},
 		{
 			name:    "get nothing",
-			flags:   flag.Flags{},
+			write:   false,
 			queries: []string{"/nothing/is/here{\"wont\",\"match\"}=<>"},
 			err:     false,
 		},
@@ -53,8 +54,10 @@ func TestHeadless_Query(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
-			testEnv(t, test.flags, func(h App, tr facade.Transactor) {
-				err := h.Run(context.Background(), tr, test.queries)
+			testEnv(t, func(app App) {
+				app.Write = test.write
+
+				err := app.Run(context.Background(), test.queries)
 				if test.err {
 					require.Error(t, err)
 				} else {
@@ -65,7 +68,7 @@ func TestHeadless_Query(t *testing.T) {
 	}
 }
 
-func testEnv(t *testing.T, flags flag.Flags, f func(App, facade.Transactor)) {
+func testEnv(t *testing.T, f func(App)) {
 	writer := zerolog.ConsoleWriter{Out: os.Stdout}
 	writer.FormatLevel = func(_ interface{}) string { return "" }
 	writer.FormatTimestamp = func(_ interface{}) string { return "" }
@@ -75,10 +78,9 @@ func testEnv(t *testing.T, flags flag.Flags, f func(App, facade.Transactor)) {
 	defer closeDV()
 
 	f(App{
-		Flags: flags,
-		Log:   log,
-		Out:   dv,
-	}, facade.NewNilTransactor())
+		Engine: engine.New(facade.NewNilTransactor(), engine.Logger(log)),
+		Out:    dv,
+	})
 }
 
 func devnull(t *testing.T) (*os.File, func()) {

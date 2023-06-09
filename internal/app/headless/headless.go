@@ -7,11 +7,8 @@ import (
 	"strings"
 
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
-	"github.com/janderland/fdbq/engine/facade"
-	"github.com/janderland/fdbq/internal/app/flag"
 	q "github.com/janderland/fdbq/keyval"
 	"github.com/janderland/fdbq/keyval/class"
 	"github.com/janderland/fdbq/keyval/convert"
@@ -21,16 +18,17 @@ import (
 )
 
 type App struct {
+	Engine engine.Engine
 	Format format.Format
-	Flags  flag.Flags
-	Log    zerolog.Logger
 	Out    io.Writer
+
+	Write      bool
+	SingleOpts engine.SingleOpts
+	RangeOpts  engine.RangeOpts
 }
 
-func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) error {
-	eg := engine.New(db, engine.ByteOrder(x.Flags.ByteOrder()), engine.Logger(x.Log))
-
-	_, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
+func (x *App) Run(ctx context.Context, queries []string) error {
+	_, err := x.Engine.Transact(func(eg engine.Engine) (interface{}, error) {
 		for _, str := range queries {
 			p := parser.New(scanner.New(strings.NewReader(str)))
 			query, err := p.Parse()
@@ -83,21 +81,21 @@ func (x *App) Run(ctx context.Context, db facade.Transactor, queries []string) e
 }
 
 func (x *App) set(eg engine.Engine, query q.KeyValue) error {
-	if !x.Flags.Write {
+	if !x.Write {
 		return errors.New("writing isn't enabled")
 	}
 	return eg.Set(query)
 }
 
 func (x *App) clear(eg engine.Engine, query q.KeyValue) error {
-	if !x.Flags.Write {
+	if !x.Write {
 		return errors.New("writing isn't enabled")
 	}
 	return eg.Clear(query)
 }
 
 func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
-	kv, err := eg.ReadSingle(query, x.Flags.SingleOpts())
+	kv, err := eg.ReadSingle(query, x.SingleOpts)
 	if err != nil {
 		return err
 	}
@@ -114,7 +112,7 @@ func (x *App) singleRead(eg engine.Engine, query q.KeyValue) error {
 }
 
 func (x *App) rangeRead(ctx context.Context, eg engine.Engine, query q.KeyValue) error {
-	for kv := range eg.ReadRange(ctx, query, x.Flags.RangeOpts()) {
+	for kv := range eg.ReadRange(ctx, query, x.RangeOpts) {
 		if kv.Err != nil {
 			return kv.Err
 		}

@@ -1,7 +1,8 @@
 package app
 
 import (
-	"context"
+	"fmt"
+	"io"
 	"os"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
@@ -10,17 +11,23 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/spf13/cobra"
 
+	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/internal/app/flag"
+	"github.com/janderland/fdbq/internal/app/fullscreen"
 	"github.com/janderland/fdbq/internal/app/headless"
 	"github.com/janderland/fdbq/parser/format"
 )
 
 var (
-	// Version is meant to be set via build flags
-	// and defines the version printed for the
+	// Version can be set via build flags and
+	// defines the version printed for the
 	// `-v` flag.
 	Version string
+
+	// APIVersion can be set via the build flags
+	// and defines the API version FDB uses.
+	APIVersion = 620
 
 	flags *flag.Flags
 )
@@ -30,20 +37,38 @@ func init() {
 }
 
 var Fdbq = &cobra.Command{
-	Use:     "fdbq [flags] query ...",
+	Use:     "fdbq [flags]",
 	Short:   "fdbq is a query language for Foundation DB",
 	Version: Version,
 
-	RunE: func(_ *cobra.Command, args []string) error {
+	RunE: func(cmd *cobra.Command, args []string) error {
+		if len(args) > 0 {
+			return errors.New("unexpected positional args")
+		}
+
 		log := zerolog.Nop()
 		if flags.Log {
-			writer := zerolog.ConsoleWriter{Out: os.Stderr}
-			writer.FormatLevel = func(_ interface{}) string { return "" }
+			var writer io.Writer = zerolog.ConsoleWriter{
+				Out:         os.Stderr,
+				FormatLevel: func(_ interface{}) string { return "" },
+			}
+			if flags.Fullscreen() {
+				file, err := os.Create(flags.LogFile)
+				if err != nil {
+					return errors.Wrap(err, "failed to open logging file")
+				}
+				defer func() {
+					if err := file.Close(); err != nil {
+						fmt.Println(errors.Wrap(err, "failed to close logging file"))
+					}
+				}()
+				writer = file
+			}
 			log = zerolog.New(writer).With().Timestamp().Logger()
 		}
 
 		log.Log().Str("cluster file", flags.Cluster).Msg("connecting to DB")
-		if err := fdb.APIVersion(620); err != nil {
+		if err := fdb.APIVersion(APIVersion); err != nil {
 			return errors.Wrap(err, "failed to set FDB API version")
 		}
 		db, err := fdb.OpenDatabase(flags.Cluster)
@@ -51,14 +76,36 @@ var Fdbq = &cobra.Command{
 			return errors.Wrap(err, "failed to connect to DB")
 		}
 
-		app := headless.App{
-			Format: format.New(format.Cfg{
-				PrintBytes: flags.Bytes,
-			}),
-			Flags: *flags,
-			Log:   log,
-			Out:   os.Stdout,
+		eg := engine.New(
+			facade.NewTransactor(db, directory.Root()),
+			engine.ByteOrder(flags.ByteOrder()),
+			engine.Logger(log))
+
+		fmt := format.New(flags.FormatCfg())
+		out := os.Stdout
+
+		if flags.Fullscreen() {
+			app := fullscreen.App{
+				Engine: eg,
+				Format: fmt,
+				Log:    log,
+				Out:    out,
+
+				Write:      flags.Write,
+				SingleOpts: flags.SingleOpts(),
+				RangeOpts:  flags.RangeOpts(),
+			}
+			return app.Run(cmd.Context())
 		}
-		return app.Run(context.Background(), facade.NewTransactor(db, directory.Root()), args)
+		app := headless.App{
+			Engine: eg,
+			Format: fmt,
+			Out:    out,
+
+			Write:      flags.Write,
+			SingleOpts: flags.SingleOpts(),
+			RangeOpts:  flags.RangeOpts(),
+		}
+		return app.Run(cmd.Context(), flags.Queries)
 	},
 }

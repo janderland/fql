@@ -6,13 +6,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/janderland/fdbq/engine"
+	"github.com/janderland/fdbq/parser/format"
 )
 
 type Flags struct {
 	Cluster string
 	Write   bool
 	Log     bool
+	LogFile string
 
+	Queries []string
 	Reverse bool
 	Strict  bool
 	Little  bool
@@ -26,7 +29,9 @@ func SetupFlags(cmd *cobra.Command) *Flags {
 	cmd.Flags().StringVarP(&flags.Cluster, "cluster", "c", "", "path to cluster file")
 	cmd.Flags().BoolVarP(&flags.Write, "write", "w", false, "allow write queries")
 	cmd.Flags().BoolVar(&flags.Log, "log", false, "perform debug logging")
+	cmd.Flags().StringVar(&flags.LogFile, "log-file", "log.txt", "logging file when in fullscreen")
 
+	cmd.Flags().StringArrayVarP(&flags.Queries, "query", "q", nil, "execute query non-interactively")
 	cmd.Flags().BoolVarP(&flags.Reverse, "reverse", "r", false, "query range-reads in reverse order")
 	cmd.Flags().BoolVarP(&flags.Strict, "strict", "s", false, "throw an error if a KV is read which doesn't match the schema")
 	cmd.Flags().BoolVarP(&flags.Little, "little", "l", false, "encode/decode values as little endian instead of big endian")
@@ -55,4 +60,14 @@ func (x *Flags) RangeOpts() engine.RangeOpts {
 		Filter:  !x.Strict,
 		Limit:   x.Limit,
 	}
+}
+
+func (x *Flags) FormatCfg() format.Cfg {
+	return format.Cfg{
+		PrintBytes: x.Bytes,
+	}
+}
+
+func (x *Flags) Fullscreen() bool {
+	return len(x.Queries) == 0
 }
