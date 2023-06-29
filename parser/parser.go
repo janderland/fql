@@ -31,6 +31,28 @@ const (
 	stateFinished
 )
 
+type subState int
+
+const (
+	subStateNone subState = iota
+
+	// These substates only occur during
+	// stateString.
+	// subStateStringDir
+	// subStateStringTup
+	// subStateStringVal
+
+	// These substates only occur during
+	// stateTupleHead or stateTupleTail.
+	subStateTupleKey
+	subStateTupleVal
+
+	// These substates only occur during
+	// stateVarHead or stateVarTail.
+	// subStateVarTup
+	// subStateVarVal
+)
+
 type stringState int
 
 const (
@@ -69,6 +91,31 @@ func stateName(state state) string {
 		return fmt.Sprintf("[unknown parser state %v]", state)
 	}
 }
+
+/*
+func subStateName(state subState) string {
+	switch state {
+	case subStateNone:
+		return "None"
+	case subStateStringDir:
+		return "StringDir"
+	case subStateStringTup:
+		return "StringTup"
+	case subStateStringVal:
+		return "StringVal"
+	case subStateTupleKey:
+		return "TupleKey"
+	case subStateTupleVal:
+		return "TupleVal"
+	case subStateVarTup:
+		return "VarTup"
+	case subStateVarVal:
+		return "VarVal"
+	default:
+		return fmt.Sprintf("[unknown parser substate %v]", state)
+	}
+}
+*/
 
 func tokenKindName(kind scanner.TokenKind) string {
 	switch kind {
@@ -152,13 +199,18 @@ func (x *Error) Error() string {
 // Parser obtains tokens from the given [scanner.Scanner]
 // and attempts to parse them into a keyval.Query.
 type Parser struct {
-	scanner scanner.Scanner
-	tokens  []Token
-	state   state
+	scanner  scanner.Scanner
+	tokens   []Token
+	subState subState
+	state    state
 }
 
 func New(s scanner.Scanner) Parser {
-	return Parser{scanner: s}
+	return Parser{
+		scanner:  s,
+		subState: subStateNone,
+		state:    stateInitial,
+	}
 }
 
 // Parse consumes all the tokens from the given
@@ -173,7 +225,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 		// If true, when internal.TupBuilder ends its
 		// root tuple, the tuple is copied into the query's
 		// value. Otherwise, it's copied into the key.
-		valTup bool
+		// valTup bool
 
 		// TODO: Work into the state machine?
 		// If true, stateVarHead & stateVarTail are building
@@ -250,8 +302,8 @@ func (x *Parser) Parse() (keyval.Query, error) {
 
 			case scanner.TokenKindTupStart:
 				x.state = stateTupleHead
+				x.subState = subStateTupleKey
 				tup = internal.TupBuilder{}
-				valTup = false
 
 			case scanner.TokenKindEnd:
 				return kv.Get().Key.Directory, nil
@@ -285,13 +337,18 @@ func (x *Parser) Parse() (keyval.Query, error) {
 
 			case scanner.TokenKindTupEnd:
 				if tup.EndTuple() {
-					if valTup {
+					switch x.subState {
+					case subStateTupleKey:
+						x.state = stateSeparator
+						kv.SetKeyTuple(tup.Get())
+
+					case subStateTupleVal:
 						x.state = stateFinished
 						kv.SetValue(tup.Get())
-						break
+
+					default:
+						return nil, errors.Errorf("unexpected substate '%v' during state '%s'", x.subState, stateName(x.state))
 					}
-					x.state = stateSeparator
-					kv.SetKeyTuple(tup.Get())
 				}
 
 			case scanner.TokenKindVarStart:
@@ -332,12 +389,17 @@ func (x *Parser) Parse() (keyval.Query, error) {
 			switch kind {
 			case scanner.TokenKindTupEnd:
 				if tup.EndTuple() {
-					if valTup {
-						x.state = stateFinished
-						kv.SetValue(tup.Get())
-					} else {
+					switch x.subState {
+					case subStateTupleKey:
 						x.state = stateSeparator
 						kv.SetKeyTuple(tup.Get())
+
+					case subStateTupleVal:
+						x.state = stateFinished
+						kv.SetValue(tup.Get())
+
+					default:
+						return nil, errors.Errorf("unexpected substate '%v' during state '%s'", x.subState, stateName(x.state))
 					}
 				}
 
@@ -373,7 +435,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 			switch kind {
 			case scanner.TokenKindTupStart:
 				x.state = stateTupleHead
-				valTup = true
+				x.subState = subStateTupleVal
 				tup = internal.TupBuilder{}
 
 			case scanner.TokenKindVarStart:
