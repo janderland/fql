@@ -49,8 +49,8 @@ const (
 
 	// These substates only occur during
 	// stateVarHead or stateVarTail.
-	// subStateVarTup
-	// subStateVarVal
+	subStateVarTup
+	subStateVarVal
 )
 
 type stringState int
@@ -231,7 +231,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 		// If true, stateVarHead & stateVarTail are building
 		// a variable for use as a value. Otherwise, the
 		// variable is for use in a tuple.
-		valVar bool
+		// valVar bool
 
 		// TODO: Work into the state machine?
 		// If < 0 then the string is a directory part.
@@ -353,7 +353,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 
 			case scanner.TokenKindVarStart:
 				x.state = stateVarHead
-				valVar = false
+				x.subState = subStateVarTup
 				tup.Append(keyval.Variable{})
 
 			case scanner.TokenKindStrMark:
@@ -440,7 +440,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 
 			case scanner.TokenKindVarStart:
 				x.state = stateVarHead
-				valVar = true
+				x.subState = subStateVarVal
 				kv.SetValue(keyval.Variable{})
 
 			case scanner.TokenKindStrMark:
@@ -529,10 +529,13 @@ func (x *Parser) Parse() (keyval.Query, error) {
 		case stateVarHead:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				if valVar {
-					x.state = stateFinished
-				} else {
+				switch x.subState {
+				case subStateVarTup:
 					x.state = stateTupleTail
+				case subStateVarVal:
+					x.state = stateFinished
+				default:
+					return nil, x.subStateErr()
 				}
 
 			case scanner.TokenKindOther:
@@ -542,14 +545,17 @@ func (x *Parser) Parse() (keyval.Query, error) {
 					return nil, x.withTokens(err)
 				}
 
-				if valVar {
-					if err := kv.AppendToValueVar(v); err != nil {
-						return nil, x.withTokens(errors.Wrap(err, "failed to append to value variable"))
-					}
-				} else {
+				switch x.subState {
+				case subStateVarTup:
 					if err := tup.AppendToLastElemVar(v); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
 					}
+				case subStateVarVal:
+					if err := kv.AppendToValueVar(v); err != nil {
+						return nil, x.withTokens(errors.Wrap(err, "failed to append to value variable"))
+					}
+				default:
+					return nil, x.subStateErr()
 				}
 
 			default:
@@ -562,10 +568,13 @@ func (x *Parser) Parse() (keyval.Query, error) {
 		case stateVarTail:
 			switch kind {
 			case scanner.TokenKindVarEnd:
-				if valVar {
-					x.state = stateFinished
-				} else {
+				switch x.subState {
+				case subStateVarTup:
 					x.state = stateTupleTail
+				case subStateVarVal:
+					x.state = stateFinished
+				default:
+					return nil, x.subStateErr()
 				}
 
 			case scanner.TokenKindVarSep:
@@ -619,6 +628,10 @@ func (x *Parser) withTokens(err error) error {
 			Token: x.scanner.Token(),
 		})
 	}
+}
+
+func (x *Parser) subStateErr() error {
+	return errors.Errorf("unexpected substate '%v' during state '%s'", x.subState, stateName(x.state))
 }
 
 func (x *Parser) escapeErr(token string) error {
