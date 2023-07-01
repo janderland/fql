@@ -38,9 +38,9 @@ const (
 
 	// These substates only occur during
 	// stateString.
-	// subStateStringDir
-	// subStateStringTup
-	// subStateStringVal
+	subStateStringDir
+	subStateStringTup
+	subStateStringVal
 
 	// These substates only occur during
 	// stateTupleHead or stateTupleTail.
@@ -53,6 +53,7 @@ const (
 	subStateVarVal
 )
 
+/*
 type stringState int
 
 const (
@@ -60,6 +61,7 @@ const (
 	stringStateTup
 	stringStateVal
 )
+*/
 
 func stateName(state state) string {
 	switch state {
@@ -92,7 +94,6 @@ func stateName(state state) string {
 	}
 }
 
-/*
 func subStateName(state subState) string {
 	switch state {
 	case subStateNone:
@@ -115,7 +116,6 @@ func subStateName(state subState) string {
 		return fmt.Sprintf("[unknown parser substate %v]", state)
 	}
 }
-*/
 
 func tokenKindName(kind scanner.TokenKind) string {
 	switch kind {
@@ -237,7 +237,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 		// If < 0 then the string is a directory part.
 		// If == 0 then the string is in a tuple.
 		// If > 0 then the string is for a value.
-		stringState stringState
+		// stringState stringState
 	)
 
 	for {
@@ -281,7 +281,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				stringState = stringStateDir
+				x.subState = subStateStringDir
 				kv.AppendPartToDirectory("")
 
 			case scanner.TokenKindOther:
@@ -347,7 +347,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 						kv.SetValue(tup.Get())
 
 					default:
-						return nil, errors.Errorf("unexpected substate '%v' during state '%s'", x.subState, stateName(x.state))
+						return nil, x.subStateErr()
 					}
 				}
 
@@ -358,7 +358,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				stringState = stringStateTup
+				x.subState = subStateStringTup
 				tup.Append(keyval.String(""))
 
 			case scanner.TokenKindWhitespace, scanner.TokenKindNewline:
@@ -399,7 +399,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 						kv.SetValue(tup.Get())
 
 					default:
-						return nil, errors.Errorf("unexpected substate '%v' during state '%s'", x.subState, stateName(x.state))
+						return nil, x.subStateErr()
 					}
 				}
 
@@ -445,7 +445,7 @@ func (x *Parser) Parse() (keyval.Query, error) {
 
 			case scanner.TokenKindStrMark:
 				x.state = stateString
-				stringState = stringStateVal
+				x.subState = subStateStringVal
 				kv.SetValue(keyval.String(""))
 
 			case scanner.TokenKindOther:
@@ -476,18 +476,18 @@ func (x *Parser) Parse() (keyval.Query, error) {
 				return nil, x.withTokens(x.tokenErr(kind))
 
 			case scanner.TokenKindStrMark:
-				switch stringState {
-				case stringStateDir:
+				switch x.subState {
+				case subStateStringDir:
 					x.state = stateDirTail
 
-				case stringStateTup:
+				case subStateStringTup:
 					x.state = stateTupleTail
 
-				case stringStateVal:
+				case subStateStringVal:
 					x.state = stateFinished
 
 				default:
-					return nil, errors.Errorf("unexpected string state '%v'", stringState)
+					return nil, x.subStateErr()
 				}
 
 			default:
@@ -502,24 +502,24 @@ func (x *Parser) Parse() (keyval.Query, error) {
 					}
 				}
 
-				switch stringState {
-				case stringStateDir:
+				switch x.subState {
+				case subStateStringDir:
 					if err := kv.AppendToLastDirPart(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to last directory element"))
 					}
 
-				case stringStateTup:
+				case subStateStringTup:
 					if err := tup.AppendToLastElemStr(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to last tuple element"))
 					}
 
-				case stringStateVal:
+				case subStateStringVal:
 					if err := kv.AppendToValueStr(token); err != nil {
 						return nil, x.withTokens(errors.Wrap(err, "failed to append to value"))
 					}
 
 				default:
-					return nil, errors.Errorf("unexpected string state '%v'", stringState)
+					return nil, x.subStateErr()
 				}
 			}
 
@@ -631,7 +631,7 @@ func (x *Parser) withTokens(err error) error {
 }
 
 func (x *Parser) subStateErr() error {
-	return errors.Errorf("unexpected substate '%v' during state '%s'", x.subState, stateName(x.state))
+	return errors.Errorf("unexpected substate '%s' during state '%s'", subStateName(x.subState), stateName(x.state))
 }
 
 func (x *Parser) escapeErr(token string) error {
