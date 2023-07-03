@@ -232,7 +232,6 @@ func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-// TODO: Include customizable key bindings.
 const helpMsg = `
 FDBQ provides an interactive environment for exploring
 key-value structures.
@@ -240,22 +239,22 @@ key-value structures.
 The environment has 3 modes: input, scroll, & help. The
 environment starts in input mode.
 
-Ctrl+C always quits the program, regardless of the current
-mode.
+Ctrl+C always quits the program, regardless of the
+current mode.
 
-During input mode, the user can type queries into the input
-box at the bottom of the screen. "Enter" cancels the currently
-executing query, clears the on screen results, and executes
-a new query defined by input box. Pressing "escape" switches to 
-scroll mode.
-
-During scroll mode, the user can scroll through the results
-of the previously executed query. Pressing "i" switches back
-to input mode.
-
-Pressing "Ctrl+?" switches to help mode, regardless of the
-current mode. This help screen is displayed during this mode.
+During input mode, the user can type queries into the
+input box at the bottom of the screen. "Enter" cancels
+the currently executing query, clears the on screen
+results, and executes a new query defined by input box.
 Pressing "escape" switches to scroll mode.
+
+During scroll mode, the user can scroll through the
+results of the previously executed query. Pressing "i"
+switches back to input mode.
+
+Pressing "Ctrl+?" switches to help mode, regardless of
+the current mode. This help screen is displayed during
+this mode. Pressing "escape" switches to scroll mode.
 `
 
 func (x Model) View() string {
