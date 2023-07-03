@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	lip "github.com/charmbracelet/lipgloss"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
@@ -32,7 +33,6 @@ type App struct {
 func (x *App) Run(ctx context.Context) error {
 	input := textinput.New()
 	input.Placeholder = "Query"
-	input.Focus()
 
 	model := Model{
 		qm: manager.New(
@@ -92,7 +92,7 @@ type Border struct {
 }
 
 func (x Model) Init() tea.Cmd {
-	return textinput.Blink
+	return nil
 }
 
 func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -101,44 +101,9 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
-	// Certain KeyMsgs are consumed by this top-level
-	// Update method. The rest of the KeyMsgs are forwarded
-	// to other Update methods via the updateChildren
-	// method.
 	case tea.KeyMsg:
-		// TODO: Try switching on mode before key.
-		switch msg.Type {
-		case tea.KeyCtrlC:
-			return x, tea.Quit
-
-		case tea.KeyEnter:
-			switch x.mode {
-			case modeInput, modeScroll:
-				return x, x.qm.Query(x.input.Value())
-			default:
-				return x, nil
-			}
-
-		case tea.KeyRunes:
-			if x.mode == modeScroll {
-				switch msg.String() {
-				case "i":
-					x.mode = modeInput
-					x.input.Focus()
-					return x, textinput.Blink
-
-				case "?":
-					x.mode = modeHelp
-					return x, nil
-				}
-			}
-
-		case tea.KeyEscape:
-			if x.mode != modeScroll {
-				x.mode = modeScroll
-				x.input.Blur()
-				return x, nil
-			}
+		if model, cmd := x.updateKey(msg); model != nil {
+			return *model, cmd
 		}
 
 	case manager.AsyncQueryMsg:
@@ -169,6 +134,58 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	return x.updateChildren(msg)
+}
+
+func (x Model) updateKey(msg tea.KeyMsg) (*Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlC {
+		return &x, tea.Quit
+	}
+
+	switch x.mode {
+	case modeScroll:
+		switch msg.Type {
+		case tea.KeyEnter:
+			return &x, x.qm.Query(x.input.Value())
+
+		case tea.KeyRunes:
+			switch msg.String() {
+			case "i":
+				x.mode = modeInput
+				x.input.Focus()
+				return &x, textinput.Blink
+
+			case "?":
+				x.mode = modeHelp
+				return &x, nil
+			}
+		}
+
+	case modeInput:
+		switch msg.Type {
+		case tea.KeyEnter:
+			return &x, x.qm.Query(x.input.Value())
+
+		case tea.KeyEscape:
+			x.mode = modeScroll
+			x.input.Blur()
+			return &x, nil
+		}
+
+	case modeHelp:
+		switch msg.Type {
+		case tea.KeyEnter:
+			return &x, nil
+
+		case tea.KeyEscape:
+			x.mode = modeScroll
+			return &x, nil
+		}
+
+	default:
+		panic(errors.Errorf("unexpected mode '%v'", x.mode))
+	}
+
+	return nil, nil
 }
 
 func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
