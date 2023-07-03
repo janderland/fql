@@ -43,7 +43,7 @@ func (x *App) Run(ctx context.Context) error {
 			manager.WithWrite(x.Write)),
 
 		log:  x.Log,
-		mode: Input,
+		mode: modeScroll,
 
 		border: Border{
 			results: lip.NewStyle().
@@ -70,8 +70,8 @@ func (x *App) Run(ctx context.Context) error {
 type Model struct {
 	qm     manager.QueryManager
 	log    zerolog.Logger
-	mode   Mode
 	latest time.Time
+	mode   Mode
 
 	border  Border
 	results results.Model
@@ -81,8 +81,9 @@ type Model struct {
 type Mode int
 
 const (
-	Input Mode = iota
-	Scroll
+	modeScroll Mode = iota
+	modeInput
+	modeHelp
 )
 
 type Border struct {
@@ -100,24 +101,41 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 
 	switch msg := msg.(type) {
+	// Certain KeyMsgs are consumed by this top-level
+	// Update method. The rest of the KeyMsgs are forwarded
+	// to other Update methods via the updateChildren
+	// method.
 	case tea.KeyMsg:
+		// TODO: Try switching on mode before key.
 		switch msg.Type {
 		case tea.KeyCtrlC:
 			return x, tea.Quit
 
 		case tea.KeyEnter:
-			return x, x.qm.Query(x.input.Value())
+			switch x.mode {
+			case modeInput, modeScroll:
+				return x, x.qm.Query(x.input.Value())
+			default:
+				return x, nil
+			}
 
 		case tea.KeyRunes:
-			if msg.String() == "i" && x.mode == Scroll {
-				x.mode = Input
-				x.input.Focus()
-				return x, textinput.Blink
+			if x.mode == modeScroll {
+				switch msg.String() {
+				case "i":
+					x.mode = modeInput
+					x.input.Focus()
+					return x, textinput.Blink
+
+				case "?":
+					x.mode = modeHelp
+					return x, nil
+				}
 			}
 
 		case tea.KeyEscape:
-			if x.mode == Input {
-				x.mode = Scroll
+			if x.mode != modeScroll {
+				x.mode = modeScroll
 				x.input.Blur()
 				return x, nil
 			}
@@ -169,6 +187,10 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 }
 
 func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if x.mode == modeHelp {
+		return x, nil
+	}
+
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -179,9 +201,9 @@ func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch x.mode {
-		case Input:
+		case modeInput:
 			x.input, cmd = x.input.Update(msg)
-		case Scroll:
+		case modeScroll:
 			x.results = x.results.Update(msg)
 		}
 		return x, cmd
@@ -193,9 +215,42 @@ func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
+// TODO: Include customizable key bindings.
+const helpMsg = `
+FDBQ provides an interactive environment for exploring
+key-value structures.
+	
+The environment has 3 modes: input, scroll, & help. The
+environment starts in input mode.
+
+Ctrl+C always quits the program, regardless of the current
+mode.
+
+During input mode, the user can type queries into the input
+box at the bottom of the screen. "Enter" cancels the currently
+executing query, clears the on screen results, and executes
+a new query defined by input box. Pressing "escape" switches to 
+scroll mode.
+
+During scroll mode, the user can scroll through the results
+of the previously executed query. Pressing "i" switches back
+to input mode.
+
+Pressing "Ctrl+?" switches to help mode, regardless of the
+current mode. This help screen is displayed during this mode.
+Pressing "escape" switches to scroll mode.
+`
+
 func (x Model) View() string {
+	var upper string
+	switch x.mode {
+	case modeHelp:
+		upper = helpMsg
+	default:
+		upper = x.results.View()
+	}
+
 	return lip.JoinVertical(lip.Left,
-		x.border.results.Render(x.results.View()),
-		x.border.input.Render(x.input.View()),
-	)
+		x.border.results.Render(upper),
+		x.border.input.Render(x.input.View()))
 }
