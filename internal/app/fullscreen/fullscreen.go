@@ -3,12 +3,14 @@ package fullscreen
 import (
 	"context"
 	"io"
+	"regexp"
 	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
 	lip "github.com/charmbracelet/lipgloss"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine"
@@ -32,7 +34,6 @@ type App struct {
 func (x *App) Run(ctx context.Context) error {
 	input := textinput.New()
 	input.Placeholder = "Query"
-	input.Focus()
 
 	model := Model{
 		qm: manager.New(
@@ -43,9 +44,9 @@ func (x *App) Run(ctx context.Context) error {
 			manager.WithWrite(x.Write)),
 
 		log:  x.Log,
-		mode: Input,
+		mode: modeScroll,
 
-		border: Border{
+		style: Style{
 			results: lip.NewStyle().
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
@@ -53,6 +54,8 @@ func (x *App) Run(ctx context.Context) error {
 			input: lip.NewStyle().
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
+
+			help: lip.NewStyle().Margin(0),
 		},
 		results: results.New(x.Format),
 		input:   input,
@@ -70,10 +73,10 @@ func (x *App) Run(ctx context.Context) error {
 type Model struct {
 	qm     manager.QueryManager
 	log    zerolog.Logger
-	mode   Mode
 	latest time.Time
+	mode   Mode
 
-	border  Border
+	style   Style
 	results results.Model
 	input   textinput.Model
 }
@@ -81,17 +84,21 @@ type Model struct {
 type Mode int
 
 const (
-	Input Mode = iota
-	Scroll
+	modeScroll Mode = iota
+	modeInput
+	modeHelp
 )
 
-type Border struct {
+type Style struct {
 	results lip.Style
 	input   lip.Style
+	help    lip.Style
 }
 
 func (x Model) Init() tea.Cmd {
-	return textinput.Blink
+	return func() tea.Msg {
+		return "Press '?' to see the help menu."
+	}
 }
 
 func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -101,26 +108,8 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyCtrlC:
-			return x, tea.Quit
-
-		case tea.KeyEnter:
-			return x, x.qm.Query(x.input.Value())
-
-		case tea.KeyRunes:
-			if msg.String() == "i" && x.mode == Scroll {
-				x.mode = Input
-				x.input.Focus()
-				return x, textinput.Blink
-			}
-
-		case tea.KeyEscape:
-			if x.mode == Input {
-				x.mode = Scroll
-				x.input.Blur()
-				return x, nil
-			}
+		if model, cmd := x.updateKey(msg); model != nil {
+			return *model, cmd
 		}
 
 	case manager.AsyncQueryMsg:
@@ -153,22 +142,85 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	return x.updateChildren(msg)
 }
 
+func (x Model) updateKey(msg tea.KeyMsg) (*Model, tea.Cmd) {
+	if msg.Type == tea.KeyCtrlC {
+		return &x, tea.Quit
+	}
+
+	switch x.mode {
+	case modeScroll:
+		switch msg.Type {
+		case tea.KeyEnter:
+			return &x, x.qm.Query(x.input.Value())
+
+		case tea.KeyRunes:
+			switch msg.String() {
+			case "i":
+				x.mode = modeInput
+				x.input.Focus()
+				return &x, textinput.Blink
+
+			case "?":
+				x.mode = modeHelp
+				return &x, nil
+			}
+		}
+
+	case modeInput:
+		switch msg.Type {
+		case tea.KeyEnter:
+			return &x, x.qm.Query(x.input.Value())
+
+		case tea.KeyEscape:
+			x.mode = modeScroll
+			x.input.Blur()
+			return &x, nil
+		}
+
+	case modeHelp:
+		switch msg.Type {
+		case tea.KeyEnter:
+			return &x, nil
+
+		case tea.KeyEscape:
+			x.mode = modeScroll
+			return &x, nil
+		}
+
+	default:
+		panic(errors.Errorf("unexpected mode '%v'", x.mode))
+	}
+
+	return nil, nil
+}
+
 func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	const inputLine = 1
 	const cursorChar = 1
-	inputHeight := x.border.input.GetVerticalFrameSize() + inputLine
+	inputHeight := x.style.input.GetVerticalFrameSize() + inputLine
 
-	x.border.results.Height(msg.Height - x.border.results.GetVerticalFrameSize() - inputHeight)
-	x.border.results.Width(msg.Width - x.border.results.GetHorizontalFrameSize())
-	x.results.Height(x.border.results.GetHeight())
+	x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
+	x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
+	x.results.Height(x.style.results.GetHeight())
 
-	x.input.Width = msg.Width - x.border.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
-	x.border.input.Width(msg.Width - x.border.input.GetHorizontalFrameSize())
+	x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
+	x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
+
+	const maxHelpWidth = 65
+	if msg.Width-x.style.results.GetHorizontalFrameSize() > maxHelpWidth {
+		x.style.help.Width(maxHelpWidth)
+	} else {
+		x.style.help.UnsetWidth()
+	}
 
 	return x
 }
 
 func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
+	if x.mode == modeHelp {
+		return x, nil
+	}
+
 	var cmd tea.Cmd
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
@@ -179,9 +231,9 @@ func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 		}
 
 		switch x.mode {
-		case Input:
+		case modeInput:
 			x.input, cmd = x.input.Update(msg)
-		case Scroll:
+		case modeScroll:
 			x.results = x.results.Update(msg)
 		}
 		return x, cmd
@@ -193,9 +245,52 @@ func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
+var (
+	helpMsg string
+)
+
+func init() {
+	const str = `
+FDBQ provides an interactive environment for exploring
+key-value structures.
+
+The environment has 3 modes: input, scroll, & help. The
+environment starts in input mode.
+
+Ctrl+C always quits the program, regardless of the
+current mode.
+
+During input mode, the user can type queries into the
+input box at the bottom of the screen. Pressing "enter"
+cancels the currently executing query, clears the on
+screen results, and executes a new query defined by
+input box. Pressing "escape" switches to scroll mode.
+
+During scroll mode, the user can scroll through the
+results of the previously executed query. Pressing "i"
+switches back to input mode. Pressing "?" switches to
+help mode.
+
+During help mode, this help screen is displayed.
+Pressing "escape" switches to scroll mode.
+`
+
+	// Remove lone newlines while leaving blank lines.
+	helpMsg =
+		regexp.MustCompile(`([^\n])\n([^\n])`).
+			ReplaceAllString(str, "$1 $2")
+}
+
 func (x Model) View() string {
-	return lip.JoinVertical(lip.Left,
-		x.border.results.Render(x.results.View()),
-		x.border.input.Render(x.input.View()),
-	)
+	switch x.mode {
+	case modeHelp:
+		return lip.JoinVertical(lip.Left,
+			x.style.results.Render(x.style.help.Render(helpMsg)),
+			x.style.input.Render(x.input.View()))
+
+	default:
+		return lip.JoinVertical(lip.Left,
+			x.style.results.Render(x.results.View()),
+			x.style.input.Render(x.input.View()))
+	}
 }

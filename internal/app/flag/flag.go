@@ -1,5 +1,7 @@
 package flag
 
+// TODO: Move flags into `internal/app` package.
+
 import (
 	"encoding/binary"
 
