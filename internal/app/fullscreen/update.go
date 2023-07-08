@@ -1,99 +1,16 @@
 package fullscreen
 
 import (
-	"context"
-	"io"
-	"regexp"
 	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
 	"github.com/charmbracelet/bubbles/textinput"
 	tea "github.com/charmbracelet/bubbletea"
-	lip "github.com/charmbracelet/lipgloss"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
 
-	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/internal/app/fullscreen/manager"
-	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/parser/format"
 )
-
-type App struct {
-	Engine engine.Engine
-	Format format.Format
-	Log    zerolog.Logger
-	Out    io.Writer
-
-	Write      bool
-	SingleOpts engine.SingleOpts
-	RangeOpts  engine.RangeOpts
-}
-
-func (x *App) Run(ctx context.Context) error {
-	input := textinput.New()
-	input.Placeholder = "Query"
-
-	model := Model{
-		qm: manager.New(
-			ctx,
-			x.Engine,
-			manager.WithSingleOpts(x.SingleOpts),
-			manager.WithRangeOpts(x.RangeOpts),
-			manager.WithWrite(x.Write)),
-
-		log:  x.Log,
-		mode: modeScroll,
-
-		style: Style{
-			results: lip.NewStyle().
-				Border(lip.RoundedBorder()).
-				Padding(0, 1),
-
-			input: lip.NewStyle().
-				Border(lip.RoundedBorder()).
-				Padding(0, 1),
-
-			help: lip.NewStyle().Margin(0),
-		},
-		results: results.New(x.Format),
-		input:   input,
-	}
-
-	_, err := tea.NewProgram(
-		model,
-		tea.WithContext(ctx),
-		tea.WithOutput(x.Out),
-		tea.WithAltScreen(),
-	).Run()
-	return err
-}
-
-type Model struct {
-	qm     manager.QueryManager
-	log    zerolog.Logger
-	latest time.Time
-	mode   Mode
-
-	style   Style
-	results results.Model
-	input   textinput.Model
-}
-
-type Mode int
-
-const (
-	modeScroll Mode = iota
-	modeInput
-	modeHelp
-)
-
-type Style struct {
-	results lip.Style
-	input   lip.Style
-	help    lip.Style
-}
 
 func (x Model) Init() tea.Cmd {
 	return func() tea.Msg {
@@ -242,55 +159,5 @@ func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 		x.input, cmd = x.input.Update(msg)
 		x.results = x.results.Update(msg)
 		return x, cmd
-	}
-}
-
-var (
-	helpMsg string
-)
-
-func init() {
-	const str = `
-FDBQ provides an interactive environment for exploring
-key-value structures.
-
-The environment has 3 modes: input, scroll, & help. The
-environment starts in input mode.
-
-Ctrl+C always quits the program, regardless of the
-current mode.
-
-During input mode, the user can type queries into the
-input box at the bottom of the screen. Pressing "enter"
-cancels the currently executing query, clears the on
-screen results, and executes a new query defined by
-input box. Pressing "escape" switches to scroll mode.
-
-During scroll mode, the user can scroll through the
-results of the previously executed query. Pressing "i"
-switches back to input mode. Pressing "?" switches to
-help mode.
-
-During help mode, this help screen is displayed.
-Pressing "escape" switches to scroll mode.
-`
-
-	// Remove lone newlines while leaving blank lines.
-	helpMsg =
-		regexp.MustCompile(`([^\n])\n([^\n])`).
-			ReplaceAllString(str, "$1 $2")
-}
-
-func (x Model) View() string {
-	switch x.mode {
-	case modeHelp:
-		return lip.JoinVertical(lip.Left,
-			x.style.results.Render(x.style.help.Render(helpMsg)),
-			x.style.input.Render(x.input.View()))
-
-	default:
-		return lip.JoinVertical(lip.Left,
-			x.style.results.Render(x.results.View()),
-			x.style.input.Render(x.input.View()))
 	}
 }
