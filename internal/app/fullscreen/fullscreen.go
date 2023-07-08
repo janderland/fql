@@ -3,6 +3,7 @@ package fullscreen
 import (
 	"context"
 	"io"
+	"regexp"
 	"time"
 
 	"github.com/charmbracelet/bubbles/cursor"
@@ -45,7 +46,7 @@ func (x *App) Run(ctx context.Context) error {
 		log:  x.Log,
 		mode: modeScroll,
 
-		border: Border{
+		style: Style{
 			results: lip.NewStyle().
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
@@ -53,6 +54,8 @@ func (x *App) Run(ctx context.Context) error {
 			input: lip.NewStyle().
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
+
+			help: lip.NewStyle().Margin(0),
 		},
 		results: results.New(x.Format),
 		input:   input,
@@ -73,7 +76,7 @@ type Model struct {
 	latest time.Time
 	mode   Mode
 
-	border  Border
+	style   Style
 	results results.Model
 	input   textinput.Model
 }
@@ -86,9 +89,10 @@ const (
 	modeHelp
 )
 
-type Border struct {
+type Style struct {
 	results lip.Style
 	input   lip.Style
+	help    lip.Style
 }
 
 func (x Model) Init() tea.Cmd {
@@ -191,14 +195,21 @@ func (x Model) updateKey(msg tea.KeyMsg) (*Model, tea.Cmd) {
 func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	const inputLine = 1
 	const cursorChar = 1
-	inputHeight := x.border.input.GetVerticalFrameSize() + inputLine
+	inputHeight := x.style.input.GetVerticalFrameSize() + inputLine
 
-	x.border.results.Height(msg.Height - x.border.results.GetVerticalFrameSize() - inputHeight)
-	x.border.results.Width(msg.Width - x.border.results.GetHorizontalFrameSize())
-	x.results.Height(x.border.results.GetHeight())
+	x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
+	x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
+	x.results.Height(x.style.results.GetHeight())
 
-	x.input.Width = msg.Width - x.border.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
-	x.border.input.Width(msg.Width - x.border.input.GetHorizontalFrameSize())
+	x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
+	x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
+
+	const maxHelpWidth = 65
+	if msg.Width-x.style.results.GetHorizontalFrameSize() > maxHelpWidth {
+		x.style.help.Width(maxHelpWidth)
+	} else {
+		x.style.help.UnsetWidth()
+	}
 
 	return x
 }
@@ -232,10 +243,15 @@ func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-const helpMsg = `
+var (
+	helpMsg string
+)
+
+func init() {
+	const str = `
 FDBQ provides an interactive environment for exploring
 key-value structures.
-	
+
 The environment has 3 modes: input, scroll, & help. The
 environment starts in input mode.
 
@@ -257,16 +273,22 @@ the current mode. This help screen is displayed during
 this mode. Pressing "escape" switches to scroll mode.
 `
 
+	// Remove lone newlines while leaving blank lines.
+	helpMsg =
+		regexp.MustCompile(`([^\n])\n([^\n])`).
+			ReplaceAllString(str, "$1 $2")
+}
+
 func (x Model) View() string {
-	var upper string
 	switch x.mode {
 	case modeHelp:
-		upper = helpMsg
-	default:
-		upper = x.results.View()
-	}
+		return lip.JoinVertical(lip.Left,
+			x.style.results.Render(x.style.help.Render(helpMsg)),
+			x.style.input.Render(x.input.View()))
 
-	return lip.JoinVertical(lip.Left,
-		x.border.results.Render(upper),
-		x.border.input.Render(x.input.View()))
+	default:
+		return lip.JoinVertical(lip.Left,
+			x.style.results.Render(x.results.View()),
+			x.style.input.Render(x.input.View()))
+	}
 }
