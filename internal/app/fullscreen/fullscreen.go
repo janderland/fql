@@ -96,7 +96,9 @@ type Style struct {
 }
 
 func (x Model) Init() tea.Cmd {
-	return nil
+	return func() tea.Msg {
+		return "Press '?' to see the help menu."
+	}
 }
 
 func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
