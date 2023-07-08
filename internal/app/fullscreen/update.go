@@ -28,35 +28,23 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		if model, cmd := x.updateKey(msg); model != nil {
 			return *model, cmd
 		}
+		return x.updateChildren(msg)
+
+	case tea.MouseMsg:
+		return x.updateChildren(msg)
 
 	case manager.AsyncQueryMsg:
-		if x.latest.After(msg.StartedAt) {
-			return x, nil
-		}
-		if x.latest.Before(msg.StartedAt) {
-			x.results.Reset()
-			x.latest = msg.StartedAt
-		}
-
-		buf, done := msg.Buffer.Get()
-		x.results.PushMany(buf)
-		if !done {
-			return x, tea.Tick(50*time.Millisecond, func(_ time.Time) tea.Msg {
-				return msg
-			})
-		}
-		return x, nil
+		return x.updateAsyncQuery(msg)
 
 	case error, string, keyval.KeyValue:
-		x.results.Reset()
-		x.results.Push(msg)
-		return x, nil
+		return x.updateSingle(msg)
 
 	case tea.WindowSizeMsg:
 		return x.updateSize(msg), nil
-	}
 
-	return x.updateChildren(msg)
+	default:
+		return x, nil
+	}
 }
 
 func (x Model) updateKey(msg tea.KeyMsg) (*Model, tea.Cmd) {
@@ -109,6 +97,31 @@ func (x Model) updateKey(msg tea.KeyMsg) (*Model, tea.Cmd) {
 	}
 
 	return nil, nil
+}
+
+func (x Model) updateAsyncQuery(msg manager.AsyncQueryMsg) (Model, tea.Cmd) {
+	if x.latest.After(msg.StartedAt) {
+		return x, nil
+	}
+	if x.latest.Before(msg.StartedAt) {
+		x.results.Reset()
+		x.latest = msg.StartedAt
+	}
+
+	buf, done := msg.Buffer.Get()
+	x.results.PushMany(buf)
+	if !done {
+		return x, tea.Tick(50*time.Millisecond, func(_ time.Time) tea.Msg {
+			return msg
+		})
+	}
+	return x, nil
+}
+
+func (x Model) updateSingle(msg any) (Model, tea.Cmd) {
+	x.results.Reset()
+	x.results.Push(msg)
+	return x, nil
 }
 
 func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
