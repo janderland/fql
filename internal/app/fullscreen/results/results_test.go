@@ -128,6 +128,7 @@ func TestScroll(t *testing.T) {
 		return str.String()
 	}
 
+	require.Nil(t, x.cursor)
 	require.Equal(t, expected(96), x.View())
 
 	x.scrollUp(10)
