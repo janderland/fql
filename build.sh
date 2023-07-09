@@ -36,7 +36,7 @@ FDB instance used by the 'verify' task.
 
 If the '--fullscreen' flag is provided then the 'fdbq' docker
 image will be connected to a proper terminal allowing queries
-to be executed in fullscreen mode. The args after `--` are
+to be executed in fullscreen mode. The args after '--' are
 respected.
 
 After this, the script ends. If any of the requested tasks fail
