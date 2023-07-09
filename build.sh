@@ -34,6 +34,11 @@ FDB instance used by the 'verify' task.
 
   ./build.sh -- --write '/my/dir{"hi"}=nil'
 
+If the '--fullscreen' flag is provided then the 'fdbq' docker
+image will be connected to a proper terminal allowing queries
+to be executed in fullscreen mode. The args after '--' are
+respected.
+
 After this, the script ends. If any of the requested tasks fail
 then the script exits immediately.
 
@@ -148,6 +153,11 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
 
+    --fullscreen)
+      FULLSCREEN="x"
+      shift 1
+      ;;
+
     --build)
       for service in $(echo "$2" | tr "," "\n"); do
         case $service in
@@ -222,6 +232,8 @@ if [[ -n "$BUILD_FDBQ_CONTAINER" ]]; then
   (set -x; docker compose build fdbq)
 fi
 
-if [[ -n "$FDBQ_COMMAND" ]]; then
+if [[ -n "$FULLSCREEN" ]]; then
+  (set -x; docker compose run fdbq)
+elif [[ -n "$FDBQ_COMMAND" ]]; then
   (set -x; docker compose up fdbq --attach fdbq --exit-code-from fdbq)
 fi
