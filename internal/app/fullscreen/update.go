@@ -147,7 +147,7 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 
 	x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
 	x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
-	x.results.Height(x.style.results.GetHeight() - 5)
+	x.results.Height(x.style.results.GetHeight())
 
 	x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
 	x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
