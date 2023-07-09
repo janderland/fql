@@ -25,10 +25,7 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
-		if model, cmd := x.updateKey(msg); model != nil {
-			return *model, cmd
-		}
-		return x.updateChildren(msg)
+		return x.updateKey(msg)
 
 	case tea.MouseMsg:
 		return x.updateChildren(msg)
@@ -47,56 +44,68 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	}
 }
 
-func (x Model) updateKey(msg tea.KeyMsg) (*Model, tea.Cmd) {
-	if msg.Type == tea.KeyCtrlC {
-		return &x, tea.Quit
+func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+	switch msg.Type {
+	case tea.KeyCtrlC:
+		return x, tea.Quit
+
+	case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
+		x.results = x.results.Update(msg)
+		return x, nil
 	}
 
 	switch x.mode {
 	case modeScroll:
 		switch msg.Type {
 		case tea.KeyEnter:
-			return &x, x.qm.Query(x.input.Value())
+			return x, x.qm.Query(x.input.Value())
 
 		case tea.KeyRunes:
 			switch msg.String() {
 			case "i":
 				x.mode = modeInput
 				x.input.Focus()
-				return &x, textinput.Blink
+				return x, textinput.Blink
 
 			case "?":
 				x.mode = modeHelp
-				return &x, nil
+				return x, nil
 			}
 		}
+
+		x.results = x.results.Update(msg)
+		return x, nil
 
 	case modeInput:
 		switch msg.Type {
 		case tea.KeyEnter:
-			return &x, x.qm.Query(x.input.Value())
+			return x, x.qm.Query(x.input.Value())
 
 		case tea.KeyEscape:
 			x.mode = modeScroll
 			x.input.Blur()
-			return &x, nil
+			return x, nil
 		}
+
+		var cmd tea.Cmd
+		x.input, cmd = x.input.Update(msg)
+		return x, cmd
 
 	case modeHelp:
 		switch msg.Type {
 		case tea.KeyEnter:
-			return &x, nil
+			return x, nil
 
 		case tea.KeyEscape:
 			x.mode = modeScroll
-			return &x, nil
+			return x, nil
 		}
+
+		return x, nil
 
 	default:
 		panic(errors.Errorf("unexpected mode '%v'", x.mode))
 	}
-
-	return nil, nil
 }
 
 func (x Model) updateAsyncQuery(msg manager.AsyncQueryMsg) (Model, tea.Cmd) {
