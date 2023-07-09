@@ -129,8 +129,12 @@ func (x *Model) updateCursors() {
 		return
 	}
 
+	// We only move height-1 elements in the
+	// for-loop below to ensure the subset of
+	// elements from endCursor to list.Back()
+	// is "height" elements long, inclusive.
 	x.endCursor = x.list.Back()
-	for i := 0; i < x.height; i++ {
+	for i := 0; i < x.height-1; i++ {
 		if x.endCursor.Prev() == nil {
 			break
 		}
@@ -159,6 +163,9 @@ func (x *Model) View() string {
 		cursor = x.list.Front()
 	}
 
+	// To ensure we include the cursor in
+	// the elements printed, we only move
+	// height-1 elements through the list.
 	for i := 0; i < x.height-1; i++ {
 		if cursor.Next() == nil {
 			break
