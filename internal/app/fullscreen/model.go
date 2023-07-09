@@ -69,7 +69,6 @@ func (x *App) Run(ctx context.Context) error {
 
 		style: Style{
 			results: lip.NewStyle().
-				Border(lip.RoundedBorder()).
 				Padding(0, 1),
 
 			input: lip.NewStyle().
