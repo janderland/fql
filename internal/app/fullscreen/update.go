@@ -28,7 +28,7 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return x.updateKey(msg)
 
 	case tea.MouseMsg:
-		return x.updateChildren(msg)
+		return x.updateMouse(msg)
 
 	case manager.AsyncQueryMsg:
 		return x.updateAsyncQuery(msg)
@@ -108,6 +108,13 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 }
 
+func (x Model) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+	var cmd tea.Cmd
+	x.input, cmd = x.input.Update(msg)
+	x.results = x.results.Update(msg)
+	return x, cmd
+}
+
 func (x Model) updateAsyncQuery(msg manager.AsyncQueryMsg) (Model, tea.Cmd) {
 	if x.latest.After(msg.StartedAt) {
 		return x, nil
@@ -153,33 +160,4 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	}
 
 	return x
-}
-
-func (x Model) updateChildren(msg tea.Msg) (tea.Model, tea.Cmd) {
-	if x.mode == modeHelp {
-		return x, nil
-	}
-
-	var cmd tea.Cmd
-	switch msg := msg.(type) {
-	case tea.KeyMsg:
-		switch msg.Type {
-		case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
-			x.results = x.results.Update(msg)
-			return x, nil
-		}
-
-		switch x.mode {
-		case modeInput:
-			x.input, cmd = x.input.Update(msg)
-		case modeScroll:
-			x.results = x.results.Update(msg)
-		}
-		return x, cmd
-
-	default:
-		x.input, cmd = x.input.Update(msg)
-		x.results = x.results.Update(msg)
-		return x, cmd
-	}
 }
