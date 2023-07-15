@@ -8,6 +8,7 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/muesli/reflow/wordwrap"
 
 	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
@@ -66,6 +67,10 @@ type Model struct {
 	// that will be rendered.
 	height int
 
+	// wrapWidth is the width at which each
+	// line is wrapped. 0 disables wrapping.
+	wrapWidth int
+
 	// builder is used by the View method
 	// to construct the final output.
 	builder *strings.Builder
@@ -102,6 +107,11 @@ func (x *Model) Reset() {
 
 func (x *Model) Height(height int) {
 	x.height = height
+	x.updateCursors()
+}
+
+func (x *Model) WrapWidth(width int) {
+	x.wrapWidth = width
 	x.updateCursors()
 }
 
@@ -163,27 +173,27 @@ func (x *Model) View() string {
 		cursor = x.list.Front()
 	}
 
-	// To ensure we include the cursor in
-	// the elements printed, we only move
-	// height-1 elements through the list.
-	for i := 0; i < x.height-1; i++ {
-		if cursor.Next() == nil {
-			break
-		}
+	var lines []string
+	for len(lines) < x.height && cursor != nil {
+		res := cursor.Value.(result)
+		str := fmt.Sprintf("%d  %s", res.i, x.view(res.value))
+		str = wordwrap.String(str, x.wrapWidth)
+		lines = append(lines, strings.Split(str, "\n")...)
 		cursor = cursor.Next()
 	}
 
 	x.builder.Reset()
-	for i := 0; i < x.height; i++ {
-		if cursor == nil {
-			break
-		}
-		res := cursor.Value.(result)
-		if i != 0 {
+
+	start := x.height - 1
+	if start > len(lines)-1 {
+		start = len(lines) - 1
+	}
+
+	for i := start; i >= 0; i-- {
+		if i != start {
 			x.builder.WriteRune('\n')
 		}
-		x.builder.WriteString(fmt.Sprintf("%d  %s", res.i, x.view(res.value)))
-		cursor = cursor.Prev()
+		x.builder.WriteString(lines[i])
 	}
 	return x.builder.String()
 }
