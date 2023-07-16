@@ -24,6 +24,25 @@ func TestHeight(t *testing.T) {
 	require.Equal(t, 50, lineCount(x.View()))
 }
 
+func TestWrapWidth(t *testing.T) {
+	x := New(format.New(format.Cfg{}))
+	x.Push("xxx xxx xxx")
+	x.Push("xxx xxx")
+	x.Push("xxx xxx xxx")
+
+	x.WrapWidth(12)
+	x.Height(4)
+
+	// The [1:] gets rid of the leading newline.
+	expected := `
+   xxx
+2  # xxx xxx
+3  # xxx xxx
+   xxx`[1:]
+
+	require.Equal(t, expected, x.View())
+}
+
 func TestReset(t *testing.T) {
 	x := setup()
 	x.Height(50)

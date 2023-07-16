@@ -175,20 +175,16 @@ func (x *Model) View() string {
 
 	var lines []string
 	for len(lines) < x.height && cursor != nil {
-		res := cursor.Value.(result)
-		str := fmt.Sprintf("%d  %s", res.i, x.view(res.value))
-		str = wordwrap.String(str, x.wrapWidth)
-		lines = append(lines, strings.Split(str, "\n")...)
+		lines = append(lines, x.render(cursor.Value.(result))...)
 		cursor = cursor.Next()
 	}
-
-	x.builder.Reset()
 
 	start := x.height - 1
 	if start > len(lines)-1 {
 		start = len(lines) - 1
 	}
 
+	x.builder.Reset()
 	for i := start; i >= 0; i-- {
 		if i != start {
 			x.builder.WriteRune('\n')
@@ -198,7 +194,28 @@ func (x *Model) View() string {
 	return x.builder.String()
 }
 
-func (x *Model) view(item any) string {
+func (x *Model) render(res result) []string {
+	prefix := fmt.Sprintf("%d  ", res.i)
+	indent := strings.Repeat(" ", len(prefix))
+
+	str := x.value(res.value)
+	str = wordwrap.String(str, x.wrapWidth-len(prefix))
+	lines := strings.Split(str, "\n")
+
+	var reversed []string
+	for i := len(lines) - 1; i >= 0; i-- {
+		var line string
+		if i == 0 {
+			line = prefix + lines[i]
+		} else {
+			line = indent + lines[i]
+		}
+		reversed = append(reversed, line)
+	}
+	return reversed
+}
+
+func (x *Model) value(item any) string {
 	switch val := item.(type) {
 	case error:
 		return fmt.Sprintf("ERR! %s", val)
@@ -218,15 +235,15 @@ func (x *Model) view(item any) string {
 
 	case stream.KeyValErr:
 		if val.Err != nil {
-			return x.view(val.Err)
+			return x.value(val.Err)
 		}
-		return x.view(val.KV)
+		return x.value(val.KV)
 
 	case stream.DirErr:
 		if val.Err != nil {
-			return x.view(val.Err)
+			return x.value(val.Err)
 		}
-		return x.view(val.Dir)
+		return x.value(val.Dir)
 
 	default:
 		return fmt.Sprintf("ERR! unexpected %T", val)
