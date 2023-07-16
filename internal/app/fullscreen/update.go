@@ -145,6 +145,7 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	const cursorChar = 1
 	inputHeight := x.style.input.GetVerticalFrameSize() + inputLine
 
+	// TODO: Clean up calls to GetXXXFrameSize().
 	x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
 	x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
 	x.results.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
