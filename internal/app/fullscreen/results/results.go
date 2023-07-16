@@ -9,6 +9,7 @@ import (
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/muesli/reflow/wordwrap"
+	"github.com/muesli/reflow/wrap"
 
 	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
@@ -200,6 +201,7 @@ func (x *Model) render(res result) []string {
 
 	str := x.value(res.value)
 	str = wordwrap.String(str, x.wrapWidth-len(prefix))
+	str = wrap.String(str, x.wrapWidth-len(prefix))
 	lines := strings.Split(str, "\n")
 
 	var reversed []string
