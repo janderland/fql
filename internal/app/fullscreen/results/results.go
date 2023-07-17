@@ -140,16 +140,10 @@ func (x *Model) updateCursors() {
 		return
 	}
 
-	// We only move height-1 elements in the
-	// for-loop below to ensure the subset of
-	// elements from endCursor to list.Back()
-	// is "height" elements long, inclusive.
 	x.endCursor = x.list.Back()
-	for i := 0; i < x.height-1; i++ {
-		if x.endCursor.Prev() == nil {
-			break
-		}
+	lines := len(x.render(x.endCursor))
 
+	for x.endCursor.Prev() != nil && lines < x.height {
 		// As we move the end cursor back through
 		// the list, if we encounter the start
 		// cursor then move it along with us.
@@ -157,6 +151,8 @@ func (x *Model) updateCursors() {
 			x.cursor = x.endCursor.Prev()
 		}
 		x.endCursor = x.endCursor.Prev()
+
+		lines += len(x.render(x.endCursor))
 	}
 }
 
@@ -176,7 +172,7 @@ func (x *Model) View() string {
 
 	var lines []string
 	for len(lines) < x.height && cursor != nil {
-		lines = append(lines, x.render(cursor.Value.(result))...)
+		lines = append(lines, x.render(cursor)...)
 		cursor = cursor.Next()
 	}
 
@@ -195,7 +191,8 @@ func (x *Model) View() string {
 	return x.builder.String()
 }
 
-func (x *Model) render(res result) []string {
+func (x *Model) render(e *list.Element) []string {
+	res := e.Value.(result)
 	prefix := fmt.Sprintf("%d  ", res.i)
 	indent := strings.Repeat(" ", len(prefix))
 
