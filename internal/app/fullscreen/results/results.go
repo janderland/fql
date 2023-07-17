@@ -199,7 +199,7 @@ func (x *Model) render(res result) []string {
 	prefix := fmt.Sprintf("%d  ", res.i)
 	indent := strings.Repeat(" ", len(prefix))
 
-	str := x.value(res.value)
+	str := x.str(res.value)
 	str = wordwrap.String(str, x.wrapWidth-len(prefix))
 	str = wrap.String(str, x.wrapWidth-len(prefix))
 	lines := strings.Split(str, "\n")
@@ -217,7 +217,7 @@ func (x *Model) render(res result) []string {
 	return reversed
 }
 
-func (x *Model) value(item any) string {
+func (x *Model) str(item any) string {
 	switch val := item.(type) {
 	case error:
 		return fmt.Sprintf("ERR! %s", val)
@@ -237,15 +237,15 @@ func (x *Model) value(item any) string {
 
 	case stream.KeyValErr:
 		if val.Err != nil {
-			return x.value(val.Err)
+			return x.str(val.Err)
 		}
-		return x.value(val.KV)
+		return x.str(val.KV)
 
 	case stream.DirErr:
 		if val.Err != nil {
-			return x.value(val.Err)
+			return x.str(val.Err)
 		}
-		return x.value(val.Dir)
+		return x.str(val.Dir)
 
 	default:
 		return fmt.Sprintf("ERR! unexpected %T", val)
