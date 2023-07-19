@@ -24,6 +24,8 @@ type keyMap struct {
 	HalfPageDown key.Binding
 	Down         key.Binding
 	Up           key.Binding
+	DownLine     key.Binding
+	UpLine       key.Binding
 }
 
 func defaultKeyMap() keyMap {
@@ -51,6 +53,14 @@ func defaultKeyMap() keyMap {
 		Down: key.NewBinding(
 			key.WithKeys("down", "j"),
 			key.WithHelp("↓/j", "down"),
+		),
+		UpLine: key.NewBinding(
+			key.WithKeys("K"),
+			key.WithHelp("K", "up line"),
+		),
+		DownLine: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "down line"),
 		),
 	}
 }
@@ -89,6 +99,17 @@ type Model struct {
 	// This prevents scrolling past the
 	// final page.
 	endCursor *list.Element
+
+	// subCursor is the number of lines
+	// above the last line of the rendered
+	// cursor which aligns with the
+	// bottom of the screen.
+	subCursor int
+
+	// endSubCursor is the maximum value
+	// allowed for subCursor. This prevents
+	// scrolling past the final page.
+	endSubCursor int
 }
 
 func New(kvFmt format.Format) Model {
@@ -113,6 +134,7 @@ func (x *Model) Height(height int) {
 
 func (x *Model) WrapWidth(width int) {
 	x.wrapWidth = width
+	x.subCursor = 0
 	x.updateCursors()
 }
 
@@ -136,7 +158,7 @@ func (x *Model) push(val any) {
 }
 
 func (x *Model) updateCursors() {
-	if x.list.Len() == 0 {
+	if x.list.Len() == 0 || x.height == 0 {
 		return
 	}
 
@@ -154,6 +176,11 @@ func (x *Model) updateCursors() {
 
 		lines += len(x.render(x.endCursor))
 	}
+
+	x.endSubCursor = 0
+	if lines > x.height {
+		x.endSubCursor = lines % x.height
+	}
 }
 
 func (x *Model) View() string {
@@ -170,19 +197,21 @@ func (x *Model) View() string {
 		cursor = x.list.Front()
 	}
 
+	virtualHeight := x.height + x.subCursor
+
 	var lines []string
-	for len(lines) < x.height && cursor != nil {
+	for len(lines) < virtualHeight && cursor != nil {
 		lines = append(lines, x.render(cursor)...)
 		cursor = cursor.Next()
 	}
 
-	start := x.height - 1
+	start := virtualHeight - 1
 	if start > len(lines)-1 {
 		start = len(lines) - 1
 	}
 
 	x.builder.Reset()
-	for i := start; i >= 0; i-- {
+	for i := start; i >= x.subCursor; i-- {
 		if i != start {
 			x.builder.WriteRune('\n')
 		}
@@ -270,6 +299,12 @@ func (x *Model) Update(msg tea.Msg) Model {
 
 		case key.Matches(msg, x.keyMap.Up):
 			x.scrollUp(1)
+
+		case key.Matches(msg, x.keyMap.DownLine):
+			x.scrollDownLines(1)
+
+		case key.Matches(msg, x.keyMap.UpLine):
+			x.scrollUpLines(1)
 		}
 
 	case tea.MouseMsg:
@@ -285,26 +320,28 @@ func (x *Model) Update(msg tea.Msg) Model {
 	return *x
 }
 
-func (x *Model) scrollDown(lines int) {
+func (x *Model) scrollDown(n int) bool {
 	if x.cursor == nil {
-		return
+		return false
 	}
-	for i := 0; i < lines; i++ {
+	for i := 0; i < n; i++ {
 		x.cursor = x.cursor.Prev()
 		if x.cursor == nil {
 			break
 		}
 	}
+	x.subCursor = 0
+	return true
 }
 
-func (x *Model) scrollUp(lines int) {
-	if x.list.Len() == 0 {
-		return
+func (x *Model) scrollUp(n int) bool {
+	if x.list.Len() == 0 || x.cursor == x.endCursor {
+		return false
 	}
 	if x.cursor == nil {
 		x.cursor = x.list.Front()
 	}
-	for i := 0; i < lines; i++ {
+	for i := 0; i < n; i++ {
 		if x.cursor == x.endCursor {
 			break
 		}
@@ -313,5 +350,41 @@ func (x *Model) scrollUp(lines int) {
 			break
 		}
 		x.cursor = newCursor
+	}
+	x.subCursor = 0
+	return true
+}
+
+func (x *Model) scrollDownLines(n int) {
+	for i := 0; i < n; i++ {
+		if x.subCursor == 0 {
+			if x.scrollDown(1) {
+				if x.cursor == nil {
+					return
+				}
+				x.subCursor = len(x.render(x.cursor)) - 1
+				continue
+			}
+			return
+		}
+		x.subCursor--
+	}
+}
+
+func (x *Model) scrollUpLines(n int) {
+	if x.list.Len() == 0 {
+		return
+	}
+	if x.cursor == nil {
+		x.cursor = x.list.Front()
+	}
+	for i := 0; i < n; i++ {
+		if x.subCursor+1 >= len(x.render(x.cursor)) {
+			if !x.scrollUp(1) {
+				return
+			}
+			continue
+		}
+		x.subCursor++
 	}
 }
