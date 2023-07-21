@@ -22,10 +22,10 @@ type keyMap struct {
 	PageUp       key.Binding
 	HalfPageUp   key.Binding
 	HalfPageDown key.Binding
-	Down         key.Binding
-	Up           key.Binding
 	DownLine     key.Binding
 	UpLine       key.Binding
+	DownItem     key.Binding
+	UpItem       key.Binding
 }
 
 func defaultKeyMap() keyMap {
@@ -46,19 +46,19 @@ func defaultKeyMap() keyMap {
 			key.WithKeys("d", "ctrl+d"),
 			key.WithHelp("d", "½ page down"),
 		),
-		Up: key.NewBinding(
+		UpLine: key.NewBinding(
 			key.WithKeys("up", "k"),
 			key.WithHelp("↑/k", "up"),
 		),
-		Down: key.NewBinding(
+		DownLine: key.NewBinding(
 			key.WithKeys("down", "j"),
 			key.WithHelp("↓/j", "down"),
 		),
-		UpLine: key.NewBinding(
+		UpItem: key.NewBinding(
 			key.WithKeys("K"),
 			key.WithHelp("K", "up line"),
 		),
-		DownLine: key.NewBinding(
+		DownItem: key.NewBinding(
 			key.WithKeys("J"),
 			key.WithHelp("J", "down line"),
 		),
@@ -283,28 +283,28 @@ func (x *Model) Update(msg tea.Msg) Model {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, x.keyMap.PageDown):
-			x.scrollDownItems(x.height - 1)
+			x.scrollDownLines(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.PageUp):
-			x.scrollUpItems(x.height - 1)
+			x.scrollUpLines(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.HalfPageDown):
-			x.scrollDownItems(x.height / 2)
+			x.scrollDownLines(x.height / 2)
 
 		case key.Matches(msg, x.keyMap.HalfPageUp):
-			x.scrollUpItems(x.height / 2)
-
-		case key.Matches(msg, x.keyMap.Down):
-			x.scrollDownItems(1)
-
-		case key.Matches(msg, x.keyMap.Up):
-			x.scrollUpItems(1)
+			x.scrollUpLines(x.height / 2)
 
 		case key.Matches(msg, x.keyMap.DownLine):
 			x.scrollDownLines(1)
 
 		case key.Matches(msg, x.keyMap.UpLine):
 			x.scrollUpLines(1)
+
+		case key.Matches(msg, x.keyMap.DownItem):
+			x.scrollDownItems(1)
+
+		case key.Matches(msg, x.keyMap.UpItem):
+			x.scrollUpItems(1)
 		}
 
 	case tea.MouseMsg:
