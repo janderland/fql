@@ -197,21 +197,21 @@ func (x *Model) View() string {
 		cursor = x.list.Front()
 	}
 
-	virtualHeight := x.height + x.subCursor
+	lines := x.render(cursor)[x.subCursor:]
+	cursor = cursor.Next()
 
-	var lines []string
-	for len(lines) < virtualHeight && cursor != nil {
+	for len(lines) < x.height && cursor != nil {
 		lines = append(lines, x.render(cursor)...)
 		cursor = cursor.Next()
 	}
 
-	start := virtualHeight - 1
+	start := x.height - 1
 	if start > len(lines)-1 {
 		start = len(lines) - 1
 	}
 
 	x.builder.Reset()
-	for i := start; i >= x.subCursor; i-- {
+	for i := start; i >= 0; i-- {
 		if i != start {
 			x.builder.WriteRune('\n')
 		}
@@ -283,22 +283,22 @@ func (x *Model) Update(msg tea.Msg) Model {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, x.keyMap.PageDown):
-			x.scrollDown(x.height - 1)
+			x.scrollDownItems(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.PageUp):
-			x.scrollUp(x.height - 1)
+			x.scrollUpItems(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.HalfPageDown):
-			x.scrollDown(x.height / 2)
+			x.scrollDownItems(x.height / 2)
 
 		case key.Matches(msg, x.keyMap.HalfPageUp):
-			x.scrollUp(x.height / 2)
+			x.scrollUpItems(x.height / 2)
 
 		case key.Matches(msg, x.keyMap.Down):
-			x.scrollDown(1)
+			x.scrollDownItems(1)
 
 		case key.Matches(msg, x.keyMap.Up):
-			x.scrollUp(1)
+			x.scrollUpItems(1)
 
 		case key.Matches(msg, x.keyMap.DownLine):
 			x.scrollDownLines(1)
@@ -310,17 +310,17 @@ func (x *Model) Update(msg tea.Msg) Model {
 	case tea.MouseMsg:
 		switch msg.Type {
 		case tea.MouseWheelDown:
-			x.scrollDown(1)
+			x.scrollDownItems(1)
 
 		case tea.MouseWheelUp:
-			x.scrollUp(1)
+			x.scrollUpItems(1)
 		}
 	}
 
 	return *x
 }
 
-func (x *Model) scrollDown(n int) bool {
+func (x *Model) scrollDownItems(n int) bool {
 	if x.cursor == nil {
 		return false
 	}
@@ -334,7 +334,7 @@ func (x *Model) scrollDown(n int) bool {
 	return true
 }
 
-func (x *Model) scrollUp(n int) bool {
+func (x *Model) scrollUpItems(n int) bool {
 	if x.list.Len() == 0 || x.cursor == x.endCursor {
 		return false
 	}
@@ -358,7 +358,7 @@ func (x *Model) scrollUp(n int) bool {
 func (x *Model) scrollDownLines(n int) {
 	for i := 0; i < n; i++ {
 		if x.subCursor == 0 {
-			if x.scrollDown(1) {
+			if x.scrollDownItems(1) {
 				if x.cursor == nil {
 					return
 				}
@@ -380,7 +380,7 @@ func (x *Model) scrollUpLines(n int) {
 	}
 	for i := 0; i < n; i++ {
 		if x.subCursor+1 >= len(x.render(x.cursor)) {
-			if !x.scrollUp(1) {
+			if !x.scrollUpItems(1) {
 				return
 			}
 			continue

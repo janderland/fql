@@ -150,13 +150,13 @@ func TestScroll(t *testing.T) {
 	require.Nil(t, x.cursor)
 	require.Equal(t, expected(96), x.View())
 
-	x.scrollUp(10)
+	x.scrollUpItems(10)
 	require.Equal(t, expected(86), x.View())
 
-	x.scrollDown(9)
+	x.scrollDownItems(9)
 	require.Equal(t, expected(95), x.View())
 
-	x.scrollUp(95)
+	x.scrollUpItems(95)
 	require.Equal(t, expected(1), x.View())
 }
 
