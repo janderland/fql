@@ -154,12 +154,12 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
 	x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
 
-	const maxHelpWidth = 65
-	if msg.Width-x.style.results.GetHorizontalFrameSize() > maxHelpWidth {
-		x.style.help.Width(maxHelpWidth)
-	} else {
-		x.style.help.UnsetWidth()
+	x.help.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
+	helpWidth := x.style.results.GetWidth() - x.style.results.GetHorizontalFrameSize()
+	if helpWidth > 80 {
+		helpWidth = 65
 	}
+	x.help.WrapWidth(helpWidth)
 
 	return x
 }
