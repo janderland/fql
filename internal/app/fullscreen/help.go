@@ -8,9 +8,7 @@ import (
 	"github.com/janderland/fdbq/parser/format"
 )
 
-var (
-	helpMsg string
-)
+var helpMsg string
 
 func init() {
 	const str = `
