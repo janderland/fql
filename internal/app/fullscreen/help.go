@@ -14,8 +14,8 @@ var (
 
 func init() {
 	const str = `
-FDBQ provides an interactive environment for exploring
-key-value structures. The environment has 3 modes: input,
+FDBQ provides an interactive environment for interacting
+with Foundation DB. The environment has 3 modes: input,
 scroll, & help. The environment starts in input mode.
 Ctrl+C always quits the program, regardless of the
 current mode.
@@ -24,7 +24,8 @@ During input mode, the user can type queries into the
 input box at the bottom of the screen. Pressing "enter"
 cancels the currently executing query, clears the on
 screen results, and executes a new query defined by
-input box. Pressing "escape" switches to scroll mode.
+the input box. Pressing "escape" switches to scroll
+mode.
 
 During scroll mode, the user can scroll through the
 results of the previously executed query. Pressing "i"
