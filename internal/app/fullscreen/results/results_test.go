@@ -25,7 +25,7 @@ func TestHeight(t *testing.T) {
 }
 
 func TestWrapWidth(t *testing.T) {
-	x := New(format.New(format.Cfg{}))
+	x := New(format.New(format.Cfg{}), false)
 	x.Push("xxx xxx xxx")
 	x.Push("xxx xxx")
 	x.Push("xxx xxx xxx")
@@ -121,13 +121,23 @@ func TestSingleLine(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%T", test.input), func(t *testing.T) {
-			x := New(format.New(format.Cfg{}))
+			x := New(format.New(format.Cfg{}), false)
 			x.Height(1)
 
 			x.Push(test.input)
 			require.Equal(t, test.expected, x.View())
 		})
 	}
+}
+
+func TestSpaced(t *testing.T) {
+	x := New(format.New(format.Cfg{}), true)
+	x.Height(2)
+
+	x.Push("1")
+	x.Push("2")
+
+	require.Equal(t, "   \n2  # 2", x.View())
 }
 
 func TestScroll(t *testing.T) {
@@ -161,7 +171,7 @@ func TestScroll(t *testing.T) {
 }
 
 func setup() Model {
-	x := New(format.New(format.Cfg{}))
+	x := New(format.New(format.Cfg{}), false)
 	for i := 1; i <= 100; i++ {
 		x.Push(fmt.Sprintf("%d", i))
 	}

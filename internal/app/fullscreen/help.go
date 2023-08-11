@@ -45,7 +45,7 @@ Pressing "escape" switches to scroll mode.
 }
 
 func newHelp() results.Model {
-	x := results.New(format.New(format.Cfg{}))
+	x := results.New(format.New(format.Cfg{}), true)
 	for _, str := range strings.Split(helpMsg, "\n") {
 		x.Push(str)
 	}

@@ -82,6 +82,10 @@ type Model struct {
 	// line is wrapped. 0 disables wrapping.
 	wrapWidth int
 
+	// spaced determines if a blank line
+	// appears between each item.
+	spaced bool
+
 	// builder is used by the View method
 	// to construct the final output.
 	builder *strings.Builder
@@ -112,10 +116,11 @@ type Model struct {
 	endSubCursor int
 }
 
-func New(kvFmt format.Format) Model {
+func New(kvFmt format.Format, spaced bool) Model {
 	return Model{
 		keyMap:  defaultKeyMap(),
 		format:  kvFmt,
+		spaced:  spaced,
 		builder: &strings.Builder{},
 		list:    list.New(),
 	}
@@ -229,6 +234,12 @@ func (x *Model) render(e *list.Element) []string {
 	str = wordwrap.String(str, x.wrapWidth-len(prefix))
 	str = wrap.String(str, x.wrapWidth-len(prefix))
 	lines := strings.Split(str, "\n")
+
+	// If spaced is enabled, add an extra blank
+	// line after each item except the newest.
+	if x.spaced && e != x.list.Front() {
+		lines = append(lines, "")
+	}
 
 	var reversed []string
 	for i := len(lines) - 1; i >= 0; i-- {
