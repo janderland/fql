@@ -350,7 +350,5 @@ func TestData(t *testing.T) {
 }
 
 func newFormat() format.Format {
-	return format.New(format.Cfg{
-		PrintBytes: true,
-	})
+	return format.New(format.WithPrintBytes())
 }

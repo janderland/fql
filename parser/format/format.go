@@ -10,12 +10,6 @@ import (
 	"github.com/janderland/fdbq/parser/internal"
 )
 
-type Cfg struct {
-	// When set to false, byte strings are formatted
-	// as their length instead of the actual string.
-	PrintBytes bool
-}
-
 // Format provides methods which convert the types
 // defined in keyval into strings. The methods with
 // an input parameter format their input into a string
@@ -24,13 +18,27 @@ type Cfg struct {
 // Reset methods.
 type Format struct {
 	builder *strings.Builder
-	cfg     Cfg
+
+	// When set to false, byte strings are formatted
+	// as their length instead of the actual string.
+	printBytes bool
 }
 
-func New(cfg Cfg) Format {
-	return Format{
+type Option func(*Format)
+
+func New(opts ...Option) Format {
+	x := Format{
 		builder: &strings.Builder{},
-		cfg:     cfg,
+	}
+	for _, o := range opts {
+		o(&x)
+	}
+	return x
+}
+
+func WithPrintBytes() Option {
+	return func(x *Format) {
+		x.printBytes = true
 	}
 }
 
@@ -109,7 +117,7 @@ func (x *Format) Variable(in keyval.Variable) {
 // Bytes formats the given keyval.Bytes
 // and appends it to the internal buffer.
 func (x *Format) Bytes(in keyval.Bytes) {
-	if x.cfg.PrintBytes {
+	if x.printBytes {
 		x.builder.WriteString(internal.HexStart)
 		x.builder.WriteString(hex.EncodeToString(in))
 	} else {

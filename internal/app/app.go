@@ -81,7 +81,7 @@ var Fdbq = &cobra.Command{
 			engine.ByteOrder(flags.ByteOrder()),
 			engine.Logger(log))
 
-		fmt := format.New(flags.FormatCfg())
+		fmt := format.New(flags.FormatOpts()...)
 		out := os.Stdout
 
 		if flags.Fullscreen() {
