@@ -50,7 +50,12 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return x, tea.Quit
 
 	case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
-		x.results = x.results.Update(msg)
+		switch x.mode {
+		case modeHelp:
+			x.help = x.help.Update(msg)
+		default:
+			x.results = x.results.Update(msg)
+		}
 		return x, nil
 	}
 
@@ -93,14 +98,12 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 
 	case modeHelp:
 		switch msg.Type {
-		case tea.KeyEnter:
-			return x, nil
-
 		case tea.KeyEscape:
 			x.mode = modeScroll
 			return x, nil
 		}
 
+		x.help = x.help.Update(msg)
 		return x, nil
 
 	default:
