@@ -417,6 +417,9 @@ func (x *Model) scrollUpLines(n int) {
 			}
 			continue
 		}
+		if x.subCursor == x.endSubCursor {
+			break
+		}
 		x.subCursor++
 	}
 }
