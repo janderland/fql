@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/janderland/fdbq/internal/app/fullscreen/results"
-	"github.com/janderland/fdbq/parser/format"
 )
 
 var helpMsg string
@@ -45,7 +44,7 @@ Pressing "escape" switches to scroll mode.
 }
 
 func newHelp() results.Model {
-	x := results.New(format.New(format.Cfg{}), true)
+	x := results.New(results.WithSpaced(true))
 	for _, str := range strings.Split(helpMsg, "\n") {
 		x.Push(str)
 	}

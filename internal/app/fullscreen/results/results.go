@@ -70,8 +70,14 @@ type result struct {
 	value any
 }
 
+type Option func(*Model)
+
 type Model struct {
+	// keyMap specifies the key bindings.
 	keyMap keyMap
+
+	// format is used to stringify
+	// key-values.
 	format format.Format
 
 	// height is the max number of lines
@@ -116,13 +122,28 @@ type Model struct {
 	endSubCursor int
 }
 
-func New(kvFmt format.Format, spaced bool) Model {
-	return Model{
+func New(opts ...Option) Model {
+	x := Model{
 		keyMap:  defaultKeyMap(),
-		format:  kvFmt,
-		spaced:  spaced,
+		format:  format.New(format.Cfg{}),
 		builder: &strings.Builder{},
 		list:    list.New(),
+	}
+	for _, o := range opts {
+		o(&x)
+	}
+	return x
+}
+
+func WithFormat(f format.Format) Option {
+	return func(x *Model) {
+		x.format = f
+	}
+}
+
+func WithSpaced(spaced bool) Option {
+	return func(x *Model) {
+		x.spaced = spaced
 	}
 }
 

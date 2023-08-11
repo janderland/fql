@@ -12,7 +12,6 @@ import (
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/parser/format"
 )
 
 func TestHeight(t *testing.T) {
@@ -25,7 +24,7 @@ func TestHeight(t *testing.T) {
 }
 
 func TestWrapWidth(t *testing.T) {
-	x := New(format.New(format.Cfg{}), false)
+	x := New()
 	x.Push("xxx xxx xxx")
 	x.Push("xxx xxx")
 	x.Push("xxx xxx xxx")
@@ -121,7 +120,7 @@ func TestSingleLine(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%T", test.input), func(t *testing.T) {
-			x := New(format.New(format.Cfg{}), false)
+			x := New()
 			x.Height(1)
 
 			x.Push(test.input)
@@ -131,7 +130,7 @@ func TestSingleLine(t *testing.T) {
 }
 
 func TestSpaced(t *testing.T) {
-	x := New(format.New(format.Cfg{}), true)
+	x := New(WithSpaced(true))
 	x.Height(2)
 
 	x.Push("1")
@@ -171,7 +170,7 @@ func TestScroll(t *testing.T) {
 }
 
 func setup() Model {
-	x := New(format.New(format.Cfg{}), false)
+	x := New()
 	for i := 1; i <= 100; i++ {
 		x.Push(fmt.Sprintf("%d", i))
 	}

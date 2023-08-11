@@ -75,7 +75,7 @@ func (x *App) Run(ctx context.Context) error {
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
 		},
-		results: results.New(x.Format, false),
+		results: results.New(results.WithFormat(x.Format)),
 		help:    newHelp(),
 		input:   input,
 	}
