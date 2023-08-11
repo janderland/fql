@@ -125,7 +125,7 @@ type Model struct {
 func New(opts ...Option) Model {
 	x := Model{
 		keyMap:  defaultKeyMap(),
-		format:  format.New(format.Cfg{}),
+		format:  format.New(),
 		builder: &strings.Builder{},
 		list:    list.New(),
 	}

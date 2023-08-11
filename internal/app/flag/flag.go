@@ -64,10 +64,12 @@ func (x *Flags) RangeOpts() engine.RangeOpts {
 	}
 }
 
-func (x *Flags) FormatCfg() format.Cfg {
-	return format.Cfg{
-		PrintBytes: x.Bytes,
+func (x *Flags) FormatOpts() []format.Option {
+	var opts []format.Option
+	if x.Bytes {
+		opts = append(opts, format.WithPrintBytes())
 	}
+	return opts
 }
 
 func (x *Flags) Fullscreen() bool {
