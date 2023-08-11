@@ -50,7 +50,12 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		return x, tea.Quit
 
 	case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
-		x.results = x.results.Update(msg)
+		switch x.mode {
+		case modeHelp:
+			x.help = x.help.Update(msg)
+		default:
+			x.results = x.results.Update(msg)
+		}
 		return x, nil
 	}
 
@@ -93,14 +98,12 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 
 	case modeHelp:
 		switch msg.Type {
-		case tea.KeyEnter:
-			return x, nil
-
 		case tea.KeyEscape:
 			x.mode = modeScroll
 			return x, nil
 		}
 
+		x.help = x.help.Update(msg)
 		return x, nil
 
 	default:
@@ -145,19 +148,21 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	const cursorChar = 1
 	inputHeight := x.style.input.GetVerticalFrameSize() + inputLine
 
+	// TODO: Clean up calls to GetXXXFrameSize().
 	x.style.results.Height(msg.Height - x.style.results.GetVerticalFrameSize() - inputHeight)
 	x.style.results.Width(msg.Width - x.style.results.GetHorizontalFrameSize())
-	x.results.Height(x.style.results.GetHeight())
+	x.results.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
+	x.results.WrapWidth(x.style.results.GetWidth() - x.style.results.GetHorizontalFrameSize())
 
 	x.input.Width = msg.Width - x.style.input.GetHorizontalFrameSize() - len(x.input.Prompt) - cursorChar - 2
 	x.style.input.Width(msg.Width - x.style.input.GetHorizontalFrameSize())
 
-	const maxHelpWidth = 65
-	if msg.Width-x.style.results.GetHorizontalFrameSize() > maxHelpWidth {
-		x.style.help.Width(maxHelpWidth)
-	} else {
-		x.style.help.UnsetWidth()
+	x.help.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
+	helpWidth := x.style.results.GetWidth() - x.style.results.GetHorizontalFrameSize()
+	if helpWidth > 80 {
+		helpWidth = 65
 	}
+	x.help.WrapWidth(helpWidth)
 
 	return x
 }

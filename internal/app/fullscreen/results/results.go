@@ -8,6 +8,8 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/muesli/reflow/wordwrap"
+	"github.com/muesli/reflow/wrap"
 
 	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
@@ -20,8 +22,10 @@ type keyMap struct {
 	PageUp       key.Binding
 	HalfPageUp   key.Binding
 	HalfPageDown key.Binding
-	Down         key.Binding
-	Up           key.Binding
+	DownLine     key.Binding
+	UpLine       key.Binding
+	DownItem     key.Binding
+	UpItem       key.Binding
 }
 
 func defaultKeyMap() keyMap {
@@ -42,13 +46,21 @@ func defaultKeyMap() keyMap {
 			key.WithKeys("d", "ctrl+d"),
 			key.WithHelp("d", "½ page down"),
 		),
-		Up: key.NewBinding(
+		UpLine: key.NewBinding(
 			key.WithKeys("up", "k"),
 			key.WithHelp("↑/k", "up"),
 		),
-		Down: key.NewBinding(
+		DownLine: key.NewBinding(
 			key.WithKeys("down", "j"),
 			key.WithHelp("↓/j", "down"),
+		),
+		UpItem: key.NewBinding(
+			key.WithKeys("K"),
+			key.WithHelp("K", "up line"),
+		),
+		DownItem: key.NewBinding(
+			key.WithKeys("J"),
+			key.WithHelp("J", "down line"),
 		),
 	}
 }
@@ -58,13 +70,27 @@ type result struct {
 	value any
 }
 
+type Option func(*Model)
+
 type Model struct {
+	// keyMap specifies the key bindings.
 	keyMap keyMap
+
+	// format is used to stringify
+	// key-values.
 	format format.Format
 
 	// height is the max number of lines
 	// that will be rendered.
 	height int
+
+	// wrapWidth is the width at which each
+	// line is wrapped. 0 disables wrapping.
+	wrapWidth int
+
+	// spaced determines if a blank line
+	// appears between each item.
+	spaced bool
 
 	// builder is used by the View method
 	// to construct the final output.
@@ -83,14 +109,41 @@ type Model struct {
 	// This prevents scrolling past the
 	// final page.
 	endCursor *list.Element
+
+	// subCursor is the number of lines
+	// above the last line of the rendered
+	// cursor which aligns with the
+	// bottom of the screen.
+	subCursor int
+
+	// endSubCursor is the maximum value
+	// allowed for subCursor. This prevents
+	// scrolling past the final page.
+	endSubCursor int
 }
 
-func New(kvFmt format.Format) Model {
-	return Model{
+func New(opts ...Option) Model {
+	x := Model{
 		keyMap:  defaultKeyMap(),
-		format:  kvFmt,
+		format:  format.New(format.Cfg{}),
 		builder: &strings.Builder{},
 		list:    list.New(),
+	}
+	for _, o := range opts {
+		o(&x)
+	}
+	return x
+}
+
+func WithFormat(f format.Format) Option {
+	return func(x *Model) {
+		x.format = f
+	}
+}
+
+func WithSpaced(spaced bool) Option {
+	return func(x *Model) {
+		x.spaced = spaced
 	}
 }
 
@@ -102,6 +155,12 @@ func (x *Model) Reset() {
 
 func (x *Model) Height(height int) {
 	x.height = height
+	x.updateCursors()
+}
+
+func (x *Model) WrapWidth(width int) {
+	x.wrapWidth = width
+	x.subCursor = 0
 	x.updateCursors()
 }
 
@@ -125,20 +184,14 @@ func (x *Model) push(val any) {
 }
 
 func (x *Model) updateCursors() {
-	if x.list.Len() == 0 {
+	if x.list.Len() == 0 || x.height == 0 {
 		return
 	}
 
-	// We only move height-1 elements in the
-	// for-loop below to ensure the subset of
-	// elements from endCursor to list.Back()
-	// is "height" elements long, inclusive.
 	x.endCursor = x.list.Back()
-	for i := 0; i < x.height-1; i++ {
-		if x.endCursor.Prev() == nil {
-			break
-		}
+	lines := len(x.render(x.endCursor))
 
+	for x.endCursor.Prev() != nil && lines < x.height {
 		// As we move the end cursor back through
 		// the list, if we encounter the start
 		// cursor then move it along with us.
@@ -146,6 +199,13 @@ func (x *Model) updateCursors() {
 			x.cursor = x.endCursor.Prev()
 		}
 		x.endCursor = x.endCursor.Prev()
+
+		lines += len(x.render(x.endCursor))
+	}
+
+	x.endSubCursor = 0
+	if lines > x.height {
+		x.endSubCursor = lines % x.height
 	}
 }
 
@@ -163,32 +223,59 @@ func (x *Model) View() string {
 		cursor = x.list.Front()
 	}
 
-	// To ensure we include the cursor in
-	// the elements printed, we only move
-	// height-1 elements through the list.
-	for i := 0; i < x.height-1; i++ {
-		if cursor.Next() == nil {
-			break
-		}
+	lines := x.render(cursor)[x.subCursor:]
+	cursor = cursor.Next()
+
+	for len(lines) < x.height && cursor != nil {
+		lines = append(lines, x.render(cursor)...)
 		cursor = cursor.Next()
 	}
 
+	start := x.height - 1
+	if start > len(lines)-1 {
+		start = len(lines) - 1
+	}
+
 	x.builder.Reset()
-	for i := 0; i < x.height; i++ {
-		if cursor == nil {
-			break
-		}
-		res := cursor.Value.(result)
-		if i != 0 {
+	for i := start; i >= 0; i-- {
+		if i != start {
 			x.builder.WriteRune('\n')
 		}
-		x.builder.WriteString(fmt.Sprintf("%d  %s", res.i, x.view(res.value)))
-		cursor = cursor.Prev()
+		x.builder.WriteString(lines[i])
 	}
 	return x.builder.String()
 }
 
-func (x *Model) view(item any) string {
+func (x *Model) render(e *list.Element) []string {
+	res := e.Value.(result)
+	prefix := fmt.Sprintf("%d  ", res.i)
+	indent := strings.Repeat(" ", len(prefix))
+
+	str := x.str(res.value)
+	str = wordwrap.String(str, x.wrapWidth-len(prefix))
+	str = wrap.String(str, x.wrapWidth-len(prefix))
+	lines := strings.Split(str, "\n")
+
+	// If spaced is enabled, add an extra blank
+	// line after each item except the newest.
+	if x.spaced && e != x.list.Front() {
+		lines = append(lines, "")
+	}
+
+	var reversed []string
+	for i := len(lines) - 1; i >= 0; i-- {
+		var line string
+		if i == 0 {
+			line = prefix + lines[i]
+		} else {
+			line = indent + lines[i]
+		}
+		reversed = append(reversed, line)
+	}
+	return reversed
+}
+
+func (x *Model) str(item any) string {
 	switch val := item.(type) {
 	case error:
 		return fmt.Sprintf("ERR! %s", val)
@@ -208,15 +295,15 @@ func (x *Model) view(item any) string {
 
 	case stream.KeyValErr:
 		if val.Err != nil {
-			return x.view(val.Err)
+			return x.str(val.Err)
 		}
-		return x.view(val.KV)
+		return x.str(val.KV)
 
 	case stream.DirErr:
 		if val.Err != nil {
-			return x.view(val.Err)
+			return x.str(val.Err)
 		}
-		return x.view(val.Dir)
+		return x.str(val.Dir)
 
 	default:
 		return fmt.Sprintf("ERR! unexpected %T", val)
@@ -228,57 +315,65 @@ func (x *Model) Update(msg tea.Msg) Model {
 	case tea.KeyMsg:
 		switch {
 		case key.Matches(msg, x.keyMap.PageDown):
-			x.scrollDown(x.height - 1)
+			x.scrollDownLines(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.PageUp):
-			x.scrollUp(x.height - 1)
+			x.scrollUpLines(x.height - 1)
 
 		case key.Matches(msg, x.keyMap.HalfPageDown):
-			x.scrollDown(x.height / 2)
+			x.scrollDownLines(x.height / 2)
 
 		case key.Matches(msg, x.keyMap.HalfPageUp):
-			x.scrollUp(x.height / 2)
+			x.scrollUpLines(x.height / 2)
 
-		case key.Matches(msg, x.keyMap.Down):
-			x.scrollDown(1)
+		case key.Matches(msg, x.keyMap.DownLine):
+			x.scrollDownLines(1)
 
-		case key.Matches(msg, x.keyMap.Up):
-			x.scrollUp(1)
+		case key.Matches(msg, x.keyMap.UpLine):
+			x.scrollUpLines(1)
+
+		case key.Matches(msg, x.keyMap.DownItem):
+			x.scrollDownItems(1)
+
+		case key.Matches(msg, x.keyMap.UpItem):
+			x.scrollUpItems(1)
 		}
 
 	case tea.MouseMsg:
 		switch msg.Type {
 		case tea.MouseWheelDown:
-			x.scrollDown(1)
+			x.scrollDownItems(1)
 
 		case tea.MouseWheelUp:
-			x.scrollUp(1)
+			x.scrollUpItems(1)
 		}
 	}
 
 	return *x
 }
 
-func (x *Model) scrollDown(lines int) {
+func (x *Model) scrollDownItems(n int) bool {
 	if x.cursor == nil {
-		return
+		return false
 	}
-	for i := 0; i < lines; i++ {
+	for i := 0; i < n; i++ {
 		x.cursor = x.cursor.Prev()
 		if x.cursor == nil {
 			break
 		}
 	}
+	x.subCursor = 0
+	return true
 }
 
-func (x *Model) scrollUp(lines int) {
-	if x.list.Len() == 0 {
-		return
+func (x *Model) scrollUpItems(n int) bool {
+	if x.list.Len() == 0 || x.cursor == x.endCursor {
+		return false
 	}
 	if x.cursor == nil {
 		x.cursor = x.list.Front()
 	}
-	for i := 0; i < lines; i++ {
+	for i := 0; i < n; i++ {
 		if x.cursor == x.endCursor {
 			break
 		}
@@ -287,5 +382,41 @@ func (x *Model) scrollUp(lines int) {
 			break
 		}
 		x.cursor = newCursor
+	}
+	x.subCursor = 0
+	return true
+}
+
+func (x *Model) scrollDownLines(n int) {
+	for i := 0; i < n; i++ {
+		if x.subCursor == 0 {
+			if x.scrollDownItems(1) {
+				if x.cursor == nil {
+					return
+				}
+				x.subCursor = len(x.render(x.cursor)) - 1
+				continue
+			}
+			return
+		}
+		x.subCursor--
+	}
+}
+
+func (x *Model) scrollUpLines(n int) {
+	if x.list.Len() == 0 {
+		return
+	}
+	if x.cursor == nil {
+		x.cursor = x.list.Front()
+	}
+	for i := 0; i < n; i++ {
+		if x.subCursor+1 >= len(x.render(x.cursor)) {
+			if !x.scrollUpItems(1) {
+				return
+			}
+			continue
+		}
+		x.subCursor++
 	}
 }

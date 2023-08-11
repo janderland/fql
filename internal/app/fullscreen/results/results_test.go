@@ -12,7 +12,6 @@ import (
 	"github.com/janderland/fdbq/engine/facade"
 	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
-	"github.com/janderland/fdbq/parser/format"
 )
 
 func TestHeight(t *testing.T) {
@@ -22,6 +21,25 @@ func TestHeight(t *testing.T) {
 
 	x.Height(50)
 	require.Equal(t, 50, lineCount(x.View()))
+}
+
+func TestWrapWidth(t *testing.T) {
+	x := New()
+	x.Push("xxx xxx xxx")
+	x.Push("xxx xxx")
+	x.Push("xxx xxx xxx")
+
+	x.WrapWidth(12)
+	x.Height(4)
+
+	// The [1:] gets rid of the leading newline.
+	expected := `
+   xxx
+2  # xxx xxx
+3  # xxx xxx
+   xxx`[1:]
+
+	require.Equal(t, expected, x.View())
 }
 
 func TestReset(t *testing.T) {
@@ -102,13 +120,23 @@ func TestSingleLine(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(fmt.Sprintf("%T", test.input), func(t *testing.T) {
-			x := New(format.New(format.Cfg{}))
+			x := New()
 			x.Height(1)
 
 			x.Push(test.input)
 			require.Equal(t, test.expected, x.View())
 		})
 	}
+}
+
+func TestSpaced(t *testing.T) {
+	x := New(WithSpaced(true))
+	x.Height(2)
+
+	x.Push("1")
+	x.Push("2")
+
+	require.Equal(t, "   \n2  # 2", x.View())
 }
 
 func TestScroll(t *testing.T) {
@@ -131,18 +159,18 @@ func TestScroll(t *testing.T) {
 	require.Nil(t, x.cursor)
 	require.Equal(t, expected(96), x.View())
 
-	x.scrollUp(10)
+	x.scrollUpItems(10)
 	require.Equal(t, expected(86), x.View())
 
-	x.scrollDown(9)
+	x.scrollDownItems(9)
 	require.Equal(t, expected(95), x.View())
 
-	x.scrollUp(95)
+	x.scrollUpItems(95)
 	require.Equal(t, expected(1), x.View())
 }
 
 func setup() Model {
-	x := New(format.New(format.Cfg{}))
+	x := New()
 	for i := 1; i <= 100; i++ {
 		x.Push(fmt.Sprintf("%d", i))
 	}

@@ -27,7 +27,6 @@ const (
 type Style struct {
 	results lip.Style
 	input   lip.Style
-	help    lip.Style
 }
 
 type Model struct {
@@ -38,6 +37,7 @@ type Model struct {
 
 	style   Style
 	results results.Model
+	help    results.Model
 	input   textinput.Model
 }
 
@@ -74,10 +74,9 @@ func (x *App) Run(ctx context.Context) error {
 			input: lip.NewStyle().
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
-
-			help: lip.NewStyle().Margin(0),
 		},
-		results: results.New(x.Format),
+		results: results.New(results.WithFormat(x.Format)),
+		help:    newHelp(),
 		input:   input,
 	}
 
