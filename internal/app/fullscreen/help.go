@@ -12,9 +12,9 @@ var helpMsg string
 func init() {
 	const str = `
 FDBQ provides an environment for reading & writing
-key-values in a Foundation DB cluster. The environment
-has 3 modes: input, scroll, & help. The environment
-starts in input mode. Ctrl+C always quits the program,
+data in a Foundation DB cluster. The environment has
+3 modes: input, scroll, & help. The environment starts
+in input mode. Ctrl+C always quits the program,
 regardless of the current mode.
 
 During input mode, the user can type queries into the
