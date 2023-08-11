@@ -1,17 +1,17 @@
-Set TypingSpeed 100ms
-Set FontSize 32
-Set Height 1200
-Set Width 1200
+Set TypingSpeed 200ms
+Set FontSize 16
+Set Height 600
+Set Width 800
 
 Type "./fdbq" 
 Enter
 
-Sleep 5s
+Sleep 2s
 
 Type "i"
 Type "/<>"
 
-Sleep 3s
+Sleep 1s
 Enter
 
 Sleep 10s
