@@ -14,4 +14,4 @@ Type "/<>"
 Sleep 1s
 Enter
 
-Sleep 10s
+Sleep 5s
