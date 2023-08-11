@@ -139,7 +139,7 @@ func TestSpaced(t *testing.T) {
 	require.Equal(t, "   \n2  # 2", x.View())
 }
 
-func TestScroll(t *testing.T) {
+func TestItemScroll(t *testing.T) {
 	x := setup()
 
 	const height = 5
@@ -167,6 +167,18 @@ func TestScroll(t *testing.T) {
 
 	x.scrollUpItems(95)
 	require.Equal(t, expected(1), x.View())
+}
+
+func TestLineScroll(t *testing.T) {
+	x := New()
+	x.Height(3)
+	x.WrapWidth(10)
+
+	x.Push("xxx xxx")
+	require.Equal(t, "1  # xxx\n   xxx", x.View())
+
+	x.scrollUpLines(1)
+	require.Equal(t, "1  # xxx\n   xxx", x.View())
 }
 
 func setup() Model {
