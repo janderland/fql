@@ -1,5 +1,7 @@
 # FDBQ
 
+![demo gif](vhs/demo.gif)
+
 FDBQ provides a query language and an alternative client API for Foundation DB.
 Some things this project aims to achieve are:
 
