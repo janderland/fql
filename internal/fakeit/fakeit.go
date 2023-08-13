@@ -16,7 +16,24 @@ func main() {
 	fdb.MustAPIVersion(620)
 	eg := engine.New(facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
 
-	for i := 0; i < 323; i++ {
+	for i := 0; i < 3; i++ {
+		query := kv.KeyValue{
+			Key: kv.Key{
+				Directory: kv.Directory{kv.String("user")},
+				Tuple: kv.Tuple{
+					kv.Int(rand.Int63()),
+					kv.String("Goodwin"),
+					kv.String(gofakeit.FirstName()),
+				},
+			},
+			Value: kv.Nil{},
+		}
+		if err := eg.Set(query); err != nil {
+			panic(err)
+		}
+	}
+
+	for i := 0; i < 320; i++ {
 		query := kv.KeyValue{
 			Key: kv.Key{
 				Directory: kv.Directory{kv.String("user")},
@@ -24,8 +41,6 @@ func main() {
 					kv.Int(rand.Int63()),
 					kv.String(gofakeit.LastName()),
 					kv.String(gofakeit.FirstName()),
-					kv.String(gofakeit.Email()),
-					kv.String(gofakeit.Phone()),
 				},
 			},
 			Value: kv.Nil{},
