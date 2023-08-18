@@ -15,7 +15,7 @@ Enter
 
 Sleep 2s
 Backspace 4
-Type '<>,"Goodwin",...}'
+Type '<int>,"Goodwin",...}'
 
 Sleep 1s
 Enter
