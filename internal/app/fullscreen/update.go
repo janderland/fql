@@ -13,9 +13,11 @@ import (
 )
 
 func (x Model) Init() tea.Cmd {
-	return func() tea.Msg {
-		return "Press '?' to see the help menu."
-	}
+	return tea.Batch(
+		textinput.Blink,
+		func() tea.Msg {
+			return "Press '?' to see the help menu."
+		})
 }
 
 func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -40,7 +42,7 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return x.updateSize(msg), nil
 
 	default:
-		return x, nil
+		return x.updateBlink(msg)
 	}
 }
 
@@ -111,7 +113,7 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 	}
 }
 
-func (x Model) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+func (x Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	x.input, cmd = x.input.Update(msg)
 	x.results = x.results.Update(msg)
@@ -165,4 +167,10 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	x.help.WrapWidth(helpWidth)
 
 	return x
+}
+
+func (x Model) updateBlink(msg any) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+	x.input, cmd = x.input.Update(msg)
+	return x, cmd
 }
