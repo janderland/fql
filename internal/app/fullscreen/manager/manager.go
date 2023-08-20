@@ -63,6 +63,10 @@ func WithWrite(write bool) Option {
 	}
 }
 
+func (x *QueryManager) Cancel() {
+	x.cancel()
+}
+
 func (x *QueryManager) Query(str string) func() tea.Msg {
 	// Cancel previous query before starting a new one.
 	x.cancel()
