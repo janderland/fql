@@ -13,11 +13,9 @@ import (
 )
 
 func (x Model) Init() tea.Cmd {
-	return tea.Batch(
-		textinput.Blink,
-		func() tea.Msg {
-			return "Press '?' to see the help menu."
-		})
+	return func() tea.Msg {
+		return "Press '?' to see the help menu."
+	}
 }
 
 func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -47,15 +45,13 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
+	// TODO: Move this into the switch below.
 	switch msg.Type {
-	case tea.KeyCtrlC:
-		return x, tea.Quit
-
 	case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
 		switch x.mode {
 		case modeHelp:
 			x.help = x.help.Update(msg)
-		default:
+		case modeInput, modeScroll:
 			x.results = x.results.Update(msg)
 		}
 		return x, nil
@@ -76,6 +72,10 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 
 			case "?":
 				x.mode = modeHelp
+				return x, nil
+
+			case "q":
+				x.mode = modeQuit
 				return x, nil
 			}
 		}
@@ -106,6 +106,24 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		}
 
 		x.help = x.help.Update(msg)
+		return x, nil
+
+	case modeQuit:
+		switch msg.Type {
+		case tea.KeyEscape:
+			x.mode = modeScroll
+			return x, nil
+
+		case tea.KeyRunes:
+			switch msg.String() {
+			case "n", "N":
+				x.mode = modeScroll
+				return x, nil
+
+			case "y", "Y":
+				return x, tea.Quit
+			}
+		}
 		return x, nil
 
 	default:
@@ -165,6 +183,9 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 		helpWidth = 65
 	}
 	x.help.WrapWidth(helpWidth)
+
+	x.quit.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
+	x.quit.WrapWidth(x.style.results.GetWidth() - x.style.results.GetHorizontalFrameSize())
 
 	return x
 }
