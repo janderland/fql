@@ -51,6 +51,10 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		case tea.KeyEnter:
 			return x, x.qm.Query(x.input.Value())
 
+		case tea.KeyCtrlC:
+			x.qm.Cancel()
+			return x, nil
+
 		case tea.KeyRunes:
 			switch msg.String() {
 			case "i":
@@ -75,6 +79,10 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		switch msg.Type {
 		case tea.KeyEnter:
 			return x, x.qm.Query(x.input.Value())
+
+		case tea.KeyCtrlC:
+			x.qm.Cancel()
+			return x, nil
 
 		case tea.KeyEscape:
 			x.mode = modeScroll
