@@ -45,18 +45,6 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
-	// TODO: Move this into the switch below.
-	switch msg.Type {
-	case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
-		switch x.mode {
-		case modeHelp:
-			x.help = x.help.Update(msg)
-		case modeInput, modeScroll:
-			x.results = x.results.Update(msg)
-		}
-		return x, nil
-	}
-
 	switch x.mode {
 	case modeScroll:
 		switch msg.Type {
@@ -92,6 +80,9 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 			x.mode = modeScroll
 			x.input.Blur()
 			return x, nil
+
+		case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
+			x.results = x.results.Update(msg)
 		}
 
 		var cmd tea.Cmd
@@ -124,6 +115,8 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 				return x, tea.Quit
 			}
 		}
+
+		x.quit = x.quit.Update(msg)
 		return x, nil
 
 	default:
