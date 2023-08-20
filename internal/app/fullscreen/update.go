@@ -40,25 +40,11 @@ func (x Model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		return x.updateSize(msg), nil
 
 	default:
-		return x, nil
+		return x.updateBlink(msg)
 	}
 }
 
 func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
-	switch msg.Type {
-	case tea.KeyCtrlC:
-		return x, tea.Quit
-
-	case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
-		switch x.mode {
-		case modeHelp:
-			x.help = x.help.Update(msg)
-		default:
-			x.results = x.results.Update(msg)
-		}
-		return x, nil
-	}
-
 	switch x.mode {
 	case modeScroll:
 		switch msg.Type {
@@ -75,6 +61,10 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 			case "?":
 				x.mode = modeHelp
 				return x, nil
+
+			case "q":
+				x.mode = modeQuit
+				return x, nil
 			}
 		}
 
@@ -90,6 +80,9 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 			x.mode = modeScroll
 			x.input.Blur()
 			return x, nil
+
+		case tea.KeyUp, tea.KeyDown, tea.KeyPgUp, tea.KeyPgDown:
+			x.results = x.results.Update(msg)
 		}
 
 		var cmd tea.Cmd
@@ -106,12 +99,32 @@ func (x Model) updateKey(msg tea.KeyMsg) (Model, tea.Cmd) {
 		x.help = x.help.Update(msg)
 		return x, nil
 
+	case modeQuit:
+		switch msg.Type {
+		case tea.KeyEscape:
+			x.mode = modeScroll
+			return x, nil
+
+		case tea.KeyRunes:
+			switch msg.String() {
+			case "n", "N":
+				x.mode = modeScroll
+				return x, nil
+
+			case "y", "Y":
+				return x, tea.Quit
+			}
+		}
+
+		x.quit = x.quit.Update(msg)
+		return x, nil
+
 	default:
 		panic(errors.Errorf("unexpected mode '%v'", x.mode))
 	}
 }
 
-func (x Model) updateMouse(msg tea.MouseMsg) (tea.Model, tea.Cmd) {
+func (x Model) updateMouse(msg tea.MouseMsg) (Model, tea.Cmd) {
 	var cmd tea.Cmd
 	x.input, cmd = x.input.Update(msg)
 	x.results = x.results.Update(msg)
@@ -164,5 +177,14 @@ func (x Model) updateSize(msg tea.WindowSizeMsg) Model {
 	}
 	x.help.WrapWidth(helpWidth)
 
+	x.quit.Height(x.style.results.GetHeight() - x.style.results.GetVerticalFrameSize())
+	x.quit.WrapWidth(x.style.results.GetWidth() - x.style.results.GetHorizontalFrameSize())
+
 	return x
+}
+
+func (x Model) updateBlink(msg any) (Model, tea.Cmd) {
+	var cmd tea.Cmd
+	x.input, cmd = x.input.Update(msg)
+	return x, cmd
 }

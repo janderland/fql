@@ -56,3 +56,9 @@ func newHelp() results.Model {
 	}
 	return x
 }
+
+func newQuit() results.Model {
+	x := results.New()
+	x.Push("Are you sure you want to quit? (y/n)")
+	return x
+}

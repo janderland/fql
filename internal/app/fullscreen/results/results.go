@@ -129,8 +129,8 @@ func New(opts ...Option) Model {
 		builder: &strings.Builder{},
 		list:    list.New(),
 	}
-	for _, o := range opts {
-		o(&x)
+	for _, option := range opts {
+		option(&x)
 	}
 	return x
 }
@@ -418,7 +418,7 @@ func (x *Model) scrollUpLines(n int) {
 			continue
 		}
 		if x.subCursor == x.endSubCursor {
-			break
+			return
 		}
 		x.subCursor++
 	}

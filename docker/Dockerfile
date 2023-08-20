@@ -53,6 +53,8 @@ RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
     rpm -i ./fdb.rpm              &&\
     rm ./fdb.rpm
 
+ENV TERM="xterm-256color"
+
 COPY --from=gobuild /fdbq /fdbq
 COPY ./docker/shim.sh /shim.sh
 ENTRYPOINT ["/shim.sh"]

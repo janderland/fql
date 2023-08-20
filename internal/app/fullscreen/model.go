@@ -22,6 +22,7 @@ const (
 	modeScroll Mode = iota
 	modeInput
 	modeHelp
+	modeQuit
 )
 
 type Style struct {
@@ -38,6 +39,7 @@ type Model struct {
 	style   Style
 	results results.Model
 	help    results.Model
+	quit    results.Model
 	input   textinput.Model
 }
 
@@ -77,6 +79,7 @@ func (x *App) Run(ctx context.Context) error {
 		},
 		results: results.New(results.WithFormat(x.Format)),
 		help:    newHelp(),
+		quit:    newQuit(),
 		input:   input,
 	}
 
