@@ -10,6 +10,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
+	"github.com/rs/zerolog"
 
 	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
@@ -73,6 +74,9 @@ type result struct {
 type Option func(*Model)
 
 type Model struct {
+	// log traces major events.
+	log zerolog.Logger
+
 	// keyMap specifies the key bindings.
 	keyMap keyMap
 
@@ -124,6 +128,7 @@ type Model struct {
 
 func New(opts ...Option) Model {
 	x := Model{
+		log:     zerolog.Nop(),
 		keyMap:  defaultKeyMap(),
 		format:  format.New(),
 		builder: &strings.Builder{},
@@ -147,24 +152,34 @@ func WithSpaced(spaced bool) Option {
 	}
 }
 
+func WithLogger(log zerolog.Logger) Option {
+	return func(x *Model) {
+		x.log = log
+	}
+}
+
 func (x *Model) Reset() {
+	x.log.Log().Msg("resetting")
 	x.list = list.New()
 	x.cursor = nil
 	x.endCursor = nil
 }
 
 func (x *Model) Height(height int) {
+	x.log.Log().Int("height", height).Msg("setting")
 	x.height = height
 	x.updateCursors()
 }
 
 func (x *Model) WrapWidth(width int) {
+	x.log.Log().Int("wrapWidth", width).Msg("setting")
 	x.wrapWidth = width
 	x.subCursor = 0
 	x.updateCursors()
 }
 
 func (x *Model) PushMany(list *list.List) {
+	x.log.Log().Int("n", list.Len()).Msg("pushing many")
 	for cursor := list.Front(); cursor != nil; cursor = cursor.Next() {
 		x.push(cursor.Value)
 	}
@@ -172,6 +187,7 @@ func (x *Model) PushMany(list *list.List) {
 }
 
 func (x *Model) Push(val any) {
+	x.log.Log().Msg("pushing")
 	x.push(val)
 	x.updateCursors()
 }
@@ -190,6 +206,7 @@ func (x *Model) updateCursors() {
 
 	x.endCursor = x.list.Back()
 	lines := len(x.render(x.endCursor))
+	fromEnd := 0
 
 	for x.endCursor.Prev() != nil && lines < x.height {
 		// As we move the end cursor back through
@@ -201,12 +218,18 @@ func (x *Model) updateCursors() {
 		x.endCursor = x.endCursor.Prev()
 
 		lines += len(x.render(x.endCursor))
+		fromEnd++
 	}
 
 	x.endSubCursor = 0
 	if lines > x.height {
 		x.endSubCursor = lines % x.height
 	}
+
+	x.log.Log().
+		Int("fromEnd", fromEnd).
+		Int("subEnd", x.endSubCursor).
+		Msg("end cursors")
 }
 
 func (x *Model) View() string {
@@ -353,12 +376,17 @@ func (x *Model) Update(msg tea.Msg) Model {
 }
 
 func (x *Model) scrollDownItems(n int) bool {
+	log := x.log.With().Int("n", n).Logger()
+	log.Log().Msg("down items")
+
 	if x.cursor == nil {
+		log.Log().Msg("down items ignored")
 		return false
 	}
 	for i := 0; i < n; i++ {
 		x.cursor = x.cursor.Prev()
 		if x.cursor == nil {
+			log.Log().Int("i", i).Msg("down items stopped")
 			break
 		}
 	}
@@ -367,7 +395,11 @@ func (x *Model) scrollDownItems(n int) bool {
 }
 
 func (x *Model) scrollUpItems(n int) bool {
+	log := x.log.With().Int("n", n).Logger()
+	log.Log().Msg("up items")
+
 	if x.list.Len() == 0 || x.cursor == x.endCursor {
+		log.Log().Msg("up items ignored")
 		return false
 	}
 	if x.cursor == nil {
@@ -375,10 +407,16 @@ func (x *Model) scrollUpItems(n int) bool {
 	}
 	for i := 0; i < n; i++ {
 		if x.cursor == x.endCursor {
+			log.Log().Int("i", i).Msg("up items stopped")
 			break
 		}
 		newCursor := x.cursor.Next()
+		// TODO: Do we need this check?
+		// Won't endCursor always be properly
+		// set, so we should never encounter
+		// this case?
 		if newCursor == nil {
+			log.Log().Int("i", i).Msg("up items unreachable?")
 			break
 		}
 		x.cursor = newCursor
@@ -388,10 +426,14 @@ func (x *Model) scrollUpItems(n int) bool {
 }
 
 func (x *Model) scrollDownLines(n int) {
+	log := x.log.With().Int("n", n).Logger()
+	log.Log().Msg("down lines")
+
 	for i := 0; i < n; i++ {
 		if x.subCursor == 0 {
 			if x.scrollDownItems(1) {
 				if x.cursor == nil {
+					log.Log().Int("i", i).Msg("down lines stopped")
 					return
 				}
 				x.subCursor = len(x.render(x.cursor)) - 1
@@ -404,7 +446,11 @@ func (x *Model) scrollDownLines(n int) {
 }
 
 func (x *Model) scrollUpLines(n int) {
+	log := x.log.With().Int("n", n).Logger()
+	log.Log().Msg("up lines")
+
 	if x.list.Len() == 0 {
+		log.Log().Msg("up lines ignored")
 		return
 	}
 	if x.cursor == nil {
@@ -417,7 +463,8 @@ func (x *Model) scrollUpLines(n int) {
 			}
 			continue
 		}
-		if x.subCursor == x.endSubCursor {
+		if x.cursor == x.endCursor && x.subCursor == x.endSubCursor {
+			log.Log().Int("i", i).Msg("up lines stopped")
 			return
 		}
 		x.subCursor++
