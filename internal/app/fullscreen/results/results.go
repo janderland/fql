@@ -226,7 +226,10 @@ func (x *Model) updateCursors() {
 		x.endSubCursor = lines % x.height
 	}
 
-	x.log.Log().Int("fromEnd", fromEnd).Int("subCursor", x.endSubCursor).Msg("updated cursors")
+	x.log.Log().
+		Int("fromEnd", fromEnd).
+		Int("subEnd", x.endSubCursor).
+		Msg("end cursors")
 }
 
 func (x *Model) View() string {
@@ -460,7 +463,7 @@ func (x *Model) scrollUpLines(n int) {
 			}
 			continue
 		}
-		if x.subCursor == x.endSubCursor {
+		if x.cursor == x.endCursor && x.subCursor == x.endSubCursor {
 			log.Log().Int("i", i).Msg("up lines stopped")
 			return
 		}
