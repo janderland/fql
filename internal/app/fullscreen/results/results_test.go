@@ -40,6 +40,18 @@ func TestWrapWidth(t *testing.T) {
    xxx`[1:]
 
 	require.Equal(t, expected, x.View())
+
+	x.Reset()
+	x.Push("xxxxxxxxxx xxx")
+	x.WrapWidth(8)
+
+	expected = `
+1  # xxx
+   xxxxx
+   xx xx
+   x`[1:]
+
+	require.Equal(t, expected, x.View())
 }
 
 func TestReset(t *testing.T) {
@@ -175,10 +187,10 @@ func TestLineScroll(t *testing.T) {
 	x.WrapWidth(10)
 
 	x.Push("xxx xxx")
-	require.Equal(t, "1  # xxx\n   xxx", x.View())
+	require.Equal(t, "1  # xxx x\n   xx", x.View())
 
 	x.scrollUpLines(1)
-	require.Equal(t, "1  # xxx\n   xxx", x.View())
+	require.Equal(t, "1  # xxx x\n   xx", x.View())
 }
 
 func setup() Model {
