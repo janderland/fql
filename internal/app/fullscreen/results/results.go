@@ -8,7 +8,6 @@ import (
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/muesli/reflow/wordwrap"
 	"github.com/muesli/reflow/wrap"
 	"github.com/rs/zerolog"
 
@@ -275,7 +274,6 @@ func (x *Model) render(e *list.Element) []string {
 	indent := strings.Repeat(" ", len(prefix))
 
 	str := x.str(res.value)
-	str = wordwrap.String(str, x.wrapWidth-len(prefix))
 	str = wrap.String(str, x.wrapWidth-len(prefix))
 	lines := strings.Split(str, "\n")
 
