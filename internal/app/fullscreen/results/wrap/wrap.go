@@ -20,6 +20,7 @@ func Wrap(str string, limit int) []string {
 
 	for _, c := range str {
 		switch {
+		// TODO: Double check the ASCII escape codes.
 		case c == '\x1B':
 			word.WriteCode(c)
 			ansiCode = true
@@ -68,10 +69,6 @@ func Wrap(str string, limit int) []string {
 type builder struct {
 	builder strings.Builder
 	width   int
-}
-
-func (x *builder) Empty() bool {
-	return x.builder.Len() == 0
 }
 
 func (x *builder) Width() int {
