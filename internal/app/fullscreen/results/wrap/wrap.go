@@ -20,7 +20,7 @@ func Wrap(str string, limit int) []string {
 
 	for _, c := range str {
 		switch {
-		// TODO: Double check the ASCII escape codes.
+		// TODO: Double-check the ASCII escape codes.
 		case c == '\x1B':
 			word.WriteCode(c)
 			ansiCode = true
