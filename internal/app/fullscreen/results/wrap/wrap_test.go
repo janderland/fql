@@ -14,15 +14,27 @@ func TestWrap(t *testing.T) {
 	}{
 		{
 			"break single word",
-			3,
+			4,
 			"foobar",
-			[]string{"foo", "bar"},
+			[]string{"foob", "ar"},
 		},
 		{
-			"wrap between words",
+			"break many words",
+			4,
+			"funder i knew",
+			[]string{"fund", "er i", "knew"},
+		},
+		{
+			"wrap between two words",
 			3,
 			"foo bar",
 			[]string{"foo", "bar"},
+		},
+		{
+			"wrap between many words",
+			4,
+			"foo bar bing baz",
+			[]string{"foo ", "bar ", "bing", "baz"},
 		},
 	}
 
