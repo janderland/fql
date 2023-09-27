@@ -36,6 +36,12 @@ func TestWrap(t *testing.T) {
 			"funder i knew",
 			[]string{"fund", "er i", "knew"},
 		},
+		{
+			"ignore ascii escape codes",
+			4,
+			"ba\x1b[1;31mll",
+			[]string{"ba\x1b[1;31mll"},
+		},
 	}
 
 	for _, tt := range tests {
