@@ -26,15 +26,15 @@ func TestWrap(t *testing.T) {
 		},
 		{
 			"wrap between many words",
-			4,
+			7,
 			"foo bar bing baz",
-			[]string{"foo ", "bar ", "bing", "baz"},
+			[]string{"foo bar", "bing ", "baz"},
 		},
 		{
 			"break and wrap words",
 			4,
-			"funder i knew",
-			[]string{"fund", "er i", "knew"},
+			"funder i knew go there",
+			[]string{"fund", "er i", "knew", "go ", "ther", "e"},
 		},
 		{
 			"ignore ascii escape codes",

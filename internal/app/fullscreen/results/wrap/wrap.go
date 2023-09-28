@@ -1,7 +1,7 @@
 package wrap
 
 import (
-	rw "github.com/mattn/go-runewidth"
+	"github.com/mattn/go-runewidth"
 	"strings"
 	"unicode"
 )
@@ -43,13 +43,16 @@ func Wrap(str string, limit int) []string {
 			line.Reset()
 
 		default:
-			// Does the char fit into the word?
-			// Well, if we add the char into the
-			// word does the word still fit into
-			// the line?
-			if line.Width()+word.Width()+rw.RuneWidth(c) > limit {
-				line.WriteString(word.String())
-				word.Reset()
+			if word.Width() == 0 {
+				word.WriteRune(c)
+				continue
+			}
+
+			if line.Width()+word.Width()+runewidth.RuneWidth(c) > limit {
+				if line.Width() == 0 {
+					line.WriteString(word.String())
+					word.Reset()
+				}
 
 				lines = append(lines, line.String())
 				line.Reset()
@@ -88,13 +91,13 @@ func (x *builder) WriteCode(r rune) {
 }
 
 func (x *builder) WriteRune(r rune) {
-	x.width += rw.RuneWidth(r)
+	x.width += runewidth.RuneWidth(r)
 	_, _ = x.builder.WriteRune(r)
 }
 
 func (x *builder) WriteString(s string) {
 	for _, c := range s {
-		x.width += rw.RuneWidth(c)
+		x.width += runewidth.RuneWidth(c)
 	}
 	_, _ = x.builder.WriteString(s)
 }
