@@ -405,12 +405,12 @@ func (x *Model) scrollUpItems(n int) bool {
 			break
 		}
 		newCursor := x.cursor.Next()
-		// TODO: Do we need this check?
-		// Won't endCursor always be properly
-		// set, so we should never encounter
-		// this case?
+		// This check is for detecting bugs.
+		// endCursor should always be set,
+		// so we should never encounter
+		// this case.
 		if newCursor == nil {
-			log.Log().Int("i", i).Msg("up items unreachable?")
+			log.Error().Int("i", i).Msg("up items unreachable?")
 			break
 		}
 		x.cursor = newCursor

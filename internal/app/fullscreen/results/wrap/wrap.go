@@ -1,7 +1,7 @@
 package wrap
 
 import (
-	"github.com/mattn/go-runewidth"
+	rw "github.com/mattn/go-runewidth"
 	"strings"
 	"unicode"
 )
@@ -48,7 +48,7 @@ func Wrap(str string, limit int) []string {
 				continue
 			}
 
-			if line.Width()+word.Width()+runewidth.RuneWidth(c) > limit {
+			if line.Width()+word.Width()+rw.RuneWidth(c) > limit {
 				if line.Width() == 0 {
 					line.WriteString(word.String())
 					word.Reset()
@@ -91,13 +91,13 @@ func (x *builder) WriteCode(r rune) {
 }
 
 func (x *builder) WriteRune(r rune) {
-	x.width += runewidth.RuneWidth(r)
+	x.width += rw.RuneWidth(r)
 	_, _ = x.builder.WriteRune(r)
 }
 
 func (x *builder) WriteString(s string) {
 	for _, c := range s {
-		x.width += runewidth.RuneWidth(c)
+		x.width += rw.RuneWidth(c)
 	}
 	_, _ = x.builder.WriteString(s)
 }
