@@ -7,10 +7,6 @@ import (
 )
 
 func Wrap(str string, limit int) []string {
-	if len(str) == 0 {
-		return []string{""}
-	}
-
 	if limit <= 0 {
 		return strings.Split(str, "\n")
 	}
