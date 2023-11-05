@@ -1,6 +1,4 @@
-package flag
-
-// TODO: Move flags into `internal/app` package.
+package app
 
 import (
 	"encoding/binary"
@@ -30,7 +28,7 @@ func SetupFlags(cmd *cobra.Command) *Flags {
 
 	cmd.Flags().StringVarP(&flags.Cluster, "cluster", "c", "", "path to cluster file")
 	cmd.Flags().BoolVarP(&flags.Write, "write", "w", false, "allow write queries")
-	cmd.Flags().BoolVar(&flags.Log, "log", false, "perform debug logging")
+	cmd.Flags().BoolVar(&flags.Log, "log", false, "enable debug logging")
 	cmd.Flags().StringVar(&flags.LogFile, "log-file", "log.txt", "logging file when in fullscreen")
 
 	cmd.Flags().StringArrayVarP(&flags.Queries, "query", "q", nil, "execute query non-interactively")
