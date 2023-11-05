@@ -3,13 +3,12 @@ package results
 import (
 	"container/list"
 	"fmt"
-	"strings"
-
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/charmbracelet/bubbles/key"
 	tea "github.com/charmbracelet/bubbletea"
-	"github.com/muesli/reflow/wrap"
+	"github.com/janderland/fdbq/internal/app/fullscreen/results/wrap"
 	"github.com/rs/zerolog"
+	"strings"
 
 	"github.com/janderland/fdbq/engine/stream"
 	"github.com/janderland/fdbq/keyval"
@@ -272,10 +271,7 @@ func (x *Model) render(e *list.Element) []string {
 	res := e.Value.(result)
 	prefix := fmt.Sprintf("%d  ", res.i)
 	indent := strings.Repeat(" ", len(prefix))
-
-	str := x.str(res.value)
-	str = wrap.String(str, x.wrapWidth-len(prefix))
-	lines := strings.Split(str, "\n")
+	lines := wrap.Wrap(x.str(res.value), x.wrapWidth-len(prefix))
 
 	// If spaced is enabled, add an extra blank
 	// line after each item except the newest.
@@ -409,12 +405,12 @@ func (x *Model) scrollUpItems(n int) bool {
 			break
 		}
 		newCursor := x.cursor.Next()
-		// TODO: Do we need this check?
-		// Won't endCursor always be properly
-		// set, so we should never encounter
-		// this case?
+		// This check is for detecting bugs.
+		// endCursor should always be set,
+		// so we should never encounter
+		// this case.
 		if newCursor == nil {
-			log.Log().Int("i", i).Msg("up items unreachable?")
+			log.Error().Int("i", i).Msg("up items unreachable?")
 			break
 		}
 		x.cursor = newCursor
