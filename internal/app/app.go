@@ -13,7 +13,6 @@ import (
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/engine/facade"
-	"github.com/janderland/fdbq/internal/app/flag"
 	"github.com/janderland/fdbq/internal/app/fullscreen"
 	"github.com/janderland/fdbq/internal/app/headless"
 	"github.com/janderland/fdbq/parser/format"
@@ -29,15 +28,15 @@ var (
 	// and defines the API version FDB uses.
 	APIVersion = 620
 
-	flags *flag.Flags
+	flags *Flags
 )
 
 func init() {
-	flags = flag.SetupFlags(Fdbq)
+	flags = SetupFlags(FDBQ)
 }
 
-var Fdbq = &cobra.Command{
-	Use:     "fdbq [flags]",
+var FDBQ = &cobra.Command{
+	Use:     "fdbq [flags] query ...",
 	Short:   "fdbq is a query language for Foundation DB",
 	Version: Version,
 
@@ -97,6 +96,7 @@ var Fdbq = &cobra.Command{
 			}
 			return app.Run(cmd.Context())
 		}
+
 		app := headless.App{
 			Engine: eg,
 			Format: fmt,
