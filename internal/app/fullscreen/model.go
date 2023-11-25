@@ -2,6 +2,8 @@ package fullscreen
 
 import (
 	"context"
+	"github.com/janderland/fdbq/internal/app/fullscreen/results"
+	"github.com/janderland/fdbq/internal/app/fullscreen/stack"
 	"io"
 	"time"
 
@@ -12,36 +14,8 @@ import (
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/internal/app/fullscreen/manager"
-	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/parser/format"
 )
-
-type Mode int
-
-const (
-	modeScroll Mode = iota
-	modeInput
-	modeHelp
-	modeQuit
-)
-
-type Style struct {
-	results lip.Style
-	input   lip.Style
-}
-
-type Model struct {
-	qm     manager.QueryManager
-	log    zerolog.Logger
-	latest time.Time
-	mode   Mode
-
-	style   Style
-	results results.Model
-	help    results.Model
-	quit    results.Model
-	input   textinput.Model
-}
 
 type App struct {
 	Engine engine.Engine
@@ -58,16 +32,14 @@ func (x *App) Run(ctx context.Context) error {
 	input := textinput.New()
 	input.Placeholder = "Query"
 
-	model := Model{
-		qm: manager.New(
-			ctx,
-			x.Engine,
-			manager.WithSingleOpts(x.SingleOpts),
-			manager.WithRangeOpts(x.RangeOpts),
-			manager.WithWrite(x.Write)),
+	resultsStack := stack.ResultsStack{}
+	resultsStack.Push(results.New(
+		results.WithFormat(x.Format),
+		results.WithLogger(x.Log)))
 
-		log:  x.Log,
+	model := Model{
 		mode: modeScroll,
+		log:  x.Log,
 
 		style: Style{
 			results: lip.NewStyle().
@@ -77,10 +49,16 @@ func (x *App) Run(ctx context.Context) error {
 				Border(lip.RoundedBorder()).
 				Padding(0, 1),
 		},
-		results: results.New(results.WithFormat(x.Format), results.WithLogger(x.Log)),
-		help:    newHelp(),
-		quit:    newQuit(),
+
+		results: resultsStack,
 		input:   input,
+
+		qm: manager.New(
+			ctx,
+			x.Engine,
+			manager.WithSingleOpts(x.SingleOpts),
+			manager.WithRangeOpts(x.RangeOpts),
+			manager.WithWrite(x.Write)),
 	}
 
 	_, err := tea.NewProgram(
@@ -90,4 +68,29 @@ func (x *App) Run(ctx context.Context) error {
 		tea.WithAltScreen(),
 	).Run()
 	return err
+}
+
+type Mode int
+
+const (
+	modeScroll Mode = iota
+	modeInput
+	modeHelp
+	modeQuit
+)
+
+type Style struct {
+	results lip.Style
+	input   lip.Style
+}
+
+type Model struct {
+	mode   Mode
+	latest time.Time
+	log    zerolog.Logger
+
+	style   Style
+	input   textinput.Model
+	results stack.ResultsStack
+	qm      manager.QueryManager
 }
