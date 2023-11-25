@@ -9,8 +9,8 @@ import (
 func TestResultsStack(t *testing.T) {
 	var (
 		x  ResultsStack
-		r1 results.Model
-		r2 results.Model
+		r1 = results.New()
+		r2 = results.New()
 	)
 
 	require.Nil(t, x.Top())
