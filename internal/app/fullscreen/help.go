@@ -54,6 +54,7 @@ func newHelp() results.Model {
 	for _, str := range strings.Split(helpMsg, "\n") {
 		x.Push(str)
 	}
+	x.MaxWrapWidth(65)
 	return x
 }
 

@@ -8,6 +8,7 @@ import (
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/janderland/fdbq/internal/app/fullscreen/results/wrap"
 	"github.com/rs/zerolog"
+	"math"
 	"strings"
 
 	"github.com/janderland/fdbq/engine/stream"
@@ -90,6 +91,11 @@ type Model struct {
 	// line is wrapped. 0 disables wrapping.
 	wrapWidth int
 
+	// maxWrapWidth caps the wrapWidth value.
+	// If a higher value is set the maxWrapWidth
+	// is used instead.
+	maxWrapWidth int
+
 	// spaced determines if a blank line
 	// appears between each item.
 	spaced bool
@@ -126,11 +132,12 @@ type Model struct {
 
 func New(opts ...Option) Model {
 	x := Model{
-		log:     zerolog.Nop(),
-		keyMap:  defaultKeyMap(),
-		format:  format.New(),
-		builder: &strings.Builder{},
-		list:    list.New(),
+		log:          zerolog.Nop(),
+		keyMap:       defaultKeyMap(),
+		format:       format.New(),
+		maxWrapWidth: math.MaxInt,
+		builder:      &strings.Builder{},
+		list:         list.New(),
 	}
 	for _, option := range opts {
 		option(&x)
@@ -170,10 +177,17 @@ func (x *Model) Height(height int) {
 }
 
 func (x *Model) WrapWidth(width int) {
+	if width > x.maxWrapWidth {
+		width = x.maxWrapWidth
+	}
 	x.log.Log().Int("wrapWidth", width).Msg("setting")
 	x.wrapWidth = width
 	x.subCursor = 0
 	x.updateCursors()
+}
+
+func (x *Model) MaxWrapWidth(width int) {
+	x.maxWrapWidth = width
 }
 
 func (x *Model) PushMany(list *list.List) {
@@ -327,7 +341,7 @@ func (x *Model) str(item any) string {
 	}
 }
 
-func (x *Model) Update(msg tea.Msg) Model {
+func (x *Model) Scroll(msg tea.Msg) {
 	switch msg := msg.(type) {
 	case tea.KeyMsg:
 		switch {
@@ -365,8 +379,6 @@ func (x *Model) Update(msg tea.Msg) Model {
 			x.scrollUpItems(1)
 		}
 	}
-
-	return *x
 }
 
 func (x *Model) scrollDownItems(n int) bool {

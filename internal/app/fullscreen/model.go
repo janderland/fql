@@ -2,6 +2,8 @@ package fullscreen
 
 import (
 	"context"
+	"github.com/janderland/fdbq/internal/app/fullscreen/results"
+	"github.com/janderland/fdbq/internal/app/fullscreen/stack"
 	"io"
 	"time"
 
@@ -12,7 +14,6 @@ import (
 
 	"github.com/janderland/fdbq/engine"
 	"github.com/janderland/fdbq/internal/app/fullscreen/manager"
-	"github.com/janderland/fdbq/internal/app/fullscreen/results"
 	"github.com/janderland/fdbq/parser/format"
 )
 
@@ -31,6 +32,11 @@ func (x *App) Run(ctx context.Context) error {
 	input := textinput.New()
 	input.Placeholder = "Query"
 
+	resultsStack := stack.ResultsStack{}
+	resultsStack.Push(results.New(
+		results.WithFormat(x.Format),
+		results.WithLogger(x.Log)))
+
 	model := Model{
 		mode: modeScroll,
 		log:  x.Log,
@@ -44,13 +50,8 @@ func (x *App) Run(ctx context.Context) error {
 				Padding(0, 1),
 		},
 
-		results: results.New(
-			results.WithFormat(x.Format),
-			results.WithLogger(x.Log)),
-
-		help:  newHelp(),
-		quit:  newQuit(),
-		input: input,
+		results: resultsStack,
+		input:   input,
 
 		qm: manager.New(
 			ctx,
@@ -89,9 +90,7 @@ type Model struct {
 	log    zerolog.Logger
 
 	style   Style
-	results results.Model
-	help    results.Model
-	quit    results.Model
 	input   textinput.Model
+	results stack.ResultsStack
 	qm      manager.QueryManager
 }
