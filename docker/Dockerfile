@@ -1,9 +1,12 @@
 # 'builder' includes all build & testing dependencies.
-FROM centos:7 AS builder
+FROM --platform=linux/amd64 centos:7 AS builder
 
-RUN yum -y --setopt=skip_missing_names_on_install=False install epel-release gcc-4.8.5 &&\
-    yum -y --setopt=skip_missing_names_on_install=False install ShellCheck-0.3.8 &&\
-    yum -y --setopt=skip_missing_names_on_install=False install git-1.8.3.1 &&\
+RUN yum -y --setopt=skip_missing_names_on_install=False install \
+        epel-release \
+        gcc-4.8.5 &&\
+    yum -y --setopt=skip_missing_names_on_install=False install \
+        ShellCheck-0.3.8 \
+        git-1.8.3.1 &&\
     yum -y clean all
 
 ARG FDB_LIB_URL
@@ -36,7 +39,7 @@ RUN curl -Lo /usr/local/bin/jq $JQ_URL &&\
 
 
 # 'gobuild' executes 'go build'.
-FROM builder AS gobuild
+FROM --platform=linux/amd64 builder AS gobuild
 
 COPY . /src
 WORKDIR /src
@@ -46,7 +49,7 @@ RUN go build -o /fdbq -ldflags="-X 'github.com/janderland/fdbq/internal/app.Vers
 
 
 # The final stage builds the 'fdbq' image.
-FROM centos:7
+FROM --platform=linux/amd64 centos:7
 
 ARG FDB_LIB_URL
 RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
