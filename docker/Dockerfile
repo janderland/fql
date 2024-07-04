@@ -1,18 +1,18 @@
 # 'builder' includes all build & testing dependencies.
-FROM --platform=linux/amd64 centos:7 AS builder
+FROM --platform=linux/amd64 debian:12 AS builder
 
-RUN yum -y --setopt=skip_missing_names_on_install=False install \
-        epel-release \
-        gcc-4.8.5 &&\
-    yum -y --setopt=skip_missing_names_on_install=False install \
-        ShellCheck-0.3.8 \
-        git-1.8.3.1 &&\
-    yum -y clean all
+RUN apt update &&\
+    apt install -y \
+      build-essential \
+      shellcheck=0.9.0-1 \
+      git=1:2.39.2-1.1 \
+      curl=7.88.1-10+deb12u6 &&\
+    apt clean
 
 ARG FDB_LIB_URL
-RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
-    rpm -i ./fdb.rpm &&\
-    rm ./fdb.rpm
+RUN curl -Lo fdb.deb $FDB_LIB_URL &&\
+    dpkg -i ./fdb.deb &&\
+    rm ./fdb.deb
 
 ARG GO_URL
 RUN curl -Lo go.tar.gz $GO_URL &&\
@@ -49,12 +49,12 @@ RUN go build -o /fdbq -ldflags="-X 'github.com/janderland/fdbq/internal/app.Vers
 
 
 # The final stage builds the 'fdbq' image.
-FROM --platform=linux/amd64 centos:7
+FROM --platform=linux/amd64 debian:12
 
 ARG FDB_LIB_URL
-RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
-    rpm -i ./fdb.rpm              &&\
-    rm ./fdb.rpm
+RUN curl -Lo fdb.deb $FDB_LIB_URL &&\
+    dpkg -i ./fdb.deb &&\
+    rm ./fdb.deb
 
 ENV TERM="xterm-256color"
 
