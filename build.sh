@@ -88,6 +88,7 @@ function join_array {
 function escape_quotes {
   out=()
   for arg in "$@"; do
+    # shellcheck disable=SC1003
     out+=("$(printf "'%s'" "${arg//'/\\'}")")
   done
   echo "${out[@]}"
