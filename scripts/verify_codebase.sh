@@ -6,6 +6,9 @@ cd "${0%/*}/.."
 
 set -x
 
+id
+ls -ld /fdbq
+
 # Lint shell scripts.
 find . -type f -iname '*.sh' -print0 | xargs -t -0 shellcheck
 
