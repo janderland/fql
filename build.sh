@@ -198,6 +198,12 @@ while [[ $# -gt 0 ]]; do
 done
 
 
+# Print helpful debug info.
+
+id
+ls -ld /fdbq
+
+
 # Build variables required by the docker compose command.
 
 BUILD_TASKS=()
