@@ -1,5 +1,5 @@
 # 'builder' includes all build & testing dependencies.
-FROM --platform=linux/amd64 debian:12 AS builder
+FROM debian:12 AS builder
 
 RUN apt update &&\
     apt install -y \
@@ -10,9 +10,8 @@ RUN apt update &&\
     apt clean
 
 ARG FDB_LIB_URL
-RUN curl -Lo fdb.deb $FDB_LIB_URL &&\
-    dpkg -i ./fdb.deb &&\
-    rm ./fdb.deb
+RUN curl -Lo /fdb.deb $FDB_LIB_URL &&\
+    dpkg -i /fdb.deb
 
 ARG GO_URL
 RUN curl -Lo go.tar.gz $GO_URL &&\
@@ -49,12 +48,11 @@ RUN go build -o /fdbq -ldflags="-X 'github.com/janderland/fdbq/internal/app.Vers
 
 
 # The final stage builds the 'fdbq' image.
-FROM --platform=linux/amd64 debian:12
+FROM debian:12
 
-ARG FDB_LIB_URL
-RUN curl -Lo fdb.deb $FDB_LIB_URL &&\
-    dpkg -i ./fdb.deb &&\
-    rm ./fdb.deb
+COPY --from=gobuild /fdb.deb /fdb.deb
+RUN dpkg -i ./fdb.deb &&\
+    rm /fdb.deb
 
 ENV TERM="xterm-256color"
 

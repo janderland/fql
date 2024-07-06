@@ -9,6 +9,8 @@ services:
     build:
       context: "./docker"
       target: "builder"
+      platforms:
+        - "linux/amd64"
       args:
         FDB_LIB_URL: "${FDB_LIB_URL}"
         GO_URL: "${GO_URL}"
@@ -34,6 +36,8 @@ services:
     build:
       context: "."
       dockerfile: "./docker/Dockerfile"
+      platforms:
+        - "linux/amd64"
       args:
         FDBQ_VER: "${DOCKER_TAG}"
         FDB_LIB_URL: "${FDB_LIB_URL}"
