@@ -201,7 +201,7 @@ done
 # Print helpful debug info.
 
 id
-ls -ld /fdbq/*
+ls -ld /
 
 
 # Build variables required by the docker compose command.
