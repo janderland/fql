@@ -1,15 +1,19 @@
 # 'builder' includes all build & testing dependencies.
-FROM centos:7 AS builder
+FROM debian:12 AS builder
 
-RUN yum -y --setopt=skip_missing_names_on_install=False install epel-release gcc-4.8.5 &&\
-    yum -y --setopt=skip_missing_names_on_install=False install ShellCheck-0.3.8 &&\
-    yum -y --setopt=skip_missing_names_on_install=False install git-1.8.3.1 &&\
-    yum -y clean all
+RUN apt-get update &&\
+    apt-get install --no-install-recommends -y \
+      build-essential=12.9 \
+      ca-certificates=20230311 \
+      shellcheck=0.9.0-1 \
+      git=1:2.39.2-1.1 \
+      curl=7.88.1-10+deb12u6 &&\
+    apt-get clean &&\
+    rm -rf /var/lib/apt/lists/*
 
 ARG FDB_LIB_URL
-RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
-    rpm -i ./fdb.rpm &&\
-    rm ./fdb.rpm
+RUN curl -Lo /fdb.deb $FDB_LIB_URL &&\
+    dpkg -i /fdb.deb
 
 ARG GO_URL
 RUN curl -Lo go.tar.gz $GO_URL &&\
@@ -34,6 +38,12 @@ ARG JQ_URL
 RUN curl -Lo /usr/local/bin/jq $JQ_URL &&\
     chmod +x /usr/local/bin/jq
 
+# Configure git so it allows any user to run git commands
+# on the /fdbq directory. This allows the user which runs
+# CI to be different from the user which built the Docker
+# image.
+RUN git config --global --add safe.directory /fdbq
+
 
 # 'gobuild' executes 'go build'.
 FROM builder AS gobuild
@@ -46,12 +56,11 @@ RUN go build -o /fdbq -ldflags="-X 'github.com/janderland/fdbq/internal/app.Vers
 
 
 # The final stage builds the 'fdbq' image.
-FROM centos:7
+FROM debian:12
 
-ARG FDB_LIB_URL
-RUN curl -Lo fdb.rpm $FDB_LIB_URL &&\
-    rpm -i ./fdb.rpm              &&\
-    rm ./fdb.rpm
+COPY --from=gobuild /fdb.deb /fdb.deb
+RUN dpkg -i ./fdb.deb &&\
+    rm /fdb.deb
 
 ENV TERM="xterm-256color"
 

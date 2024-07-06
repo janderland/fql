@@ -8,14 +8,14 @@ jobs:
   build:
     strategy:
       matrix:
-        fdb_ver: [6.2.30, 7.1.33]
+        fdb_ver: [6.2.30, 7.1.61]
         include:
           - fdb_ver: 6.2.30
-            fdb_lib_url: https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients-6.2.30-1.el7.x86_64.rpm
+            fdb_lib_url: https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients_6.2.30-1_amd64.deb
             fdb_docker_image: foundationdb/foundationdb:6.2.30
-          - fdb_ver: 7.1.33
-            fdb_lib_url: https://github.com/apple/foundationdb/releases/download/7.1.33/foundationdb-clients-7.1.33-1.el7.x86_64.rpm
-            fdb_docker_image: foundationdb/foundationdb:7.1.33
+          - fdb_ver: 7.1.61
+            fdb_lib_url: https://github.com/apple/foundationdb/releases/download/7.1.61/foundationdb-clients_7.1.61-1_amd64.deb
+            fdb_docker_image: foundationdb/foundationdb:7.1.61
     runs-on: ubuntu-latest
     steps:
     - name: Checkout

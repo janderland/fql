@@ -88,6 +88,7 @@ function join_array {
 function escape_quotes {
   out=()
   for arg in "$@"; do
+    # shellcheck disable=SC1003
     out+=("$(printf "'%s'" "${arg//'/\\'}")")
   done
   echo "${out[@]}"
@@ -175,6 +176,11 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
 
+    --no-hado)
+      NO_HADO="x"
+      shift 1
+      ;;
+
     --help)
       print_help
       exit 0
@@ -202,7 +208,7 @@ fi
 
 if [[ -n "$VERIFY_CODEBASE" ]]; then
   BUILD_TASKS+=('./scripts/setup_database.sh')
-  BUILD_TASKS+=('./scripts/verify_codebase.sh')
+  BUILD_TASKS+=("./scripts/verify_codebase.sh ${NO_HADO:+--no-hado}")
 fi
 
 BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"
