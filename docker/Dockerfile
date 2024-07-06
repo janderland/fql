@@ -1,13 +1,13 @@
 # 'builder' includes all build & testing dependencies.
 FROM debian:12 AS builder
 
-RUN apt update &&\
-    apt install -y \
+RUN apt-get update &&\
+    apt-get install -y \
       build-essential \
       shellcheck=0.9.0-1 \
       git=1:2.39.2-1.1 \
       curl=7.88.1-10+deb12u6 &&\
-    apt clean
+    apt-get clean
 
 ARG FDB_LIB_URL
 RUN curl -Lo /fdb.deb $FDB_LIB_URL &&\
