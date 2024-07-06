@@ -36,6 +36,12 @@ ARG JQ_URL
 RUN curl -Lo /usr/local/bin/jq $JQ_URL &&\
     chmod +x /usr/local/bin/jq
 
+# Configure git so it allows any user to run git commands
+# on the /fdbq directory. This allows the user which runs
+# CI to be different from the user which built the Docker
+# image.
+RUN git config --global --add safe.directory /fdbq
+
 
 # 'gobuild' executes 'go build'.
 FROM --platform=linux/amd64 builder AS gobuild
