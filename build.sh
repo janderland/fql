@@ -202,6 +202,7 @@ done
 
 id
 ls -ld /fdbq
+ls -ld /fdbq/*
 
 
 # Build variables required by the docker compose command.
