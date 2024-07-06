@@ -201,7 +201,6 @@ done
 # Print helpful debug info.
 
 id
-ls -ld /fdbq
 ls -ld /fdbq/*
 
 
