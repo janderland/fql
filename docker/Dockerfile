@@ -3,7 +3,7 @@ FROM debian:12 AS builder
 
 RUN apt-get update &&\
     apt-get install -y \
-      build-essential \
+      build-essential=12.9 \
       shellcheck=0.9.0-1 \
       git=1:2.39.2-1.1 \
       curl=7.88.1-10+deb12u6 &&\
@@ -44,7 +44,7 @@ RUN git config --global --add safe.directory /fdbq
 
 
 # 'gobuild' executes 'go build'.
-FROM --platform=linux/amd64 builder AS gobuild
+FROM builder AS gobuild
 
 COPY . /src
 WORKDIR /src
