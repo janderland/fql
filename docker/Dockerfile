@@ -2,12 +2,14 @@
 FROM debian:12 AS builder
 
 RUN apt-get update &&\
-    apt-get install -y \
+    apt-get install --no-install-recommends -y \
       build-essential=12.9 \
+      ca-certificates=20230311 \
       shellcheck=0.9.0-1 \
       git=1:2.39.2-1.1 \
       curl=7.88.1-10+deb12u6 &&\
-    apt-get clean
+    apt-get clean &&\
+    rm -rf /var/lib/apt/lists/*
 
 ARG FDB_LIB_URL
 RUN curl -Lo /fdb.deb $FDB_LIB_URL &&\
