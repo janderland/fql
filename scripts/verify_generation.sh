@@ -4,6 +4,9 @@ set -euo pipefail
 # Change directory to repo root.
 cd "${0%/*}/.."
 
+id
+ls -ld /fdbq
+
 STATUS="$(git status --short)"
 if [[ -n "$STATUS" ]]; then
   echo "ERR! Generated code cannot be verified while there are uncommitted changes."
