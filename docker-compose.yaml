@@ -5,6 +5,7 @@ services:
   build:
     container_name: "build"
     image: "docker.io/janderland/fdbq-build:${DOCKER_TAG}"
+    platform: "linux/amd64"
     build:
       context: "./docker"
       target: "builder"
@@ -29,6 +30,7 @@ services:
   fdbq:
     container_name: "fdbq"
     image: "docker.io/janderland/fdbq:${DOCKER_TAG}"
+    platform: "linux/amd64"
     build:
       context: "."
       dockerfile: "./docker/Dockerfile"
@@ -49,5 +51,6 @@ services:
   fdb:
     container_name: "fdb"
     image: "${FDB_DOCKER_IMAGE}"
+    platform: "linux/amd64"
     ports:
       - "4500:4500"
