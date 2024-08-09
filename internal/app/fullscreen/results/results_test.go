@@ -88,7 +88,7 @@ func TestSingleLine(t *testing.T) {
 				},
 				Value: keyval.Int(10),
 			},
-			"1  /dir{23}=10",
+			"1  /dir(23)=10",
 		},
 		{
 			dir([]string{"dir"}),
@@ -104,7 +104,7 @@ func TestSingleLine(t *testing.T) {
 					Value: keyval.Int(10),
 				},
 			},
-			"1  /dir{23}=10",
+			"1  /dir(23)=10",
 		},
 		{
 			stream.KeyValErr{

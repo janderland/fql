@@ -23,31 +23,31 @@ func TestHeadless_Query(t *testing.T) {
 		{
 			name:    "set",
 			write:   true,
-			queries: []string{"/my/dir{\"hi\",\"there\"}=33.9"},
+			queries: []string{"/my/dir(\"hi\",\"there\")=33.9"},
 			err:     false,
 		},
 		{
 			name:    "set error",
 			write:   false,
-			queries: []string{"/my/dir{\"hi\",\"there\"}=33.9"},
+			queries: []string{"/my/dir(\"hi\",\"there\")=33.9"},
 			err:     true,
 		},
 		{
 			name:    "clear",
 			write:   true,
-			queries: []string{"/my/dir{\"hi\",\"there\"}=clear"},
+			queries: []string{"/my/dir(\"hi\",\"there\")=clear"},
 			err:     false,
 		},
 		{
 			name:    "clear error",
 			write:   false,
-			queries: []string{"/my/dir{\"hi\",\"there\"}=clear"},
+			queries: []string{"/my/dir(\"hi\",\"there\")=clear"},
 			err:     true,
 		},
 		{
 			name:    "get nothing",
 			write:   false,
-			queries: []string{"/nothing/is/here{\"wont\",\"match\"}=<>"},
+			queries: []string{"/nothing/is/here(\"wont\",\"match\")=<>"},
 			err:     false,
 		},
 	}

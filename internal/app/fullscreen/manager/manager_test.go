@@ -20,31 +20,31 @@ func TestWriteFlag(t *testing.T) {
 		{
 			name:  "set",
 			write: true,
-			query: "/my/dir{\"hi\",\"there\"}=33.9",
+			query: "/my/dir(\"hi\",\"there\")=33.9",
 			err:   false,
 		},
 		{
 			name:  "set error",
 			write: false,
-			query: "/my/dir{\"hi\",\"there\"}=33.9",
+			query: "/my/dir(\"hi\",\"there\")=33.9",
 			err:   true,
 		},
 		{
 			name:  "clear",
 			write: true,
-			query: "/my/dir{\"hi\",\"there\"}=clear",
+			query: "/my/dir(\"hi\",\"there\")=clear",
 			err:   false,
 		},
 		{
 			name:  "clear error",
 			write: false,
-			query: "/my/dir{\"hi\",\"there\"}=clear",
+			query: "/my/dir(\"hi\",\"there\")=clear",
 			err:   true,
 		},
 		{
 			name:  "get nothing",
 			write: false,
-			query: "/nothing/is/here{\"wont\",\"match\"}=<>",
+			query: "/nothing/is/here(\"wont\",\"match\")=<>",
 			err:   false,
 		},
 	}

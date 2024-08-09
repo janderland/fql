@@ -43,7 +43,7 @@ func TestScanner(t *testing.T) {
 		},
 		{
 			name:  "tuples",
-			input: "{\"something\"\r, \t22.88e0,- 88  \n}",
+			input: "(\"something\"\r, \t22.88e0,- 88  \n)",
 			tokens: []token{
 				tokenTupStart,
 				tokenStrMark,
@@ -63,7 +63,7 @@ func TestScanner(t *testing.T) {
 		},
 		{
 			name:  "key-value",
-			input: "/my \t/dir\r\n{ \"hi world\" ,\n 88-212 = {, \t",
+			input: "/my \t/dir\r\n( \"hi world\" ,\n 88-212 = (, \t",
 			tokens: []token{
 				tokenDirSep,
 				{TokenKindOther, "my"},
@@ -90,7 +90,7 @@ func TestScanner(t *testing.T) {
 		},
 		{
 			name:  "escape",
-			input: "/how \\a\n /wow { \"tens \\\\ \"",
+			input: "/how \\a\n /wow ( \"tens \\\\ \"",
 			tokens: []token{
 				tokenDirSep,
 				{TokenKindOther, "how"},
