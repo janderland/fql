@@ -150,9 +150,9 @@ func singleRuneKind(r rune) TokenKind {
 		return TokenKindReserved
 	case internal.Ampersand:
 		return TokenKindReserved
-	case internal.ParenStart:
+	case internal.CurlyStart:
 		return TokenKindReserved
-	case internal.ParenEnd:
+	case internal.CurlyEnd:
 		return TokenKindReserved
 	case internal.Star:
 		return TokenKindReserved
