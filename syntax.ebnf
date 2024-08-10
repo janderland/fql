@@ -15,7 +15,7 @@ value = 'clear' | data
 
 directory = '/' ( '<>' | name | string ) [ directory ]
 
-tuple = '{' [ nl elements [ ',' ] nl ] '}'
+tuple = '(' [ nl elements [ ',' ] nl ] ')'
 
 elements = '...' | ( data [ ',' nl elements ] )
 
