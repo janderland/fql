@@ -40,9 +40,9 @@ arguments are passed to the FDBQ binary.
 
 ```bash
 # 'my_cluster:baoeA32@172.20.3.33:4500' is used as the contents
-# for the cluster file. '-log' and '/my/dir{<>}=42' are passed
+# for the cluster file. '-log' and '/my/dir(<>)=42' are passed
 # as args to the FDBQ binary.
-docker run docker.io/janderland/fdbq 'my_cluster:baoeA32@172.20.3.33:4500' -log '/my/dir{<>}=42'
+docker run docker.io/janderland/fdbq 'my_cluster:baoeA32@172.20.3.33:4500' -log '/my/dir(<>)=42'
 ```
 
 Within the cluster file contents (first argument), any instances of a 
@@ -58,7 +58,7 @@ docker run --network my_net --name fdb -d foundationdb/foundationdb
 # The substring '{fdb}' in the first argument will be replaced with
 # the IP address of the FDB container started above before the cluster
 # file is written to disk.
-docker run --network my_net docker.io/janderland/fdbq 'docker:docker@{fdb}:4500' -log '/my/dir{<>}=42'
+docker run --network my_net docker.io/janderland/fdbq 'docker:docker@{fdb}:4500' -log '/my/dir(<>)=42'
 ```
 
 ## Query Language
@@ -146,24 +146,24 @@ a pair of curly braces. The elements may be a tuple or any of the primitive
 types.
 
 ```fdbq
-{"one", 2, 0x03, { "subtuple" }, 5825d3f8-de5b-40c6-ac32-47ea8b98f7b4}
+("one", 2, 0x03, ( "subtuple" ), 5825d3f8-de5b-40c6-ac32-47ea8b98f7b4)
 ```
 
 The last element of a tuple may be the `...` token.
 
 ```fdbq
-{0xFF, "thing", ...}
+(0xFF, "thing", ...)
 ```
 
 Any combination of spaces, tabs, and newlines is allowed after the opening  
 brace and commas.
 
 ```fdbq
-{
+(
   1,
   2,
   3,
-}
+)
 ```
 
 #### Key-Values
@@ -172,19 +172,19 @@ A key-value is specified as a directory, tuple, equal symbol, and value appended
 together:
 
 ```fdbq
-/my/dir{"this", 0}=0xabcf03
+/my/dir("this", 0)=0xabcf03
 ```
 
 The value following the equal symbol may be any of the primitives or a tuple:
 
 ```fdbq
-/my/dir{22.3, -8}={"another", "tuple"}
+/my/dir(22.3, -8)=("another", "tuple")
 ```
 
 The value can also be the `clear` token.
 
 ```fdbq
-/some/where{"home", "town", 88.3}=clear
+/some/where("home", "town", 88.3)=clear
 ```
 
 #### Variables
@@ -192,7 +192,7 @@ The value can also be the `clear` token.
 A variable may be used in place of a directory element, tuple element, or value.
 
 ```fdbq
-/my/dir/<>{"first", <>, "third"}=<>
+/my/dir/<>("first", <>, "third")=<>
 ```
 
 If the variable is a tuple element or value, it may contain a list of primitive
@@ -201,7 +201,7 @@ contain the `any` type which is equivalent to specifying every type. Specifying
 no types is also equivalent to specifying the `any` type.
 
 ```fdbq
-/my/dir{"that", <int|float|bytes>}=<any>
+/my/dir("that", <int|float|bytes>)=<any>
 ```
 
 ### Kinds of Queries
@@ -215,7 +215,7 @@ Set queries write a single key-value. The query must not contain the `clear`
 or `...` tokens, nor a variable.
 
 ```fdbq
-/my/dir{"hello", "world"}=42
+/my/dir("hello", "world")=42
 ```
 
 ```go
@@ -238,7 +238,7 @@ Clear queries delete a single key-value. The query must contain the `clear`
 token as it's value and must not contain the `...` token or variables.
 
 ```fdbq
-/my/dir{"hello", "world"}=clear
+/my/dir("hello", "world")=clear
 ```
 
 ```go
@@ -266,7 +266,7 @@ the value cannot be deserialized as any of the types specified then the
 key-value is not returned or an error is returned, depending on configuration.
 
 ```fdbq
-/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<int|string>
+/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|string>
 ```
 
 ```go
@@ -295,9 +295,9 @@ This implies an empty variable as the value. In the code block below, the
 three queries are equivalent.
 
 ```fdbq
-/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}
-/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<>
-/my/dir{99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136}=<any>
+/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)
+/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<>
+/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<any>
 ```
 
 #### Read Range of Keys
@@ -312,7 +312,7 @@ queries as they may result in large amounts of data being sent to the
 client and most of the data being filtered out.
 
 ```fdbq
-/people{3392, <string|int>, <>}={<uint>, ...}
+/people(3392, <string|int>, <>)=(<uint>, ...)
 ```
 
 ```go
