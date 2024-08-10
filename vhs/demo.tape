@@ -3,19 +3,24 @@ Set FontSize 14
 Set Height 600
 Set Width 800
 
+Hide
+Type@0 "export DYLD_LIBRARY_PATH=/usr/local/lib"
+Enter
+Show
+
 Type "./fdbq" 
 Enter
 
 Sleep 2s
 Type "i"
-Type "/user{...}"
+Type "/user(...)"
 
 Sleep 1s
 Enter
 
 Sleep 2s
 Backspace 4
-Type '<int>,"Goodwin",...}'
+Type '<int>,"Goodwin",...)'
 
 Sleep 1s
 Enter
