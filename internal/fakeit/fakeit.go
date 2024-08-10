@@ -14,7 +14,14 @@ import (
 
 func main() {
 	fdb.MustAPIVersion(620)
-	eg := engine.New(facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
+	db := fdb.MustOpenDefault()
+	eg := engine.New(facade.NewTransactor(db, directory.Root()))
+
+	for _, path := range [][]string{{"user"}, {"status"}} {
+		if _, err := directory.Root().Remove(db, path); err != nil {
+			panic(err)
+		}
+	}
 
 	for i := 0; i < 3; i++ {
 		query := kv.KeyValue{
