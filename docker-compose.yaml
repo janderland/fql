@@ -1,3 +1,6 @@
+volumes:
+  cache:
+
 services:
 
   # The build service is responsible for building,
@@ -11,21 +14,20 @@ services:
       target: "builder"
       platforms:
         - "linux/amd64"
-      args:
+      args: &build_args
+        FDBQ_VER: "${DOCKER_TAG}"
         FDB_LIB_URL: "${FDB_LIB_URL}"
         GO_URL: "${GO_URL}"
         GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
         HADOLINT_URL: "${HADOLINT_URL}"
         JQ_URL: "${JQ_URL}"
+        SHELLCHECK_URL: "${SHELLCHECK_URL}"
     depends_on:
       - "fdb"
     working_dir: "/fdbq"
     volumes:
       - ".:/fdbq"
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "${BUILD_COMMAND}"
+      - "cache:/cache"
 
   # The fdbq service allows us to build and test the
   # fdbq Docker image.
@@ -38,17 +40,9 @@ services:
       dockerfile: "./docker/Dockerfile"
       platforms:
         - "linux/amd64"
-      args:
-        FDBQ_VER: "${DOCKER_TAG}"
-        FDB_LIB_URL: "${FDB_LIB_URL}"
-        GO_URL: "${GO_URL}"
-        GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
-        HADOLINT_URL: "${HADOLINT_URL}"
-        JQ_URL: "${JQ_URL}"
+      args: *build_args
     depends_on:
       - "fdb"
-    command: |
-      'docker:docker@{fdb}:4500' ${FDBQ_COMMAND}
 
   # The fdb service provides a single-node cluster
   # for integration testing.
