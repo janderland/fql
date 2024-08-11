@@ -204,14 +204,18 @@ export DOCKER_TAG
 
 # Run the requested commands.
 
-[[ -n "$IMAGE_BUILD" ]] &&\
+if [[ -n "$IMAGE_BUILD" ]]; then
   (set -x; docker compose build build)
+fi
 
-[[ -n "$BUILD_COMMAND" ]] &&\
+if [[ -n "$BUILD_COMMAND" ]]; then
   (set -x; docker compose run build /bin/sh -c "$BUILD_COMMAND")
+fi
 
-[[ -n "$IMAGE_FDBQ" ]] &&\
+if [[ -n "$IMAGE_FDBQ" ]]; then
   (set -x; docker compose build fdbq)
+fi
 
-[[ -n "$RUN" ]] &&\
+if [[ -n "$RUN" ]]; then
   (set -x; docker compose run fdbq 'docker:docker@{fdb}:4500' "${FDBQ_ARGS[@]}")
+fi
