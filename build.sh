@@ -38,13 +38,6 @@ FDB instance used by the 'verify' task.
 
   ./build.sh --run --write -q '/my/dir{"hi"}=nil'
 
-If the '--fullscreen' flag is provided then the 'fdbq' docker
-image will be connected to a proper terminal allowing queries
-to be executed in fullscreen mode. This flag should be used
-alongside the '--run' flag and must be provided before it.
-
-  ./build.sh --fullscreen --run
-
 After this, the script ends. If any of the requested tasks fail
 then the script exits immediately.
 
@@ -81,23 +74,6 @@ function join_array {
     done
   fi
   echo "$out"
-}
-
-
-# escape_quotes adds an extra layer of single quotes
-# around it's arguments. Any single quotes included
-# in the arguments are escaped with backslashes. This
-# is required because Docker interprets the CLI args
-# through a shell before being passed to the fdbq
-# container
-
-function escape_quotes {
-  out=()
-  for arg in "$@"; do
-    # shellcheck disable=SC1003
-    out+=("$(printf "'%s'" "${arg//'/\\'}")")
-  done
-  echo "${out[@]}"
 }
 
 
@@ -160,11 +136,6 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
 
-    --fullscreen)
-      FULLSCREEN="x"
-      shift 1
-      ;;
-
     --no-hado)
       NO_HADO="x"
       shift 1
@@ -194,6 +165,7 @@ while [[ $# -gt 0 ]]; do
 
     --run)
       shift 1
+      RUN="x"
       FDBQ_ARGS=("$@")
       shift $#
       ;;
@@ -221,7 +193,7 @@ BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"
 echo "BUILD_COMMAND=${BUILD_COMMAND}"
 export BUILD_COMMAND
 
-FDBQ_COMMAND="$(escape_quotes "${FDBQ_ARGS[@]}")"
+FDBQ_COMMAND=${FDBQ_ARGS[*]}
 echo "FDBQ_COMMAND=${FDBQ_COMMAND}"
 export FDBQ_COMMAND
 
@@ -237,15 +209,13 @@ if [[ -n "$IMAGE_BUILD" ]]; then
 fi
 
 if [[ -n "$BUILD_COMMAND" ]]; then
-  (set -x; docker compose up build --attach build --exit-code-from build)
+  (set -x; docker compose run build /bin/sh -c "$BUILD_COMMAND")
 fi
 
 if [[ -n "$IMAGE_FDBQ" ]]; then
   (set -x; docker compose build fdbq)
 fi
 
-if [[ -n "$FULLSCREEN" ]]; then
-  (set -x; docker compose run fdbq)
-elif [[ -n "$FDBQ_COMMAND" ]]; then
-  (set -x; docker compose up fdbq --attach fdbq --exit-code-from fdbq)
+if [[ -n "$RUN" ]]; then
+  (set -x; docker compose run fdbq 'docker:docker@{fdb}:4500' "${FDBQ_ARGS[@]}")
 fi

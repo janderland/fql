@@ -28,10 +28,6 @@ services:
     volumes:
       - ".:/fdbq"
       - "cache:/cache"
-    command:
-      - "/bin/sh"
-      - "-c"
-      - "${BUILD_COMMAND}"
 
   # The fdbq service allows us to build and test the
   # fdbq Docker image.
@@ -47,8 +43,6 @@ services:
       args: *build_args
     depends_on:
       - "fdb"
-    command: |
-      'docker:docker@{fdb}:4500' ${FDBQ_COMMAND}
 
   # The fdb service provides a single-node cluster
   # for integration testing.
