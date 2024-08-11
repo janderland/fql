@@ -5,7 +5,6 @@ RUN apt-get update &&\
     apt-get install --no-install-recommends -y \
       build-essential=12.9 \
       ca-certificates=20230311 \
-      shellcheck=0.9.0-1 \
       git=1:2.39.2-1.1 \
       curl=7.88.1-10+deb12u6 &&\
     apt-get clean &&\
@@ -29,6 +28,12 @@ RUN curl -Lo golint.sh $GOLANGCI_LINT_URL &&\
     sh ./golint.sh -b "$(go env GOPATH)/bin" $GOLANGCI_LINT_VER &&\
     rm ./golint.sh
 ENV GOLANGCI_LINT_CACHE="/cache/golangci-lint"
+
+ARG SHELLCHECK_URL
+RUN curl -Lo shellcheck.tar.xz $SHELLCHECK_URL &&\
+    tar -xf ./shellcheck.tar.xz &&\
+    mv ./shellcheck-*/shellcheck /usr/local/bin &&\
+    rm -r ./shellcheck.tar.xz ./shellcheck-*
 
 ARG HADOLINT_URL
 RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\

@@ -18,6 +18,7 @@ services:
         GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
         HADOLINT_URL: "${HADOLINT_URL}"
         JQ_URL: "${JQ_URL}"
+        SHELLCHECK_URL: "${SHELLCHECK_URL}"
     depends_on:
       - "fdb"
     working_dir: "/fdbq"
