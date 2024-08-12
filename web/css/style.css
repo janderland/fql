@@ -1,0 +1,151 @@
+:root {
+  /* 
+   * base16 "eighties" color scheme
+   * http://chriskempson.com/projects/base16/
+   */
+
+  --color0: rgb(45, 45, 45);
+  --color1: rgb(57, 57, 57);
+  --color2: rgb(81, 81, 81);
+  --color3: rgb(116, 115, 105);
+  --color4: rgb(160, 159, 147);
+  --color5: rgb(211, 208, 200);
+  --color6: rgb(232, 230, 223);
+  --color7: rgb(242, 240, 236);
+  --color8: rgb(242, 119, 122);
+  --color9: rgb(249, 145, 87);
+  --colorA: rgb(255, 204, 102);
+  --colorB: rgb(153, 204, 153);
+  --colorC: rgb(102, 204, 204);
+  --colorD: rgb(102, 153, 204);
+  --colorE: rgb(204, 153, 204);
+  --colorF: rgb(210, 123, 83);
+}
+
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: var(--color0);
+  color: var(--color5);
+
+  line-height: 1.75;
+  max-width: 38rem;
+  padding: 0 0.6rem;
+  margin: 0 auto;
+}
+
+/*
+header {
+  display: flex;
+
+  .jander {
+    display: inline-block;
+    color: var(--colorE);
+    font-size: 1.5rem;
+  }
+
+  .land {
+    display: inline-block;
+    color: var(--colorD);
+    font-size: 1.4rem;
+  }
+}
+
+header.home {
+  padding-left: 7.75rem;
+  line-height: 1;
+
+  .jander {
+    font-size: 6.25rem;
+    margin-left: -7.5rem;
+  }
+
+  .land {
+    font-size: 5.25rem;
+  }
+}
+*/
+
+h2 {
+  margin: 4rem 0 1rem 0;
+}
+
+p {
+  margin: 1rem 0;
+}
+
+table {
+  width: 100%;
+  margin: 2rem 0;
+  border-spacing: 0;
+}
+
+table tr th,
+table tr td {
+  padding: 0.5rem 1rem;
+}
+
+table tr th {
+  background-color: var(--color1);
+}
+
+table tr:first-child th:first-child {
+  border-top-left-radius: 0.5rem;
+  border-bottom-left-radius: 0.5rem;
+}
+
+table tr:first-child th:last-child {
+  border-top-right-radius: 0.5rem;
+  border-bottom-right-radius: 0.5rem;
+}
+
+blockquote {
+  border-left: 1rem solid var(--color2);
+  padding: 0.5rem 1rem;
+  margin: 2rem 0;
+  background-color: var(--color1);
+  border-radius: 0.5rem;
+}
+
+code {
+  font-family: "Fira Code", monospace;
+  border-radius: 0.3rem;
+  background-color: var(--color1);
+}
+
+pre > code {
+  width: 100%;
+  display: block;
+  margin: 2rem 0;
+  padding: 1rem 2rem;
+  box-sizing: border-box;
+  border-radius: 0.5rem;
+  overflow-x: auto;
+  color: var(--color6);
+  background-color: black;
+}
+
+pre.result {
+  position: relative;
+  z-index: -1;
+  code {
+    margin-top: -3rem;
+    background-color: var(--color1);
+    padding: 2rem 2rem 1rem 2rem;
+  }
+}
+
+a:link {
+  color: var(--color8);
+}
+
+a:visited {
+  color: var(--color9);
+}
+
+a:hover {
+  color: var(--colorA);
+}
+
+.date {
+  color: var(--color4)
+}
