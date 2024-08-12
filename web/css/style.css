@@ -33,38 +33,6 @@ body {
   margin: 0 auto;
 }
 
-/*
-header {
-  display: flex;
-
-  .jander {
-    display: inline-block;
-    color: var(--colorE);
-    font-size: 1.5rem;
-  }
-
-  .land {
-    display: inline-block;
-    color: var(--colorD);
-    font-size: 1.4rem;
-  }
-}
-
-header.home {
-  padding-left: 7.75rem;
-  line-height: 1;
-
-  .jander {
-    font-size: 6.25rem;
-    margin-left: -7.5rem;
-  }
-
-  .land {
-    font-size: 5.25rem;
-  }
-}
-*/
-
 h2 {
   margin: 4rem 0 1rem 0;
 }
