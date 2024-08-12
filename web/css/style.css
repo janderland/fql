@@ -20,15 +20,23 @@
   --colorD: rgb(102, 153, 204);
   --colorE: rgb(204, 153, 204);
   --colorF: rgb(210, 123, 83);
+
+  /*
+   * colorX is an addition to the
+   * "eighties" base16 scheme. It's
+   * used as a darkest color, freeing
+   * up color1 to be used elsewhere.
+   */
+  --colorX: rgb(20, 20, 20);
 }
 
 body {
   font-family: "Roboto", sans-serif;
-  background-color: var(--color0);
+  background-color: var(--colorX);
   color: var(--color5);
 
   line-height: 1.75;
-  max-width: 38rem;
+  max-width: 40rem;
   padding: 0 0.6rem;
   margin: 0 auto;
 }
@@ -77,19 +85,19 @@ blockquote {
 code {
   font-family: "Fira Code", monospace;
   border-radius: 0.3rem;
-  background-color: var(--color1);
+  background-color: var(--color0);
 }
 
 pre > code {
   width: 100%;
   display: block;
   margin: 2rem 0;
-  padding: 1rem 2rem;
+  padding: 1rem 1rem;
   box-sizing: border-box;
   border-radius: 0.5rem;
   overflow-x: auto;
   color: var(--color6);
-  background-color: black;
+  background-color: var(--color0);
 }
 
 pre.result {
@@ -98,7 +106,7 @@ pre.result {
   code {
     margin-top: -3rem;
     background-color: var(--color1);
-    padding: 2rem 2rem 1rem 2rem;
+    padding: 2rem 1rem 1rem 1rem;
   }
 }
 

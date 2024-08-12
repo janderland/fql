@@ -7,7 +7,8 @@ include-before: |
   ```lang-fql
   /user/index/surname("Johnson",<userID:int>)
   /user(:userID,...)
-  % results ->
+  ```
+  ```lang-fql {.result}
   /user(9323,"Timothy","Johnson",37)=nil
   /user(24335,"Andrew","Johnson",42)=nil
   /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
@@ -41,7 +42,8 @@ as shown below.
 
 ```lang-fql
 /my/directory("my","tuple")=<>
-% results ->
+```
+```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 ```
 
@@ -57,7 +59,8 @@ query.
 
 ```lang-fql
 /my/directory(<>,"tuple")=nil
-% results ->
+```
+```lang-fql {.result}
 /my/directory("your","tuple")=nil
 /my/directory(42,"tuple")=nil
 ```
@@ -67,7 +70,8 @@ by ending the key's tuple with `...`.
 
 ```lang-fql
 /my/directory("my","tuple",...)=<>
-% results ->
+```
+```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
@@ -79,7 +83,8 @@ above.
 
 ```lang-fql
 /my/directory("my","tuple",...)
-% results ->
+```
+```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
@@ -90,7 +95,8 @@ the read on all directory paths matching the schema.
 
 ```lang-fql
 /<>/directory("my","tuple")
-% results ->
+```
+```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /your/directory("my","tuple")=nil
 ```
@@ -162,7 +168,7 @@ separated by commas, wrapped in a pair of parenthesis.
 Sub-tuples are allowed.
 
 ```lang-fql
-("one",2,0x03,("subtuple"),5825d3f8-de5b-40c6-ac32-47ea8b98f7b4)
+("one",0x03,("subtuple"),5825d3f8-de5b-40c6-ac32-47ea8b98f7b4)
 ```
 
 The last element of a tuple may be the `...` token.
