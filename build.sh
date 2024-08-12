@@ -136,6 +136,11 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
 
+    --web)
+      GENERATE_WEBSITE="x"
+      shift 1
+      ;;
+
     --no-hado)
       NO_HADO="x"
       shift 1
@@ -158,16 +163,16 @@ while [[ $# -gt 0 ]]; do
       shift 2
       ;;
 
+    --run)
+      shift 1
+      RUN_FDBQ="x"
+      FDBQ_ARGS=("$@")
+      shift $#
+      ;;
+
     --help)
       print_help
       exit 0
-      ;;
-
-    --run)
-      shift 1
-      RUN="x"
-      FDBQ_ARGS=("$@")
-      shift $#
       ;;
 
     *)
@@ -187,6 +192,10 @@ fi
 if [[ -n "$VERIFY_CODEBASE" ]]; then
   BUILD_TASKS+=('./scripts/setup_database.sh')
   BUILD_TASKS+=("./scripts/verify_codebase.sh ${NO_HADO:+--no-hado}")
+fi
+
+if [[ -n "$GENERATE_WEBSITE" ]]; then
+  BUILD_TASKS+=('./scripts/generate_web.sh')
 fi
 
 BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"
@@ -216,6 +225,6 @@ if [[ -n "$IMAGE_FDBQ" ]]; then
   (set -x; docker compose build fdbq)
 fi
 
-if [[ -n "$RUN" ]]; then
+if [[ -n "$RUN_FDBQ" ]]; then
   (set -x; docker compose run fdbq 'docker:docker@{fdb}:4500' "${FDBQ_ARGS[@]}")
 fi

@@ -19,9 +19,10 @@ services:
         FDB_LIB_URL: "${FDB_LIB_URL}"
         GO_URL: "${GO_URL}"
         GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
+        SHELLCHECK_URL: "${SHELLCHECK_URL}"
         HADOLINT_URL: "${HADOLINT_URL}"
         JQ_URL: "${JQ_URL}"
-        SHELLCHECK_URL: "${SHELLCHECK_URL}"
+        PANDOC_URL: "${PANDOC_URL}"
     depends_on:
       - "fdb"
     working_dir: "/fdbq"

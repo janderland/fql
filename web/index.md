@@ -12,7 +12,7 @@ include-before: |
   /user(24335,"Andrew","Johnson",42)=nil
   /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
   ```
-  FQL is a query language for [Foundation
+  Foundation QL is a query language for [Foundation
   DB](https://www.foundationdb.org/). FQL aims to make FDB's
   semantics feel natural and intuitive. Common FDB access
   patterns can be modeled using FQL. Index indirection and

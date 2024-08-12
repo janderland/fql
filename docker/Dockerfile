@@ -10,30 +10,33 @@ RUN apt-get update &&\
     apt-get clean &&\
     rm -rf /var/lib/apt/lists/*
 
+# The FDB installer is not deleted so it can be used to
+# install the library in the final stage at the end of
+# this file.
 ARG FDB_LIB_URL
 RUN curl -Lo /fdb.deb $FDB_LIB_URL &&\
     dpkg -i /fdb.deb
 
 ARG GO_URL
-RUN curl -Lo go.tar.gz $GO_URL &&\
-    tar -C /usr/local -xzf ./go.tar.gz &&\
-    rm ./go.tar.gz
+RUN curl -Lo /go.tar.gz $GO_URL &&\
+    tar -C /usr/local -xzf /go.tar.gz &&\
+    rm /go.tar.gz
 ENV PATH="/root/go/bin:/usr/local/go/bin:${PATH}"
 ENV GOCACHE="/cache/gocache"
 ENV GOMODCACHE="/cache/gomod"
 
 ARG GOLANGCI_LINT_URL="https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh"
 ARG GOLANGCI_LINT_VER
-RUN curl -Lo golint.sh $GOLANGCI_LINT_URL &&\
-    sh ./golint.sh -b "$(go env GOPATH)/bin" $GOLANGCI_LINT_VER &&\
-    rm ./golint.sh
+RUN curl -Lo /golint.sh $GOLANGCI_LINT_URL &&\
+    sh /golint.sh -b "$(go env GOPATH)/bin" $GOLANGCI_LINT_VER &&\
+    rm /golint.sh
 ENV GOLANGCI_LINT_CACHE="/cache/golangci-lint"
 
 ARG SHELLCHECK_URL
-RUN curl -Lo shellcheck.tar.xz $SHELLCHECK_URL &&\
-    tar -xf ./shellcheck.tar.xz &&\
-    mv ./shellcheck-*/shellcheck /usr/local/bin &&\
-    rm -r ./shellcheck.tar.xz ./shellcheck-*
+RUN curl -Lo /shellcheck.tar.xz $SHELLCHECK_URL &&\
+    tar -xf /shellcheck.tar.xz &&\
+    mv /shellcheck-*/shellcheck /usr/local/bin &&\
+    rm -r /shellcheck.tar.xz /shellcheck-*
 
 ARG HADOLINT_URL
 RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\
@@ -42,6 +45,11 @@ RUN curl -Lo /usr/local/bin/hadolint $HADOLINT_URL &&\
 ARG JQ_URL
 RUN curl -Lo /usr/local/bin/jq $JQ_URL &&\
     chmod +x /usr/local/bin/jq
+
+ARG PANDOC_URL
+RUN curl -Lo /pandoc.deb $PANDOC_URL &&\
+    dpkg -i /pandoc.deb &&\
+    rm /pandoc.deb
 
 # Configure git so it allows any user to run git commands
 # on the /fdbq directory. This allows the user which runs
