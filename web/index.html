@@ -474,6 +474,12 @@ func _() {
     panic(err)
   }
 }</code></pre>
-  <script>hljs.highlightAll()</script>
+  <script>
+    hljs.highlightAll();
+    document.querySelectorAll(":not(pre) > code").forEach((e) => {
+      e.classList.add("lang-fql");
+      hljs.highlightElement(e);
+    });
+  </script>
 </body>
 </html>

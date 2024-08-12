@@ -53,6 +53,11 @@ table {
   width: 100%;
   margin: 2rem 0;
   border-spacing: 0;
+  background-color: var(--color0);
+  border-radius: 0.5rem;
+  code {
+    background-color: var(--color0);
+  }
 }
 
 table tr th,
@@ -85,7 +90,7 @@ blockquote {
 code {
   font-family: "Fira Code", monospace;
   border-radius: 0.3rem;
-  background-color: var(--color0);
+  background-color: var(--color1);
 }
 
 pre > code {
@@ -97,7 +102,7 @@ pre > code {
   border-radius: 0.5rem;
   overflow-x: auto;
   color: var(--color6);
-  background-color: var(--color0);
+  background-color: var(--color1);
 }
 
 pre.result {
@@ -105,7 +110,7 @@ pre.result {
   z-index: -1;
   code {
     margin-top: -3rem;
-    background-color: var(--color1);
+    background-color: var(--color0);
     padding: 2rem 1rem 1rem 1rem;
   }
 }
