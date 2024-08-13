@@ -41,14 +41,14 @@ shown above, or may define a set of key-values to be read,
 as shown below.
 
 ```lang-fql
-/my/directory("my","tuple")=<>
+/my/directory("my","tuple")=<int>
 ```
 ```lang-fql {.result}
-/my/directory("my","tuple")=0x0fa0
+/my/directory("my","tuple")=4000
 ```
 
-The query above has a variable `<>` as it's value. Variables
-act as placeholders for any of the supported [data
+The query above has a variable `<int>` as it's value.
+Variables act as placeholders for any of the supported [data
 elements](#data-elements). This query will return a single
 key-value from the database, if such a key exists.
 
