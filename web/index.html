@@ -68,10 +68,10 @@
   <p>FQL queries may define a single key-value to be written, as shown
   above, or may define a set of key-values to be read, as shown
   below.</p>
-  <pre class="lang-fql"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;&gt;</code></pre>
-  <pre class="lang-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0</code></pre>
-  <p>The query above has a variable <code>&lt;&gt;</code> as it’s value.
-  Variables act as placeholders for any of the supported <a
+  <pre class="lang-fql"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;int&gt;</code></pre>
+  <pre class="lang-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
+  <p>The query above has a variable <code>&lt;int&gt;</code> as it’s
+  value. Variables act as placeholders for any of the supported <a
   href="#data-elements">data elements</a>. This query will return a
   single key-value from the database, if such a key exists.</p>
   <p>FQL queries can also perform range reads by including a variable in
