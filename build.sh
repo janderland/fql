@@ -24,6 +24,9 @@ If the '--no-hado' flag is set then the 'verify' task above will
 exclude linting the Dockerfile. This provides a workaround on
 Arm Macs where Dockerfile linting is currently unsupported.
 
+If the --docs' flag is set then the documentation HTML will be
+generated under the /docs directory.
+
 If the '--image fdbq' flag is set then the script runs 'docker
 build' for the 'fdbq' docker image. The tag is determined by the
 git tag/hash and the version of the FDB library specified in the
@@ -136,8 +139,8 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
 
-    --web)
-      GENERATE_WEBSITE="x"
+    --docs)
+      GENERATE_DOCS="x"
       shift 1
       ;;
 
@@ -194,8 +197,8 @@ if [[ -n "$VERIFY_CODEBASE" ]]; then
   BUILD_TASKS+=("./scripts/verify_codebase.sh ${NO_HADO:+--no-hado}")
 fi
 
-if [[ -n "$GENERATE_WEBSITE" ]]; then
-  BUILD_TASKS+=('./scripts/generate_web.sh')
+if [[ -n "$GENERATE_DOCS" ]]; then
+  BUILD_TASKS+=('./scripts/generate_docs.sh')
 fi
 
 BUILD_COMMAND="$(join_array ' && ' "${BUILD_TASKS[@]}")"

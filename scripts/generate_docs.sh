@@ -6,6 +6,6 @@ cd "${0%/*}/.."
 
 pandoc \
   --no-highlight --toc \
-  --template ./web/index.tmpl \
-  --output ./web/index.html \
-  ./web/index.md
+  --template ./docs/index.tmpl \
+  --output ./docs/index.html \
+  ./docs/index.md
