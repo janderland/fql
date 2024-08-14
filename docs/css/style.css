@@ -58,6 +58,8 @@ p {
 }
 
 table {
+  display: block;
+  overflow-x: scroll;
   width: 100%;
   margin: 2rem 0;
   border-spacing: 0;
