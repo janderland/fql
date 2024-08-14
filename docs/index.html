@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Foundation QL</title>
+  <title>FQL</title>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
@@ -15,7 +15,7 @@
   <script src="js/go.js"></script>
 </head>
 <body>
-  <h1>Foundation QL</h1>
+  <h1>FQL</h1>
     <pre class="lang-fql"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
 /user(:userID,...)</code></pre>
     <pre class="lang-fql result"><code>/user(9323,&quot;Timothy&quot;,&quot;Johnson&quot;,37)=nil
@@ -23,9 +23,7 @@
 /user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,0x0ffa83,42.2)=nil</code></pre>
     <p>Foundation QL is a query language for <a
     href="https://www.foundationdb.org/">Foundation DB</a>. FQL aims to
-    make FDB’s semantics feel natural and intuitive. Common FDB access
-    patterns can be modeled using FQL. Index indirection and
-    multi-transaction range reads are first class citizens.</p>
+    make FDB’s semantics feel natural and intuitive.</p>
     <ul>
     <li><a href="#todo" id="toc-todo">TODO</a></li>
     <li><a href="#overview" id="toc-overview">Overview</a></li>

@@ -1,5 +1,5 @@
 ---
-title: Foundation QL
+title: FQL
 
 # We include this intro via the 'include-before'
 # metadata field so it's placed before the TOC.
@@ -15,9 +15,7 @@ include-before: |
   ```
   Foundation QL is a query language for [Foundation
   DB](https://www.foundationdb.org/). FQL aims to make FDB's
-  semantics feel natural and intuitive. Common FDB access
-  patterns can be modeled using FQL. Index indirection and
-  multi-transaction range reads are first class citizens.
+  semantics feel natural and intuitive.
 ...
 
 ## TODO

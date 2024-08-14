@@ -102,21 +102,24 @@ code {
   background-color: var(--color1);
 }
 
-pre > code {
-  width: 100%;
-  display: block;
-  margin: 2rem 0;
-  padding: 1rem 1rem;
-  box-sizing: border-box;
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  color: var(--color6);
-  background-color: var(--color1);
+pre {
+  position: relative;
+  z-index: 1;
+  code {
+    width: 100%;
+    display: block;
+    margin: 2rem 0;
+    padding: 1rem 1rem;
+    box-sizing: border-box;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    color: var(--color6);
+    background-color: var(--color1);
+  }
 }
 
 pre.result {
-  position: relative;
-  z-index: -1;
+  z-index: 0;
   code {
     margin-top: -3rem;
     background-color: var(--color0);
