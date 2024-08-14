@@ -112,11 +112,21 @@ code {
 pre {
   position: relative;
   z-index: 1;
+
+  >::before {
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--color4);
+    content: "query"
+  }
+
   code {
     width: 100%;
     display: block;
     margin: 2rem 0;
-    padding: 1rem 1rem;
+    padding: 1.5rem 1rem 0.5rem 1rem;
     box-sizing: border-box;
     border-radius: 0.5rem;
     overflow-x: auto;
@@ -127,10 +137,17 @@ pre {
 
 pre.result {
   z-index: 0;
+
+  >::before {
+    top: 1rem;
+    color: var(--color3);
+    content: "result";
+  }
+
   code {
     margin-top: -3rem;
     background-color: var(--color0);
-    padding: 2rem 1rem 1rem 1rem;
+    padding: 2.5rem 1rem 0.5rem 1rem;
   }
 }
 
