@@ -195,6 +195,8 @@ elements as the [tuple
 layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
 Example instances of these types can be seen below.
 
+<div>
+
 | Type     | Example                                |
 |:---------|:---------------------------------------|
 | `nil`    | `nil`                                  |
@@ -207,6 +209,8 @@ Example instances of these types can be seen below.
 | `bytes`  | `0xa2bff2438312aac032`                 |
 | `uuid`   | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `tuple`  | `("hello",27.4,nil)`                   |
+
+</div>
 
 > `bigint` support is not yet implemented.
 
@@ -428,6 +432,8 @@ provide a standard encoding.
 The table below outlines how data elements are encoded 
 when present in the value section.
 
+<div>
+
 | Type     | Encoding                        |
 |:---------|:--------------------------------|
 | `nil`    | empty value                     |
@@ -440,6 +446,8 @@ when present in the value section.
 | `bytes`  | as provided                     |
 | `uuid`   | RFC 4122                        |
 | `tuple`  | tuple layer                     |
+
+</div>
 
 ### Index Indirection
 

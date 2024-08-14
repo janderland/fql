@@ -57,14 +57,19 @@ p {
   margin: 1rem 0;
 }
 
-table {
-  display: block;
-  overflow-x: scroll;
+div:has(> table) {
   width: 100%;
+  overflow-x: scroll;
   margin: 2rem 0;
+  border-radius: 0.5rem;
+}
+
+table {
+  width: 100%;
   border-spacing: 0;
   background-color: var(--color0);
   border-radius: 0.5rem;
+
   code {
     background-color: var(--color0);
   }
