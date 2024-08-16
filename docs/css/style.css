@@ -1,3 +1,5 @@
+/* Colors */
+
 :root {
   /* 
    * base16 "eighties" color scheme
@@ -25,10 +27,12 @@
    * colorX is an addition to the
    * "eighties" base16 scheme. It's
    * used as a darkest color, freeing
-   * up color1 to be used elsewhere.
+   * up color0 to be used elsewhere.
    */
   --colorX: rgb(20, 20, 20);
 }
+
+/* General */
 
 body {
   font-family: "Roboto", sans-serif;
@@ -41,8 +45,14 @@ body {
   margin: 0 auto;
 }
 
+p {
+  margin: 1rem 0;
+}
+
+/* Headers */
+
 h1 {
-  font-size: 4rem;
+  font-size: 3.5rem;
 }
 
 h2 {
@@ -53,76 +63,7 @@ h2 {
   margin: 4rem 0 1rem 0;
 }
 
-p {
-  margin: 1rem 0;
-}
-
-table {
-  width: 100%;
-  margin: 2rem 0;
-  border-spacing: 0;
-  background-color: var(--color0);
-  border-radius: 0.5rem;
-  code {
-    background-color: var(--color0);
-  }
-}
-
-table tr th,
-table tr td {
-  padding: 0.5rem 1rem;
-}
-
-table tr th {
-  background-color: var(--color1);
-}
-
-table tr:first-child th:first-child {
-  border-top-left-radius: 0.5rem;
-  border-bottom-left-radius: 0.5rem;
-}
-
-table tr:first-child th:last-child {
-  border-top-right-radius: 0.5rem;
-  border-bottom-right-radius: 0.5rem;
-}
-
-blockquote {
-  border-left: 1rem solid var(--color2);
-  padding: 0.5rem 1rem;
-  margin: 2rem 0;
-  background-color: var(--color1);
-  border-radius: 0.5rem;
-}
-
-code {
-  font-family: "Fira Code", monospace;
-  border-radius: 0.3rem;
-  padding: 0 0.2rem 0 0.2rem;
-  background-color: var(--color1);
-}
-
-pre > code {
-  width: 100%;
-  display: block;
-  margin: 2rem 0;
-  padding: 1rem 1rem;
-  box-sizing: border-box;
-  border-radius: 0.5rem;
-  overflow-x: auto;
-  color: var(--color6);
-  background-color: var(--color1);
-}
-
-pre.result {
-  position: relative;
-  z-index: -1;
-  code {
-    margin-top: -3rem;
-    background-color: var(--color0);
-    padding: 2rem 1rem 1rem 1rem;
-  }
-}
+/* Links */
 
 a:link {
   color: var(--color8);
@@ -136,6 +77,138 @@ a:hover {
   color: var(--colorA);
 }
 
-.date {
-  color: var(--color4)
+/* Callouts */
+
+blockquote {
+  border-left: 1rem solid var(--color2);
+  padding: 0.5rem 1rem;
+  margin: 2rem 0;
+  background-color: var(--color1);
+  border-radius: 0.5rem;
+}
+
+/* Inline Code */
+
+code {
+  font-family: "Fira Code", monospace;
+  border-radius: 0.3rem;
+  padding: 0 0.2rem 0 0.2rem;
+  background-color: var(--color1);
+}
+
+/* Code Blocks */
+
+pre {
+  position: relative;
+  z-index: 1;
+
+  /* This is the label at the top-left
+   * of the code block. The 'content'
+   * property must be overriden for
+   * it to be displayed.
+   */
+  > ::before {
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--color4);
+  }
+
+  code {
+    width: 100%;
+    display: block;
+    margin: 2rem 0;
+    padding: 0.5rem 1rem;
+    box-sizing: border-box;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    color: var(--color6);
+    background-color: var(--color1);
+  }
+}
+
+pre.query, pre.lang-go {
+  code {
+    padding: 1.5rem 1rem 0.5rem 1rem;
+  }
+}
+
+pre.result, pre.equiv-go {
+  z-index: 0;
+
+  > ::before {
+    top: 1rem;
+    color: var(--color3);
+  }
+
+  code {
+    margin-top: -3rem;
+    background-color: var(--color0);
+    padding: 2.5rem 1rem 0.5rem 1rem;
+  }
+}
+
+pre.query > ::before {
+  content: "query";
+}
+
+pre.result > ::before {
+  content: "result";
+}
+
+pre.lang-go > ::before {
+  content: "go";
+}
+
+/* Tables */
+
+/* This div hides it's table child
+ * when it's larger than the screen
+ * width and provides scollability.
+ */
+div:has(> table) {
+  width: 100%;
+  overflow-x: auto;
+  margin: 2rem 0;
+  border-radius: 0.5rem;
+  background-color: var(--color0);
+}
+
+table {
+  width: 100%;
+  border-spacing: 0;
+  background-color: var(--color0);
+  border-radius: 0.5rem;
+
+  /* Hide inline code's bg color by matching
+   * the table's bg color. Within the tables,
+   * code is always next to code so there's
+   * no need to highlight it.
+   */
+  code {
+    background-color: var(--color0);
+  }
+
+  tr {
+    th {
+      background-color: var(--color1);
+    }
+
+    th, td {
+      padding: 0.5rem 1rem;
+    }
+  }
+
+  tr:first-child {
+    th:first-child {
+      border-top-left-radius: 0.5rem;
+      border-bottom-left-radius: 0.5rem;
+    }
+
+    th:last-child {
+      border-top-right-radius: 0.5rem;
+      border-bottom-right-radius: 0.5rem;
+    }
+  }
 }

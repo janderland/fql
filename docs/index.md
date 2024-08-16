@@ -1,10 +1,10 @@
 ---
-title: Foundation QL
+title: FQL
 
 # We include this intro via the 'include-before'
 # metadata field so it's placed before the TOC.
 include-before: |
-  ```lang-fql
+  ```lang-fql {.query}
   /user/index/surname("Johnson",<userID:int>)
   /user(:userID,...)
   ```
@@ -15,9 +15,7 @@ include-before: |
   ```
   Foundation QL is a query language for [Foundation
   DB](https://www.foundationdb.org/). FQL aims to make FDB's
-  semantics feel natural and intuitive. Common FDB access
-  patterns can be modeled using FQL. Index indirection and
-  multi-transaction range reads are first class citizens.
+  semantics feel natural and intuitive.
 ...
 
 ## TODO
@@ -32,7 +30,7 @@ FQL queries generally look like key-values. They have a key
 access keys encoded using the directory & tuple
 [layers](https://apple.github.io/foundationdb/layer-concept.html).
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple")=4000
 ```
 
@@ -40,7 +38,7 @@ FQL queries may define a single key-value to be written, as
 shown above, or may define a set of key-values to be read,
 as shown below.
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple")=<int>
 ```
 ```lang-fql {.result}
@@ -57,7 +55,7 @@ a variable in the key's tuple. The query below will return
 all key-values which conform to the schema defined by the
 query. 
 
-```lang-fql
+```lang-fql {.query}
 /my/directory(<>,"tuple")=nil
 ```
 ```lang-fql {.result}
@@ -68,7 +66,7 @@ query.
 All key-values with a certain key prefix can be range read
 by ending the key's tuple with `...`.
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple",...)=<>
 ```
 ```lang-fql {.result}
@@ -81,7 +79,7 @@ A query's value may be omitted to imply a variable, meaning
 the following query is semantically identical to the one
 above.
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple",...)
 ```
 ```lang-fql {.result}
@@ -93,7 +91,7 @@ above.
 Including a variable in the directory tells FQL to perform
 the read on all directory paths matching the schema.
 
-```lang-fql
+```lang-fql {.query}
 /<>/directory("my","tuple")
 ```
 ```lang-fql {.result}
@@ -150,13 +148,13 @@ The strings of the directory do not need quotes if they only
 contain alphanumericals, underscores, dashes, or periods. To
 use other symbols, the strings must be quoted:
 
-```
+```lang-fql
 /my/"dir@--o/"/path_way
 ```
 
 The quote character may be backslash escaped:
 
-```
+```lang-fql
 /my/"\"dir\""/path_way
 ```
 
@@ -197,6 +195,8 @@ elements as the [tuple
 layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
 Example instances of these types can be seen below.
 
+<div>
+
 | Type     | Example                                |
 |:---------|:---------------------------------------|
 | `nil`    | `nil`                                  |
@@ -209,6 +209,8 @@ Example instances of these types can be seen below.
 | `bytes`  | `0xa2bff2438312aac032`                 |
 | `uuid`   | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `tuple`  | `("hello",27.4,nil)`                   |
+
+</div>
 
 > `bigint` support is not yet implemented.
 
@@ -276,11 +278,11 @@ and should not be confused with write queries.
 If the query has a [data element](#data-elements) as it's
 value then it performs a write operation.
 
-```lang-fql
+```lang-fql {.query}
 /my/dir("hello","world")=42
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.CreateOrOpen(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -297,11 +299,11 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 Queries with the `clear` token as their value result in
 a key-value being cleared.
 
-```lang-fql
+```lang-fql {.query}
 /my/dir("hello","world")=clear
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -326,11 +328,11 @@ therefore read queries.
 If the query lacks a [variable](#variables) or `...` in it's
 key then it reads a single-value, if the key-value exists.
 
-```lang-fql
+```lang-fql {.query}
 /my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|string>
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -354,11 +356,11 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 Queries with [variables](#variables) or a `...` token in
 their key result in a range of key-values being read.
 
-```lang-fql
+```lang-fql {.query}
 /people(3392, <string|int>, <>)=(<uint>, ...)
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"people"}, nil)
   if err != nil {
@@ -430,6 +432,8 @@ provide a standard encoding.
 The table below outlines how data elements are encoded 
 when present in the value section.
 
+<div>
+
 | Type     | Encoding                        |
 |:---------|:--------------------------------|
 | `nil`    | empty value                     |
@@ -443,11 +447,13 @@ when present in the value section.
 | `uuid`   | RFC 4122                        |
 | `tuple`  | tuple layer                     |
 
+</div>
+
 ### Index Indirection
 
 TODO: Finish section.
 
-```lang-fql
+```lang-fql {.query}
 /user/index/surname("Johnson",<userID:int>)
 /user/entry(:userID,...)
 ```

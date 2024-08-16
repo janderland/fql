@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Foundation QL</title>
+  <title>FQL</title>
   <meta charset="utf-8" />
   <meta name="generator" content="pandoc" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
@@ -15,17 +15,15 @@
   <script src="js/go.js"></script>
 </head>
 <body>
-  <h1>Foundation QL</h1>
-    <pre class="lang-fql"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
+  <h1>FQL</h1>
+    <pre class="lang-fql query"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
 /user(:userID,...)</code></pre>
     <pre class="lang-fql result"><code>/user(9323,&quot;Timothy&quot;,&quot;Johnson&quot;,37)=nil
 /user(24335,&quot;Andrew&quot;,&quot;Johnson&quot;,42)=nil
 /user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,0x0ffa83,42.2)=nil</code></pre>
     <p>Foundation QL is a query language for <a
     href="https://www.foundationdb.org/">Foundation DB</a>. FQL aims to
-    make FDB’s semantics feel natural and intuitive. Common FDB access
-    patterns can be modeled using FQL. Index indirection and
-    multi-transaction range reads are first class citizens.</p>
+    make FDB’s semantics feel natural and intuitive.</p>
     <ul>
     <li><a href="#todo" id="toc-todo">TODO</a></li>
     <li><a href="#overview" id="toc-overview">Overview</a></li>
@@ -64,11 +62,11 @@
   (directory &amp; tuple) and value separated by <code>=</code>. FQL can
   only access keys encoded using the directory &amp; tuple <a
   href="https://apple.github.io/foundationdb/layer-concept.html">layers</a>.</p>
-  <pre class="lang-fql"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
+  <pre class="lang-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>FQL queries may define a single key-value to be written, as shown
   above, or may define a set of key-values to be read, as shown
   below.</p>
-  <pre class="lang-fql"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;int&gt;</code></pre>
+  <pre class="lang-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;int&gt;</code></pre>
   <pre class="lang-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>The query above has a variable <code>&lt;int&gt;</code> as it’s
   value. Variables act as placeholders for any of the supported <a
@@ -77,24 +75,24 @@
   <p>FQL queries can also perform range reads by including a variable in
   the key’s tuple. The query below will return all key-values which
   conform to the schema defined by the query.</p>
-  <pre class="lang-fql"><code>/my/directory(&lt;&gt;,&quot;tuple&quot;)=nil</code></pre>
+  <pre class="lang-fql query"><code>/my/directory(&lt;&gt;,&quot;tuple&quot;)=nil</code></pre>
   <pre class="lang-fql result"><code>/my/directory(&quot;your&quot;,&quot;tuple&quot;)=nil
 /my/directory(42,&quot;tuple&quot;)=nil</code></pre>
   <p>All key-values with a certain key prefix can be range read by
   ending the key’s tuple with <code>...</code>.</p>
-  <pre class="lang-fql"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)=&lt;&gt;</code></pre>
+  <pre class="lang-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)=&lt;&gt;</code></pre>
   <pre class="lang-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,47.3)=0x8f3a
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,false,0xff9a853c12)=nil</code></pre>
   <p>A query’s value may be omitted to imply a variable, meaning the
   following query is semantically identical to the one above.</p>
-  <pre class="lang-fql"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)</code></pre>
+  <pre class="lang-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)</code></pre>
   <pre class="lang-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,47.3)=0x8f3a
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,false,0xff9a853c12)=nil</code></pre>
   <p>Including a variable in the directory tells FQL to perform the read
   on all directory paths matching the schema.</p>
-  <pre class="lang-fql"><code>/&lt;&gt;/directory(&quot;my&quot;,&quot;tuple&quot;)</code></pre>
+  <pre class="lang-fql query"><code>/&lt;&gt;/directory(&quot;my&quot;,&quot;tuple&quot;)</code></pre>
   <pre class="lang-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
 /your/directory(&quot;my&quot;,&quot;tuple&quot;)=nil</code></pre>
   <p>The next two sections of this document elaborate on the language’s
@@ -125,9 +123,9 @@
   <p>The strings of the directory do not need quotes if they only
   contain alphanumericals, underscores, dashes, or periods. To use other
   symbols, the strings must be quoted:</p>
-  <pre><code>/my/&quot;dir@--o/&quot;/path_way</code></pre>
+  <pre class="lang-fql"><code>/my/&quot;dir@--o/&quot;/path_way</code></pre>
   <p>The quote character may be backslash escaped:</p>
-  <pre><code>/my/&quot;\&quot;dir\&quot;&quot;/path_way</code></pre>
+  <pre class="lang-fql"><code>/my/&quot;\&quot;dir\&quot;&quot;/path_way</code></pre>
   <h3 id="tuples">Tuples</h3>
   <p>A tuple is specified as a sequence of <a href="#data-elements">data
   elements</a> and <a href="#variables">variables</a>, separated by
@@ -147,6 +145,7 @@
   of data elements. FQL utilizes the same types of elements as the <a
   href="https://github.com/apple/foundationdb/blob/main/design/tuple.md">tuple
   layer</a>. Example instances of these types can be seen below.</p>
+  <div>
   <table>
   <thead>
   <tr>
@@ -199,6 +198,7 @@
   </tr>
   </tbody>
   </table>
+  </div>
   <blockquote>
   <p><code>bigint</code> support is not yet implemented.</p>
   </blockquote>
@@ -242,8 +242,8 @@
   and should not be confused with write queries.</p>
   <p>If the query has a <a href="#data-elements">data element</a> as
   it’s value then it performs a write operation.</p>
-  <pre class="lang-fql"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=42</code></pre>
-  <pre class="lang-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=42</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.CreateOrOpen(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
     return nil, err
@@ -256,8 +256,8 @@
 })</code></pre>
   <p>Queries with the <code>clear</code> token as their value result in
   a key-value being cleared.</p>
-  <pre class="lang-fql"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=clear</code></pre>
-  <pre class="lang-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=clear</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -277,8 +277,8 @@
   <p>If the query lacks a <a href="#variables">variable</a> or
   <code>...</code> in it’s key then it reads a single-value, if the
   key-value exists.</p>
-  <pre class="lang-fql"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|string&gt;</code></pre>
-  <pre class="lang-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|string&gt;</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -299,8 +299,8 @@
   <p>Queries with <a href="#variables">variables</a> or a
   <code>...</code> token in their key result in a range of key-values
   being read.</p>
-  <pre class="lang-fql"><code>/people(3392, &lt;string|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
-  <pre class="lang-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/people(3392, &lt;string|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
+  <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -363,6 +363,7 @@
   standard encoding.</p>
   <p>The table below outlines how data elements are encoded when present
   in the value section.</p>
+  <div>
   <table>
   <thead>
   <tr>
@@ -414,9 +415,10 @@
   </tr>
   </tbody>
   </table>
+  </div>
   <h3 id="index-indirection">Index Indirection</h3>
   <p>TODO: Finish section.</p>
-  <pre class="lang-fql"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
+  <pre class="lang-fql query"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
 /user/entry(:userID,...)</code></pre>
   <h3 id="transaction-boundaries">Transaction Boundaries</h3>
   <p>TODO: Finish section.</p>
