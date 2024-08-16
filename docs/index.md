@@ -4,7 +4,7 @@ title: FQL
 # We include this intro via the 'include-before'
 # metadata field so it's placed before the TOC.
 include-before: |
-  ```lang-fql
+  ```lang-fql {.query}
   /user/index/surname("Johnson",<userID:int>)
   /user(:userID,...)
   ```
@@ -30,7 +30,7 @@ FQL queries generally look like key-values. They have a key
 access keys encoded using the directory & tuple
 [layers](https://apple.github.io/foundationdb/layer-concept.html).
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple")=4000
 ```
 
@@ -38,7 +38,7 @@ FQL queries may define a single key-value to be written, as
 shown above, or may define a set of key-values to be read,
 as shown below.
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple")=<int>
 ```
 ```lang-fql {.result}
@@ -55,7 +55,7 @@ a variable in the key's tuple. The query below will return
 all key-values which conform to the schema defined by the
 query. 
 
-```lang-fql
+```lang-fql {.query}
 /my/directory(<>,"tuple")=nil
 ```
 ```lang-fql {.result}
@@ -66,7 +66,7 @@ query.
 All key-values with a certain key prefix can be range read
 by ending the key's tuple with `...`.
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple",...)=<>
 ```
 ```lang-fql {.result}
@@ -79,7 +79,7 @@ A query's value may be omitted to imply a variable, meaning
 the following query is semantically identical to the one
 above.
 
-```lang-fql
+```lang-fql {.query}
 /my/directory("my","tuple",...)
 ```
 ```lang-fql {.result}
@@ -91,7 +91,7 @@ above.
 Including a variable in the directory tells FQL to perform
 the read on all directory paths matching the schema.
 
-```lang-fql
+```lang-fql {.query}
 /<>/directory("my","tuple")
 ```
 ```lang-fql {.result}
@@ -148,13 +148,13 @@ The strings of the directory do not need quotes if they only
 contain alphanumericals, underscores, dashes, or periods. To
 use other symbols, the strings must be quoted:
 
-```
+```lang-fql
 /my/"dir@--o/"/path_way
 ```
 
 The quote character may be backslash escaped:
 
-```
+```lang-fql
 /my/"\"dir\""/path_way
 ```
 
