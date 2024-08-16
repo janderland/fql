@@ -172,6 +172,7 @@ div:has(> table) {
   overflow-x: auto;
   margin: 2rem 0;
   border-radius: 0.5rem;
+  background-color: var(--color0);
 }
 
 table {
