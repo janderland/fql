@@ -102,6 +102,11 @@ pre {
   position: relative;
   z-index: 1;
 
+  /* This is the label at the top-left
+   * of the code block. The 'content'
+   * property must be overriden for
+   * it to be displayed.
+   */
   > ::before {
     position: absolute;
     top: 0;
@@ -114,7 +119,7 @@ pre {
     width: 100%;
     display: block;
     margin: 2rem 0;
-    padding: 1.5rem 1rem 0.5rem 1rem;
+    padding: 0.5rem 1rem;
     box-sizing: border-box;
     border-radius: 0.5rem;
     overflow-x: auto;
@@ -123,7 +128,13 @@ pre {
   }
 }
 
-pre.result {
+pre.query, pre.lang-go {
+  code {
+    padding: 1.5rem 1rem 0.5rem 1rem;
+  }
+}
+
+pre.result, pre.equiv-go {
   z-index: 0;
 
   > ::before {
@@ -138,8 +149,8 @@ pre.result {
   }
 }
 
-pre.lang-fql > ::before {
-  content: "query fragment";
+pre.query > ::before {
+  content: "query";
 }
 
 pre.result > ::before {
@@ -148,10 +159,6 @@ pre.result > ::before {
 
 pre.lang-go > ::before {
   content: "go";
-}
-
-pre.query > ::before {
-  content: "query";
 }
 
 /* Tables */

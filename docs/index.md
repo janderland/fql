@@ -278,11 +278,11 @@ and should not be confused with write queries.
 If the query has a [data element](#data-elements) as it's
 value then it performs a write operation.
 
-```lang-fql
+```lang-fql {.query}
 /my/dir("hello","world")=42
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.CreateOrOpen(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -299,11 +299,11 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 Queries with the `clear` token as their value result in
 a key-value being cleared.
 
-```lang-fql
+```lang-fql {.query}
 /my/dir("hello","world")=clear
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -328,11 +328,11 @@ therefore read queries.
 If the query lacks a [variable](#variables) or `...` in it's
 key then it reads a single-value, if the key-value exists.
 
-```lang-fql
+```lang-fql {.query}
 /my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|string>
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
   if err != nil {
@@ -356,11 +356,11 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 Queries with [variables](#variables) or a `...` token in
 their key result in a range of key-values being read.
 
-```lang-fql
+```lang-fql {.query}
 /people(3392, <string|int>, <>)=(<uint>, ...)
 ```
 
-```lang-go
+```lang-go {.equiv-go}
 db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"people"}, nil)
   if err != nil {
@@ -453,7 +453,7 @@ when present in the value section.
 
 TODO: Finish section.
 
-```lang-fql
+```lang-fql {.query}
 /user/index/surname("Johnson",<userID:int>)
 /user/entry(:userID,...)
 ```

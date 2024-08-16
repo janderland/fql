@@ -242,8 +242,8 @@
   and should not be confused with write queries.</p>
   <p>If the query has a <a href="#data-elements">data element</a> as
   it’s value then it performs a write operation.</p>
-  <pre class="lang-fql"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=42</code></pre>
-  <pre class="lang-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=42</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.CreateOrOpen(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
     return nil, err
@@ -256,8 +256,8 @@
 })</code></pre>
   <p>Queries with the <code>clear</code> token as their value result in
   a key-value being cleared.</p>
-  <pre class="lang-fql"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=clear</code></pre>
-  <pre class="lang-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=clear</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -277,8 +277,8 @@
   <p>If the query lacks a <a href="#variables">variable</a> or
   <code>...</code> in it’s key then it reads a single-value, if the
   key-value exists.</p>
-  <pre class="lang-fql"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|string&gt;</code></pre>
-  <pre class="lang-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|string&gt;</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -299,8 +299,8 @@
   <p>Queries with <a href="#variables">variables</a> or a
   <code>...</code> token in their key result in a range of key-values
   being read.</p>
-  <pre class="lang-fql"><code>/people(3392, &lt;string|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
-  <pre class="lang-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+  <pre class="lang-fql query"><code>/people(3392, &lt;string|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
+  <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -418,7 +418,7 @@
   </div>
   <h3 id="index-indirection">Index Indirection</h3>
   <p>TODO: Finish section.</p>
-  <pre class="lang-fql"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
+  <pre class="lang-fql query"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
 /user/entry(:userID,...)</code></pre>
   <h3 id="transaction-boundaries">Transaction Boundaries</h3>
   <p>TODO: Finish section.</p>
