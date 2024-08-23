@@ -13,9 +13,10 @@ include-before: |
   /user(24335,"Andrew","Johnson",42)=nil
   /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
   ```
-  Foundation QL is a query language for [Foundation
-  DB](https://www.foundationdb.org/). FQL aims to make FDB's
-  semantics feel natural and intuitive.
+  FQL is a query language for
+  [Foundation DB](https://www.foundationdb.org/).
+  FQL aims to make FDB's semantics feel natural and
+  intuitive.
 ...
 
 ## TODO
@@ -25,9 +26,8 @@ include-before: |
 
 ## Overview
 
-FQL queries generally look like key-values. They have a key
-(directory & tuple) and value separated by `=`. FQL can only
-access keys encoded using the directory & tuple
+FQL queries look like key-values encoded using the directory
+& tuple
 [layers](https://apple.github.io/foundationdb/layer-concept.html).
 
 ```lang-fql {.query}
@@ -50,10 +50,10 @@ Variables act as placeholders for any of the supported [data
 elements](#data-elements). This query will return a single
 key-value from the database, if such a key exists.
 
-FQL queries can also perform range reads by including
-a variable in the key's tuple. The query below will return
-all key-values which conform to the schema defined by the
-query. 
+FQL queries can also perform range reads and filtering by
+including a variable in the key's tuple. The query below
+will return all key-values which conform to the schema
+defined by the query. 
 
 ```lang-fql {.query}
 /my/directory(<>,"tuple")=nil
@@ -97,6 +97,23 @@ the read on all directory paths matching the schema.
 ```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /your/directory("my","tuple")=nil
+```
+
+Key-values can be cleared by using the special `clear` token
+as the value.
+
+```lang-fql {.query}
+/my/directory("my","tuple")=clear
+```
+
+The directory layer can be queried by only including
+a directory path.
+
+```lang-fql {.query}
+/my/<>
+```
+```lang-fql {.result}
+/my/directory
 ```
 
 The next two sections of this document elaborate on the
