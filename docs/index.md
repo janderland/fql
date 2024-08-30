@@ -13,18 +13,15 @@ include-before: |
   /user(24335,"Andrew","Johnson",42)=nil
   /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
   ```
-  FQL is a query language for
-  [Foundation DB](https://www.foundationdb.org/).
-  FQL aims to make FDB's semantics feel natural and
-  intuitive.
+  FQL is an [open source](https://github.com/janderland/fdbq)
+  query language for
+  [Foundation DB](https://www.foundationdb.org/)
+  defined via a simple, yet powerful
+  [context-free
+  grammar](https://github.com/janderland/fdbq/blob/main/syntax.ebnf).
 ...
 
-## TODO
-
-- Only allow `...` in the key's root tuple.
-- Better descriptions for data elements.
-
-## Overview
+# Overview
 
 FQL queries look like key-values encoded using the directory
 & tuple
@@ -45,12 +42,12 @@ as shown below.
 /my/directory("my","tuple")=4000
 ```
 
-The query above has a variable `<int>` as it's value.
+The query above has a variable `<int>` as its value.
 Variables act as placeholders for any of the supported [data
 elements](#data-elements). This query will return a single
 key-value from the database, if such a key exists.
 
-FQL queries can also perform range reads and filtering by
+FQL queries can also perform range reads & filtering by
 including a variable in the key's tuple. The query below
 will return all key-values which conform to the schema
 defined by the query. 
@@ -116,101 +113,12 @@ a directory path.
 /my/directory
 ```
 
-The next two sections of this document elaborate on the
-language's grammar and semantics. If you wish to immediately
-see more examples of the language in practice, skip to
-[design recipes](#design-recipes).
+# Data Elements
 
-## Grammar
-
-FQL is a context-free language with a formal
-[definition](https://github.com/janderland/fdbq/blob/main/syntax.ebnf).
-This section elaborates on this definition.
-
-### Key-Values
-
-Most FQL queries are structured like key-values and are
-written as a [directory](#Directory), [tuple](#Tuple), `=`,
-and value appended together.
-
-```lang-fql
-/app/data("server A",0)=0xabcf03
-```
-
-The value following the `=` may be any of the [data
-elements](#data-elements) or a [variable](#variables).
-
-```lang-fql
-/region/north_america(22.3,-8)=("rain","fog")
-/region/north_america(22.3,-8)=<tuple|int>
-/region/north_america(22.3,-8)=-16
-```
-
-The value may also be the `clear` token.
-
-```lang-fql
-/some/where("home","town",88.3)=clear
-```
-
-### Directories
-
-A directory is specified as a sequence of strings, each
-prefixed by a forward slash:
-
-```lang-fql
-/my/dir/path_way
-```
-
-The strings of the directory do not need quotes if they only
-contain alphanumericals, underscores, dashes, or periods. To
-use other symbols, the strings must be quoted:
-
-```lang-fql
-/my/"dir@--o/"/path_way
-```
-
-The quote character may be backslash escaped:
-
-```lang-fql
-/my/"\"dir\""/path_way
-```
-
-### Tuples
-
-A tuple is specified as a sequence of [data
-elements](#data-elements) and [variables](#variables),
-separated by commas, wrapped in a pair of parenthesis.
-Sub-tuples are allowed.
-
-```lang-fql
-("one",0x03,("subtuple"),5825d3f8-de5b-40c6-ac32-47ea8b98f7b4)
-```
-
-The last element of a tuple may be the `...` token.
-
-```lang-fql
-(0xff,"thing",...)
-```
-
-Any combination of spaces, tabs, and newlines are allowed
-after the opening brace and commas. Trailing commas are
-allowed.
-
-```lang-fql
-(
-  1,
-  2,
-  3,
-)
-```
-
-### Data Elements
-
-In a FQL query, the directory, tuples, and value contain
-instances of data elements. FQL utilizes the same types of
-elements as the [tuple
+An FQL query contains instances of data elements. These are
+the same types of elements found in the [tuple
 layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
-Example instances of these types can be seen below.
+Example instances of these elements can be seen below.
 
 <div>
 
@@ -231,39 +139,106 @@ Example instances of these types can be seen below.
 
 > `bigint` support is not yet implemented.
 
-### Variables
+Tuples & values may contain any of the data elements.
 
-Any [data element](#data-elements) may be replaced with
-a variable. Variables are specified as a list of data types,
+```lang-fql {.query}
+/region/north_america(22.3,-8)=("rain","fog")
+/region/east_asian("japan",nil)=0xff
+```
+
+Strings are the only data element allowed in directories. If
+a directory string only contains alphanumericals,
+underscores, dashes, and periods then the quotes don't need
+to be included.
+
+```lang-fql {.query}
+/quoteless-string_in.dir(true)=false
+/"other ch@r@cters must be quoted!"(20)=32.3
+```
+
+Quoted strings may contain quotes via backslash escapes.
+
+```lang-fql {.query}
+/my/dir("I said \"hello\"")=nil
+```
+
+# Value Encoding
+
+The directory and tuple layers are responsible for encoding
+the data elements in the key. As for the value, FDB doesn't
+provide a standard encoding.
+
+The table below outlines how FQL encodes data elements as
+values. Endianness is configurable.
+
+<div>
+
+| Type     | Encoding                        |
+|:---------|:--------------------------------|
+| `nil`    | empty value                     |
+| `int`    | 64-bit, 1's compliment          |
+| `uint`   | 64-bit                          |
+| `bool`   | single byte, `0x00` means false |
+| `float`  | IEEE 754                        |
+| `bigint` | not implemented yet             |
+| `string` | ASCII                           |
+| `bytes`  | as provided                     |
+| `uuid`   | RFC 4122                        |
+| `tuple`  | tuple layer                     |
+
+</div>
+
+# Variables
+
+Variables allow FQL to describe key-value schemas. Any [data
+element](#data-elements) may be replaced with a variable.
+Variables are specified as a list of element types,
 separated by `|`, wrapped in angled braces.
 
 ```lang-fql
 <uint|string|uuid|bytes>
 ```
 
-A variable may be empty, including no data types.
+A variable may be empty, including no element types, meaning
+it represents all element types.
 
 ```lang-fql
 <>
 ```
 
-### Comments
+Before the type list, a variable can be given a name. This
+name is used to reference the variable in subsequent
+queries, allowing for [index
+redirection](#index-indirection).
 
-Comments start with `%` and continue until the end of the
-line.
-
-```lang-fql
-% This query will read all the first
-% names. A single name may be returned
-% multiple times.
-
-/index/name(<name:string>,...)
+```lang-fql {.query}
+/index("cars",<varName:int>)
+/data(:varName,...)
+```
+```lang-fql {.result}
+/user(33,"mazda")=nil
+/user(33,"ford")=nil
+/user(33,"chevy")=nil
 ```
 
-You can add comments within a tuple or after the value to
-describe the data elements.
+# Space & Comments
+
+Whitespace and newlines are allowed within a tuple, between
+its elements.
+
+```lang-fql {.query}
+/account/private(
+  <uint>,
+  <uint>,
+  <string>,
+)=<int>
+```
+
+Comments start with a `%` and continue until the end of the
+line. They can be used to describe a tuple's elements.
 
 ```lang-fql
+% private account balances
 /account/private(
   <uint>,   % user ID
   <uint>,   % group ID
@@ -271,28 +246,24 @@ describe the data elements.
 )=<int>     % balance in USD
 ```
 
-## Semantics
+# Kinds of Queries
 
-FQL queries have the ability to write a single key-value,
-clear a single key-value, read one or more key-values, and
-list directories. This section elaborates on what queries do
-and how they encode/decode data.
+FQL queries can write & clear a single key-value, read one
+or more key-values, or list directories. Throughout this
+section, snippets of Go code are included to show how the
+queries interact with the FDB API.
 
-Throughout this section, snippets of Go code are included to
-help explemplify what's being discussed. These snippets
-accurately showcases the DB operations in the clearest way
-possible and don't include the optimizations and concurrency
-implemented in the FQL engine.
-
-### Writes
+## Writes & Clears
 
 Queries lacking a [variable](#variables) or the `...` token
 perform mutations on the database by either writing
-a key-value or clearing on existing one. Queries lacking
-a value imply an empty [variable](#variables) as the value
-and should not be confused with write queries.
+a key-value or clearing an existing one.
 
-If the query has a [data element](#data-elements) as it's
+> Queries lacking a value imply an empty
+> [variable](#variables) as the value and should not be
+> confused with write queries.
+
+If the query has a [data element](#data-elements) as its
 value then it performs a write operation.
 
 ```lang-fql {.query}
@@ -307,6 +278,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   }
 
   val := make([]byte, 8)
+  // Endianness is configurable...
   binary.LittleEndian.PutUint64(val, 42)
   tr.Set(dir.Pack(tuple.Tuple{"hello", "world"}), val)
   return nil, nil
@@ -335,15 +307,11 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-### Reads
+## Single Reads
 
-If the query contains a [variable](#variables) or `...`
-token, then it performs a read. Queries lacking a value
-imply an empty [variable](#variables) as their value and are
-therefore read queries.
-
-If the query lacks a [variable](#variables) or `...` in it's
-key then it reads a single-value, if the key-value exists.
+If the query only has a [variable](#variables) or `...` in
+its value (not its key) then it reads a single key-value,
+if the key-value exists.
 
 ```lang-fql {.query}
 /my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|string>
@@ -360,17 +328,51 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   }
 
   val := tr.MustGet(dir.Pack(tuple.Tuple{99.8,
-    tuple.UUID{0x7d, 0xfb, 0x10, 0xd1, 0x24, 0x93, 0x4f, 0xb5, 0x92, 0x8e, 0x88, 0x9f, 0xdc, 0x6a, 0x71, 0x36}))
-  
-     
+    tuple.UUID{
+      0x7d, 0xfb, 0x10, 0xd1,
+      0x24, 0x93, 0x4f, 0xb5,
+      0x92, 0x8e, 0x88, 0x9f,
+      0xdc, 0x6a, 0x71, 0x36}))
+
+  // Try to decode the value as a uint.
   if len(val) == 8 {
       return binary.LittleEndian.Uint64(val), nil
   }
+  // If the value isn't a uint, assume it's a string.
   return string(val), nil
 })
 ```
 
-Queries with [variables](#variables) or a `...` token in
+FQL attempts to decode the value as each of the types listed
+in the variable, stopping at first success. If the value
+cannot be decoded, the key-value does not matching the
+schema.
+
+If the value is specified as an empty variable, then the raw
+bytes are returned.
+
+```lang-fql {.query}
+/some/data(10139)=<>
+```
+
+```lang-go {.equiv-go}
+db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  dir, err := directory.Open(tr, []string{"some", "data"}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  // No value decoding...
+  return tr.MustGet(dir.Pack(tuple.Tuple{10139})), nil
+})
+```
+
+## Range Reads
+
+Queries with [variables](#variables) or the `...` token in
 their key result in a range of key-values being read.
 
 ```lang-fql {.query}
@@ -402,23 +404,35 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
       return nil, err
     }
 
+    // Our query specifies a key-tuple
+    // with 3 elements...
     if len(tup) != 3 {
       continue
     }
 
-    switch tup[0].(type) {
+    // The 2nd element must be either a
+    // string or an int64...
+    switch tup[1].(type) {
     default:
       continue
     case string | int64:
     }
 
+    // The query tells us to assume the value
+    // is a packed tuple...
     val, err := tuple.Unpack(kv.Value)
     if err != nil {
       continue
     }
+
+    // The value-tuple must have one or more
+    // elements in it...
     if len(val) == 0 {
       continue
     }
+
+    // The first element of the value-tuple must
+    // be a uint64...
     if _, isInt := val[0].(uint64); !isInt {
       continue
     }
@@ -429,44 +443,26 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
+The actual implementation of range-reads pipelines the
+reading, filtering, and value decoding across multiple
+threads.
+
+# Filtering
+
 Read queries define a schema to which key-values may or
-may-not conform. In the Go snippet above, you may have
-noticed that non-conformant key-values are being filtered
-out of the results.
+may-not conform. In the Go snippets above, non-conformant
+key-values were being filtered out of the results.
+
+> Filtering is performed on the client-side and may result
+> in lots of data being transferred to the host machine.
+> Care must be taken to avoid wasted bandwidth.
 
 Alternatively, FQL can throw an error when encountering
-a non-conformant key-value. This may help enforce the
+non-conformant key-values. This may help enforce the
 assumption that all key-values within a directory conform to
-the same schema. This behavior, and others, can be
-configured via the transaction's [options](#options).
+the same schema.
 
-### Data Encoding
-
-The directory and tuple layers are responsible for encoding
-the data elements in the key. As for the value, FDB doesn't
-provide a standard encoding.
-
-The table below outlines how data elements are encoded 
-when present in the value section.
-
-<div>
-
-| Type     | Encoding                        |
-|:---------|:--------------------------------|
-| `nil`    | empty value                     |
-| `int`    | 64-bit, 1's compliment          |
-| `uint`   | 64-bit                          |
-| `bool`   | single byte, `0x00` means false |
-| `float`  | IEEE 754                        |
-| `bigint` | not implemented yet             |
-| `string` | ASCII                           |
-| `bytes`  | as provided                     |
-| `uuid`   | RFC 4122                        |
-| `tuple`  | tuple layer                     |
-
-</div>
-
-### Index Indirection
+# Index Indirection
 
 TODO: Finish section.
 
@@ -475,15 +471,15 @@ TODO: Finish section.
 /user/entry(:userID,...)
 ```
 
-### Transaction Boundaries
+# Transaction Boundaries
 
 TODO: Finish section.
 
-## Design Recipes
+# Design Recipes
 
 TODO: Finish section.
 
-## As a Layer
+# As a Layer
 
 When integrating SQL into other languages, there are usually
 two choices each with their own drawbacks:
