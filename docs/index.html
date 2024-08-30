@@ -23,10 +23,7 @@
 /user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,0x0ffa83,42.2)=nil</code></pre>
     <p>FQL is an <a href="https://github.com/janderland/fdbq">open
     source</a> query language for <a
-    href="https://www.foundationdb.org/">Foundation DB</a> defined via a
-    simple, yet powerful <a
-    href="https://github.com/janderland/fdbq/blob/main/syntax.ebnf">context-free
-    grammar</a>.</p>
+    href="https://www.foundationdb.org/">Foundation DB</a>.</p>
     <ul>
     <li><a href="#overview" id="toc-overview">Overview</a></li>
     <li><a href="#data-elements" id="toc-data-elements">Data
@@ -55,8 +52,10 @@
     <li><a href="#as-a-layer" id="toc-as-a-layer">As a Layer</a></li>
     </ul>
   <h1 id="overview">Overview</h1>
-  <p>FQL queries look like key-values encoded using the directory &amp;
-  tuple <a
+  <p>FQL is specified via a <a
+  href="https://github.com/janderland/fdbq/blob/main/syntax.ebnf">context-free
+  grammar</a>. The queries look like key-values encoded using the
+  directory &amp; tuple <a
   href="https://apple.github.io/foundationdb/layer-concept.html">layers</a>.</p>
   <pre class="lang-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>FQL queries may define a single key-value to be written, as shown
@@ -117,6 +116,10 @@
   <td style="text-align: left;"><code>nil</code></td>
   </tr>
   <tr>
+  <td style="text-align: left;"><code>bool</code></td>
+  <td style="text-align: left;"><code>true</code></td>
+  </tr>
+  <tr>
   <td style="text-align: left;"><code>int</code></td>
   <td style="text-align: left;"><code>-14</code></td>
   </tr>
@@ -125,25 +128,17 @@
   <td style="text-align: left;"><code>7</code></td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>bool</code></td>
-  <td style="text-align: left;"><code>true</code></td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>float</code></td>
-  <td style="text-align: left;"><code>33.4</code></td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>bigint</code></td>
+  <td style="text-align: left;"><code>bint</code></td>
   <td
   style="text-align: left;"><code>#35299340192843523485929848293291842</code></td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>string</code></td>
-  <td style="text-align: left;"><code>"string"</code></td>
+  <td style="text-align: left;"><code>num</code></td>
+  <td style="text-align: left;"><code>33.4</code></td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>bytes</code></td>
-  <td style="text-align: left;"><code>0xa2bff2438312aac032</code></td>
+  <td style="text-align: left;"><code>str</code></td>
+  <td style="text-align: left;"><code>"string"</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>uuid</code></td>
@@ -151,14 +146,18 @@
   style="text-align: left;"><code>5a5ebefd-2193-47e2-8def-f464fc698e31</code></td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>tuple</code></td>
+  <td style="text-align: left;"><code>bytes</code></td>
+  <td style="text-align: left;"><code>0xa2bff2438312aac032</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>tup</code></td>
   <td style="text-align: left;"><code>("hello",27.4,nil)</code></td>
   </tr>
   </tbody>
   </table>
   </div>
   <blockquote>
-  <p><code>bigint</code> support is not yet implemented.</p>
+  <p><code>bint</code> support is not yet implemented.</p>
   </blockquote>
   <p>Tuples &amp; values may contain any of the data elements.</p>
   <pre class="lang-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
@@ -190,6 +189,11 @@
   <td style="text-align: left;">empty value</td>
   </tr>
   <tr>
+  <td style="text-align: left;"><code>bool</code></td>
+  <td style="text-align: left;">single byte, <code>0x00</code> means
+  false</td>
+  </tr>
+  <tr>
   <td style="text-align: left;"><code>int</code></td>
   <td style="text-align: left;">64-bit, 1’s compliment</td>
   </tr>
@@ -198,32 +202,27 @@
   <td style="text-align: left;">64-bit</td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>bool</code></td>
-  <td style="text-align: left;">single byte, <code>0x00</code> means
-  false</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>float</code></td>
-  <td style="text-align: left;">IEEE 754</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>bigint</code></td>
+  <td style="text-align: left;"><code>bint</code></td>
   <td style="text-align: left;">not implemented yet</td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>string</code></td>
-  <td style="text-align: left;">ASCII</td>
+  <td style="text-align: left;"><code>num</code></td>
+  <td style="text-align: left;">IEEE 754</td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>bytes</code></td>
-  <td style="text-align: left;">as provided</td>
+  <td style="text-align: left;"><code>str</code></td>
+  <td style="text-align: left;">ASCII</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>uuid</code></td>
   <td style="text-align: left;">RFC 4122</td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>tuple</code></td>
+  <td style="text-align: left;"><code>bytes</code></td>
+  <td style="text-align: left;">as provided</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>tup</code></td>
   <td style="text-align: left;">tuple layer</td>
   </tr>
   </tbody>
@@ -234,7 +233,7 @@
   href="#data-elements">data element</a> may be replaced with a
   variable. Variables are specified as a list of element types,
   separated by <code>|</code>, wrapped in angled braces.</p>
-  <pre class="lang-fql"><code>&lt;uint|string|uuid|bytes&gt;</code></pre>
+  <pre class="lang-fql"><code>&lt;uint|str|uuid|bytes&gt;</code></pre>
   <p>A variable may be empty, including no element types, meaning it
   represents all element types.</p>
   <pre class="lang-fql"><code>&lt;&gt;</code></pre>
@@ -252,7 +251,7 @@
   <pre class="lang-fql query"><code>/account/private(
   &lt;uint&gt;,
   &lt;uint&gt;,
-  &lt;string&gt;,
+  &lt;str&gt;,
 )=&lt;int&gt;</code></pre>
   <p>Comments start with a <code>%</code> and continue until the end of
   the line. They can be used to describe a tuple’s elements.</p>
@@ -260,7 +259,7 @@
 /account/private(
   &lt;uint&gt;,   % user ID
   &lt;uint&gt;,   % group ID
-  &lt;string&gt;, % account name
+  &lt;str&gt;, % account name
 )=&lt;int&gt;     % balance in USD</code></pre>
   <h1 id="kinds-of-queries">Kinds of Queries</h1>
   <p>FQL queries can write &amp; clear a single key-value, read one or
@@ -310,7 +309,7 @@
   <p>If the query only has a <a href="#variables">variable</a> or
   <code>...</code> in its value (not its key) then it reads a single
   key-value, if the key-value exists.</p>
-  <pre class="lang-fql query"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|string&gt;</code></pre>
+  <pre class="lang-fql query"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
@@ -336,7 +335,7 @@
 })</code></pre>
   <p>FQL attempts to decode the value as each of the types listed in the
   variable, stopping at first success. If the value cannot be decoded,
-  the key-value does not matching the schema.</p>
+  the key-value does not match the schema.</p>
   <p>If the value is specified as an empty variable, then the raw bytes
   are returned.</p>
   <pre class="lang-fql query"><code>/some/data(10139)=&lt;&gt;</code></pre>
@@ -356,7 +355,7 @@
   <p>Queries with <a href="#variables">variables</a> or the
   <code>...</code> token in their key result in a range of key-values
   being read.</p>
-  <pre class="lang-fql query"><code>/people(3392, &lt;string|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
+  <pre class="lang-fql query"><code>/people(3392, &lt;str|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
   <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
   if err != nil {
