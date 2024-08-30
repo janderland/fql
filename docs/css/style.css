@@ -80,7 +80,7 @@ a:hover {
 /* Callouts */
 
 blockquote {
-  border-left: 1rem solid var(--color2);
+  border-left: 1rem solid var(--colorF);
   padding: 0.5rem 1rem;
   margin: 2rem 0;
   background-color: var(--color1);

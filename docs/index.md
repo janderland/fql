@@ -15,16 +15,14 @@ include-before: |
   ```
   FQL is an [open source](https://github.com/janderland/fdbq)
   query language for
-  [Foundation DB](https://www.foundationdb.org/)
-  defined via a simple, yet powerful
-  [context-free
-  grammar](https://github.com/janderland/fdbq/blob/main/syntax.ebnf).
+  [Foundation DB](https://www.foundationdb.org/).
 ...
 
 # Overview
 
-FQL queries look like key-values encoded using the directory
-& tuple
+FQL is specified via a [context-free
+grammar](https://github.com/janderland/fdbq/blob/main/syntax.ebnf). The queries
+look like key-values encoded using the directory & tuple
 [layers](https://apple.github.io/foundationdb/layer-concept.html).
 
 ```lang-fql {.query}
@@ -122,22 +120,22 @@ Example instances of these elements can be seen below.
 
 <div>
 
-| Type     | Example                                |
-|:---------|:---------------------------------------|
-| `nil`    | `nil`                                  |
-| `int`    | `-14`                                  |
-| `uint`   | `7`                                    |
-| `bool`   | `true`                                 |
-| `float`  | `33.4`                                 |
-| `bigint` | `#35299340192843523485929848293291842` |
-| `string` | `"string"`                             |
-| `bytes`  | `0xa2bff2438312aac032`                 |
-| `uuid`   | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
-| `tuple`  | `("hello",27.4,nil)`                   |
+| Type    | Example                                |
+|:--------|:---------------------------------------|
+| `nil`   | `nil`                                  |
+| `bool`  | `true`                                 |
+| `int`   | `-14`                                  |
+| `uint`  | `7`                                    |
+| `bint`  | `#35299340192843523485929848293291842` |
+| `num`   | `33.4`                                 |
+| `str`   | `"string"`                             |
+| `uuid`  | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
+| `bytes` | `0xa2bff2438312aac032`                 |
+| `tup`   | `("hello",27.4,nil)`                   |
 
 </div>
 
-> `bigint` support is not yet implemented.
+> `bint` support is not yet implemented.
 
 Tuples & values may contain any of the data elements.
 
@@ -173,18 +171,18 @@ values. Endianness is configurable.
 
 <div>
 
-| Type     | Encoding                        |
-|:---------|:--------------------------------|
-| `nil`    | empty value                     |
-| `int`    | 64-bit, 1's compliment          |
-| `uint`   | 64-bit                          |
-| `bool`   | single byte, `0x00` means false |
-| `float`  | IEEE 754                        |
-| `bigint` | not implemented yet             |
-| `string` | ASCII                           |
-| `bytes`  | as provided                     |
-| `uuid`   | RFC 4122                        |
-| `tuple`  | tuple layer                     |
+| Type    | Encoding                        |
+|:--------|:--------------------------------|
+| `nil`   | empty value                     |
+| `bool`  | single byte, `0x00` means false |
+| `int`   | 64-bit, 1's compliment          |
+| `uint`  | 64-bit                          |
+| `bint`  | not implemented yet             |
+| `num`   | IEEE 754                        |
+| `str`   | ASCII                           |
+| `uuid`  | RFC 4122                        |
+| `bytes` | as provided                     |
+| `tup`   | tuple layer                     |
 
 </div>
 
@@ -196,7 +194,7 @@ Variables are specified as a list of element types,
 separated by `|`, wrapped in angled braces.
 
 ```lang-fql
-<uint|string|uuid|bytes>
+<uint|str|uuid|bytes>
 ```
 
 A variable may be empty, including no element types, meaning
@@ -230,7 +228,7 @@ its elements.
 /account/private(
   <uint>,
   <uint>,
-  <string>,
+  <str>,
 )=<int>
 ```
 
@@ -242,7 +240,7 @@ line. They can be used to describe a tuple's elements.
 /account/private(
   <uint>,   % user ID
   <uint>,   % group ID
-  <string>, % account name
+  <str>, % account name
 )=<int>     % balance in USD
 ```
 
@@ -314,7 +312,7 @@ its value (not its key) then it reads a single key-value,
 if the key-value exists.
 
 ```lang-fql {.query}
-/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|string>
+/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
 ```
 
 ```lang-go {.equiv-go}
@@ -345,8 +343,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 FQL attempts to decode the value as each of the types listed
 in the variable, stopping at first success. If the value
-cannot be decoded, the key-value does not matching the
-schema.
+cannot be decoded, the key-value does not match the schema.
 
 If the value is specified as an empty variable, then the raw
 bytes are returned.
@@ -376,7 +373,7 @@ Queries with [variables](#variables) or the `...` token in
 their key result in a range of key-values being read.
 
 ```lang-fql {.query}
-/people(3392, <string|int>, <>)=(<uint>, ...)
+/people(3392, <str|int>, <>)=(<uint>, ...)
 ```
 
 ```lang-go {.equiv-go}
