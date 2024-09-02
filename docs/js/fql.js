@@ -19,7 +19,7 @@
   };
 
   const DSTRING = {
-    scope: 'string',
+    scope: 'section',
     begin: /[^\/]/,
     end: /(?=[\/\(])/,
   };
