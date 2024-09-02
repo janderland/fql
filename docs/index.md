@@ -147,7 +147,7 @@ Tuples & values may contain any of the data elements.
 
 ```lang-fql {.query}
 /region/north_america(22.3,-8)=("rain","fog")
-/region/east_asian("japan",nil)=0xff
+/region/east_asia("japan",nil)=0xff
 ```
 
 Strings are the only data element allowed in directories. If
