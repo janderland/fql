@@ -122,7 +122,7 @@ a directory path.
 An FQL query contains instances of data elements. These are
 the same types of elements found in the [tuple
 layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
-Example instances of these elements can be seen below.
+Descriptions of these elements can be seen below.
 
 <div>
 
