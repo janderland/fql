@@ -466,8 +466,7 @@ may-not conform. In the Go snippets above, non-conformant
 key-values were being filtered out of the results.
 
 > Filtering is performed on the client-side and may result
-> in lots of data being transferred to the host machine.
-> Care must be taken to avoid wasted bandwidth.
+> in lots of data being transferred to the client machine.
 
 Alternatively, FQL can throw an error when encountering
 non-conformant key-values. This helps enforce the assumption
@@ -479,6 +478,8 @@ schema.
 In Foundation DB, indexes are implemented by having one
 key-value (the index) point at another key-value. This is
 also called "indirection".
+
+> Indirection is not yet implemented.
 
 Suppose we have a large list of people, one key-value for
 each person.
@@ -523,6 +524,10 @@ resulting in 3 individual [single reads](#single-reads).
 /index/last_name("Johnson",348)=nil
 /index/last_name("Johnson",2003)=nil
 ```
+
+# Aggregation
+
+TODO: Finish section.
 
 # Transactions
 
