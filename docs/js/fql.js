@@ -21,8 +21,7 @@
   const DSTRING = {
     scope: 'string',
     begin: /[^\/]/,
-    end: /(?=\/)/,
-    endsWithParent: true,
+    end: /(?=[\/\(])/,
   };
 
   const DATA = {
@@ -37,7 +36,7 @@
     end: />/,
     keywords: {
       $$pattern: /[^:|<>]+/,
-      keyword: ['int', 'uint', 'bool', 'float', 'bigint', 'string', 'bytes', 'uuid', 'tuple'],
+      keyword: ['int', 'uint', 'bool', 'num', 'bint', 'str', 'bytes', 'uuid', 'tup'],
     },
   };
 
@@ -47,22 +46,23 @@
     end: /,/,
   };
 
-  const DIRECTORY = {
-    scope: 'directory',
-    begin: /\//,
-    end: /(?=\()/,
-    contains: [STRING, DSTRING],
-  };
-
   const TUPLE = {
     scope: 'tuple',
     begin: /\(/,
     end: /\)/,
+    endsParent: true,
     keywords: {
       $$pattern: /[^,\)\s]+/,
       literal: ['nil', 'true', 'false'],
     },
     contains: [STRING, VARIABLE, REFERENCE, COMMENT, DATA, 'self'],
+  };
+
+  const DIRECTORY = {
+    scope: 'directory',
+    begin: /\//,
+    end: /(?=\=)/,
+    contains: [STRING, TUPLE, DSTRING],
   };
 
   const VALUE = {
