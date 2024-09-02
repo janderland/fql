@@ -6,7 +6,7 @@ RUN apt-get update &&\
       build-essential=12.9 \
       ca-certificates=20230311 \
       git=1:2.39.2-1.1 \
-      curl=7.88.1-10+deb12u6 &&\
+      curl=7.88.1-10+deb12u7 &&\
     apt-get clean &&\
     rm -rf /var/lib/apt/lists/*
 
