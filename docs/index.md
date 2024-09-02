@@ -190,10 +190,10 @@ values. Endianness is configurable.
 
 </div>
 
-# Variables
+# Variables & Schemas
 
 Variables allow FQL to describe key-value schemas. Any [data
-element](#data-elements) may be replaced with a variable.
+element](#data-elements) may be represented with a variable.
 Variables are specified as a list of element types,
 separated by `|`, wrapped in angled braces.
 
@@ -201,17 +201,25 @@ separated by `|`, wrapped in angled braces.
 <uint|str|uuid|bytes>
 ```
 
-A variable may be empty, including no element types, meaning
-it represents all element types.
+The variable's type list describes which data elements are
+allowed at the variable's position. A variable may be empty,
+including no element types, meaning it represents all
+element types.
 
-```lang-fql
-<>
+```lang-fql {.query}
+/user(<int>,<str>,<>)=<>
+```
+
+```lang-fql {.result}
+/user(0,"jon",0xffab0c)=nil
+/user(20,"roger",22.3)=0xff
+/user(21,"",nil)="nothing"
 ```
 
 Before the type list, a variable can be given a name. This
 name is used to reference the variable in subsequent
 queries, allowing for [index
-redirection](#index-indirection).
+indirection](#index-indirection).
 
 ```lang-fql {.query}
 /index("cars",<varName:int>)
@@ -219,8 +227,8 @@ redirection](#index-indirection).
 ```
 ```lang-fql {.result}
 /user(33,"mazda")=nil
-/user(33,"ford")=nil
-/user(33,"chevy")=nil
+/user(320,"ford")=nil
+/user(411,"chevy")=nil
 ```
 
 # Space & Comments
@@ -242,31 +250,31 @@ line. They can be used to describe a tuple's elements.
 ```lang-fql
 % private account balances
 /account/private(
-  <uint>,   % user ID
-  <uint>,   % group ID
-  <str>, % account name
-)=<int>     % balance in USD
+  <uint>, % user ID
+  <uint>, % group ID
+  <str>,  % account name
+)=<int>   % balance in USD
 ```
 
 # Kinds of Queries
 
-FQL queries can write & clear a single key-value, read one
-or more key-values, or list directories. Throughout this
+FQL queries can write/clear a single key-value, read one or
+more key-values, or list directories. Throughout this
 section, snippets of Go code are included to show how the
 queries interact with the FDB API.
 
-## Writes & Clears
+## Mutations
 
-Queries lacking a [variable](#variables) or the `...` token
-perform mutations on the database by either writing
+Queries lacking both [variables](#variables) and the `...`
+token perform mutations on the database by either writing
 a key-value or clearing an existing one.
 
-> Queries lacking a value imply an empty
+> Queries lacking a value altogether imply an empty
 > [variable](#variables) as the value and should not be
-> confused with write queries.
+> confused with mutation queries.
 
-If the query has a [data element](#data-elements) as its
-value then it performs a write operation.
+Mutation queries with a [data element](#data-elements) as
+their value perform a write operation.
 
 ```lang-fql {.query}
 /my/dir("hello","world")=42
@@ -282,13 +290,14 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   val := make([]byte, 8)
   // Endianness is configurable...
   binary.LittleEndian.PutUint64(val, 42)
+
   tr.Set(dir.Pack(tuple.Tuple{"hello", "world"}), val)
   return nil, nil
 })
 ```
 
-Queries with the `clear` token as their value result in
-a key-value being cleared.
+Mutation queries with the `clear` token as their value
+perform a clear operation.
 
 ```lang-fql {.query}
 /my/dir("hello","world")=clear
@@ -311,9 +320,9 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 ## Single Reads
 
-If the query only has a [variable](#variables) or `...` in
-its value (not its key) then it reads a single key-value,
-if the key-value exists.
+If the query has [variables](#variables) or the `...` token
+in its value (but not in its key) then it reads a single
+key-value, if the key-value exists.
 
 ```lang-fql {.query}
 /my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
@@ -329,6 +338,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
     return nil, err
   }
 
+  // Read the value's raw bytes...
   val := tr.MustGet(dir.Pack(tuple.Tuple{99.8,
     tuple.UUID{
       0x7d, 0xfb, 0x10, 0xd1,
@@ -340,6 +350,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   if len(val) == 8 {
       return binary.LittleEndian.Uint64(val), nil
   }
+
   // If the value isn't a uint, assume it's a string.
   return string(val), nil
 })
@@ -374,10 +385,11 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 ## Range Reads
 
 Queries with [variables](#variables) or the `...` token in
-their key result in a range of key-values being read.
+their key (and optionally in their value) result in a range
+of key-values being read.
 
 ```lang-fql {.query}
-/people(3392, <str|int>, <>)=(<uint>, ...)
+/people(3392,<str|int>,<>)=(<uint>,...)
 ```
 
 ```lang-go {.equiv-go}
@@ -444,9 +456,8 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-The actual implementation of range-reads pipelines the
-reading, filtering, and value decoding across multiple
-threads.
+The actual implementation pipelines the reading, filtering,
+and value decoding across multiple threads.
 
 # Filtering
 
@@ -459,20 +470,61 @@ key-values were being filtered out of the results.
 > Care must be taken to avoid wasted bandwidth.
 
 Alternatively, FQL can throw an error when encountering
-non-conformant key-values. This may help enforce the
-assumption that all key-values within a directory conform to
-the same schema.
+non-conformant key-values. This helps enforce the assumption
+that all key-values within a directory conform to a certain
+schema.
 
-# Index Indirection
+# Indirection
 
-TODO: Finish section.
+In Foundation DB, indexes are implemented by having one
+key-value (the index) point at another key-value. This is
+also called "indirection".
+
+Suppose we have a large list of people, one key-value for
+each person.
 
 ```lang-fql {.query}
-/user/index/surname("Johnson",<userID:int>)
-/user/entry(:userID,...)
+/people(<id:uint>,<firstName:str>,<lastName:str>,<age:int>)=nil
 ```
 
-# Transaction Boundaries
+If we wanted to read all records with the last name of
+"Johnson", we'd have to perform a linear search across the
+entire "people" directory. To make this kind of search more
+efficient, we can store an index of last names in a separate
+directory.
+
+```lang-fql {.query}
+/index/last_name(<lastName:str>,<id:uint>)=nil
+```
+
+FQL can forward the observed values of named variables from
+one query to the next, allowing us to efficiently query for
+all people with the last name of "Johnson".
+
+```lang-fql {.query}
+/index/last_name("Johnson",<id:uint>)
+/people(:id,...)
+```
+```lang-fql {.result}
+/people(23,"Lenny","Johnson",22,"Mechanic")=nil
+/people(348,"Roger","Johnson",54,"Engineer")=nil
+/people(2003,"Larry","Johnson",8,"N/A")=nil
+```
+
+The first query returned 3 key-values containing the IDs of
+23, 348, & 2003 which were then fed into the second query
+resulting in 3 individual [single reads](#single-reads).
+
+```lang-fql {.query}
+/index/last_name("Johnson",<id:uint>)
+```
+```lang-fql {.result}
+/index/last_name("Johnson",23)=nil
+/index/last_name("Johnson",348)=nil
+/index/last_name("Johnson",2003)=nil
+```
+
+# Transactions
 
 TODO: Finish section.
 

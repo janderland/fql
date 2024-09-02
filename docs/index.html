@@ -34,23 +34,22 @@
     Elements</a></li>
     <li><a href="#value-encoding" id="toc-value-encoding">Value
     Encoding</a></li>
-    <li><a href="#variables" id="toc-variables">Variables</a></li>
+    <li><a href="#variables-schemas"
+    id="toc-variables-schemas">Variables &amp; Schemas</a></li>
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
     <li><a href="#kinds-of-queries" id="toc-kinds-of-queries">Kinds of
     Queries</a>
     <ul>
-    <li><a href="#writes-clears" id="toc-writes-clears">Writes &amp;
-    Clears</a></li>
+    <li><a href="#mutations" id="toc-mutations">Mutations</a></li>
     <li><a href="#single-reads" id="toc-single-reads">Single
     Reads</a></li>
     <li><a href="#range-reads" id="toc-range-reads">Range Reads</a></li>
     </ul></li>
     <li><a href="#filtering" id="toc-filtering">Filtering</a></li>
-    <li><a href="#index-indirection" id="toc-index-indirection">Index
-    Indirection</a></li>
-    <li><a href="#transaction-boundaries"
-    id="toc-transaction-boundaries">Transaction Boundaries</a></li>
+    <li><a href="#indirection" id="toc-indirection">Indirection</a></li>
+    <li><a href="#transactions"
+    id="toc-transactions">Transactions</a></li>
     <li><a href="#design-recipes" id="toc-design-recipes">Design
     Recipes</a></li>
     <li><a href="#as-a-layer" id="toc-as-a-layer">As a Layer</a></li>
@@ -231,23 +230,27 @@
   </tbody>
   </table>
   </div>
-  <h1 id="variables">Variables</h1>
+  <h1 id="variables-schemas">Variables &amp; Schemas</h1>
   <p>Variables allow FQL to describe key-value schemas. Any <a
-  href="#data-elements">data element</a> may be replaced with a
+  href="#data-elements">data element</a> may be represented with a
   variable. Variables are specified as a list of element types,
   separated by <code>|</code>, wrapped in angled braces.</p>
   <pre class="lang-fql"><code>&lt;uint|str|uuid|bytes&gt;</code></pre>
-  <p>A variable may be empty, including no element types, meaning it
-  represents all element types.</p>
-  <pre class="lang-fql"><code>&lt;&gt;</code></pre>
+  <p>The variable’s type list describes which data elements are allowed
+  at the variable’s position. A variable may be empty, including no
+  element types, meaning it represents all element types.</p>
+  <pre class="lang-fql query"><code>/user(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
+  <pre class="lang-fql result"><code>/user(0,&quot;jon&quot;,0xffab0c)=nil
+/user(20,&quot;roger&quot;,22.3)=0xff
+/user(21,&quot;&quot;,nil)=&quot;nothing&quot;</code></pre>
   <p>Before the type list, a variable can be given a name. This name is
   used to reference the variable in subsequent queries, allowing for <a
-  href="#index-indirection">index redirection</a>.</p>
+  href="#index-indirection">index indirection</a>.</p>
   <pre class="lang-fql query"><code>/index(&quot;cars&quot;,&lt;varName:int&gt;)
 /data(:varName,...)</code></pre>
   <pre class="lang-fql result"><code>/user(33,&quot;mazda&quot;)=nil
-/user(33,&quot;ford&quot;)=nil
-/user(33,&quot;chevy&quot;)=nil</code></pre>
+/user(320,&quot;ford&quot;)=nil
+/user(411,&quot;chevy&quot;)=nil</code></pre>
   <h1 id="space-comments">Space &amp; Comments</h1>
   <p>Whitespace and newlines are allowed within a tuple, between its
   elements.</p>
@@ -260,26 +263,26 @@
   the line. They can be used to describe a tuple’s elements.</p>
   <pre class="lang-fql"><code>% private account balances
 /account/private(
-  &lt;uint&gt;,   % user ID
-  &lt;uint&gt;,   % group ID
-  &lt;str&gt;, % account name
-)=&lt;int&gt;     % balance in USD</code></pre>
+  &lt;uint&gt;, % user ID
+  &lt;uint&gt;, % group ID
+  &lt;str&gt;,  % account name
+)=&lt;int&gt;   % balance in USD</code></pre>
   <h1 id="kinds-of-queries">Kinds of Queries</h1>
-  <p>FQL queries can write &amp; clear a single key-value, read one or
-  more key-values, or list directories. Throughout this section,
-  snippets of Go code are included to show how the queries interact with
-  the FDB API.</p>
-  <h2 id="writes-clears">Writes &amp; Clears</h2>
-  <p>Queries lacking a <a href="#variables">variable</a> or the
+  <p>FQL queries can write/clear a single key-value, read one or more
+  key-values, or list directories. Throughout this section, snippets of
+  Go code are included to show how the queries interact with the FDB
+  API.</p>
+  <h2 id="mutations">Mutations</h2>
+  <p>Queries lacking both <a href="#variables">variables</a> and the
   <code>...</code> token perform mutations on the database by either
   writing a key-value or clearing an existing one.</p>
   <blockquote>
-  <p>Queries lacking a value imply an empty <a
+  <p>Queries lacking a value altogether imply an empty <a
   href="#variables">variable</a> as the value and should not be confused
-  with write queries.</p>
+  with mutation queries.</p>
   </blockquote>
-  <p>If the query has a <a href="#data-elements">data element</a> as its
-  value then it performs a write operation.</p>
+  <p>Mutation queries with a <a href="#data-elements">data element</a>
+  as their value perform a write operation.</p>
   <pre class="lang-fql query"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=42</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.CreateOrOpen(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
@@ -290,11 +293,12 @@
   val := make([]byte, 8)
   // Endianness is configurable...
   binary.LittleEndian.PutUint64(val, 42)
+
   tr.Set(dir.Pack(tuple.Tuple{&quot;hello&quot;, &quot;world&quot;}), val)
   return nil, nil
 })</code></pre>
-  <p>Queries with the <code>clear</code> token as their value result in
-  a key-value being cleared.</p>
+  <p>Mutation queries with the <code>clear</code> token as their value
+  perform a clear operation.</p>
   <pre class="lang-fql query"><code>/my/dir(&quot;hello&quot;,&quot;world&quot;)=clear</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
@@ -309,9 +313,9 @@
   return nil, nil
 })</code></pre>
   <h2 id="single-reads">Single Reads</h2>
-  <p>If the query only has a <a href="#variables">variable</a> or
-  <code>...</code> in its value (not its key) then it reads a single
-  key-value, if the key-value exists.</p>
+  <p>If the query has <a href="#variables">variables</a> or the
+  <code>...</code> token in its value (but not in its key) then it reads
+  a single key-value, if the key-value exists.</p>
   <pre class="lang-fql query"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
@@ -322,6 +326,7 @@
     return nil, err
   }
 
+  // Read the value&#39;s raw bytes...
   val := tr.MustGet(dir.Pack(tuple.Tuple{99.8,
     tuple.UUID{
       0x7d, 0xfb, 0x10, 0xd1,
@@ -333,6 +338,7 @@
   if len(val) == 8 {
       return binary.LittleEndian.Uint64(val), nil
   }
+
   // If the value isn&#39;t a uint, assume it&#39;s a string.
   return string(val), nil
 })</code></pre>
@@ -356,9 +362,9 @@
 })</code></pre>
   <h2 id="range-reads">Range Reads</h2>
   <p>Queries with <a href="#variables">variables</a> or the
-  <code>...</code> token in their key result in a range of key-values
-  being read.</p>
-  <pre class="lang-fql query"><code>/people(3392, &lt;str|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
+  <code>...</code> token in their key (and optionally in their value)
+  result in a range of key-values being read.</p>
+  <pre class="lang-fql query"><code>/people(3392,&lt;str|int&gt;,&lt;&gt;)=(&lt;uint&gt;,...)</code></pre>
   <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
   if err != nil {
@@ -420,8 +426,8 @@
   }
   return results, nil
 })</code></pre>
-  <p>The actual implementation of range-reads pipelines the reading,
-  filtering, and value decoding across multiple threads.</p>
+  <p>The actual implementation pipelines the reading, filtering, and
+  value decoding across multiple threads.</p>
   <h1 id="filtering">Filtering</h1>
   <p>Read queries define a schema to which key-values may or may-not
   conform. In the Go snippets above, non-conformant key-values were
@@ -432,13 +438,36 @@
   avoid wasted bandwidth.</p>
   </blockquote>
   <p>Alternatively, FQL can throw an error when encountering
-  non-conformant key-values. This may help enforce the assumption that
-  all key-values within a directory conform to the same schema.</p>
-  <h1 id="index-indirection">Index Indirection</h1>
-  <p>TODO: Finish section.</p>
-  <pre class="lang-fql query"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
-/user/entry(:userID,...)</code></pre>
-  <h1 id="transaction-boundaries">Transaction Boundaries</h1>
+  non-conformant key-values. This helps enforce the assumption that all
+  key-values within a directory conform to a certain schema.</p>
+  <h1 id="indirection">Indirection</h1>
+  <p>In Foundation DB, indexes are implemented by having one key-value
+  (the index) point at another key-value. This is also called
+  “indirection”.</p>
+  <p>Suppose we have a large list of people, one key-value for each
+  person.</p>
+  <pre class="lang-fql query"><code>/people(&lt;id:uint&gt;,&lt;firstName:str&gt;,&lt;lastName:str&gt;,&lt;age:int&gt;)=nil</code></pre>
+  <p>If we wanted to read all records with the last name of “Johnson”,
+  we’d have to perform a linear search across the entire “people”
+  directory. To make this kind of search more efficient, we can store an
+  index of last names in a separate directory.</p>
+  <pre class="lang-fql query"><code>/index/last_name(&lt;lastName:str&gt;,&lt;id:uint&gt;)=nil</code></pre>
+  <p>FQL can forward the observed values of named variables from one
+  query to the next, allowing us to efficiently query for all people
+  with the last name of “Johnson”.</p>
+  <pre class="lang-fql query"><code>/index/last_name(&quot;Johnson&quot;,&lt;id:uint&gt;)
+/people(:id,...)</code></pre>
+  <pre class="lang-fql result"><code>/people(23,&quot;Lenny&quot;,&quot;Johnson&quot;,22,&quot;Mechanic&quot;)=nil
+/people(348,&quot;Roger&quot;,&quot;Johnson&quot;,54,&quot;Engineer&quot;)=nil
+/people(2003,&quot;Larry&quot;,&quot;Johnson&quot;,8,&quot;N/A&quot;)=nil</code></pre>
+  <p>The first query returned 3 key-values containing the IDs of 23,
+  348, &amp; 2003 which were then fed into the second query resulting in
+  3 individual <a href="#single-reads">single reads</a>.</p>
+  <pre class="lang-fql query"><code>/index/last_name(&quot;Johnson&quot;,&lt;id:uint&gt;)</code></pre>
+  <pre class="lang-fql result"><code>/index/last_name(&quot;Johnson&quot;,23)=nil
+/index/last_name(&quot;Johnson&quot;,348)=nil
+/index/last_name(&quot;Johnson&quot;,2003)=nil</code></pre>
+  <h1 id="transactions">Transactions</h1>
   <p>TODO: Finish section.</p>
   <h1 id="design-recipes">Design Recipes</h1>
   <p>TODO: Finish section.</p>
