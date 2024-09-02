@@ -15,15 +15,19 @@ include-before: |
   ```
   FQL is an [open source](https://github.com/janderland/fdbq)
   query language for
-  [Foundation DB](https://www.foundationdb.org/).
+  [Foundation DB](https://www.foundationdb.org/). Query
+  semantics mirror Foundation DB's [core data
+  model](https://apple.github.io/foundationdb/data-modeling.html).
+  Common operations like range-reads and indirection are first
+  class citizens.
 ...
 
 # Overview
 
-FQL is specified via a [context-free
-grammar](https://github.com/janderland/fdbq/blob/main/syntax.ebnf). The queries
-look like key-values encoded using the directory & tuple
-[layers](https://apple.github.io/foundationdb/layer-concept.html).
+FQL is specified as a [context-free
+grammar](https://github.com/janderland/fdbq/blob/main/syntax.ebnf).
+The queries look like key-values encoded using the directory
+& tuple layers.
 
 ```lang-fql {.query}
 /my/directory("my","tuple")=4000
@@ -120,7 +124,7 @@ Example instances of these elements can be seen below.
 
 <div>
 
-| Type    | Example                                |
+| Type    | Description                            |
 |:--------|:---------------------------------------|
 | `nil`   | `nil`                                  |
 | `bool`  | `true`                                 |

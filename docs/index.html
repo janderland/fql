@@ -23,7 +23,11 @@
 /user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,0x0ffa83,42.2)=nil</code></pre>
     <p>FQL is an <a href="https://github.com/janderland/fdbq">open
     source</a> query language for <a
-    href="https://www.foundationdb.org/">Foundation DB</a>.</p>
+    href="https://www.foundationdb.org/">Foundation DB</a>. Query
+    semantics mirror Foundation DB’s <a
+    href="https://apple.github.io/foundationdb/data-modeling.html">core
+    data model</a>. Common operations like range-reads and indirection
+    are first class citizens.</p>
     <ul>
     <li><a href="#overview" id="toc-overview">Overview</a></li>
     <li><a href="#data-elements" id="toc-data-elements">Data
@@ -52,11 +56,10 @@
     <li><a href="#as-a-layer" id="toc-as-a-layer">As a Layer</a></li>
     </ul>
   <h1 id="overview">Overview</h1>
-  <p>FQL is specified via a <a
+  <p>FQL is specified as a <a
   href="https://github.com/janderland/fdbq/blob/main/syntax.ebnf">context-free
   grammar</a>. The queries look like key-values encoded using the
-  directory &amp; tuple <a
-  href="https://apple.github.io/foundationdb/layer-concept.html">layers</a>.</p>
+  directory &amp; tuple layers.</p>
   <pre class="lang-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>FQL queries may define a single key-value to be written, as shown
   above, or may define a set of key-values to be read, as shown
@@ -107,7 +110,7 @@
   <thead>
   <tr>
   <th style="text-align: left;">Type</th>
-  <th style="text-align: left;">Example</th>
+  <th style="text-align: left;">Description</th>
   </tr>
   </thead>
   <tbody>
