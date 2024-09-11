@@ -15,10 +15,10 @@ include-before: |
   ```
   FQL is an [open source](https://github.com/janderland/fdbq)
   query language for
-  [Foundation DB](https://www.foundationdb.org/). Query
+  [Foundation DB](https://www.foundationdb.org/). It's query
   semantics mirror Foundation DB's [core data
   model](https://apple.github.io/foundationdb/data-modeling.html).
-  Common operations like range-reads and indirection are first
+  Fundamental patterns like range-reads and indirection are first
   class citizens.
 ...
 
@@ -46,8 +46,10 @@ as shown below.
 
 The query above has a variable `<int>` as its value.
 Variables act as placeholders for any of the supported [data
-elements](#data-elements). This query will return a single
-key-value from the database, if such a key exists.
+elements](#data-elements). In this case, the variable also
+tells FQL how to decode the value's bytes. This query will
+return a single key-value from the database, if such a key
+exists.
 
 FQL queries can also perform range reads & filtering by
 including a variable in the key's tuple. The query below
@@ -120,7 +122,7 @@ a directory path.
 An FQL query contains instances of data elements. These are
 the same types of elements found in the [tuple
 layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
-Example instances of these elements can be seen below.
+Descriptions of these elements can be seen below.
 
 <div>
 
@@ -145,7 +147,7 @@ Tuples & values may contain any of the data elements.
 
 ```lang-fql {.query}
 /region/north_america(22.3,-8)=("rain","fog")
-/region/east_asian("japan",nil)=0xff
+/region/east_asia("japan",nil)=0xff
 ```
 
 Strings are the only data element allowed in directories. If

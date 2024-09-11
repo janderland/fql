@@ -23,11 +23,11 @@
 /user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,0x0ffa83,42.2)=nil</code></pre>
     <p>FQL is an <a href="https://github.com/janderland/fdbq">open
     source</a> query language for <a
-    href="https://www.foundationdb.org/">Foundation DB</a>. Query
+    href="https://www.foundationdb.org/">Foundation DB</a>. It’s query
     semantics mirror Foundation DB’s <a
     href="https://apple.github.io/foundationdb/data-modeling.html">core
-    data model</a>. Common operations like range-reads and indirection
-    are first class citizens.</p>
+    data model</a>. Fundamental patterns like range-reads and
+    indirection are first class citizens.</p>
     <ul>
     <li><a href="#overview" id="toc-overview">Overview</a></li>
     <li><a href="#data-elements" id="toc-data-elements">Data
@@ -68,8 +68,9 @@
   <pre class="lang-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>The query above has a variable <code>&lt;int&gt;</code> as its
   value. Variables act as placeholders for any of the supported <a
-  href="#data-elements">data elements</a>. This query will return a
-  single key-value from the database, if such a key exists.</p>
+  href="#data-elements">data elements</a>. In this case, the variable
+  also tells FQL how to decode the value’s bytes. This query will return
+  a single key-value from the database, if such a key exists.</p>
   <p>FQL queries can also perform range reads &amp; filtering by
   including a variable in the key’s tuple. The query below will return
   all key-values which conform to the schema defined by the query.</p>
@@ -104,7 +105,7 @@
   <p>An FQL query contains instances of data elements. These are the
   same types of elements found in the <a
   href="https://github.com/apple/foundationdb/blob/main/design/tuple.md">tuple
-  layer</a>. Example instances of these elements can be seen below.</p>
+  layer</a>. Descriptions of these elements can be seen below.</p>
   <div>
   <table>
   <thead>
@@ -164,7 +165,7 @@
   </blockquote>
   <p>Tuples &amp; values may contain any of the data elements.</p>
   <pre class="lang-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
-/region/east_asian(&quot;japan&quot;,nil)=0xff</code></pre>
+/region/east_asia(&quot;japan&quot;,nil)=0xff</code></pre>
   <p>Strings are the only data element allowed in directories. If a
   directory string only contains alphanumericals, underscores, dashes,
   and periods then the quotes don’t need to be included.</p>
