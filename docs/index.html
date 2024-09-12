@@ -472,7 +472,46 @@
 /index/last_name(&quot;Johnson&quot;,348)=nil
 /index/last_name(&quot;Johnson&quot;,2003)=nil</code></pre>
   <h1 id="aggregation">Aggregation</h1>
-  <p>TODO: Finish section.</p>
+  <blockquote>
+  <p>The design of aggregation queries is not complete. This section
+  describes the general idea. Exact syntax may change. This feature is
+  not currently included in the grammar nor has it been implemented.</p>
+  </blockquote>
+  <p>Foundation DB performs best when key-values are kept small. When <a
+  href="https://apple.github.io/foundationdb/blob.html">storing large
+  blobs</a>, the data is usually split into 10 kB chunks stored in the
+  value. The respective key contain the byte offset of the chunk.</p>
+  <pre class="lang-fql query"><code>/blob(
+  &quot;my file&quot;,    % The identifier of the blob.
+  &lt;offset:int&gt;, % The byte offset within the blob.
+)=&lt;chunk:bytes&gt; % A chunk of the blob.</code></pre>
+  <pre class="lang-fql result"><code>/blob(&quot;my file&quot;,0)=10e3_bytes
+/blob(&quot;my file&quot;,10000)=10e3_bytes
+/blob(&quot;my file&quot;,20000)=2.7e3_bytes</code></pre>
+  <blockquote>
+  <p>Instead of printing the actual byte strings in these results, only
+  the byte lengths are printed. This is an option provided by the CLI to
+  lower result verbosity.</p>
+  </blockquote>
+  <p>This gets the job done, but it would be nice if the client could
+  obtain the entire blob instead of having to append the chunks
+  themselves. This can be done using aggregation queries.</p>
+  <p>FQL provides a pseudo data type named <code>agg</code> which
+  performs the aggregation.</p>
+  <pre class="lang-fql query"><code>/blob(&quot;my file&quot;,...)=&lt;blob:agg&gt;</code></pre>
+  <pre class="lang-fql result"><code>/blob(&quot;my file&quot;,...)=22.7e3_bytes</code></pre>
+  <p>Aggregation queries always result in a single key-value. With
+  non-aggregation queries, variables &amp; the <code>...</code> token
+  are resolved as actual data elements in the query results. For
+  aggregation queries, only aggregation variables are resolved.</p>
+  <p>A similar pseudo data type for summing integers could be provided
+  as well.</p>
+  <pre class="lang-fql query"><code>/deltas(&quot;group A&quot;,&lt;int&gt;)</code></pre>
+  <pre class="lang-fql result"><code>/deltas(&quot;group A&quot;,20)=nil
+/deltas(&quot;group A&quot;,-18)=nil
+/deltas(&quot;group A&quot;,3)=nil</code></pre>
+  <pre class="lang-fql query"><code>/deltas(&quot;group A&quot;,&lt;sum&gt;)</code></pre>
+  <pre class="lang-fql result"><code>/deltas(&quot;group A&quot;,5)=&lt;&gt;</code></pre>
   <h1 id="transactions">Transactions</h1>
   <p>TODO: Finish section.</p>
   <h1 id="design-recipes">Design Recipes</h1>

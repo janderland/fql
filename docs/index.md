@@ -40,6 +40,7 @@ as shown below.
 ```lang-fql {.query}
 /my/directory("my","tuple")=<int>
 ```
+
 ```lang-fql {.result}
 /my/directory("my","tuple")=4000
 ```
@@ -59,6 +60,7 @@ defined by the query.
 ```lang-fql {.query}
 /my/directory(<>,"tuple")=nil
 ```
+
 ```lang-fql {.result}
 /my/directory("your","tuple")=nil
 /my/directory(42,"tuple")=nil
@@ -70,6 +72,7 @@ by ending the key's tuple with `...`.
 ```lang-fql {.query}
 /my/directory("my","tuple",...)=<>
 ```
+
 ```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
@@ -83,6 +86,7 @@ above.
 ```lang-fql {.query}
 /my/directory("my","tuple",...)
 ```
+
 ```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
@@ -95,6 +99,7 @@ the read on all directory paths matching the schema.
 ```lang-fql {.query}
 /<>/directory("my","tuple")
 ```
+
 ```lang-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /your/directory("my","tuple")=nil
@@ -113,6 +118,7 @@ a directory path.
 ```lang-fql {.query}
 /my/<>
 ```
+
 ```lang-fql {.result}
 /my/directory
 ```
@@ -227,6 +233,7 @@ indirection](#index-indirection).
 /index("cars",<varName:int>)
 /data(:varName,...)
 ```
+
 ```lang-fql {.result}
 /user(33,"mazda")=nil
 /user(320,"ford")=nil
@@ -529,7 +536,76 @@ resulting in 3 individual [single reads](#single-reads).
 
 # Aggregation
 
-TODO: Finish section.
+> The design of aggregation queries is not complete. This
+> section describes the general idea. Exact syntax may
+> change. This feature is not currently included in the
+> grammar nor has it been implemented.
+
+Foundation DB performs best when key-values are kept small.
+When [storing large
+blobs](https://apple.github.io/foundationdb/blob.html), the
+data is usually split into 10 kB chunks stored in the value.
+The respective key contain the byte offset of the chunk.
+
+```lang-fql {.query}
+/blob(
+  "my file",    % The identifier of the blob.
+  <offset:int>, % The byte offset within the blob.
+)=<chunk:bytes> % A chunk of the blob.
+```
+
+```lang-fql {.result}
+/blob("my file",0)=10e3_bytes
+/blob("my file",10000)=10e3_bytes
+/blob("my file",20000)=2.7e3_bytes
+```
+
+> Instead of printing the actual byte strings in these
+> results, only the byte lengths are printed. This is an
+> option provided by the CLI to lower result verbosity.
+
+This gets the job done, but it would be nice if the client
+could obtain the entire blob instead of having to append the
+chunks themselves. This can be done using aggregation
+queries.
+
+FQL provides a pseudo data type named `agg` which performs
+the aggregation.
+
+```lang-fql {.query}
+/blob("my file",...)=<blob:agg>
+```
+
+```lang-fql {.result}
+/blob("my file",...)=22.7e3_bytes
+```
+
+Aggregation queries always result in a single key-value.
+With non-aggregation queries, variables & the `...` token
+are resolved as actual data elements in the query results.
+For aggregation queries, only aggregation variables are
+resolved.
+
+A similar pseudo data type for summing integers could be
+provided as well.
+
+```lang-fql {.query}
+/deltas("group A",<int>)
+```
+
+```lang-fql {.result}
+/deltas("group A",20)=nil
+/deltas("group A",-18)=nil
+/deltas("group A",3)=nil
+```
+
+```lang-fql {.query}
+/deltas("group A",<sum>)
+```
+
+```lang-fql {.result}
+/deltas("group A",5)=<>
+```
 
 # Transactions
 

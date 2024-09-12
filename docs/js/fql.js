@@ -36,7 +36,7 @@
     end: />/,
     keywords: {
       $$pattern: /[^:|<>]+/,
-      keyword: ['int', 'uint', 'bool', 'num', 'bint', 'str', 'bytes', 'uuid', 'tup'],
+      keyword: ['int', 'uint', 'bool', 'num', 'bint', 'str', 'bytes', 'uuid', 'tup', 'agg', 'sum'],
     },
   };
 
