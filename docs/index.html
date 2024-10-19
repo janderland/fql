@@ -38,17 +38,19 @@
     id="toc-variables-schemas">Variables &amp; Schemas</a></li>
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
-    <li><a href="#kinds-of-queries" id="toc-kinds-of-queries">Kinds of
+    <li><a href="#basic-queries" id="toc-basic-queries">Basic
     Queries</a>
     <ul>
     <li><a href="#mutations" id="toc-mutations">Mutations</a></li>
-    <li><a href="#single-reads" id="toc-single-reads">Single
-    Reads</a></li>
-    <li><a href="#range-reads" id="toc-range-reads">Range Reads</a></li>
-    </ul></li>
+    <li><a href="#reads" id="toc-reads">Reads</a></li>
     <li><a href="#filtering" id="toc-filtering">Filtering</a></li>
+    </ul></li>
+    <li><a href="#advanced-queries" id="toc-advanced-queries">Advanced
+    Queries</a>
+    <ul>
     <li><a href="#indirection" id="toc-indirection">Indirection</a></li>
     <li><a href="#aggregation" id="toc-aggregation">Aggregation</a></li>
+    </ul></li>
     <li><a href="#using-fql" id="toc-using-fql">Using FQL</a>
     <ul>
     <li><a href="#cli" id="toc-cli">CLI</a></li>
@@ -269,15 +271,15 @@
   &lt;uint&gt;, % group ID
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
-  <h1 id="kinds-of-queries">Kinds of Queries</h1>
+  <h1 id="basic-queries">Basic Queries</h1>
   <p>FQL queries can write/clear a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of
   Go code are included to show how the queries interact with the FDB
   API.</p>
   <h2 id="mutations">Mutations</h2>
-  <p>Queries lacking both <a href="#variables">variables</a> and the
+  <p>Queries lacking <a href="#variables">variables</a> and the
   <code>...</code> token perform mutations on the database by either
-  writing a key-value or clearing an existing one.</p>
+  writing or clearing a key-value.</p>
   <blockquote>
   <p>Queries lacking a value altogether imply an empty <a
   href="#variables">variable</a> as the value and should not be confused
@@ -314,11 +316,20 @@
   tr.Clear(dir.Pack(tuple.Tuple{&quot;hello&quot;, &quot;world&quot;}))
   return nil, nil
 })</code></pre>
-  <h2 id="single-reads">Single Reads</h2>
-  <p>If the query has <a href="#variables">variables</a> or the
-  <code>...</code> token in its value (but not in its key) then it reads
-  a single key-value, if the key-value exists.</p>
-  <pre class="lang-fql query"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
+  <h2 id="reads">Reads</h2>
+  <p>TODO: Make sure all reads use ReadTransact().</p>
+  <p>Queries containing a <a href="#variables">variable</a> or the
+  <code>...</code> token read one or more key-values. The query defines
+  a schema which the returned key-values must conform to.</p>
+  <p>If the variable or <code>...</code> token only appears in the
+  query’s value, then it returns a single key-value, if one matching the
+  schema exists.</p>
+  <blockquote>
+  <p>Queries lacking a value altogether imply an empty <a
+  href="#variables">variable</a> as the value, and are therefore read
+  queries.</p>
+  </blockquote>
+  <pre class="lang-fql query"><code>/my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
@@ -362,14 +373,59 @@
   // No value decoding...
   return tr.MustGet(dir.Pack(tuple.Tuple{10139})), nil
 })</code></pre>
-  <h2 id="range-reads">Range Reads</h2>
-  <p>TODO: Show a simpler query here. Use this query as the filtering
-  example.</p>
   <p>Queries with <a href="#variables">variables</a> or the
   <code>...</code> token in their key (and optionally in their value)
   result in a range of key-values being read.</p>
-  <pre class="lang-fql query"><code>/people(3392,&lt;str|int&gt;,&lt;&gt;)=(&lt;uint&gt;,...)</code></pre>
+  <pre class="lang-fql query"><code>/people(&quot;coders&quot;,...)</code></pre>
   <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+  dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  rng, err := fdb.PrefixRange(dir.Pack(tuple.Tuple{&quot;coders&quot;}))
+  if err != nil {
+    return nil, err
+  }
+
+  var results []fdb.KeyValue
+  iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
+  for iter.Advance() {
+    kv := iter.MustGet()
+
+    tup, err := dir.Unpack(kv.Key)
+    if err != nil {
+      return nil, err
+    }
+
+    results = append(results, kv)
+  }
+  return results, nil
+})</code></pre>
+  <h2 id="filtering">Filtering</h2>
+  <p>Read queries define a schema to which key-values may or may-not
+  conform. In the Go snippets above, non-conformant key-values were
+  being filtered out of the results.</p>
+  <p>Alternatively, FQL can throw an error when encountering
+  non-conformant key-values. This may help enforce the assumption that
+  all key-values within a directory conform to a certain schema.</p>
+  <p>TODO: Link to FQL options.</p>
+  <p>Because filtering is performed on the client side, range reads may
+  stream a lot of data to the client while the client filters most of it
+  away. For example, consider the following query:</p>
+  <pre class="lang-fql query"><code>/people(3392,&lt;str|int&gt;,&lt;&gt;)=(&lt;uint&gt;,...)</code></pre>
+  <p>In the key, the location of the first variable or <code>...</code>
+  token determines the range read prefix used by FQL. For this
+  particular query, the prefix would be as follows:</p>
+  <pre class="lang-fql query"><code>/people(3392)</code></pre>
+  <p>Foundation DB will stream all key-values with this prefix to the
+  client. As they are received, the client will filter out key-values
+  which don’t match the query’s schema. Below you can see a Go
+  implementation of how this filtering would work.</p>
+  <pre class="lang-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -430,20 +486,8 @@
   }
   return results, nil
 })</code></pre>
-  <p>The actual implementation pipelines the reading, filtering, and
-  value decoding across multiple threads.</p>
-  <h1 id="filtering">Filtering</h1>
-  <p>Read queries define a schema to which key-values may or may-not
-  conform. In the Go snippets above, non-conformant key-values were
-  being filtered out of the results.</p>
-  <blockquote>
-  <p>Filtering is performed on the client-side and may result in lots of
-  data being transferred to the client machine.</p>
-  </blockquote>
-  <p>Alternatively, FQL can throw an error when encountering
-  non-conformant key-values. This helps enforce the assumption that all
-  key-values within a directory conform to a certain schema.</p>
-  <h1 id="indirection">Indirection</h1>
+  <h1 id="advanced-queries">Advanced Queries</h1>
+  <h2 id="indirection">Indirection</h2>
   <p>In Foundation DB, indexes are implemented by having one key-value
   (the index) point at another key-value. This is also called
   “indirection”.</p>
@@ -473,7 +517,7 @@
   <pre class="lang-fql result"><code>/index/last_name(&quot;Johnson&quot;,23)=nil
 /index/last_name(&quot;Johnson&quot;,348)=nil
 /index/last_name(&quot;Johnson&quot;,2003)=nil</code></pre>
-  <h1 id="aggregation">Aggregation</h1>
+  <h2 id="aggregation">Aggregation</h2>
   <blockquote>
   <p>The design of aggregation queries is not complete. This section
   describes the general idea. Exact syntax may change. This feature is

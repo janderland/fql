@@ -265,7 +265,7 @@ line. They can be used to describe a tuple's elements.
 )=<int>   % balance in USD
 ```
 
-# Kinds of Queries
+# Basic Queries
 
 FQL queries can write/clear a single key-value, read one or
 more key-values, or list directories. Throughout this
@@ -274,9 +274,9 @@ queries interact with the FDB API.
 
 ## Mutations
 
-Queries lacking both [variables](#variables) and the `...`
-token perform mutations on the database by either writing
-a key-value or clearing an existing one.
+Queries lacking [variables](#variables) and the `...` token
+perform mutations on the database by either writing or
+clearing a key-value.
 
 > Queries lacking a value altogether imply an empty
 > [variable](#variables) as the value and should not be
@@ -327,14 +327,24 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-## Single Reads
+## Reads
 
-If the query has [variables](#variables) or the `...` token
-in its value (but not in its key) then it reads a single
-key-value, if the key-value exists.
+TODO: Make sure all reads use ReadTransact().
+
+Queries containing a [variable](#variables) or the `...`
+token read one or more key-values. The query defines
+a schema which the returned key-values must conform to.
+
+If the variable or `...` token only appears in the query's
+value, then it returns a single key-value, if one matching
+the schema exists.
+
+> Queries lacking a value altogether imply an empty
+> [variable](#variables) as the value, and are therefore
+> read queries.
 
 ```lang-fql {.query}
-/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
+/my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
 ```
 
 ```lang-go {.equiv-go}
@@ -391,20 +401,82 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-## Range Reads
-
-TODO: Show a simpler query here. Use this query as the
-filtering example.
-
 Queries with [variables](#variables) or the `...` token in
 their key (and optionally in their value) result in a range
 of key-values being read.
 
 ```lang-fql {.query}
-/people(3392,<str|int>,<>)=(<uint>,...)
+/people("coders",...)
 ```
 
 ```lang-go {.equiv-go}
+db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
+  dir, err := directory.Open(tr, []string{"people"}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  rng, err := fdb.PrefixRange(dir.Pack(tuple.Tuple{"coders"}))
+  if err != nil {
+    return nil, err
+  }
+
+  var results []fdb.KeyValue
+  iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
+  for iter.Advance() {
+    kv := iter.MustGet()
+
+    tup, err := dir.Unpack(kv.Key)
+    if err != nil {
+      return nil, err
+    }
+
+    results = append(results, kv)
+  }
+  return results, nil
+})
+```
+
+## Filtering
+
+Read queries define a schema to which key-values may or
+may-not conform. In the Go snippets above, non-conformant
+key-values were being filtered out of the results.
+
+Alternatively, FQL can throw an error when encountering
+non-conformant key-values. This may help enforce the
+assumption that all key-values within a directory conform to
+a certain schema.
+
+TODO: Link to FQL options.
+
+Because filtering is performed on the client side, range
+reads may stream a lot of data to the client while the
+client filters most of it away. For example, consider the
+following query:
+
+```lang-fql {.query}
+/people(3392,<str|int>,<>)=(<uint>,...)
+```
+
+In the key, the location of the first variable or `...`
+token determines the range read prefix used by FQL. For this
+particular query, the prefix would be as follows:
+
+```lang-fql {.query}
+/people(3392)
+```
+
+Foundation DB will stream all key-values with this prefix to
+the client. As they are received, the client will filter out
+key-values which don't match the query's schema. Below you
+can see a Go implementation of how this filtering would
+work.
+
+```lang-go
 db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"people"}, nil)
   if err != nil {
@@ -468,24 +540,9 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-The actual implementation pipelines the reading, filtering,
-and value decoding across multiple threads.
+# Advanced Queries
 
-# Filtering
-
-Read queries define a schema to which key-values may or
-may-not conform. In the Go snippets above, non-conformant
-key-values were being filtered out of the results.
-
-> Filtering is performed on the client-side and may result
-> in lots of data being transferred to the client machine.
-
-Alternatively, FQL can throw an error when encountering
-non-conformant key-values. This helps enforce the assumption
-that all key-values within a directory conform to a certain
-schema.
-
-# Indirection
+## Indirection
 
 In Foundation DB, indexes are implemented by having one
 key-value (the index) point at another key-value. This is
@@ -537,7 +594,7 @@ resulting in 3 individual [single reads](#single-reads).
 /index/last_name("Johnson",2003)=nil
 ```
 
-# Aggregation
+## Aggregation
 
 > The design of aggregation queries is not complete. This
 > section describes the general idea. Exact syntax may
