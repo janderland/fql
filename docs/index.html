@@ -53,9 +53,15 @@
     </ul></li>
     <li><a href="#using-fql" id="toc-using-fql">Using FQL</a>
     <ul>
-    <li><a href="#cli" id="toc-cli">CLI</a></li>
-    <li><a href="#api" id="toc-api">API</a></li>
+    <li><a href="#cli" id="toc-cli">CLI</a>
+    <ul>
+    <li><a href="#headless" id="toc-headless">Headless</a></li>
+    <li><a href="#fullscreen" id="toc-fullscreen">Fullscreen</a></li>
     </ul></li>
+    <li><a href="#api-layer" id="toc-api-layer">API (Layer)</a></li>
+    </ul></li>
+    <li><a href="#project-roadmap" id="toc-project-roadmap">Project
+    Roadmap</a></li>
     </ul>
   <h1 id="overview">Overview</h1>
   <p>FQL is specified as a <a
@@ -487,12 +493,19 @@
   return results, nil
 })</code></pre>
   <h1 id="advanced-queries">Advanced Queries</h1>
+  <p>Besides basic <a
+  href="https://en.wikipedia.org/wiki/Create,_read,_update_and_delete">CRUD</a>
+  operations, FQL is capable of performing indirection and aggregation
+  queries.</p>
   <h2 id="indirection">Indirection</h2>
+  <p>Indirection queries are similar to SQL joins. They associate
+  different groups of key-values via some shared data element.</p>
   <p>In Foundation DB, indexes are implemented by having one key-value
   (the index) point at another key-value. This is also called
   “indirection”.</p>
   <blockquote>
-  <p>Indirection is not yet implemented.</p>
+  <p>Indirection is not yet included in the grammar, nor is it
+  implemented. The design of this feature is somewhat finalized.</p>
   </blockquote>
   <p>Suppose we have a large list of people, one key-value for each
   person.</p>
@@ -559,9 +572,45 @@
   <pre class="lang-fql query"><code>/deltas(&quot;group A&quot;,&lt;sum&gt;)</code></pre>
   <pre class="lang-fql result"><code>/deltas(&quot;group A&quot;,5)=&lt;&gt;</code></pre>
   <h1 id="using-fql">Using FQL</h1>
+  <p>FQL can be used for exploring a Foundation DB cluster in a CLI
+  environment or programmatically as a Foundation DB <a
+  href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>.</p>
   <h2 id="cli">CLI</h2>
-  <p>TODO: Finish section.</p>
-  <h2 id="api">API</h2>
+  <h3 id="headless">Headless</h3>
+  <p>FQL provides a CLI for performing queries from the command line. To
+  execute a query in “headless” mode (without fullscreen), you can use
+  the <code>-q</code> flag.</p>
+  <pre class="language-bash"><code>ᐅ fql -q &#39;/my/dir(&quot;hello&quot;,&quot;world&quot;)&#39;
+/my/dir(&quot;hello&quot;,&quot;world&quot;)=nil</code></pre>
+  <p>When using BASH (or a BASH-like shell), The queries must be wrapped
+  in single quotes to avoid mangling.</p>
+  <p>The <code>-q</code> flag may be provided multiple times. When
+  invoking FQL in this manner, all queries are performed in the same
+  transaction.</p>
+  <pre class="language-bash"><code>ᐅ fql -q &#39;/my/dir(&quot;hello&quot;,&lt;var:str&gt;)&#39; -q &#39;/other(22,...)&#39;
+/my/dir(&quot;hello&quot;,&quot;world&quot;)=nil
+/other(22,&quot;1&quot;)=0xa8
+/other(22,&quot;2&quot;)=0xf3</code></pre>
+  <h3 id="fullscreen">Fullscreen</h3>
+  <p>If the CLI is executed without the <code>-q</code> flag, a
+  fullscreen environment is started up. In this case, the connection to
+  Foundation DB is maintained for the lifetime of the application.
+  Single queries may be executed in their own transactions and the
+  results are displayed in a scrollable list.</p>
+  <p><img src="../vhs/demo.gif" /></p>
+  <p>Currently, this environment is not very useful, but it lays the
+  groundwork for a fully-featured FQL frontend (accidental
+  alliteration). The final version of this environment will include the
+  following features:</p>
+  <ul>
+  <li>Syntax highlighting</li>
+  <li>Context-aware autocompletion</li>
+  <li>Querying of data cached on the client</li>
+  <li>Importing &amp; exporting subspaces to disk</li>
+  <li>Customizable formatting of key-values</li>
+  <li>Restoring a session after restart</li>
+  </ul>
+  <h2 id="api-layer">API (Layer)</h2>
   <p>TODO: Review this section.</p>
   <p>When integrating SQL into other languages, there are usually two
   choices each with their own drawbacks:</p>
@@ -614,6 +663,7 @@ func _() {
     panic(err)
   }
 }</code></pre>
+  <h1 id="project-roadmap">Project Roadmap</h1>
   <script>
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {

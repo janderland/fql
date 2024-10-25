@@ -542,13 +542,23 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 
 # Advanced Queries
 
+Besides basic
+[CRUD](https://en.wikipedia.org/wiki/Create,_read,_update_and_delete)
+operations, FQL is capable of performing indirection and
+aggregation queries.
+
 ## Indirection
+
+Indirection queries are similar to SQL joins. They associate
+different groups of key-values via some shared data element.
 
 In Foundation DB, indexes are implemented by having one
 key-value (the index) point at another key-value. This is
 also called "indirection".
 
-> Indirection is not yet implemented.
+> Indirection is not yet included in the grammar, nor is it
+> implemented. The design of this feature is somewhat
+> finalized.
 
 Suppose we have a large list of people, one key-value for
 each person.
@@ -669,11 +679,61 @@ provided as well.
 
 # Using FQL
 
+FQL can be used for exploring a Foundation DB cluster in
+a CLI environment or programmatically as a Foundation DB
+[layer](https://apple.github.io/foundationdb/layer-concept.html).
+
 ## CLI
 
-TODO: Finish section.
+### Headless
 
-## API
+FQL provides a CLI for performing queries from the command
+line. To execute a query in "headless" mode (without
+fullscreen), you can use the `-q` flag.
+
+```language-bash
+ᐅ fql -q '/my/dir("hello","world")'
+/my/dir("hello","world")=nil
+```
+
+When using BASH (or a BASH-like shell), The queries must be
+wrapped in single quotes to avoid mangling.
+
+The `-q` flag may be provided multiple times. When invoking
+FQL in this manner, all queries are performed in the same
+transaction.
+
+```language-bash
+ᐅ fql -q '/my/dir("hello",<var:str>)' -q '/other(22,...)'
+/my/dir("hello","world")=nil
+/other(22,"1")=0xa8
+/other(22,"2")=0xf3
+```
+
+### Fullscreen
+
+If the CLI is executed without the `-q` flag, a fullscreen
+environment is started up. In this case, the connection to
+Foundation DB is maintained for the lifetime of the
+application. Single queries may be executed in their own
+transactions and the results are displayed in a scrollable
+list.
+
+![](../vhs/demo.gif)
+
+Currently, this environment is not very useful, but it lays
+the groundwork for a fully-featured FQL frontend (accidental
+alliteration). The final version of this environment will
+include the following features:
+
+- Syntax highlighting
+- Context-aware autocompletion
+- Querying of data cached on the client
+- Importing & exporting subspaces to disk
+- Customizable formatting of key-values
+- Restoring a session after restart
+
+## API (Layer)
 
 TODO: Review this section.
 
@@ -736,3 +796,4 @@ func _() {
 }
 ```
 
+# Project Roadmap
