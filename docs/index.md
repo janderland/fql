@@ -440,6 +440,10 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
+## Directory Queries
+
+TODO: Finish section.
+
 ## Filtering
 
 Read queries define a schema to which key-values may or
@@ -797,3 +801,38 @@ func _() {
 ```
 
 # Project Roadmap
+
+By summer of 2025, I'd like to have the following items
+completed:
+
+- Indirection & aggregation queries implemented as described
+  in this document.
+
+- Design and document the syntax for doing the following
+  features.
+
+  - Separating queries into multiple transactions.
+
+  - Set options at both the query & transaction level.
+    Options control things like range-read direction
+    & limits, endianness of values, and whether write
+    queries are allowed.
+
+  - A meta language for aliasing queries or parts of
+    queries. This language would provide type-safe
+    templating with the goal of reducing repetition in
+    a query file.
+
+Looking beyond summer 2025, I'd like to focus on the TUI
+environment:
+
+- Query on the results of a previously run query. This would
+  allow the user to cache subspaces of data in local memory
+  and refine their search with subsequent queries.
+
+- Autocompletion and syntax highlighting.
+
+- Mechanism for various output formats. These would control
+  what is done with the key-values. They could be used to
+  print only the first element of the key's tuple or to
+  store all the resulting key-values in a flat buffer.
