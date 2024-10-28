@@ -24,10 +24,78 @@
     end: /(?=[\/\(])/,
   };
 
-  const DATA = {
+  const NUMBER = {
     scope: 'number',
     begin: /[^\/,\(\)=<>\s]/,
     end: /(?=[\/,\(\)=<>%\s])/,
+    contains: [{
+      scope: 'title',
+      begin: /\./,
+    }],
+  };
+
+  const COMPOUND = {
+    scope: 'title',
+    begin: /(#|-)/,
+    contains: [NUMBER],
+  };
+
+  const BYTES = {
+    begin: [
+      /0/,
+      /x/,
+    ],
+    beginScope: {
+      1: 'number',
+      2: 'title',
+    },
+    contains: [NUMBER],
+  };
+
+  const UUID = {
+    begin: [
+      /\w{8}/,
+      /-/,
+      /\w{4}/,
+      /-/,
+      /\w{4}/,
+      /-/,
+      /\w{4}/,
+      /-/,
+      /\w{12}/,
+    ],
+    beginScope: {
+      1: 'number',
+      2: 'title',
+      3: 'number',
+      4: 'title',
+      5: 'number',
+      6: 'title',
+      7: 'number',
+      8: 'title',
+      9: 'number',
+    },
+  };
+
+  const KEYWORD = {
+    scope: 'keyword',
+    beginKeywords: [
+      'true',
+      'false',
+      'clear',
+      'nil',
+      'int',
+      'uint',
+      'bool',
+      'num',
+      'bint',
+      'str',
+      'bytes',
+      'uuid',
+      'tup',
+      'agg',
+      'sum',
+    ].join(' '),
   };
 
   const VARIABLE = {
@@ -36,7 +104,19 @@
     end: />/,
     keywords: {
       $$pattern: /[^:|<>]+/,
-      keyword: ['int', 'uint', 'bool', 'num', 'bint', 'str', 'bytes', 'uuid', 'tup', 'agg', 'sum'],
+      keyword: [
+        'int',
+        'uint',
+        'bool',
+        'num',
+        'bint',
+        'str',
+        'bytes',
+        'uuid',
+        'tup',
+        'agg',
+        'sum',
+      ],
     },
   };
 
@@ -46,16 +126,31 @@
     end: /,/,
   };
 
+  const MORE = {
+    scope: 'variable',
+    begin: /\.\.\./,
+  };
+
   const TUPLE = {
     scope: 'tuple',
     begin: /\(/,
     end: /\)/,
     endsParent: true,
-    keywords: {
-      $$pattern: /[^,\)\s]+/,
-      literal: ['nil', 'true', 'false'],
-    },
-    contains: [STRING, VARIABLE, REFERENCE, COMMENT, DATA, 'self'],
+    contains: [COMMENT, STRING, VARIABLE, REFERENCE, MORE, KEYWORD, UUID, BYTES, COMPOUND, NUMBER, 'self'],
+  };
+
+  const DIRECTORY = {
+    scope: 'directory',
+    begin: /\//,
+    end: /(?=\=)/,
+    contains: [STRING, VARIABLE, TUPLE, DSTRING],
+  };
+
+  const VALUE = {
+    scope: 'value',
+    begin: /=/,
+    end: /[\s%]/,
+    contains: [TUPLE, STRING, VARIABLE, REFERENCE, KEYWORD, UUID, BYTES, COMPOUND, NUMBER],
   };
 
   // TODO: Refactor into single tuple.
@@ -65,24 +160,6 @@
   const G_TUPLE = Object.assign({}, TUPLE);
   G_TUPLE.endsParent = false;
 
-  const DIRECTORY = {
-    scope: 'directory',
-    begin: /\//,
-    end: /(?=\=)/,
-    contains: [STRING, TUPLE, DSTRING],
-  };
-
-  const VALUE = {
-    scope: 'value',
-    begin: /=/,
-    end: /\s/,
-    keywords: {
-      $$pattern: /[^=\s]+/,
-      literal: ['nil', 'true', 'false'],
-    },
-    contains: [STRING, VARIABLE, REFERENCE, DATA],
-  };
-
   hljs.registerLanguage('fql', (hljs) => ({
     classNameAliases: {
       directory: 'built_in',
@@ -91,6 +168,6 @@
       reference: 'variable',
       escape: 'subst',
     },
-    contains: [DIRECTORY, G_TUPLE, VALUE, VARIABLE, COMMENT, STRING, DATA],
+    contains: [DIRECTORY, G_TUPLE, VALUE, VARIABLE, MORE, KEYWORD, COMMENT, STRING, UUID, BYTES, COMPOUND, NUMBER],
   }));
 })();
