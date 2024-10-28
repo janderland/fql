@@ -43,6 +43,7 @@
     <ul>
     <li><a href="#mutations" id="toc-mutations">Mutations</a></li>
     <li><a href="#reads" id="toc-reads">Reads</a></li>
+    <li><a href="#directories" id="toc-directories">Directories</a></li>
     <li><a href="#filtering" id="toc-filtering">Filtering</a></li>
     </ul></li>
     <li><a href="#advanced-queries" id="toc-advanced-queries">Advanced
@@ -53,15 +54,14 @@
     </ul></li>
     <li><a href="#using-fql" id="toc-using-fql">Using FQL</a>
     <ul>
-    <li><a href="#cli" id="toc-cli">CLI</a>
+    <li><a href="#command-line" id="toc-command-line">Command Line</a>
     <ul>
     <li><a href="#headless" id="toc-headless">Headless</a></li>
     <li><a href="#fullscreen" id="toc-fullscreen">Fullscreen</a></li>
     </ul></li>
     <li><a href="#api-layer" id="toc-api-layer">API (Layer)</a></li>
     </ul></li>
-    <li><a href="#project-roadmap" id="toc-project-roadmap">Project
-    Roadmap</a></li>
+    <li><a href="#roadmap" id="toc-roadmap">Roadmap</a></li>
     </ul>
   <h1 id="overview">Overview</h1>
   <p>FQL is specified as a <a
@@ -323,7 +323,6 @@
   return nil, nil
 })</code></pre>
   <h2 id="reads">Reads</h2>
-  <p>TODO: Make sure all reads use ReadTransact().</p>
   <p>Queries containing a <a href="#variables">variable</a> or the
   <code>...</code> token read one or more key-values. The query defines
   a schema which the returned key-values must conform to.</p>
@@ -336,7 +335,7 @@
   queries.</p>
   </blockquote>
   <pre class="lang-fql query"><code>/my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
-  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -367,7 +366,7 @@
   <p>If the value is specified as an empty variable, then the raw bytes
   are returned.</p>
   <pre class="lang-fql query"><code>/some/data(10139)=&lt;&gt;</code></pre>
-  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+  <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;some&quot;, &quot;data&quot;}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -411,6 +410,37 @@
   }
   return results, nil
 })</code></pre>
+  <h2 id="directories">Directories</h2>
+  <p>The directory layer may be queried in isolation by using a lone
+  directory as a query. These queries can only perform reads. If the
+  directory path contains no variables, the query will read that single
+  directory.</p>
+  <pre class="lang-fql query"><code>/root/&lt;&gt;/items</code></pre>
+  <pre class="lang-go equiv-go"><code> root, err := directory.Open(tr, []string{&quot;root&quot;}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  oneDeep, err := root.List(tr, nil)
+  if err != nil {
+    return nil, err
+  }
+
+  var results [][]string
+  for _, dir1 := range oneDeep {
+    twoDeep, err := root.List(tr, []string{dir1, &quot;items&quot;})
+    if err != nil {
+      return nil, err
+    }
+
+    for _, dir2 := range twoDeep {
+      results = append(results, []string{&quot;root&quot;, dir1, dir2})
+    }
+  }
+  return results, nil</code></pre>
   <h2 id="filtering">Filtering</h2>
   <p>Read queries define a schema to which key-values may or may-not
   conform. In the Go snippets above, non-conformant key-values were
@@ -575,7 +605,7 @@
   <p>FQL can be used for exploring a Foundation DB cluster in a CLI
   environment or programmatically as a Foundation DB <a
   href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>.</p>
-  <h2 id="cli">CLI</h2>
+  <h2 id="command-line">Command Line</h2>
   <h3 id="headless">Headless</h3>
   <p>FQL provides a CLI for performing queries from the command line. To
   execute a query in “headless” mode (without fullscreen), you can use
@@ -663,7 +693,36 @@ func _() {
     panic(err)
   }
 }</code></pre>
-  <h1 id="project-roadmap">Project Roadmap</h1>
+  <h1 id="roadmap">Roadmap</h1>
+  <p>By summer of 2025, I’d like to have the following items
+  completed:</p>
+  <ul>
+  <li><p>Indirection &amp; aggregation queries implemented as described
+  in this document.</p></li>
+  <li><p>Design and document the syntax for doing the following
+  features.</p>
+  <ul>
+  <li><p>Separating queries into multiple transactions.</p></li>
+  <li><p>Set options at both the query &amp; transaction level. Options
+  control things like range-read direction &amp; limits, endianness of
+  values, and whether write queries are allowed.</p></li>
+  <li><p>Meta language for aliasing queries or parts of queries. This
+  language would provide type-safe templating with the goal of reducing
+  repetition in a query file.</p></li>
+  </ul></li>
+  </ul>
+  <p>Looking beyond summer 2025, I’d like to focus on the TUI
+  environment:</p>
+  <ul>
+  <li><p>Autocompletion and syntax highlighting.</p></li>
+  <li><p>Query on the results of a previously run query. This would
+  allow the user to cache subspaces of data in local memory and refine
+  their search with subsequent queries.</p></li>
+  <li><p>Mechanisms for controlling the output format. These would
+  control what is done with the key-values. They could be used to print
+  only the first element of the key’s tuple or to store all the
+  resulting key-values in a flat buffer.</p></li>
+  </ul>
   <script>
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {
