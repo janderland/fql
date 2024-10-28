@@ -77,6 +77,13 @@ a:hover {
   color: var(--colorA);
 }
 
+/* Images */
+
+img {
+  border-radius: 0.5rem;
+  width: 100%;
+}
+
 /* Callouts */
 
 blockquote {

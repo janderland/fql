@@ -329,8 +329,6 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 ## Reads
 
-TODO: Make sure all reads use ReadTransact().
-
 Queries containing a [variable](#variables) or the `...`
 token read one or more key-values. The query defines
 a schema which the returned key-values must conform to.
@@ -348,7 +346,7 @@ the schema exists.
 ```
 
 ```lang-go {.equiv-go}
-db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -387,7 +385,7 @@ bytes are returned.
 ```
 
 ```lang-go {.equiv-go}
-db.Transact(func(tr fdb.Transaction) (interface{}, error) {
+db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{"some", "data"}, nil)
   if err != nil {
     if errors.Is(err, directory.ErrDirNotExists) {
@@ -440,9 +438,44 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-## Directory Queries
+## Directories
 
-TODO: Finish section.
+The directory layer may be queried in isolation by using
+a lone directory as a query. These queries can only perform
+reads. If the directory path contains no variables, the
+query will read that single directory.
+
+```lang-fql {.query}
+/root/<>/items
+```
+
+```lang-go {.equiv-go}
+ root, err := directory.Open(tr, []string{"root"}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  oneDeep, err := root.List(tr, nil)
+  if err != nil {
+    return nil, err
+  }
+
+  var results [][]string
+  for _, dir1 := range oneDeep {
+    twoDeep, err := root.List(tr, []string{dir1, "items"})
+    if err != nil {
+      return nil, err
+    }
+
+    for _, dir2 := range twoDeep {
+      results = append(results, []string{"root", dir1, dir2})
+    }
+  }
+  return results, nil
+```
 
 ## Filtering
 
@@ -687,7 +720,7 @@ FQL can be used for exploring a Foundation DB cluster in
 a CLI environment or programmatically as a Foundation DB
 [layer](https://apple.github.io/foundationdb/layer-concept.html).
 
-## CLI
+## Command Line
 
 ### Headless
 
@@ -800,7 +833,7 @@ func _() {
 }
 ```
 
-# Project Roadmap
+# Roadmap
 
 By summer of 2025, I'd like to have the following items
 completed:
@@ -818,21 +851,20 @@ completed:
     & limits, endianness of values, and whether write
     queries are allowed.
 
-  - A meta language for aliasing queries or parts of
-    queries. This language would provide type-safe
-    templating with the goal of reducing repetition in
-    a query file.
+  - Meta language for aliasing queries or parts of queries.
+    This language would provide type-safe templating with
+    the goal of reducing repetition in a query file.
 
 Looking beyond summer 2025, I'd like to focus on the TUI
 environment:
+
+- Autocompletion and syntax highlighting.
 
 - Query on the results of a previously run query. This would
   allow the user to cache subspaces of data in local memory
   and refine their search with subsequent queries.
 
-- Autocompletion and syntax highlighting.
-
-- Mechanism for various output formats. These would control
-  what is done with the key-values. They could be used to
-  print only the first element of the key's tuple or to
-  store all the resulting key-values in a flat buffer.
+- Mechanisms for controlling the output format. These would
+  control what is done with the key-values. They could be
+  used to print only the first element of the key's tuple or
+  to store all the resulting key-values in a flat buffer.
