@@ -141,6 +141,12 @@ pre.query, pre.lang-go {
   }
 }
 
+pre.result, pre.lang-go {
+  code {
+    background-color: var(--color0);
+  }
+}
+
 pre.result, pre.equiv-go {
   z-index: 0;
 
@@ -151,7 +157,6 @@ pre.result, pre.equiv-go {
 
   code {
     margin-top: -3rem;
-    background-color: var(--color0);
     padding: 2.5rem 1rem 0.5rem 1rem;
   }
 }
