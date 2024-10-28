@@ -58,6 +58,13 @@
     contains: [STRING, VARIABLE, REFERENCE, COMMENT, DATA, 'self'],
   };
 
+  // TODO: Refactor into single tuple.
+  // We need this because TUPLE has
+  // endsParent=true which doesn't
+  // allow it to match a lone tuple.
+  const G_TUPLE = Object.assign({}, TUPLE);
+  G_TUPLE.endsParent = false;
+
   const DIRECTORY = {
     scope: 'directory',
     begin: /\//,
@@ -84,6 +91,6 @@
       reference: 'variable',
       escape: 'subst',
     },
-    contains: [DIRECTORY, TUPLE, VALUE, VARIABLE, COMMENT],
+    contains: [DIRECTORY, G_TUPLE, VALUE, VARIABLE, COMMENT, STRING, DATA],
   }));
 })();
