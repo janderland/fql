@@ -1,55 +1,40 @@
 (function() {
   const ESCAPE = {
     scope: 'escape',
-    begin: /\\/,
-    end: /./,
+    begin: /\\./,
   };
 
   const COMMENT = {
     scope: 'comment',
-    begin: /%/,
-    end: /\n/,
-  };
-
-  const STRING = {
-    scope: 'string',
-    begin: /"/,
-    end: /"/,
-    contains: [ESCAPE],
-  };
-
-  const DSTRING = {
-    scope: 'section',
-    begin: /[^\/]/,
-    end: /(?=[\/\(])/,
+    begin: /%.*\n?/,
   };
 
   const NUMBER = {
-    scope: 'number',
-    begin: /[^\/,\(\)=<>\s]/,
-    end: /(?=[\/,\(\)=<>%\s])/,
-    contains: [{
-      scope: 'title',
-      begin: /\./,
-    }],
-  };
-
-  const COMPOUND = {
-    scope: 'title',
-    begin: /(#|-)/,
-    contains: [NUMBER],
+    begin: [
+      /-?/,
+      /\d+/,
+      /\.?/,
+      /\d*/,
+    ],
+    beginScope: {
+      1: 'title',
+      2: 'number',
+      3: 'title',
+      4: 'number',
+    },
   };
 
   const BYTES = {
     begin: [
       /0/,
       /x/,
+      /[A-Za-z0-9]*/,
     ],
     beginScope: {
       1: 'number',
       2: 'title',
+      3: 'number',
     },
-    contains: [NUMBER],
   };
 
   const UUID = {
@@ -75,6 +60,18 @@
       8: 'title',
       9: 'number',
     },
+  };
+
+  const STRING = {
+    scope: 'string',
+    begin: /"/,
+    end: /"/,
+    contains: [ESCAPE],
+  };
+
+  const DSTRING = {
+    scope: 'section',
+    begin: /[\w\.]/,
   };
 
   const KEYWORD = {
@@ -103,7 +100,7 @@
     begin: /</,
     end: />/,
     keywords: {
-      $$pattern: /[^:|<>]+/,
+      $$pattern: /[^:|]+/,
       keyword: [
         'int',
         'uint',
@@ -122,11 +119,10 @@
 
   const REFERENCE = {
     scope: 'reference',
-    begin: /:/,
-    end: /,/,
+    begin: /:[\w\.]+/,
   };
 
-  const MORE = {
+  const MAYBEMORE = {
     scope: 'variable',
     begin: /\.\.\./,
   };
@@ -136,7 +132,7 @@
     begin: /\(/,
     end: /\)/,
     endsParent: true,
-    contains: [COMMENT, STRING, VARIABLE, REFERENCE, MORE, KEYWORD, UUID, BYTES, COMPOUND, NUMBER, 'self'],
+    contains: [COMMENT, STRING, VARIABLE, REFERENCE, MAYBEMORE, KEYWORD, UUID, BYTES, NUMBER, 'self'],
   };
 
   const DIRECTORY = {
@@ -150,7 +146,7 @@
     scope: 'value',
     begin: /=/,
     end: /[\s%]/,
-    contains: [TUPLE, STRING, VARIABLE, REFERENCE, KEYWORD, UUID, BYTES, COMPOUND, NUMBER],
+    contains: [TUPLE, STRING, VARIABLE, REFERENCE, KEYWORD, UUID, BYTES, NUMBER],
   };
 
   // TODO: Refactor into single tuple.
@@ -168,6 +164,6 @@
       reference: 'variable',
       escape: 'subst',
     },
-    contains: [DIRECTORY, G_TUPLE, VALUE, VARIABLE, MORE, KEYWORD, COMMENT, STRING, UUID, BYTES, COMPOUND, NUMBER],
+    contains: [DIRECTORY, G_TUPLE, VALUE, VARIABLE, MAYBEMORE, KEYWORD, COMMENT, STRING, UUID, BYTES, NUMBER],
   }));
 })();
