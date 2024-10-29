@@ -1,55 +1,40 @@
 (function() {
   const ESCAPE = {
     scope: 'escape',
-    begin: /\\/,
-    end: /./,
+    begin: /\\./,
   };
 
   const COMMENT = {
     scope: 'comment',
-    begin: /%/,
-    end: /\n/,
-  };
-
-  const STRING = {
-    scope: 'string',
-    begin: /"/,
-    end: /"/,
-    contains: [ESCAPE],
-  };
-
-  const DSTRING = {
-    scope: 'section',
-    begin: /[^\/]/,
-    end: /(?=[\/\(])/,
+    begin: /%.*\n?/,
   };
 
   const NUMBER = {
-    scope: 'number',
-    begin: /[^\/,\(\)=<>\s]/,
-    end: /(?=[\/,\(\)=<>%\s])/,
-    contains: [{
-      scope: 'title',
-      begin: /\./,
-    }],
-  };
-
-  const COMPOUND = {
-    scope: 'title',
-    begin: /(#|-)/,
-    contains: [NUMBER],
+    begin: [
+      /-?/,
+      /\d+/,
+      /\.?/,
+      /\d*/,
+    ],
+    beginScope: {
+      1: 'accent',
+      2: 'number',
+      3: 'accent',
+      4: 'number',
+    },
   };
 
   const BYTES = {
     begin: [
       /0/,
       /x/,
+      /[A-Za-z0-9]*/,
     ],
     beginScope: {
       1: 'number',
-      2: 'title',
+      2: 'accent',
+      3: 'number',
     },
-    contains: [NUMBER],
   };
 
   const UUID = {
@@ -66,15 +51,27 @@
     ],
     beginScope: {
       1: 'number',
-      2: 'title',
+      2: 'accent',
       3: 'number',
-      4: 'title',
+      4: 'accent',
       5: 'number',
-      6: 'title',
+      6: 'accent',
       7: 'number',
-      8: 'title',
+      8: 'accent',
       9: 'number',
     },
+  };
+
+  const STRING = {
+    scope: 'string',
+    begin: /"/,
+    end: /"/,
+    contains: [ESCAPE],
+  };
+
+  const DSTRING = {
+    scope: 'section',
+    begin: /[\w\.]/,
   };
 
   const KEYWORD = {
@@ -103,7 +100,7 @@
     begin: /</,
     end: />/,
     keywords: {
-      $$pattern: /[^:|<>]+/,
+      $$pattern: /[^:|]+/,
       keyword: [
         'int',
         'uint',
@@ -122,43 +119,58 @@
 
   const REFERENCE = {
     scope: 'reference',
-    begin: /:/,
-    end: /,/,
+    begin: /:[\w\.]+/,
   };
 
-  const MORE = {
+  const MAYBEMORE = {
     scope: 'variable',
     begin: /\.\.\./,
+  };
+
+  const DIRECTORY = {
+    scope: 'directory',
+    begin: /\//,
+    end: /(?=\()/,
+    contains: [
+      STRING,
+      VARIABLE,
+      DSTRING,
+    ],
   };
 
   const TUPLE = {
     scope: 'tuple',
     begin: /\(/,
     end: /\)/,
-    endsParent: true,
-    contains: [COMMENT, STRING, VARIABLE, REFERENCE, MORE, KEYWORD, UUID, BYTES, COMPOUND, NUMBER, 'self'],
-  };
-
-  const DIRECTORY = {
-    scope: 'directory',
-    begin: /\//,
-    end: /(?=\=)/,
-    contains: [STRING, VARIABLE, TUPLE, DSTRING],
+    contains: [
+      COMMENT,
+      'self',
+      STRING,
+      VARIABLE,
+      REFERENCE,
+      MAYBEMORE,
+      KEYWORD,
+      UUID,
+      BYTES,
+      NUMBER,
+    ],
   };
 
   const VALUE = {
     scope: 'value',
     begin: /=/,
     end: /[\s%]/,
-    contains: [TUPLE, STRING, VARIABLE, REFERENCE, KEYWORD, UUID, BYTES, COMPOUND, NUMBER],
+    contains: [
+      TUPLE,
+      STRING,
+      VARIABLE,
+      REFERENCE,
+      KEYWORD,
+      UUID,
+      BYTES,
+      NUMBER,
+    ],
   };
-
-  // TODO: Refactor into single tuple.
-  // We need this because TUPLE has
-  // endsParent=true which doesn't
-  // allow it to match a lone tuple.
-  const G_TUPLE = Object.assign({}, TUPLE);
-  G_TUPLE.endsParent = false;
 
   hljs.registerLanguage('fql', (hljs) => ({
     classNameAliases: {
@@ -167,7 +179,24 @@
       value: 'built_in',
       reference: 'variable',
       escape: 'subst',
+      accent: 'title',
     },
-    contains: [DIRECTORY, G_TUPLE, VALUE, VARIABLE, MORE, KEYWORD, COMMENT, STRING, UUID, BYTES, COMPOUND, NUMBER],
+    contains: [
+      COMMENT, 
+      DIRECTORY,
+      TUPLE,
+      VALUE,
+      VARIABLE,
+      MAYBEMORE,
+      KEYWORD,
+      STRING,
+      UUID,
+      BYTES,
+      NUMBER,
+      { // Highlight lone bar for inline text.
+        scope: 'variable',
+        begin: /|/,
+      },
+    ],
   }));
 })();
