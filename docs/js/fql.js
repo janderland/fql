@@ -17,9 +17,9 @@
       /\d*/,
     ],
     beginScope: {
-      1: 'title',
+      1: 'accent',
       2: 'number',
-      3: 'title',
+      3: 'accent',
       4: 'number',
     },
   };
@@ -32,7 +32,7 @@
     ],
     beginScope: {
       1: 'number',
-      2: 'title',
+      2: 'accent',
       3: 'number',
     },
   };
@@ -51,13 +51,13 @@
     ],
     beginScope: {
       1: 'number',
-      2: 'title',
+      2: 'accent',
       3: 'number',
-      4: 'title',
+      4: 'accent',
       5: 'number',
-      6: 'title',
+      6: 'accent',
       7: 'number',
-      8: 'title',
+      8: 'accent',
       9: 'number',
     },
   };
@@ -127,34 +127,50 @@
     begin: /\.\.\./,
   };
 
+  const DIRECTORY = {
+    scope: 'directory',
+    begin: /\//,
+    end: /(?=\()/,
+    contains: [
+      STRING,
+      VARIABLE,
+      DSTRING,
+    ],
+  };
+
   const TUPLE = {
     scope: 'tuple',
     begin: /\(/,
     end: /\)/,
-    endsParent: true,
-    contains: [COMMENT, STRING, VARIABLE, REFERENCE, MAYBEMORE, KEYWORD, UUID, BYTES, NUMBER, 'self'],
-  };
-
-  const DIRECTORY = {
-    scope: 'directory',
-    begin: /\//,
-    end: /(?=\=)/,
-    contains: [STRING, VARIABLE, TUPLE, DSTRING],
+    contains: [
+      COMMENT,
+      'self',
+      STRING,
+      VARIABLE,
+      REFERENCE,
+      MAYBEMORE,
+      KEYWORD,
+      UUID,
+      BYTES,
+      NUMBER,
+    ],
   };
 
   const VALUE = {
     scope: 'value',
     begin: /=/,
     end: /[\s%]/,
-    contains: [TUPLE, STRING, VARIABLE, REFERENCE, KEYWORD, UUID, BYTES, NUMBER],
+    contains: [
+      TUPLE,
+      STRING,
+      VARIABLE,
+      REFERENCE,
+      KEYWORD,
+      UUID,
+      BYTES,
+      NUMBER,
+    ],
   };
-
-  // TODO: Refactor into single tuple.
-  // We need this because TUPLE has
-  // endsParent=true which doesn't
-  // allow it to match a lone tuple.
-  const G_TUPLE = Object.assign({}, TUPLE);
-  G_TUPLE.endsParent = false;
 
   hljs.registerLanguage('fql', (hljs) => ({
     classNameAliases: {
@@ -163,7 +179,24 @@
       value: 'built_in',
       reference: 'variable',
       escape: 'subst',
+      accent: 'title',
     },
-    contains: [DIRECTORY, G_TUPLE, VALUE, VARIABLE, MAYBEMORE, KEYWORD, COMMENT, STRING, UUID, BYTES, NUMBER],
+    contains: [
+      COMMENT, 
+      DIRECTORY,
+      TUPLE,
+      VALUE,
+      VARIABLE,
+      MAYBEMORE,
+      KEYWORD,
+      STRING,
+      UUID,
+      BYTES,
+      NUMBER,
+      { // Highlight lone bar for inline text.
+        scope: 'variable',
+        begin: /|/,
+      },
+    ],
   }));
 })();
