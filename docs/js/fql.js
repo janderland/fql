@@ -195,7 +195,7 @@
       NUMBER,
       { // Highlight lone bar for inline text.
         scope: 'variable',
-        begin: /|/,
+        begin: /\|/,
       },
     ],
   }));
