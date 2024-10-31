@@ -54,11 +54,8 @@
     </ul></li>
     <li><a href="#using-fql" id="toc-using-fql">Using FQL</a>
     <ul>
-    <li><a href="#command-line" id="toc-command-line">Command Line</a>
-    <ul>
-    <li><a href="#headless" id="toc-headless">Headless</a></li>
-    <li><a href="#fullscreen" id="toc-fullscreen">Fullscreen</a></li>
-    </ul></li>
+    <li><a href="#command-line" id="toc-command-line">Command
+    Line</a></li>
     <li><a href="#api-layer" id="toc-api-layer">API (Layer)</a></li>
     </ul></li>
     <li><a href="#roadmap" id="toc-roadmap">Roadmap</a></li>
@@ -606,6 +603,7 @@
   environment or programmatically as a Foundation DB <a
   href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>.</p>
   <h2 id="command-line">Command Line</h2>
+  <div class="language-bash">
   <h3 id="headless">Headless</h3>
   <p>FQL provides a CLI for performing queries from the command line. To
   execute a query in “headless” mode (without fullscreen), you can use
@@ -627,7 +625,7 @@
   Foundation DB is maintained for the lifetime of the application.
   Single queries may be executed in their own transactions and the
   results are displayed in a scrollable list.</p>
-  <p><img src="../vhs/demo.gif" /></p>
+  <p><img src="img/demo.gif" /></p>
   <p>Currently, this environment is not very useful, but it lays the
   groundwork for a fully-featured FQL frontend (accidental
   alliteration). The final version of this environment will include the
@@ -640,6 +638,7 @@
   <li>Customizable formatting of key-values</li>
   <li>Restoring a session after restart</li>
   </ul>
+  </div>
   <h2 id="api-layer">API (Layer)</h2>
   <p>TODO: Review this section.</p>
   <p>When integrating SQL into other languages, there are usually two
@@ -726,7 +725,16 @@ func _() {
   <script>
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {
-      e.classList.add("lang-fql");
+      let bash = false;
+      for (let p = e.parentElement; p; p = p.parentElement) {
+        if (p.classList.contains("language-bash")) {
+          bash = true;
+          break;
+        }
+      }
+
+      if (bash) e.classList.add("language-bash");
+      else e.classList.add("language-fql");
       hljs.highlightElement(e);
     });
   </script>

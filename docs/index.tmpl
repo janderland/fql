@@ -24,7 +24,16 @@
   <script>
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {
-      e.classList.add("lang-fql");
+      let bash = false;
+      for (let p = e.parentElement; p; p = p.parentElement) {
+        if (p.classList.contains("language-bash")) {
+          bash = true;
+          break;
+        }
+      }
+
+      if (bash) e.classList.add("language-bash");
+      else e.classList.add("language-fql");
       hljs.highlightElement(e);
     });
   </script>

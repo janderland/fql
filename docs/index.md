@@ -722,6 +722,8 @@ a CLI environment or programmatically as a Foundation DB
 
 ## Command Line
 
+<div class="language-bash">
+
 ### Headless
 
 FQL provides a CLI for performing queries from the command
@@ -756,7 +758,7 @@ application. Single queries may be executed in their own
 transactions and the results are displayed in a scrollable
 list.
 
-![](../vhs/demo.gif)
+![](img/demo.gif)
 
 Currently, this environment is not very useful, but it lays
 the groundwork for a fully-featured FQL frontend (accidental
@@ -769,6 +771,8 @@ include the following features:
 - Importing & exporting subspaces to disk
 - Customizable formatting of key-values
 - Restoring a session after restart
+
+</div>
 
 ## API (Layer)
 
