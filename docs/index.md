@@ -4,11 +4,11 @@ title: FQL
 # We include this intro via the 'include-before'
 # metadata field so it's placed before the TOC.
 include-before: |
-  ```lang-fql {.query}
+  ```language-fql {.query}
   /user/index/surname("Johnson",<userID:int>)
   /user(:userID,...)
   ```
-  ```lang-fql {.result}
+  ```language-fql {.result}
   /user(9323,"Timothy","Johnson",37)=nil
   /user(24335,"Andrew","Johnson",42)=nil
   /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
@@ -29,7 +29,7 @@ grammar](https://github.com/janderland/fql/blob/main/syntax.ebnf).
 The queries look like key-values encoded using the directory
 & tuple layers.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/directory("my","tuple")=4000
 ```
 
@@ -37,11 +37,11 @@ FQL queries may define a single key-value to be written, as
 shown above, or may define a set of key-values to be read,
 as shown below.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/directory("my","tuple")=<int>
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /my/directory("my","tuple")=4000
 ```
 
@@ -57,11 +57,11 @@ including a variable in the key's tuple. The query below
 will return all key-values which conform to the schema
 defined by the query.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/directory(<>,"tuple")=nil
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /my/directory("your","tuple")=nil
 /my/directory(42,"tuple")=nil
 ```
@@ -69,11 +69,11 @@ defined by the query.
 All key-values with a certain key prefix can be range read
 by ending the key's tuple with `...`.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/directory("my","tuple",...)=<>
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
@@ -83,11 +83,11 @@ A query's value may be omitted to imply a variable, meaning
 the following query is semantically identical to the one
 above.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/directory("my","tuple",...)
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
@@ -96,11 +96,11 @@ above.
 Including a variable in the directory tells FQL to perform
 the read on all directory paths matching the schema.
 
-```lang-fql {.query}
+```language-fql {.query}
 /<>/directory("my","tuple")
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /your/directory("my","tuple")=nil
 ```
@@ -108,18 +108,18 @@ the read on all directory paths matching the schema.
 Key-values can be cleared by using the special `clear` token
 as the value.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/directory("my","tuple")=clear
 ```
 
 The directory layer can be queried by only including
 a directory path.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/<>
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /my/directory
 ```
 
@@ -151,7 +151,7 @@ Descriptions of these elements can be seen below.
 
 Tuples & values may contain any of the data elements.
 
-```lang-fql {.query}
+```language-fql {.query}
 /region/north_america(22.3,-8)=("rain","fog")
 /region/east_asia("japan",nil)=0xff
 ```
@@ -161,14 +161,14 @@ a directory string only contains alphanumericals,
 underscores, dashes, and periods then the quotes don't need
 to be included.
 
-```lang-fql {.query}
+```language-fql {.query}
 /quoteless-string_in.dir(true)=false
 /"other ch@r@cters must be quoted!"(20)=32.3
 ```
 
 Quoted strings may contain quotes via backslash escapes.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/dir("I said \"hello\"")=nil
 ```
 
@@ -205,7 +205,7 @@ element](#data-elements) may be represented with a variable.
 Variables are specified as a list of element types,
 separated by `|`, wrapped in angled braces.
 
-```lang-fql
+```language-fql
 <uint|str|uuid|bytes>
 ```
 
@@ -214,11 +214,11 @@ allowed at the variable's position. A variable may be empty,
 including no element types, meaning it represents all
 element types.
 
-```lang-fql {.query}
+```language-fql {.query}
 /user(<int>,<str>,<>)=<>
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /user(0,"jon",0xffab0c)=nil
 /user(20,"roger",22.3)=0xff
 /user(21,"",nil)="nothing"
@@ -229,12 +229,12 @@ name is used to reference the variable in subsequent
 queries, allowing for [index
 indirection](#index-indirection).
 
-```lang-fql {.query}
+```language-fql {.query}
 /index("cars",<varName:int>)
 /data(:varName,...)
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /user(33,"mazda")=nil
 /user(320,"ford")=nil
 /user(411,"chevy")=nil
@@ -245,7 +245,7 @@ indirection](#index-indirection).
 Whitespace and newlines are allowed within a tuple, between
 its elements.
 
-```lang-fql {.query}
+```language-fql {.query}
 /account/private(
   <uint>,
   <uint>,
@@ -256,7 +256,7 @@ its elements.
 Comments start with a `%` and continue until the end of the
 line. They can be used to describe a tuple's elements.
 
-```lang-fql
+```language-fql
 % private account balances
 /account/private(
   <uint>, % user ID
@@ -285,7 +285,7 @@ clearing a key-value.
 Mutation queries with a [data element](#data-elements) as
 their value perform a write operation.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/dir("hello","world")=42
 ```
 
@@ -308,7 +308,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 Mutation queries with the `clear` token as their value
 perform a clear operation.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/dir("hello","world")=clear
 ```
 
@@ -341,7 +341,7 @@ the schema exists.
 > [variable](#variables) as the value, and are therefore
 > read queries.
 
-```lang-fql {.query}
+```language-fql {.query}
 /my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
 ```
 
@@ -380,7 +380,7 @@ cannot be decoded, the key-value does not match the schema.
 If the value is specified as an empty variable, then the raw
 bytes are returned.
 
-```lang-fql {.query}
+```language-fql {.query}
 /some/data(10139)=<>
 ```
 
@@ -403,7 +403,7 @@ Queries with [variables](#variables) or the `...` token in
 their key (and optionally in their value) result in a range
 of key-values being read.
 
-```lang-fql {.query}
+```language-fql {.query}
 /people("coders",...)
 ```
 
@@ -445,7 +445,7 @@ a lone directory as a query. These queries can only perform
 reads. If the directory path contains no variables, the
 query will read that single directory.
 
-```lang-fql {.query}
+```language-fql {.query}
 /root/<>/items
 ```
 
@@ -495,7 +495,7 @@ reads may stream a lot of data to the client while the
 client filters most of it away. For example, consider the
 following query:
 
-```lang-fql {.query}
+```language-fql {.query}
 /people(3392,<str|int>,<>)=(<uint>,...)
 ```
 
@@ -503,7 +503,7 @@ In the key, the location of the first variable or `...`
 token determines the range read prefix used by FQL. For this
 particular query, the prefix would be as follows:
 
-```lang-fql {.query}
+```language-fql {.query}
 /people(3392)
 ```
 
@@ -600,7 +600,7 @@ also called "indirection".
 Suppose we have a large list of people, one key-value for
 each person.
 
-```lang-fql {.query}
+```language-fql {.query}
 /people(<id:uint>,<firstName:str>,<lastName:str>,<age:int>)=nil
 ```
 
@@ -610,7 +610,7 @@ entire "people" directory. To make this kind of search more
 efficient, we can store an index of last names in a separate
 directory.
 
-```lang-fql {.query}
+```language-fql {.query}
 /index/last_name(<lastName:str>,<id:uint>)=nil
 ```
 
@@ -618,11 +618,11 @@ FQL can forward the observed values of named variables from
 one query to the next, allowing us to efficiently query for
 all people with the last name of "Johnson".
 
-```lang-fql {.query}
+```language-fql {.query}
 /index/last_name("Johnson",<id:uint>)
 /people(:id,...)
 ```
-```lang-fql {.result}
+```language-fql {.result}
 /people(23,"Lenny","Johnson",22,"Mechanic")=nil
 /people(348,"Roger","Johnson",54,"Engineer")=nil
 /people(2003,"Larry","Johnson",8,"N/A")=nil
@@ -632,10 +632,10 @@ The first query returned 3 key-values containing the IDs of
 23, 348, & 2003 which were then fed into the second query
 resulting in 3 individual [single reads](#single-reads).
 
-```lang-fql {.query}
+```language-fql {.query}
 /index/last_name("Johnson",<id:uint>)
 ```
-```lang-fql {.result}
+```language-fql {.result}
 /index/last_name("Johnson",23)=nil
 /index/last_name("Johnson",348)=nil
 /index/last_name("Johnson",2003)=nil
@@ -654,14 +654,14 @@ blobs](https://apple.github.io/foundationdb/blob.html), the
 data is usually split into 10 kB chunks stored in the value.
 The respective key contain the byte offset of the chunk.
 
-```lang-fql {.query}
+```language-fql {.query}
 /blob(
   "my file",    % The identifier of the blob.
   <offset:int>, % The byte offset within the blob.
 )=<chunk:bytes> % A chunk of the blob.
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /blob("my file",0)=10e3_bytes
 /blob("my file",10000)=10e3_bytes
 /blob("my file",20000)=2.7e3_bytes
@@ -679,11 +679,11 @@ queries.
 FQL provides a pseudo data type named `agg` which performs
 the aggregation.
 
-```lang-fql {.query}
+```language-fql {.query}
 /blob("my file",...)=<blob:agg>
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /blob("my file",...)=22.7e3_bytes
 ```
 
@@ -696,21 +696,21 @@ resolved.
 A similar pseudo data type for summing integers could be
 provided as well.
 
-```lang-fql {.query}
+```language-fql {.query}
 /deltas("group A",<int>)
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /deltas("group A",20)=nil
 /deltas("group A",-18)=nil
 /deltas("group A",3)=nil
 ```
 
-```lang-fql {.query}
+```language-fql {.query}
 /deltas("group A",<sum>)
 ```
 
-```lang-fql {.result}
+```language-fql {.result}
 /deltas("group A",5)=<>
 ```
 
