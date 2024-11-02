@@ -125,35 +125,53 @@ a directory path.
 
 # Data Elements
 
-An FQL query contains instances of data elements. These are
-the same types of elements found in the [tuple
+An FQL query contains instances of data elements. These
+mirror the types of elements found in the [tuple
 layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
 Descriptions of these elements can be seen below.
 
 <div>
 
-| Type    | Description                            |
-|:--------|:---------------------------------------|
-| `nil`   | `nil`                                  |
-| `bool`  | `true`                                 |
-| `int`   | `-14`                                  |
-| `uint`  | `7`                                    |
-| `bint`  | `#35299340192843523485929848293291842` |
-| `num`   | `33.4`                                 |
-| `str`   | `"string"`                             |
-| `uuid`  | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
-| `bytes` | `0xa2bff2438312aac032`                 |
-| `tup`   | `("hello",27.4,nil)`                   |
+| Type    | Description    | Example                                |
+|:--------|:---------------|:---------------------------------------|
+| `nil`   | Empty Type     | `nil`                                  |
+| `bool`  | Boolean        | `true`                                 |
+| `int`   | Signed Integer | `-14`                                  |
+| `num`   | Floating Point | `33.4`                                 |
+| `str`   | ASCII String   | `"string"`                             |
+| `uuid`  | UUID           | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
+| `bytes` | Byte String    | `0xa2bff2438312aac032`                 |
+| `tup`   | Tuple          | `("hello",27.4,nil)`                   |
 
 </div>
 
-> `bint` support is not yet implemented.
+The `nil` type allows for a single value which is also
+`nil`. The tuple layer supports a unique encoding for `nil`.
+As a value, `nil` is equivalent to an empty byte array, so
+the following queries are semantically equivalent:
 
-Tuples & values may contain any of the data elements.
+```language-fql {.query}
+/entry(537856)=nil
+/entry(537856)=0x
+```
+
+The `int` type allows for arbitrarily large integers. The
+`num` type allows for 64-bit floating-point numbers. The
+`num` type does not support arbitrary precision because the
+tuple layer [advising
+against](https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal)
+using it's abitrarily-sized decimal encoding.
+
+> Support for arbitrarily-sized floating-point numbers will
+> be revisited in the future.
+
+Tuples & values may contain any of the data elements,
+including tuples; values may contain a tuple and tuples may
+contain sub-tuples.
 
 ```language-fql {.query}
 /region/north_america(22.3,-8)=("rain","fog")
-/region/east_asia("japan",nil)=0xff
+/region/east_asia("japan",("sub",nil))=0xff
 ```
 
 Strings are the only data element allowed in directories. If
@@ -171,6 +189,10 @@ Quoted strings may contain quotes via backslash escapes.
 ```language-fql {.query}
 /my/dir("I said \"hello\"")=nil
 ```
+
+> Currently, strings only support ASCII characters. This
+> will be changed to include all unicode characters in the
+> future.
 
 # Value Encoding
 
