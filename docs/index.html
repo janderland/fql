@@ -611,45 +611,36 @@
   <pre class="language-fql query"><code>/deltas(&quot;group A&quot;,&lt;sum&gt;)</code></pre>
   <pre class="language-fql result"><code>/deltas(&quot;group A&quot;,5)=&lt;&gt;</code></pre>
   <h1 id="using-fql">Using FQL</h1>
-  <p>FQL can be used for exploring a Foundation DB cluster in a CLI
-  environment or programmatically as a Foundation DB <a
+  <p>The FQL project provides an application for executing queries and
+  exploring the data, similar to <code>psql</code> for Postgres. This
+  libraries powering this application are exposed as a Go API, allowing
+  FQL to be used as a Foundation DB <a
   href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>.</p>
   <h2 id="command-line">Command Line</h2>
   <div class="language-bash">
   <h3 id="headless">Headless</h3>
   <p>FQL provides a CLI for performing queries from the command line. To
   execute a query in “headless” mode (without fullscreen), you can use
-  the <code>-q</code> flag.</p>
+  the <code>-q</code> flag. The query following the <code>-q</code> flag
+  must be wrapped in single quotes to avoid mangling by BASH.</p>
   <pre class="language-bash"><code>ᐅ fql -q &#39;/my/dir(&quot;hello&quot;,&quot;world&quot;)&#39;
 /my/dir(&quot;hello&quot;,&quot;world&quot;)=nil</code></pre>
-  <p>When using BASH (or a BASH-like shell), The queries must be wrapped
-  in single quotes to avoid mangling.</p>
-  <p>The <code>-q</code> flag may be provided multiple times. When
-  invoking FQL in this manner, all queries are performed in the same
-  transaction.</p>
+  <p>The <code>-q</code> flag may be provided multiple times. All
+  queries are run within a single transaction.</p>
   <pre class="language-bash"><code>ᐅ fql -q &#39;/my/dir(&quot;hello&quot;,&lt;var:str&gt;)&#39; -q &#39;/other(22,...)&#39;
 /my/dir(&quot;hello&quot;,&quot;world&quot;)=nil
 /other(22,&quot;1&quot;)=0xa8
 /other(22,&quot;2&quot;)=0xf3</code></pre>
   <h3 id="fullscreen">Fullscreen</h3>
   <p>If the CLI is executed without the <code>-q</code> flag, a
-  fullscreen environment is started up. In this case, the connection to
-  Foundation DB is maintained for the lifetime of the application.
-  Single queries may be executed in their own transactions and the
-  results are displayed in a scrollable list.</p>
+  fullscreen environment is started up. Single queries may be executed
+  in their own transactions and the results are displayed in a
+  scrollable list.</p>
   <p><img src="img/demo.gif" /></p>
   <p>Currently, this environment is not very useful, but it lays the
-  groundwork for a fully-featured FQL frontend (accidental
-  alliteration). The final version of this environment will include the
-  following features:</p>
-  <ul>
-  <li>Syntax highlighting</li>
-  <li>Context-aware autocompletion</li>
-  <li>Querying of data cached on the client</li>
-  <li>Importing &amp; exporting subspaces to disk</li>
-  <li>Customizable formatting of key-values</li>
-  <li>Restoring a session after restart</li>
-  </ul>
+  groundwork for a fully-featured FQL frontend. The final version of
+  this environment will provide autocompletion, querying of locally
+  cached data, and display customizations.</p>
   </div>
   <h2 id="programmatic">Programmatic</h2>
   <p>FQL exposes it’s AST as an API, allowing Go applications to use FQL
@@ -713,47 +704,36 @@ func _() {
 
 func _() {
   fdb.MustAPIVersion(620)
-  db := facade.NewTransactor(
-    fdb.MustOpenDefault(), directory.Root()))
+  eg := engine.New(
+    facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
 
-  dir := kv.Directory{
-    kv.String(&quot;hello&quot;),
-    kv.String(&quot;there&quot;),
-  }
-
-  key := kv.Key{
-    Directory: dir,
-    Tuple: kv.Tuple{kv.Float(33.3)},
-  }
+  dir := kv.Directory{kv.String(&quot;hello&quot;), kv.String(&quot;there&quot;)}
+  key := kv.Key{dir, kv.Tuple{kv.Float(33.3)}}
 
   // Write: /hello/there{33.3}=10
-  query := kv.KeyValue{Key: key, Value: kv.Int(10)}
+  query := kv.KeyValue{key, kv.Int(10)}
   if err := eg.Set(query); err != nil {
     panic(err)
   }
 
-  keyExists, err := eg.Transact(
-    func(eg engine.Engine) (interface{}, error) {
-      // Write: /hello/there{42}=&quot;hello&quot;
-      query := kv.KeyValue{
-        Key: kv.Key{
-          Directory: dir,
-          Tuple: kv.Tuple{kv.Int(42)},
-        },
-        Value: kv.Int(10),
-      }
-      if err := eg.Set(query); err != nil {
-        return nil, err
-      }
+  keyExists, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
+    // Write: /hello/there{42}=&quot;hello&quot;
+    query := kv.KeyValue{
+      kv.Key{dir, kv.Tuple{kv.Int(42)}},
+      kv.String(&quot;hello&quot;),
+    }
+    if err := eg.Set(query); err != nil {
+      return nil, err
+    }
 
-      // Read: /hello/there{33.3}=&lt;&gt;
-      query = kv.KeyValue{Key: key, Value: kv.Variable{}}
-      result, err := eg.ReadSingle(query, engine.SingleOpts{})
-      if err != nil {
-        return nil, err
-      }
-      return result != nil, nil
-    })
+    // Read: /hello/there{33.3}=&lt;&gt;
+    query = kv.KeyValue{key, kv.Variable{}}
+    result, err := eg.ReadSingle(query, engine.SingleOpts{})
+    if err != nil {
+      return nil, err
+    }
+    return result != nil, nil
+  })
   if err != nil {
     panic(err)
   }

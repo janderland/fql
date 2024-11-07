@@ -738,8 +738,11 @@ provided as well.
 
 # Using FQL
 
-FQL can be used for exploring a Foundation DB cluster in
-a CLI environment or programmatically as a Foundation DB
+The FQL project provides an application for executing
+queries and exploring the data, similar to `psql` for
+Postgres. This libraries powering this application are
+exposed as a Go API, allowing FQL to be used as a Foundation
+DB
 [layer](https://apple.github.io/foundationdb/layer-concept.html).
 
 ## Command Line
@@ -750,19 +753,17 @@ a CLI environment or programmatically as a Foundation DB
 
 FQL provides a CLI for performing queries from the command
 line. To execute a query in "headless" mode (without
-fullscreen), you can use the `-q` flag.
+fullscreen), you can use the `-q` flag. The query following
+the `-q` flag must be wrapped in single quotes to avoid
+mangling by BASH.
 
 ```language-bash
 ᐅ fql -q '/my/dir("hello","world")'
 /my/dir("hello","world")=nil
 ```
 
-When using BASH (or a BASH-like shell), The queries must be
-wrapped in single quotes to avoid mangling.
-
-The `-q` flag may be provided multiple times. When invoking
-FQL in this manner, all queries are performed in the same
-transaction.
+The `-q` flag may be provided multiple times. All queries
+are run within a single transaction.
 
 ```language-bash
 ᐅ fql -q '/my/dir("hello",<var:str>)' -q '/other(22,...)'
@@ -774,25 +775,16 @@ transaction.
 ### Fullscreen
 
 If the CLI is executed without the `-q` flag, a fullscreen
-environment is started up. In this case, the connection to
-Foundation DB is maintained for the lifetime of the
-application. Single queries may be executed in their own
-transactions and the results are displayed in a scrollable
-list.
+environment is started up. Single queries may be executed in
+their own transactions and the results are displayed in
+a scrollable list.
 
 ![](img/demo.gif)
 
 Currently, this environment is not very useful, but it lays
-the groundwork for a fully-featured FQL frontend (accidental
-alliteration). The final version of this environment will
-include the following features:
-
-- Syntax highlighting
-- Context-aware autocompletion
-- Querying of data cached on the client
-- Importing & exporting subspaces to disk
-- Customizable formatting of key-values
-- Restoring a session after restart
+the groundwork for a fully-featured FQL frontend. The final
+version of this environment will provide autocompletion,
+querying of locally cached data, and display customizations.
 
 </div>
 
@@ -869,47 +861,36 @@ import (
 
 func _() {
   fdb.MustAPIVersion(620)
-  db := facade.NewTransactor(
-    fdb.MustOpenDefault(), directory.Root()))
+  eg := engine.New(
+    facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
 
-  dir := kv.Directory{
-    kv.String("hello"),
-    kv.String("there"),
-  }
-
-  key := kv.Key{
-    Directory: dir,
-    Tuple: kv.Tuple{kv.Float(33.3)},
-  }
+  dir := kv.Directory{kv.String("hello"), kv.String("there")}
+  key := kv.Key{dir, kv.Tuple{kv.Float(33.3)}}
 
   // Write: /hello/there{33.3}=10
-  query := kv.KeyValue{Key: key, Value: kv.Int(10)}
+  query := kv.KeyValue{key, kv.Int(10)}
   if err := eg.Set(query); err != nil {
     panic(err)
   }
 
-  keyExists, err := eg.Transact(
-    func(eg engine.Engine) (interface{}, error) {
-      // Write: /hello/there{42}="hello"
-      query := kv.KeyValue{
-        Key: kv.Key{
-          Directory: dir,
-          Tuple: kv.Tuple{kv.Int(42)},
-        },
-        Value: kv.Int(10),
-      }
-      if err := eg.Set(query); err != nil {
-        return nil, err
-      }
+  keyExists, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
+    // Write: /hello/there{42}="hello"
+    query := kv.KeyValue{
+      kv.Key{dir, kv.Tuple{kv.Int(42)}},
+      kv.String("hello"),
+    }
+    if err := eg.Set(query); err != nil {
+      return nil, err
+    }
 
-      // Read: /hello/there{33.3}=<>
-      query = kv.KeyValue{Key: key, Value: kv.Variable{}}
-      result, err := eg.ReadSingle(query, engine.SingleOpts{})
-      if err != nil {
-        return nil, err
-      }
-      return result != nil, nil
-    })
+    // Read: /hello/there{33.3}=<>
+    query = kv.KeyValue{key, kv.Variable{}}
+    result, err := eg.ReadSingle(query, engine.SingleOpts{})
+    if err != nil {
+      return nil, err
+    }
+    return result != nil, nil
+  })
   if err != nil {
     panic(err)
   }
