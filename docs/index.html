@@ -56,7 +56,8 @@
     <ul>
     <li><a href="#command-line" id="toc-command-line">Command
     Line</a></li>
-    <li><a href="#api-layer" id="toc-api-layer">API (Layer)</a></li>
+    <li><a href="#programmatic"
+    id="toc-programmatic">Programmatic</a></li>
     </ul></li>
     <li><a href="#roadmap" id="toc-roadmap">Roadmap</a></li>
     </ul>
@@ -143,7 +144,7 @@
   </tr>
   <tr>
   <td style="text-align: left;"><code>str</code></td>
-  <td style="text-align: left;">ASCII String</td>
+  <td style="text-align: left;">Unicode String</td>
   <td style="text-align: left;"><code>"string"</code></td>
   </tr>
   <tr>
@@ -174,19 +175,16 @@
 /entry(537856)=0x</code></pre>
   <p>The <code>int</code> type allows for arbitrarily large integers.
   The <code>num</code> type allows for 64-bit floating-point numbers.
-  The <code>num</code> type does not support arbitrary precision because
-  the tuple layer <a
-  href="https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal">advising
-  against</a> using it’s abitrarily-sized decimal encoding.</p>
-  <blockquote>
-  <p>Support for arbitrarily-sized floating-point numbers will be
-  revisited in the future.</p>
-  </blockquote>
-  <p>Tuples &amp; values may contain any of the data elements, including
-  tuples; values may contain a tuple and tuples may contain
-  sub-tuples.</p>
-  <pre class="language-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
-/region/east_asia(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
+  For now, the <code>num</code> type does not support arbitrary
+  precision because the tuple layer <a
+  href="https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal">advises
+  against</a> using it’s abitrarily-sized decimal encoding. Support for
+  arbitrarily-sized floating-point numbers will be revisited in the
+  future.</p>
+  <p>The <code>str</code> type supports unicode strings, including
+  unicode escape sequences. FQL has not chosen a unicode escape syntax,
+  but it will be similar to what is found in other programming
+  languages.</p>
   <p>Strings are the only data element allowed in directories. If a
   directory string only contains alphanumericals, underscores, dashes,
   and periods then the quotes don’t need to be included.</p>
@@ -194,16 +192,18 @@
 /&quot;other ch@r@cters must be quoted!&quot;(20)=32.3</code></pre>
   <p>Quoted strings may contain quotes via backslash escapes.</p>
   <pre class="language-fql query"><code>/my/dir(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
-  <blockquote>
-  <p>Currently, strings only support ASCII characters. This will be
-  changed to include all unicode characters in the future.</p>
-  </blockquote>
+  <p>The ‘tup’ type may contain any of the data elements, including
+  sub-tuples. Like tuples, a query’s value may contain any of the data
+  elements.</p>
+  <pre class="language-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
+/region/east_asia(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
   <h1 id="value-encoding">Value Encoding</h1>
   <p>The directory and tuple layers are responsible for encoding the
   data elements in the key. As for the value, FDB doesn’t provide a
   standard encoding.</p>
-  <p>The table below outlines how FQL encodes data elements as values.
-  Endianness is configurable.</p>
+  <p>FQL provides default value encoding for each of the data elements,
+  as show below. The upcoming “options” syntax will allow queries to
+  specify alternative encodings for each data element.</p>
   <div>
   <table>
   <thead>
@@ -227,20 +227,12 @@
   <td style="text-align: left;">64-bit, 1’s compliment</td>
   </tr>
   <tr>
-  <td style="text-align: left;"><code>uint</code></td>
-  <td style="text-align: left;">64-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>bint</code></td>
-  <td style="text-align: left;">not implemented yet</td>
-  </tr>
-  <tr>
   <td style="text-align: left;"><code>num</code></td>
   <td style="text-align: left;">IEEE 754</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>str</code></td>
-  <td style="text-align: left;">ASCII</td>
+  <td style="text-align: left;">Unicode</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>uuid</code></td>
@@ -659,24 +651,58 @@
   <li>Restoring a session after restart</li>
   </ul>
   </div>
-  <h2 id="api-layer">API (Layer)</h2>
-  <p>TODO: Review this section.</p>
-  <p>When integrating SQL into other languages, there are usually two
-  choices each with their own drawbacks:</p>
-  <ol type="1">
-  <li><p>Write literal <em>SQL strings</em> into your code. This is
-  simple but type safety isn’t usually checked till runtime.</p></li>
-  <li><p>Use an <em>ORM</em>. This is more complex and sometimes doesn’t
-  perfectly model SQL semantics, but does provide type safety.</p></li>
-  </ol>
-  <p>FQL leans towards option #2 by providing a Go API which is
-  structurally equivalent to the query language, allowing FQL semantics
-  to be modeled in the host language’s type system.</p>
-  <p>This Go API may also be viewed as an FDB layer which unifies the
-  directory &amp; tuple layers with the FDB base API.</p>
-  <pre class="lang-go"><code>package example
+  <h2 id="programmatic">Programmatic</h2>
+  <p>FQL exposes it’s AST as an API, allowing Go applications to use FQL
+  as an FDB layer. The <code>keyval</code> package can be used to
+  construct queries in a partially type-safe manner. While many invalid
+  queries are caught by the Go type system, certain queries will only
+  error at runtime.</p>
+  <pre class="language-go"><code>import kv &quot;github.com/janderland/fql/keyval&quot;
 
-import (
+var query = kv.KeyValue{
+  Key: kv.Key{
+    Directory: kv.Directory{
+      kv.String(&quot;user&quot;),
+      kv.String(&quot;entry&quot;),
+    },
+    Tuple: kv.Tuple{
+      kv.Int(22573),
+      kv.String(&quot;Goodwin&quot;),
+      kv.String(&quot;Samuels&quot;),
+    },
+  },
+  Value: kv.Nil{},
+}</code></pre>
+  <p>The <code>facade</code> package wraps the FDB client with an
+  indirection layer, allowing FDB to be mocked. Here we initialize the
+  default implementation of the facade. A global root directory is
+  provided at construction time.</p>
+  <pre class="language-go"><code>import (
+  &quot;github.com/apple/foundationdb/bindings/go/src/fdb&quot;
+  &quot;github.com/apple/foundationdb/bindings/go/src/fdb/directory&quot;
+  &quot;github.com/apple/foundationdb/bindings/go/src/tuple&quot;
+
+  &quot;github.com/janderland/fql/engine/facade&quot;
+)
+
+func _() {
+  fdb.MustAPIVersion(620)
+  db := facade.NewTransactor(
+    fdb.MustOpenDefault(), directory.Root()))
+
+  db.Transact(func(tr facade.Transaction) (interface{}, error) {
+    dir, err := tr.DirOpen([]string{&quot;my&quot;, &quot;dir&quot;})
+    if err != nil {
+      return nil, err
+    }
+    return nil, tr.Set(dir.Pack(tuple.Tuple{&quot;hi&quot;, &quot;world&quot;}, nil)
+  })
+}</code></pre>
+  <p>The <code>engine</code> package executes FQL queries. Each of the
+  five types of queries has it’s own method, making the intended
+  operation explicit. If a query is used with the wrong method, an error
+  is returned.</p>
+  <pre class="language-go"><code>import (
   &quot;github.com/apple/foundationdb/bindings/go/src/fdb&quot;
   &quot;github.com/apple/foundationdb/bindings/go/src/fdb/directory&quot;
 
@@ -687,29 +713,53 @@ import (
 
 func _() {
   fdb.MustAPIVersion(620)
-  eg := engine.New(facade.NewTransactor(
+  db := facade.NewTransactor(
     fdb.MustOpenDefault(), directory.Root()))
 
-  // /user/entry(22573,&quot;Goodwin&quot;,&quot;Samuels&quot;)=nil
-  query := kv.KeyValue{
-    Key: kv.Key{
-      Directory: kv.Directory{
-        kv.String(&quot;user&quot;),
-        kv.String(&quot;entry&quot;),
-      },
-      Tuple: kv.Tuple{
-        kv.Int(22573),
-        kv.String(&quot;Goodwin&quot;),
-        kv.String(&quot;Samuels&quot;),
-      },
-    },
-    Value: kv.Nil{},
+  dir := kv.Directory{
+    kv.String(&quot;hello&quot;),
+    kv.String(&quot;there&quot;),
   }
 
-  // Perform the write.
-  err := eg.Set(query);
+  key := kv.Key{
+    Directory: dir,
+    Tuple: kv.Tuple{kv.Float(33.3)},
+  }
+
+  // Write: /hello/there{33.3}=10
+  query := kv.KeyValue{Key: key, Value: kv.Int(10)}
+  if err := eg.Set(query); err != nil {
+    panic(err)
+  }
+
+  keyExists, err := eg.Transact(
+    func(eg engine.Engine) (interface{}, error) {
+      // Write: /hello/there{42}=&quot;hello&quot;
+      query := kv.KeyValue{
+        Key: kv.Key{
+          Directory: dir,
+          Tuple: kv.Tuple{kv.Int(42)},
+        },
+        Value: kv.Int(10),
+      }
+      if err := eg.Set(query); err != nil {
+        return nil, err
+      }
+
+      // Read: /hello/there{33.3}=&lt;&gt;
+      query = kv.KeyValue{Key: key, Value: kv.Variable{}}
+      result, err := eg.ReadSingle(query, engine.SingleOpts{})
+      if err != nil {
+        return nil, err
+      }
+      return result != nil, nil
+    })
   if err != nil {
     panic(err)
+  }
+  
+  if !keyExists.(bool) {
+    panic(&quot;keyExists should be true&quot;)
   }
 }</code></pre>
   <h1 id="roadmap">Roadmap</h1>

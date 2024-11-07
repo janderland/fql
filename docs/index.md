@@ -138,7 +138,7 @@ Descriptions of these elements can be seen below.
 | `bool`  | Boolean        | `true`                                 |
 | `int`   | Signed Integer | `-14`                                  |
 | `num`   | Floating Point | `33.4`                                 |
-| `str`   | ASCII String   | `"string"`                             |
+| `str`   | Unicode String | `"string"`                             |
 | `uuid`  | UUID           | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `bytes` | Byte String    | `0xa2bff2438312aac032`                 |
 | `tup`   | Tuple          | `("hello",27.4,nil)`                   |
@@ -156,23 +156,18 @@ the following queries are semantically equivalent:
 ```
 
 The `int` type allows for arbitrarily large integers. The
-`num` type allows for 64-bit floating-point numbers. The
-`num` type does not support arbitrary precision because the
-tuple layer [advising
+`num` type allows for 64-bit floating-point numbers. For
+now, the `num` type does not support arbitrary precision
+because the tuple layer [advises
 against](https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal)
-using it's abitrarily-sized decimal encoding.
+using it's abitrarily-sized decimal encoding. Support for
+arbitrarily-sized floating-point numbers will
+be revisited in the future.
 
-> Support for arbitrarily-sized floating-point numbers will
-> be revisited in the future.
-
-Tuples & values may contain any of the data elements,
-including tuples; values may contain a tuple and tuples may
-contain sub-tuples.
-
-```language-fql {.query}
-/region/north_america(22.3,-8)=("rain","fog")
-/region/east_asia("japan",("sub",nil))=0xff
-```
+The `str` type supports unicode strings, including unicode
+escape sequences. FQL has not chosen a unicode escape
+syntax, but it will be similar to what is found in other
+programming languages.
 
 Strings are the only data element allowed in directories. If
 a directory string only contains alphanumericals,
@@ -190,9 +185,14 @@ Quoted strings may contain quotes via backslash escapes.
 /my/dir("I said \"hello\"")=nil
 ```
 
-> Currently, strings only support ASCII characters. This
-> will be changed to include all unicode characters in the
-> future.
+The 'tup' type may contain any of the data elements,
+including sub-tuples. Like tuples, a query's value may
+contain any of the data elements.
+
+```language-fql {.query}
+/region/north_america(22.3,-8)=("rain","fog")
+/region/east_asia("japan",("sub",nil))=0xff
+```
 
 # Value Encoding
 
@@ -200,8 +200,10 @@ The directory and tuple layers are responsible for encoding
 the data elements in the key. As for the value, FDB doesn't
 provide a standard encoding.
 
-The table below outlines how FQL encodes data elements as
-values. Endianness is configurable.
+FQL provides default value encoding for each of the data
+elements, as show below. The upcoming "options" syntax will
+allow queries to specify alternative encodings for each data
+element.
 
 <div>
 
@@ -210,10 +212,8 @@ values. Endianness is configurable.
 | `nil`   | empty value                     |
 | `bool`  | single byte, `0x00` means false |
 | `int`   | 64-bit, 1's compliment          |
-| `uint`  | 64-bit                          |
-| `bint`  | not implemented yet             |
 | `num`   | IEEE 754                        |
-| `str`   | ASCII                           |
+| `str`   | Unicode                         |
 | `uuid`  | RFC 4122                        |
 | `bytes` | as provided                     |
 | `tup`   | tuple layer                     |
@@ -796,31 +796,68 @@ include the following features:
 
 </div>
 
-## API (Layer)
+## Programmatic
 
-TODO: Review this section.
+FQL exposes it's AST as an API, allowing Go applications to
+use FQL as an FDB layer. The `keyval` package can be used to
+construct queries in a partially type-safe manner. While
+many invalid queries are caught by the Go type system,
+certain queries will only error at runtime.
 
-When integrating SQL into other languages, there are usually
-two choices each with their own drawbacks:
+```language-go
+import kv "github.com/janderland/fql/keyval"
 
-1. Write literal _SQL strings_ into your code. This is
-   simple but type safety isn't usually checked till
-   runtime.
+var query = kv.KeyValue{
+  Key: kv.Key{
+    Directory: kv.Directory{
+      kv.String("user"),
+      kv.String("entry"),
+    },
+    Tuple: kv.Tuple{
+      kv.Int(22573),
+      kv.String("Goodwin"),
+      kv.String("Samuels"),
+    },
+  },
+  Value: kv.Nil{},
+}
+```
 
-2. Use an _ORM_. This is more complex and sometimes doesn't
-   perfectly model SQL semantics, but does provide type
-   safety.
+The `facade` package wraps the FDB client with an
+indirection layer, allowing FDB to be mocked. Here we
+initialize the default implementation of the facade.
+A global root directory is provided at construction time.
 
-FQL leans towards option #2 by providing a Go API which is
-structurally equivalent to the query language, allowing FQL
-semantics to be modeled in the host language's type system.
+```language-go
+import (
+  "github.com/apple/foundationdb/bindings/go/src/fdb"
+  "github.com/apple/foundationdb/bindings/go/src/fdb/directory"
+  "github.com/apple/foundationdb/bindings/go/src/tuple"
 
-This Go API may also be viewed as an FDB layer which unifies
-the directory & tuple layers with the FDB base API.
+  "github.com/janderland/fql/engine/facade"
+)
 
-```lang-go
-package example
+func _() {
+  fdb.MustAPIVersion(620)
+  db := facade.NewTransactor(
+    fdb.MustOpenDefault(), directory.Root()))
 
+  db.Transact(func(tr facade.Transaction) (interface{}, error) {
+    dir, err := tr.DirOpen([]string{"my", "dir"})
+    if err != nil {
+      return nil, err
+    }
+    return nil, tr.Set(dir.Pack(tuple.Tuple{"hi", "world"}, nil)
+  })
+}
+```
+
+The `engine` package executes FQL queries. Each of the five
+types of queries has it's own method, making the intended
+operation explicit. If a query is used with the wrong
+method, an error is returned.
+
+```language-go
 import (
   "github.com/apple/foundationdb/bindings/go/src/fdb"
   "github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -832,29 +869,53 @@ import (
 
 func _() {
   fdb.MustAPIVersion(620)
-  eg := engine.New(facade.NewTransactor(
+  db := facade.NewTransactor(
     fdb.MustOpenDefault(), directory.Root()))
 
-  // /user/entry(22573,"Goodwin","Samuels")=nil
-  query := kv.KeyValue{
-    Key: kv.Key{
-      Directory: kv.Directory{
-        kv.String("user"),
-        kv.String("entry"),
-      },
-      Tuple: kv.Tuple{
-        kv.Int(22573),
-        kv.String("Goodwin"),
-        kv.String("Samuels"),
-      },
-    },
-    Value: kv.Nil{},
+  dir := kv.Directory{
+    kv.String("hello"),
+    kv.String("there"),
   }
 
-  // Perform the write.
-  err := eg.Set(query);
+  key := kv.Key{
+    Directory: dir,
+    Tuple: kv.Tuple{kv.Float(33.3)},
+  }
+
+  // Write: /hello/there{33.3}=10
+  query := kv.KeyValue{Key: key, Value: kv.Int(10)}
+  if err := eg.Set(query); err != nil {
+    panic(err)
+  }
+
+  keyExists, err := eg.Transact(
+    func(eg engine.Engine) (interface{}, error) {
+      // Write: /hello/there{42}="hello"
+      query := kv.KeyValue{
+        Key: kv.Key{
+          Directory: dir,
+          Tuple: kv.Tuple{kv.Int(42)},
+        },
+        Value: kv.Int(10),
+      }
+      if err := eg.Set(query); err != nil {
+        return nil, err
+      }
+
+      // Read: /hello/there{33.3}=<>
+      query = kv.KeyValue{Key: key, Value: kv.Variable{}}
+      result, err := eg.ReadSingle(query, engine.SingleOpts{})
+      if err != nil {
+        return nil, err
+      }
+      return result != nil, nil
+    })
   if err != nil {
     panic(err)
+  }
+  
+  if !keyExists.(bool) {
+    panic("keyExists should be true")
   }
 }
 ```
