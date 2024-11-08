@@ -537,38 +537,42 @@
   operations, FQL is capable of performing indirection and aggregation
   queries.</p>
   <h2 id="indirection">Indirection</h2>
+  <blockquote>
+  <p>🚧 Indirection is still being implemented.</p>
+  </blockquote>
   <p>Indirection queries are similar to SQL joins. They associate
   different groups of key-values via some shared data element.</p>
-  <p>In Foundation DB, indexes are implemented by having one key-value
-  (the index) point at another key-value. This is also called
-  “indirection”.</p>
-  <blockquote>
-  <p>Indirection is not yet included in the grammar, nor is it
-  implemented. The design of this feature is somewhat finalized.</p>
-  </blockquote>
-  <p>Suppose we have a large list of people, one key-value for each
+  <p>In Foundation DB, indexes are implemented using indirection.
+  Suppose we have a large list of people, one key-value for each
   person.</p>
-  <pre class="language-fql query"><code>/people(&lt;id:uint&gt;,&lt;firstName:str&gt;,&lt;lastName:str&gt;,&lt;age:int&gt;)=nil</code></pre>
-  <p>If we wanted to read all records with the last name of “Johnson”,
-  we’d have to perform a linear search across the entire “people”
-  directory. To make this kind of search more efficient, we can store an
-  index of last names in a separate directory.</p>
-  <pre class="language-fql query"><code>/index/last_name(&lt;lastName:str&gt;,&lt;id:uint&gt;)=nil</code></pre>
+  <pre class="language-fql query"><code>/people(
+  &lt;int&gt;, % ID
+  &lt;str&gt;, % First Name
+  &lt;str&gt;, % Last Name
+  &lt;int&gt;, % Age
+)=nil</code></pre>
+  <p>If we wanted to read all records containing the last name
+  “Johnson”, we’d have to perform a linear search across the entire
+  “people” directory. To make this kind of search more efficient, we can
+  store an index for last names in a separate directory.</p>
+  <pre class="language-fql query"><code>/index/last_name(
+  &lt;str&gt;, % Last Name
+  &lt;int&gt;, % ID
+)=nil</code></pre>
+  <p>If we query the index, we can get the IDs of the records containing
+  the last name “Johnson”.</p>
+  <pre class="language-fql query"><code>/index/last_name(&quot;Johnson&quot;,&lt;int&gt;)</code></pre>
+  <pre class="language-fql result"><code>/index/last_name(&quot;Johnson&quot;,23)=nil
+/index/last_name(&quot;Johnson&quot;,348)=nil
+/index/last_name(&quot;Johnson&quot;,2003)=nil</code></pre>
   <p>FQL can forward the observed values of named variables from one
-  query to the next, allowing us to efficiently query for all people
-  with the last name of “Johnson”.</p>
-  <pre class="language-fql query"><code>/index/last_name(&quot;Johnson&quot;,&lt;id:uint&gt;)
+  query to the next. We can use this to obtain our desired subset from
+  the “people” directory.</p>
+  <pre class="language-fql query"><code>/index/last_name(&quot;Johnson&quot;,&lt;id:int&gt;)
 /people(:id,...)</code></pre>
   <pre class="language-fql result"><code>/people(23,&quot;Lenny&quot;,&quot;Johnson&quot;,22,&quot;Mechanic&quot;)=nil
 /people(348,&quot;Roger&quot;,&quot;Johnson&quot;,54,&quot;Engineer&quot;)=nil
 /people(2003,&quot;Larry&quot;,&quot;Johnson&quot;,8,&quot;N/A&quot;)=nil</code></pre>
-  <p>The first query returned 3 key-values containing the IDs of 23,
-  348, &amp; 2003 which were then fed into the second query resulting in
-  3 individual <a href="#single-reads">single reads</a>.</p>
-  <pre class="language-fql query"><code>/index/last_name(&quot;Johnson&quot;,&lt;id:uint&gt;)</code></pre>
-  <pre class="language-fql result"><code>/index/last_name(&quot;Johnson&quot;,23)=nil
-/index/last_name(&quot;Johnson&quot;,348)=nil
-/index/last_name(&quot;Johnson&quot;,2003)=nil</code></pre>
   <h2 id="aggregation">Aggregation</h2>
   <blockquote>
   <p>The design of aggregation queries is not complete. This section

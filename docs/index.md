@@ -608,59 +608,61 @@ aggregation queries.
 
 ## Indirection
 
+> 🚧 Indirection is still being implemented.
+
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
 
-In Foundation DB, indexes are implemented by having one
-key-value (the index) point at another key-value. This is
-also called "indirection".
-
-> Indirection is not yet included in the grammar, nor is it
-> implemented. The design of this feature is somewhat
-> finalized.
-
+In Foundation DB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
 each person.
 
 ```language-fql {.query}
-/people(<id:uint>,<firstName:str>,<lastName:str>,<age:int>)=nil
+/people(
+  <int>, % ID
+  <str>, % First Name
+  <str>, % Last Name
+  <int>, % Age
+)=nil
 ```
 
-If we wanted to read all records with the last name of
+If we wanted to read all records containing the last name
 "Johnson", we'd have to perform a linear search across the
 entire "people" directory. To make this kind of search more
-efficient, we can store an index of last names in a separate
-directory.
+efficient, we can store an index for last names in
+a separate directory.
 
 ```language-fql {.query}
-/index/last_name(<lastName:str>,<id:uint>)=nil
+/index/last_name(
+  <str>, % Last Name
+  <int>, % ID
+)=nil
+```
+
+If we query the index, we can get the IDs of the records
+containing the last name "Johnson".
+
+```language-fql {.query}
+/index/last_name("Johnson",<int>)
+```
+```language-fql {.result}
+/index/last_name("Johnson",23)=nil
+/index/last_name("Johnson",348)=nil
+/index/last_name("Johnson",2003)=nil
 ```
 
 FQL can forward the observed values of named variables from
-one query to the next, allowing us to efficiently query for
-all people with the last name of "Johnson".
+one query to the next. We can use this to obtain our desired
+subset from the "people" directory.
 
 ```language-fql {.query}
-/index/last_name("Johnson",<id:uint>)
+/index/last_name("Johnson",<id:int>)
 /people(:id,...)
 ```
 ```language-fql {.result}
 /people(23,"Lenny","Johnson",22,"Mechanic")=nil
 /people(348,"Roger","Johnson",54,"Engineer")=nil
 /people(2003,"Larry","Johnson",8,"N/A")=nil
-```
-
-The first query returned 3 key-values containing the IDs of
-23, 348, & 2003 which were then fed into the second query
-resulting in 3 individual [single reads](#single-reads).
-
-```language-fql {.query}
-/index/last_name("Johnson",<id:uint>)
-```
-```language-fql {.result}
-/index/last_name("Johnson",23)=nil
-/index/last_name("Johnson",348)=nil
-/index/last_name("Johnson",2003)=nil
 ```
 
 ## Aggregation
