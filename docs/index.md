@@ -645,6 +645,7 @@ containing the last name "Johnson".
 ```language-fql {.query}
 /index/last_name("Johnson",<int>)
 ```
+
 ```language-fql {.result}
 /index/last_name("Johnson",23)=nil
 /index/last_name("Johnson",348)=nil
@@ -659,6 +660,7 @@ subset from the "people" directory.
 /index/last_name("Johnson",<id:int>)
 /people(:id,...)
 ```
+
 ```language-fql {.result}
 /people(23,"Lenny","Johnson",22,"Mechanic")=nil
 /people(348,"Roger","Johnson",54,"Engineer")=nil
@@ -667,76 +669,63 @@ subset from the "people" directory.
 
 ## Aggregation
 
-> The design of aggregation queries is not complete. This
-> section describes the general idea. Exact syntax may
-> change. This feature is not currently included in the
-> grammar nor has it been implemented.
+> 🚧 Aggregation queries are still being implemented.
+
+Aggregation queries read multiple key-values and combine
+them into a single output key-value.
 
 Foundation DB performs best when key-values are kept small.
 When [storing large
 blobs](https://apple.github.io/foundationdb/blob.html), the
-data is usually split into 10 kB chunks stored in the value.
-The respective key contain the byte offset of the chunk.
+blobs are usually split into 10 kB chunks and stored as
+values. The respective keys contain the byte offset of the
+chunks.
 
 ```language-fql {.query}
 /blob(
-  "my file",    % The identifier of the blob.
+  "audio.wav",  % The identifier of the blob.
   <offset:int>, % The byte offset within the blob.
 )=<chunk:bytes> % A chunk of the blob.
 ```
 
 ```language-fql {.result}
-/blob("my file",0)=10e3_bytes
-/blob("my file",10000)=10e3_bytes
-/blob("my file",20000)=2.7e3_bytes
+/blob("audio.wav",0)=10000_bytes
+/blob("audio.wav",10000)=10000_bytes
+/blob("audio.wav",20000)=2730_bytes
 ```
 
-> Instead of printing the actual byte strings in these
-> results, only the byte lengths are printed. This is an
-> option provided by the CLI to lower result verbosity.
+> ❓ In the above results, instead of printing the actual
+> byte strings, only the byte lengths are printed. This is
+> an option provided by the CLI to lower result verbosity.
 
 This gets the job done, but it would be nice if the client
-could obtain the entire blob instead of having to append the
-chunks themselves. This can be done using aggregation
-queries.
+could obtain the entire blob as a single byte string. This
+can be done using aggregation queries.
 
-FQL provides a pseudo data type named `agg` which performs
-the aggregation.
+FQL provides a pseudo type named `append` which instructs
+the query to append all byte strings found at the variable's
+location.
 
 ```language-fql {.query}
-/blob("my file",...)=<blob:agg>
+/blob("audio.wav",...)=<append>
 ```
 
 ```language-fql {.result}
-/blob("my file",...)=22.7e3_bytes
+/blob("my file",...)=22730_bytes
 ```
 
 Aggregation queries always result in a single key-value.
-With non-aggregation queries, variables & the `...` token
-are resolved as actual data elements in the query results.
-For aggregation queries, only aggregation variables are
-resolved.
+Non-aggregation queries resolve variables & the `...` token
+into actual data elements in the query results. Aggregation
+queries only resolve aggregation variables.
 
-A similar pseudo data type for summing integers could be
-provided as well.
+You can see all the supported aggregation types below.
 
-```language-fql {.query}
-/deltas("group A",<int>)
-```
-
-```language-fql {.result}
-/deltas("group A",20)=nil
-/deltas("group A",-18)=nil
-/deltas("group A",3)=nil
-```
-
-```language-fql {.query}
-/deltas("group A",<sum>)
-```
-
-```language-fql {.result}
-/deltas("group A",5)=<>
-```
+| Pseudo Type | Accepted Inputs | Description      |
+|:------------|:----------------|:-----------------|
+| `append`    | `bytes` `str`   | Append arrays    |
+| `sum`       | `int` `num`     | Add numbers      |
+| `count`     | `any`           | Count key-values |
 
 # Using FQL
 
