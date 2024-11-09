@@ -264,7 +264,7 @@
 /user(21,&quot;&quot;,nil)=&quot;nothing&quot;</code></pre>
   <p>Before the type list, a variable can be given a name. This name is
   used to reference the variable in subsequent queries, allowing for <a
-  href="#index-indirection">index indirection</a>.</p>
+  href="#indirection">index indirection</a>.</p>
   <pre class="language-fql query"><code>/index(&quot;cars&quot;,&lt;varName:int&gt;)
 /data(:varName,...)</code></pre>
   <pre class="language-fql result"><code>/user(33,&quot;mazda&quot;)=nil
@@ -292,13 +292,13 @@
   Go code are included to show how the queries interact with the FDB
   API.</p>
   <h2 id="mutations">Mutations</h2>
-  <p>Queries lacking <a href="#variables">variables</a> and the
+  <p>Queries lacking <a href="#variables-schemas">variables</a> and the
   <code>...</code> token perform mutations on the database by either
   writing or clearing a key-value.</p>
   <blockquote>
   <p>Queries lacking a value altogether imply an empty <a
-  href="#variables">variable</a> as the value and should not be confused
-  with mutation queries.</p>
+  href="#variables-schemas">variable</a> as the value and should not be
+  confused with mutation queries.</p>
   </blockquote>
   <p>Mutation queries with a <a href="#data-elements">data element</a>
   as their value perform a write operation.</p>
@@ -332,16 +332,16 @@
   return nil, nil
 })</code></pre>
   <h2 id="reads">Reads</h2>
-  <p>Queries containing a <a href="#variables">variable</a> or the
-  <code>...</code> token read one or more key-values. The query defines
-  a schema which the returned key-values must conform to.</p>
+  <p>Queries containing a <a href="#variables-schemas">variable</a> or
+  the <code>...</code> token read one or more key-values. The query
+  defines a schema which the returned key-values must conform to.</p>
   <p>If the variable or <code>...</code> token only appears in the
   query’s value, then it returns a single key-value, if one matching the
   schema exists.</p>
   <blockquote>
   <p>Queries lacking a value altogether imply an empty <a
-  href="#variables">variable</a> as the value, and are therefore read
-  queries.</p>
+  href="#variables-schemas">variable</a> as the value, and are therefore
+  read queries.</p>
   </blockquote>
   <pre class="language-fql query"><code>/my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
   <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
@@ -387,7 +387,7 @@
   // No value decoding...
   return tr.MustGet(dir.Pack(tuple.Tuple{10139})), nil
 })</code></pre>
-  <p>Queries with <a href="#variables">variables</a> or the
+  <p>Queries with <a href="#variables-schemas">variables</a> or the
   <code>...</code> token in their key (and optionally in their value)
   result in a range of key-values being read.</p>
   <pre class="language-fql query"><code>/people(&quot;coders&quot;,...)</code></pre>
