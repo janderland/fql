@@ -248,8 +248,7 @@ element types.
 
 Before the type list, a variable can be given a name. This
 name is used to reference the variable in subsequent
-queries, allowing for [index
-indirection](#index-indirection).
+queries, allowing for [index indirection](#indirection).
 
 ```language-fql {.query}
 /index("cars",<varName:int>)
@@ -296,13 +295,13 @@ queries interact with the FDB API.
 
 ## Mutations
 
-Queries lacking [variables](#variables) and the `...` token
-perform mutations on the database by either writing or
-clearing a key-value.
+Queries lacking [variables](#variables-schemas) and the
+`...` token perform mutations on the database by either
+writing or clearing a key-value.
 
 > Queries lacking a value altogether imply an empty
-> [variable](#variables) as the value and should not be
-> confused with mutation queries.
+> [variable](#variables-schemas) as the value and should not
+> be confused with mutation queries.
 
 Mutation queries with a [data element](#data-elements) as
 their value perform a write operation.
@@ -351,8 +350,8 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 ## Reads
 
-Queries containing a [variable](#variables) or the `...`
-token read one or more key-values. The query defines
+Queries containing a [variable](#variables-schemas) or the
+`...` token read one or more key-values. The query defines
 a schema which the returned key-values must conform to.
 
 If the variable or `...` token only appears in the query's
@@ -360,8 +359,8 @@ value, then it returns a single key-value, if one matching
 the schema exists.
 
 > Queries lacking a value altogether imply an empty
-> [variable](#variables) as the value, and are therefore
-> read queries.
+> [variable](#variables-schemas) as the value, and are
+> therefore read queries.
 
 ```language-fql {.query}
 /my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
@@ -421,9 +420,9 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-Queries with [variables](#variables) or the `...` token in
-their key (and optionally in their value) result in a range
-of key-values being read.
+Queries with [variables](#variables-schemas) or the `...`
+token in their key (and optionally in their value) result in
+a range of key-values being read.
 
 ```language-fql {.query}
 /people("coders",...)
