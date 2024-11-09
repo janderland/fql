@@ -608,133 +608,124 @@ aggregation queries.
 
 ## Indirection
 
+> 🚧 Indirection is still being implemented.
+
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
 
-In Foundation DB, indexes are implemented by having one
-key-value (the index) point at another key-value. This is
-also called "indirection".
-
-> Indirection is not yet included in the grammar, nor is it
-> implemented. The design of this feature is somewhat
-> finalized.
-
+In Foundation DB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
 each person.
 
 ```language-fql {.query}
-/people(<id:uint>,<firstName:str>,<lastName:str>,<age:int>)=nil
+/people(
+  <int>, % ID
+  <str>, % First Name
+  <str>, % Last Name
+  <int>, % Age
+)=nil
 ```
 
-If we wanted to read all records with the last name of
+If we wanted to read all records containing the last name
 "Johnson", we'd have to perform a linear search across the
 entire "people" directory. To make this kind of search more
-efficient, we can store an index of last names in a separate
-directory.
+efficient, we can store an index for last names in
+a separate directory.
 
 ```language-fql {.query}
-/index/last_name(<lastName:str>,<id:uint>)=nil
+/index/last_name(
+  <str>, % Last Name
+  <int>, % ID
+)=nil
 ```
 
-FQL can forward the observed values of named variables from
-one query to the next, allowing us to efficiently query for
-all people with the last name of "Johnson".
-
-```language-fql {.query}
-/index/last_name("Johnson",<id:uint>)
-/people(:id,...)
-```
-```language-fql {.result}
-/people(23,"Lenny","Johnson",22,"Mechanic")=nil
-/people(348,"Roger","Johnson",54,"Engineer")=nil
-/people(2003,"Larry","Johnson",8,"N/A")=nil
-```
-
-The first query returned 3 key-values containing the IDs of
-23, 348, & 2003 which were then fed into the second query
-resulting in 3 individual [single reads](#single-reads).
+If we query the index, we can get the IDs of the records
+containing the last name "Johnson".
 
 ```language-fql {.query}
-/index/last_name("Johnson",<id:uint>)
+/index/last_name("Johnson",<int>)
 ```
+
 ```language-fql {.result}
 /index/last_name("Johnson",23)=nil
 /index/last_name("Johnson",348)=nil
 /index/last_name("Johnson",2003)=nil
 ```
 
+FQL can forward the observed values of named variables from
+one query to the next. We can use this to obtain our desired
+subset from the "people" directory.
+
+```language-fql {.query}
+/index/last_name("Johnson",<id:int>)
+/people(:id,...)
+```
+
+```language-fql {.result}
+/people(23,"Lenny","Johnson",22,"Mechanic")=nil
+/people(348,"Roger","Johnson",54,"Engineer")=nil
+/people(2003,"Larry","Johnson",8,"N/A")=nil
+```
+
 ## Aggregation
 
-> The design of aggregation queries is not complete. This
-> section describes the general idea. Exact syntax may
-> change. This feature is not currently included in the
-> grammar nor has it been implemented.
+> 🚧 Aggregation is still being implemented.
+
+Aggregation queries read multiple key-values and combine
+them into a single output key-value.
 
 Foundation DB performs best when key-values are kept small.
 When [storing large
 blobs](https://apple.github.io/foundationdb/blob.html), the
-data is usually split into 10 kB chunks stored in the value.
-The respective key contain the byte offset of the chunk.
+blobs are usually split into 10 kB chunks and stored as
+values. The respective keys contain the byte offset of the
+chunks.
 
 ```language-fql {.query}
 /blob(
-  "my file",    % The identifier of the blob.
+  "audio.wav",  % The identifier of the blob.
   <offset:int>, % The byte offset within the blob.
 )=<chunk:bytes> % A chunk of the blob.
 ```
 
 ```language-fql {.result}
-/blob("my file",0)=10e3_bytes
-/blob("my file",10000)=10e3_bytes
-/blob("my file",20000)=2.7e3_bytes
+/blob("audio.wav",0)=10000_bytes
+/blob("audio.wav",10000)=10000_bytes
+/blob("audio.wav",20000)=2730_bytes
 ```
 
-> Instead of printing the actual byte strings in these
-> results, only the byte lengths are printed. This is an
-> option provided by the CLI to lower result verbosity.
+> ❓ In the above results, instead of printing the actual
+> byte strings, only the byte lengths are printed. This is
+> an option provided by the CLI to lower result verbosity.
 
 This gets the job done, but it would be nice if the client
-could obtain the entire blob instead of having to append the
-chunks themselves. This can be done using aggregation
-queries.
+could obtain the entire blob as a single byte string. This
+can be done using aggregation queries.
 
-FQL provides a pseudo data type named `agg` which performs
-the aggregation.
+FQL provides a pseudo type named `append` which instructs
+the query to append all byte strings found at the variable's
+location.
 
 ```language-fql {.query}
-/blob("my file",...)=<blob:agg>
+/blob("audio.wav",...)=<append>
 ```
 
 ```language-fql {.result}
-/blob("my file",...)=22.7e3_bytes
+/blob("my file",...)=22730_bytes
 ```
 
 Aggregation queries always result in a single key-value.
-With non-aggregation queries, variables & the `...` token
-are resolved as actual data elements in the query results.
-For aggregation queries, only aggregation variables are
-resolved.
+Non-aggregation queries resolve variables & the `...` token
+into actual data elements in the query results. Aggregation
+queries only resolve aggregation variables.
 
-A similar pseudo data type for summing integers could be
-provided as well.
+You can see all the supported aggregation types below.
 
-```language-fql {.query}
-/deltas("group A",<int>)
-```
-
-```language-fql {.result}
-/deltas("group A",20)=nil
-/deltas("group A",-18)=nil
-/deltas("group A",3)=nil
-```
-
-```language-fql {.query}
-/deltas("group A",<sum>)
-```
-
-```language-fql {.result}
-/deltas("group A",5)=<>
-```
+| Pseudo Type | Accepted Inputs | Description      |
+|:------------|:----------------|:-----------------|
+| `append`    | `bytes` `str`   | Append arrays    |
+| `sum`       | `int` `num`     | Add numbers      |
+| `count`     | `any`           | Count key-values |
 
 # Using FQL
 

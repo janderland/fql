@@ -81,6 +81,7 @@
       'false',
       'clear',
       'nil',
+      'any',
       'int',
       'uint',
       'bool',
@@ -90,8 +91,9 @@
       'bytes',
       'uuid',
       'tup',
-      'agg',
+      'append',
       'sum',
+      'count',
     ].join(' '),
   };
 
@@ -102,6 +104,7 @@
     keywords: {
       $$pattern: /[^:|]+/,
       keyword: [
+        'any',
         'int',
         'uint',
         'bool',
@@ -111,8 +114,9 @@
         'bytes',
         'uuid',
         'tup',
-        'agg',
+        'append',
         'sum',
+        'count',
       ],
     },
   };
