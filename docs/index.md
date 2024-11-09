@@ -669,7 +669,7 @@ subset from the "people" directory.
 
 ## Aggregation
 
-> 🚧 Aggregation queries are still being implemented.
+> 🚧 Aggregation is still being implemented.
 
 Aggregation queries read multiple key-values and combine
 them into a single output key-value.
