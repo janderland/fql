@@ -135,6 +135,10 @@ pre {
   }
 }
 
+.lang-go {
+  font-size: 0.9rem;
+}
+
 pre.query, pre.lang-go {
   code {
     padding: 1.5rem 1rem 0.5rem 1rem;
