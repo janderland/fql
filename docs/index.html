@@ -74,9 +74,7 @@
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>The query above has a variable <code>&lt;int&gt;</code> as its
   value. Variables act as placeholders for any of the supported <a
-  href="#data-elements">data elements</a>. In this case, the variable
-  also tells FQL how to decode the value’s bytes. This query will return
-  a single key-value from the database, if such a key exists.</p>
+  href="#data-elements">data elements</a>.</p>
   <p>FQL queries can also perform range reads &amp; filtering by
   including a variable in the key’s tuple. The query below will return
   all key-values which conform to the schema defined by the query.</p>
@@ -174,36 +172,42 @@
   <pre class="language-fql query"><code>/entry(537856)=nil
 /entry(537856)=0x</code></pre>
   <p>The <code>int</code> type allows for arbitrarily large integers.
-  The <code>num</code> type allows for 64-bit floating-point numbers.
-  For now, the <code>num</code> type does not support arbitrary
-  precision because the tuple layer <a
+  The <code>num</code> type allows for 64-bit floating-point
+  numbers.</p>
+  <blockquote>
+  <p>❓ The <code>num</code> type does not support arbitrary precision
+  because the tuple layer <a
   href="https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal">advises
   against</a> using it’s abitrarily-sized decimal encoding. Support for
   arbitrarily-sized floating-point numbers will be revisited in the
   future.</p>
-  <p>The <code>str</code> type supports unicode strings, including
-  unicode escape sequences. FQL has not chosen a unicode escape syntax,
-  but it will be similar to what is found in other programming
-  languages.</p>
-  <p>Strings are the only data element allowed in directories. If a
-  directory string only contains alphanumericals, underscores, dashes,
-  and periods then the quotes don’t need to be included.</p>
+  </blockquote>
+  <p>The <code>str</code> type is the only element type allowed in
+  directories. If a directory string only contains alphanumericals,
+  underscores, dashes, and periods then the quotes don’t need to be
+  included.</p>
   <pre class="language-fql query"><code>/quoteless-string_in.dir(true)=false
 /&quot;other ch@r@cters must be quoted!&quot;(20)=32.3</code></pre>
   <p>Quoted strings may contain quotes via backslash escapes.</p>
   <pre class="language-fql query"><code>/my/dir(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
-  <p>The ‘tup’ type may contain any of the data elements, including
-  sub-tuples. Like tuples, a query’s value may contain any of the data
-  elements.</p>
+  <blockquote>
+  <p>🚧 Unicode character support is not yet implement. The current
+  implementation only supports ASCII.</p>
+  </blockquote>
+  <p>The <code>tup</code> type may contain any of the data elements,
+  including sub-tuples. Like tuples, a query’s value may contain any of
+  the data elements.</p>
   <pre class="language-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
 /region/east_asia(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
   <h1 id="value-encoding">Value Encoding</h1>
   <p>The directory and tuple layers are responsible for encoding the
-  data elements in the key. As for the value, FDB doesn’t provide a
-  standard encoding.</p>
-  <p>FQL provides default value encoding for each of the data elements,
-  as show below. The upcoming “options” syntax will allow queries to
-  specify alternative encodings for each data element.</p>
+  data elements in the key. As for the value, Foundation DB doesn’t
+  provide a standard encoding.</p>
+  <p>FQL provides value encodings for each of the data elements. A
+  particular encoding can be specified by modifying a data element or
+  type using options. When not specified, the element’s default encoding
+  is used. Below, you can see the supported valued encoding for each
+  type of data element.</p>
   <div>
   <table>
   <thead>
@@ -254,14 +258,14 @@
   href="#data-elements">data element</a> may be represented with a
   variable. Variables are specified as a list of element types,
   separated by <code>|</code>, wrapped in angled braces.</p>
-  <pre class="language-fql"><code>&lt;uint|str|uuid|bytes&gt;</code></pre>
+  <pre class="language-fql"><code>&lt;int|str|uuid|bytes&gt;</code></pre>
   <p>The variable’s type list describes which data elements are allowed
   at the variable’s position. A variable may be empty, including no
   element types, meaning it represents all element types.</p>
   <pre class="language-fql query"><code>/user(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
   <pre class="language-fql result"><code>/user(0,&quot;jon&quot;,0xffab0c)=nil
 /user(20,&quot;roger&quot;,22.3)=0xff
-/user(21,&quot;&quot;,nil)=&quot;nothing&quot;</code></pre>
+/user(21,&quot;&quot;,nil)=nil</code></pre>
   <p>Before the type list, a variable can be given a name. This name is
   used to reference the variable in subsequent queries, allowing for <a
   href="#indirection">index indirection</a>.</p>
@@ -270,27 +274,35 @@
   <pre class="language-fql result"><code>/user(33,&quot;mazda&quot;)=nil
 /user(320,&quot;ford&quot;)=nil
 /user(411,&quot;chevy&quot;)=nil</code></pre>
+  <p>Named variable must include at least one type. To allow named
+  variables to match any element type, use the <code>any</code>
+  type.</p>
+  <pre class="language-fql"><code>/stuff(&lt;thing:any&gt;)
+/count(:thing,&lt;int&gt;)</code></pre>
+  <pre class="language-fql result"><code>/count(&quot;cat&quot;,10)
+/count(42,1)
+/count(0x5fae,3)</code></pre>
   <h1 id="space-comments">Space &amp; Comments</h1>
   <p>Whitespace and newlines are allowed within a tuple, between its
   elements.</p>
   <pre class="language-fql query"><code>/account/private(
-  &lt;uint&gt;,
-  &lt;uint&gt;,
+  &lt;int&gt;,
+  &lt;int&gt;,
   &lt;str&gt;,
 )=&lt;int&gt;</code></pre>
   <p>Comments start with a <code>%</code> and continue until the end of
   the line. They can be used to describe a tuple’s elements.</p>
   <pre class="language-fql"><code>% private account balances
 /account/private(
-  &lt;uint&gt;, % user ID
-  &lt;uint&gt;, % group ID
+  &lt;int&gt;,  % group ID
+  &lt;int&gt;,  % account ID
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
   <h1 id="basic-queries">Basic Queries</h1>
-  <p>FQL queries can write/clear a single key-value, read one or more
+  <p>FQL queries can mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of
-  Go code are included to show how the queries interact with the FDB
-  API.</p>
+  Go code are included which approximate how the queries interact with
+  the Foundation DB API.</p>
   <h2 id="mutations">Mutations</h2>
   <p>Queries lacking <a href="#variables-schemas">variables</a> and the
   <code>...</code> token perform mutations on the database by either

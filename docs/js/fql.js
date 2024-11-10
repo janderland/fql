@@ -83,7 +83,6 @@
       'nil',
       'any',
       'int',
-      'uint',
       'bool',
       'num',
       'bint',
@@ -106,7 +105,6 @@
       keyword: [
         'any',
         'int',
-        'uint',
         'bool',
         'num',
         'bint',
