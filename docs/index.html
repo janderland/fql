@@ -36,9 +36,9 @@
     Encoding</a></li>
     <li><a href="#holes-schemas" id="toc-holes-schemas">Holes &amp;
     Schemas</a></li>
-    <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
+    <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#basic-queries" id="toc-basic-queries">Basic
     Queries</a>
     <ul>
@@ -63,10 +63,10 @@
     <li><a href="#roadmap" id="toc-roadmap">Roadmap</a></li>
     </ul>
   <h1 id="overview">Overview</h1>
-  <p>FQL is specified as a <a
-  href="https://github.com/janderland/fql/blob/main/syntax.ebnf">context-free
-  grammar</a>. The queries look like key-values encoded using the
-  directory &amp; tuple layers.</p>
+  <p>FQL is specified as a context-free <a
+  href="https://github.com/janderland/fql/blob/main/syntax.ebnf">grammar</a>.
+  The queries look like key-values encoded using the directory &amp;
+  tuple layers.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>FQL queries may define a single key-value to be written, as shown
   above, or may define a set of key-values to be read, as shown
@@ -176,10 +176,10 @@
   between <code>-1.18e4932</code> and <code>1.18e4932</code>, and may
   use scientific notation. The type may also be instantiated as the
   tokens <code>-inf</code>, <code>inf</code>, <code>-nan</code>, or
-  <code>nan</code>. The element is represented as an 80-bit <a
-  href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">extended
-  double floating-point</a> and will snap to the nearest representable
-  number.</p>
+  <code>nan</code>. The element is represented as an 80-bit extended
+  double <a
+  href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">floating-point</a>
+  and will snap to the nearest representable number.</p>
   <pre class="language-fql query"><code>/float(-inf,nan)=1.234e4732</code></pre>
   <p>The <code>str</code> type is the only element type allowed in
   directory paths. If a directory string only contains alphanumericals,
@@ -297,8 +297,6 @@
   <p>❓ Currently, the <code>...</code> token is only allowed as the
   last element of a tuple. This will be revisited in the future.</p>
   </blockquote>
-  <h1 id="options">Options</h1>
-  <p>TODO: Write this section.</p>
   <h1 id="space-comments">Space &amp; Comments</h1>
   <p>Whitespace and newlines are allowed within a tuple, between its
   elements.</p>
@@ -315,6 +313,8 @@
   &lt;int&gt;,  % account ID
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
+  <h1 id="options">Options</h1>
+  <p>TODO: Write this section.</p>
   <h1 id="basic-queries">Basic Queries</h1>
   <p>FQL queries can mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of
@@ -558,10 +558,8 @@
   return results, nil
 })</code></pre>
   <h1 id="advanced-queries">Advanced Queries</h1>
-  <p>Besides basic <a
-  href="https://en.wikipedia.org/wiki/Create,_read,_update_and_delete">CRUD</a>
-  operations, FQL is capable of performing indirection and aggregation
-  queries.</p>
+  <p>Besides basic CRUD operations, FQL is capable of performing
+  indirection and aggregation queries.</p>
   <h2 id="indirection">Indirection</h2>
   <blockquote>
   <p>🚧 Indirection is still being implemented.</p>
@@ -605,10 +603,11 @@
   </blockquote>
   <p>Aggregation queries read multiple key-values and combine them into
   a single output key-value.</p>
-  <p>Foundation DB performs best when key-values are kept small. When <a
-  href="https://apple.github.io/foundationdb/blob.html">storing large
-  blobs</a>, the blobs are usually split into 10 kB chunks and stored as
-  values. The respective keys contain the byte offset of the chunks.</p>
+  <p>Foundation DB performs best when key-values are kept small. When
+  storing large <a
+  href="https://apple.github.io/foundationdb/blob.html">blobs</a>, the
+  blobs are usually split into 10 kB chunks and stored as values. The
+  respective keys contain the byte offset of the chunks.</p>
   <pre class="language-fql query"><code>/blob(
   &quot;audio.wav&quot;,  % The identifier of the blob.
   &lt;offset:int&gt;, % The byte offset within the blob.
@@ -665,7 +664,7 @@
   exploring the data, similar to <code>psql</code> for Postgres. This
   libraries powering this application are exposed as a Go API, allowing
   FQL to be used as a Foundation DB <a
-  href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>.</p>
+  href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>;</p>
   <h2 id="command-line">Command Line</h2>
   <div class="language-bash">
   <h3 id="headless">Headless</h3>

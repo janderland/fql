@@ -24,10 +24,11 @@ include-before: |
 
 # Overview
 
-FQL is specified as a [context-free
-grammar](https://github.com/janderland/fql/blob/main/syntax.ebnf).
-The queries look like key-values encoded using the directory
+FQL is specified as a context-free [grammar][]. The
+queries look like key-values encoded using the directory
 & tuple layers.
+
+[grammar]: https://github.com/janderland/fql/blob/main/syntax.ebnf
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -123,8 +124,9 @@ a directory path.
 # Data Elements
 
 An FQL query contains instances of data elements. These
-mirror the types of elements found in the [tuple
-layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
+mirror the types of elements found in the [tuple layer][].
+
+[tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
 <div>
 
@@ -153,9 +155,10 @@ The `num` type may be instantiated as any real number
 between `-1.18e4932` and `1.18e4932`, and may use scientific
 notation. The type may also be instantiated as the tokens
 `-inf`, `inf`, `-nan`, or `nan`. The element is represented
-as an 80-bit [extended double
-floating-point](https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format)
-and will snap to the nearest representable number.
+as an 80-bit extended double [floating-point][] and will
+snap to the nearest representable number.
+
+[floating-point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```language-fql {.query}
 /float(-inf,nan)=1.234e4732
@@ -303,10 +306,6 @@ any type.
 > ❓ Currently, the `...` token is only allowed as the last
 > element of a tuple. This will be revisited in the future.
 
-# Options
-
-TODO: Write this section.
-
 # Space & Comments
 
 Whitespace and newlines are allowed within a tuple, between
@@ -331,6 +330,10 @@ line. They can be used to describe a tuple's elements.
   <str>,  % account name
 )=<int>   % balance in USD
 ```
+
+# Options
+
+TODO: Write this section.
 
 # Basic Queries
 
@@ -642,10 +645,8 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 
 # Advanced Queries
 
-Besides basic
-[CRUD](https://en.wikipedia.org/wiki/Create,_read,_update_and_delete)
-operations, FQL is capable of performing indirection and
-aggregation queries.
+Besides basic CRUD operations, FQL is capable of performing
+indirection and aggregation queries.
 
 ## Indirection
 
@@ -716,11 +717,11 @@ Aggregation queries read multiple key-values and combine
 them into a single output key-value.
 
 Foundation DB performs best when key-values are kept small.
-When [storing large
-blobs](https://apple.github.io/foundationdb/blob.html), the
-blobs are usually split into 10 kB chunks and stored as
-values. The respective keys contain the byte offset of the
-chunks.
+When storing large [blobs][], the blobs are usually split
+into 10 kB chunks and stored as values. The respective keys
+contain the byte offset of the chunks.
+
+[blobs]: https://apple.github.io/foundationdb/blob.html
 
 ```language-fql {.query}
 /blob(
@@ -774,8 +775,9 @@ The FQL project provides an application for executing
 queries and exploring the data, similar to `psql` for
 Postgres. This libraries powering this application are
 exposed as a Go API, allowing FQL to be used as a Foundation
-DB
-[layer](https://apple.github.io/foundationdb/layer-concept.html).
+DB [layer][];
+
+[layer]: https://apple.github.io/foundationdb/layer-concept.html
 
 ## Command Line
 
