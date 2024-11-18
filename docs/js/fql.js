@@ -83,6 +83,10 @@
     beginKeywords: [
       'true',
       'false',
+      '-inf',
+      'inf',
+      '-nan',
+      'nan',
       'clear',
       'nil',
       'any',

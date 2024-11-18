@@ -143,12 +143,19 @@ layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
 
 The `nil` type may only be instantiated as the element
 `nil`. The `int` type may be instantiated as any arbitrarily
-large integer. The `num` type may be instantiated as any
-64-bit floating point number.
+large integer. 
 
 ```
-/val(9223372036854775808)=2.284
+/val(9223372036854775808)=nil
 ```
+
+The `num` type may be instantiated as any real number
+between `-1.18e4932` and `1.18e4932`. The element is
+represented as an 80-bit [extended double
+floating-point](https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format)
+and will snap to the nearest representable number. The `num`
+type may also be instantiated as `-inf`, `inf`, `-nan`, and
+`nan`, as is allowed by it's binary format.
 
 The `str` type is the only element type allowed in directory
 paths. If a directory string only contains alphanumericals,
@@ -184,39 +191,37 @@ contain any of the data elements.
 
 # Value Encoding
 
-The tuple layer supports a unique encoding for `nil`,
-but as a value `nil` is equivalent to an empty byte array.
-This makes the following two queries equivalent.
-
-```language-fql {.query}
-/entry(537856)=nil
-/entry(537856)=0x
-```
-
 The directory and tuple layers are responsible for encoding
 the data elements in the key. As for the value, Foundation
 DB doesn't provide a standard encoding.
 
 FQL provides value encodings for each of the data elements.
-A particular encoding can be specified by modifying a data
-element or type using options. When not specified, the
-element's default encoding is used. Below, you can see the
-supported valued encoding for each type of data element.
+Some elements have more than one value encoding. The default
+encoding for each type is shown below.
 
 <div>
 
 | Type    | Encoding                        |
 |:--------|:--------------------------------|
-| `nil`   | empty value                     |
+| `nil`   | empty byte array                |
 | `bool`  | single byte, `0x00` means false |
 | `int`   | 64-bit, 1's compliment          |
 | `num`   | IEEE 754                        |
-| `str`   | Unicode                         |
+| `str`   | UTF-8                           |
 | `uuid`  | RFC 4122                        |
 | `bytes` | as provided                     |
 | `tup`   | tuple layer                     |
 
 </div>
+
+The tuple layer supports a unique encoding for `nil`, but as
+a value `nil` is equivalent to an empty byte array. This
+makes the following two queries equivalent.
+
+```language-fql {.query}
+/entry(537856)=nil
+/entry(537856)=0x
+```
 
 # Holes & Schemas
 

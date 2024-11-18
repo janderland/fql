@@ -167,9 +167,16 @@
   </div>
   <p>The <code>nil</code> type may only be instantiated as the element
   <code>nil</code>. The <code>int</code> type may be instantiated as any
-  arbitrarily large integer. The <code>num</code> type may be
-  instantiated as any 64-bit floating point number.</p>
-  <pre><code>/val(9223372036854775808)=2.284</code></pre>
+  arbitrarily large integer.</p>
+  <pre><code>/val(9223372036854775808)=nil</code></pre>
+  <p>The <code>num</code> type may be instantiated as any real number
+  between <code>-1.18e4932</code> and <code>1.18e4932</code>. The
+  element is represented as an 80-bit <a
+  href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">extended
+  double floating-point</a> and will snap to the nearest representable
+  number. The <code>num</code> type may also be instantiated as
+  <code>-inf</code>, <code>inf</code>, <code>-nan</code>, and
+  <code>nan</code>, as is allowed by it’s binary format.</p>
   <p>The <code>str</code> type is the only element type allowed in
   directory paths. If a directory string only contains alphanumericals,
   underscores, dashes, and periods then the quotes may not be
@@ -187,19 +194,12 @@
   <pre class="language-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
 /region/east_asia(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
   <h1 id="value-encoding">Value Encoding</h1>
-  <p>The tuple layer supports a unique encoding for <code>nil</code>,
-  but as a value <code>nil</code> is equivalent to an empty byte array.
-  This makes the following two queries equivalent.</p>
-  <pre class="language-fql query"><code>/entry(537856)=nil
-/entry(537856)=0x</code></pre>
   <p>The directory and tuple layers are responsible for encoding the
   data elements in the key. As for the value, Foundation DB doesn’t
   provide a standard encoding.</p>
-  <p>FQL provides value encodings for each of the data elements. A
-  particular encoding can be specified by modifying a data element or
-  type using options. When not specified, the element’s default encoding
-  is used. Below, you can see the supported valued encoding for each
-  type of data element.</p>
+  <p>FQL provides value encodings for each of the data elements. Some
+  elements have more than one value encoding. The default encoding for
+  each type is shown below.</p>
   <div>
   <table>
   <thead>
@@ -211,7 +211,7 @@
   <tbody>
   <tr>
   <td style="text-align: left;"><code>nil</code></td>
-  <td style="text-align: left;">empty value</td>
+  <td style="text-align: left;">empty byte array</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>bool</code></td>
@@ -228,7 +228,7 @@
   </tr>
   <tr>
   <td style="text-align: left;"><code>str</code></td>
-  <td style="text-align: left;">Unicode</td>
+  <td style="text-align: left;">UTF-8</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>uuid</code></td>
@@ -245,6 +245,11 @@
   </tbody>
   </table>
   </div>
+  <p>The tuple layer supports a unique encoding for <code>nil</code>,
+  but as a value <code>nil</code> is equivalent to an empty byte array.
+  This makes the following two queries equivalent.</p>
+  <pre class="language-fql query"><code>/entry(537856)=nil
+/entry(537856)=0x</code></pre>
   <h1 id="holes-schemas">Holes &amp; Schemas</h1>
   <p>A hole is any of the following syntax constructs: variables,
   references, and the <code>...</code> token. Holes are used to define a
