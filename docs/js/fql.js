@@ -15,12 +15,16 @@
       /\d+/,
       /\.?/,
       /\d*/,
+      /e?/,
+      /\d*/,
     ],
     beginScope: {
       1: 'accent',
       2: 'number',
       3: 'accent',
       4: 'number',
+      5: 'accent',
+      6: 'number',
     },
   };
 
@@ -71,7 +75,7 @@
 
   const DSTRING = {
     scope: 'section',
-    begin: /[\w\.]/,
+    begin: /[\w\.\-]/,
   };
 
   const KEYWORD = {

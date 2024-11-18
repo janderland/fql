@@ -125,7 +125,6 @@ a directory path.
 An FQL query contains instances of data elements. These
 mirror the types of elements found in the [tuple
 layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
-Descriptions of these elements can be seen below.
 
 <div>
 
@@ -142,30 +141,19 @@ Descriptions of these elements can be seen below.
 
 </div>
 
-The `nil` type allows for a single value which is also
-`nil`. The tuple layer supports a unique encoding for `nil`.
-As a value, `nil` is equivalent to an empty byte array, so
-the following queries are semantically equivalent:
+The `nil` type may only be instantiated as the element
+`nil`. The `int` type may be instantiated as any arbitrarily
+large integer. The `num` type may be instantiated as any
+64-bit floating point number.
 
-```language-fql {.query}
-/entry(537856)=nil
-/entry(537856)=0x
+```
+/val(9223372036854775808)=2.284
 ```
 
-The `int` type allows for arbitrarily large integers. The
-`num` type allows for 64-bit floating-point numbers.
-
-> ❓ The `num` type does not support arbitrary precision
-> because the tuple layer [advises
-> against](https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal)
-> using it's abitrarily-sized decimal encoding. Support for
-> arbitrarily-sized floating-point numbers will be revisited
-> in the future.
-
-The `str` type is the only element type allowed in
-directories. If a directory string only contains
-alphanumericals, underscores, dashes, and periods then the
-quotes don't need to be included.
+The `str` type is the only element type allowed in directory
+paths. If a directory string only contains alphanumericals,
+underscores, dashes, and periods then the quotes may not be
+included.
 
 ```language-fql {.query}
 /quoteless-string_in.dir(true)=false
@@ -178,8 +166,12 @@ Quoted strings may contain quotes via backslash escapes.
 /my/dir("I said \"hello\"")=nil
 ```
 
-> 🚧 Unicode character support is not yet implement. The
-> current implementation only supports ASCII.
+The hexidecimal numbers of the `uuid` and `bytes` types may
+be upper, lower, or mixed case.
+
+```language-fql {.query}
+/bin(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
+```
 
 The `tup` type may contain any of the data elements,
 including sub-tuples. Like tuples, a query's value may
@@ -191,6 +183,15 @@ contain any of the data elements.
 ```
 
 # Value Encoding
+
+The tuple layer supports a unique encoding for `nil`,
+but as a value `nil` is equivalent to an empty byte array.
+This makes the following two queries equivalent.
+
+```language-fql {.query}
+/entry(537856)=nil
+/entry(537856)=0x
+```
 
 The directory and tuple layers are responsible for encoding
 the data elements in the key. As for the value, Foundation
@@ -217,12 +218,16 @@ supported valued encoding for each type of data element.
 
 </div>
 
-# Variables & Schemas
+# Holes & Schemas
 
-Variables allow FQL to describe key-value schemas. Any [data
-element](#data-elements) may be represented with a variable.
-Variables are specified as a list of element types,
-separated by `|`, wrapped in angled braces.
+A hole is any of the following syntax constructs: variables,
+references, and the `...` token. Holes are used to define
+a key-value schema by acting as placeholders for one or more
+data elements.
+
+A single [data element](#data-elements) may be represented
+with a variable. Variables are specified as a list of
+element types, separated by `|`, wrapped in angled braces.
 
 ```language-fql
 <int|str|uuid|bytes>
@@ -258,7 +263,7 @@ queries, allowing for [index indirection](#indirection).
 /user(411,"chevy")=nil
 ```
 
-Named variable must include at least one type. To allow
+Named variables must include at least one type. To allow
 named variables to match any element type, use the `any`
 type.
 
@@ -272,6 +277,26 @@ type.
 /count(42,1)
 /count(0x5fae,3)
 ```
+
+The `...` token represents any number of data elements of
+any type.
+
+```language-fql
+/tuples(0x00,...)
+```
+
+```language-fql {.result}
+/tuples(0x00,"something")=nil
+/tuples(0x00,42,43,44)=0xabcf
+/tuples(0x00)=nil
+```
+
+> ❓ Currently, the `...` token is only allowed as the last
+> element of a tuple. This will be revisited in the future.
+
+# Options
+
+TODO: Write this section.
 
 # Space & Comments
 
@@ -307,13 +332,12 @@ queries interact with the Foundation DB API.
 
 ## Mutations
 
-Queries lacking [variables](#variables-schemas) and the
-`...` token perform mutations on the database by either
-writing or clearing a key-value.
+Queries lacking [holes](#holes-schemas) perform mutations on
+the database by either writing or clearing a key-value.
 
-> Queries lacking a value altogether imply an empty
-> [variable](#variables-schemas) as the value and should not
-> be confused with mutation queries.
+> ❗ Queries lacking a value altogether imply an empty
+> [variable](#holes-schemas) as the value and should not be
+> confused with mutation queries.
 
 Mutation queries with a [data element](#data-elements) as
 their value perform a write operation.
@@ -362,17 +386,14 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 ## Reads
 
-Queries containing a [variable](#variables-schemas) or the
-`...` token read one or more key-values. The query defines
-a schema which the returned key-values must conform to.
+Queries containing [holes](#holes-schemas) read one or more
+key-values. If the holes only appears in the value, then
+a single key-value is returned, if one matching the schema
+exists.
 
-If the variable or `...` token only appears in the query's
-value, then it returns a single key-value, if one matching
-the schema exists.
-
-> Queries lacking a value altogether imply an empty
-> [variable](#variables-schemas) as the value, and are
-> therefore read queries.
+> ❗ Queries lacking a value altogether imply an empty
+> [variable](#holes-schemas) as the value which makes them
+> read queries.
 
 ```language-fql {.query}
 /my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
@@ -432,9 +453,9 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-Queries with [variables](#variables-schemas) or the `...`
-token in their key (and optionally in their value) result in
-a range of key-values being read.
+Queries with [variables](#holes-schemas) in their key (and
+optionally in their value) result in a range of key-values
+being read.
 
 ```language-fql {.query}
 /people("coders",...)
