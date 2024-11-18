@@ -135,7 +135,7 @@ pre {
   }
 }
 
-.lang-go {
+.lang-go, .language-go {
   font-size: 0.85rem;
 }
 
