@@ -131,10 +131,10 @@ layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
 | Type    | Description    | Example                                |
 |:--------|:---------------|:---------------------------------------|
 | `nil`   | Empty Type     | `nil`                                  |
-| `bool`  | Boolean        | `true`                                 |
-| `int`   | Signed Integer | `-14`                                  |
-| `num`   | Floating Point | `33.4`                                 |
-| `str`   | Unicode String | `"string"`                             |
+| `bool`  | Boolean        | `true` `false`                         |
+| `int`   | Signed Integer | `-14` `3033`                           |
+| `num`   | Floating Point | `33.4` `-3.2e5`                        |
+| `str`   | Unicode String | `"happy😁"` `"\"quoted\""`             |
 | `uuid`  | UUID           | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `bytes` | Byte String    | `0xa2bff2438312aac032`                 |
 | `tup`   | Tuple          | `("hello",27.4,nil)`                   |
@@ -146,16 +146,20 @@ The `nil` type may only be instantiated as the element
 large integer. 
 
 ```
-/val(9223372036854775808)=nil
+/int(9223372036854775808)=nil
 ```
 
 The `num` type may be instantiated as any real number
-between `-1.18e4932` and `1.18e4932`. The element is
-represented as an 80-bit [extended double
+between `-1.18e4932` and `1.18e4932`, and may use scientific
+notation. The type may also be instantiated as the tokens
+`-inf`, `inf`, `-nan`, or `nan`. The element is represented
+as an 80-bit [extended double
 floating-point](https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format)
-and will snap to the nearest representable number. The `num`
-type may also be instantiated as `-inf`, `inf`, `-nan`, and
-`nan`, as is allowed by it's binary format.
+and will snap to the nearest representable number.
+
+```language-fql {.query}
+/float(-inf,nan)=1.234e4732
+```
 
 The `str` type is the only element type allowed in directory
 paths. If a directory string only contains alphanumericals,
@@ -170,14 +174,14 @@ included.
 Quoted strings may contain quotes via backslash escapes.
 
 ```language-fql {.query}
-/my/dir("I said \"hello\"")=nil
+/escape("I said \"hello\"")=nil
 ```
 
 The hexidecimal numbers of the `uuid` and `bytes` types may
 be upper, lower, or mixed case.
 
 ```language-fql {.query}
-/bin(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
+/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
 ```
 
 The `tup` type may contain any of the data elements,
@@ -185,8 +189,8 @@ including sub-tuples. Like tuples, a query's value may
 contain any of the data elements.
 
 ```language-fql {.query}
-/region/north_america(22.3,-8)=("rain","fog")
-/region/east_asia("japan",("sub",nil))=0xff
+/tuple/value(22.3,-8)=("rain","fog")
+/sub/tuple("japan",("sub",nil))=0xff
 ```
 
 # Value Encoding

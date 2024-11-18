@@ -129,22 +129,25 @@
   <tr>
   <td style="text-align: left;"><code>bool</code></td>
   <td style="text-align: left;">Boolean</td>
-  <td style="text-align: left;"><code>true</code></td>
+  <td style="text-align: left;"><code>true</code>
+  <code>false</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>int</code></td>
   <td style="text-align: left;">Signed Integer</td>
-  <td style="text-align: left;"><code>-14</code></td>
+  <td style="text-align: left;"><code>-14</code> <code>3033</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>num</code></td>
   <td style="text-align: left;">Floating Point</td>
-  <td style="text-align: left;"><code>33.4</code></td>
+  <td style="text-align: left;"><code>33.4</code>
+  <code>-3.2e5</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>str</code></td>
   <td style="text-align: left;">Unicode String</td>
-  <td style="text-align: left;"><code>"string"</code></td>
+  <td style="text-align: left;"><code>"happy😁"</code>
+  <code>"\"quoted\""</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>uuid</code></td>
@@ -168,15 +171,16 @@
   <p>The <code>nil</code> type may only be instantiated as the element
   <code>nil</code>. The <code>int</code> type may be instantiated as any
   arbitrarily large integer.</p>
-  <pre><code>/val(9223372036854775808)=nil</code></pre>
+  <pre><code>/int(9223372036854775808)=nil</code></pre>
   <p>The <code>num</code> type may be instantiated as any real number
-  between <code>-1.18e4932</code> and <code>1.18e4932</code>. The
-  element is represented as an 80-bit <a
+  between <code>-1.18e4932</code> and <code>1.18e4932</code>, and may
+  use scientific notation. The type may also be instantiated as the
+  tokens <code>-inf</code>, <code>inf</code>, <code>-nan</code>, or
+  <code>nan</code>. The element is represented as an 80-bit <a
   href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">extended
   double floating-point</a> and will snap to the nearest representable
-  number. The <code>num</code> type may also be instantiated as
-  <code>-inf</code>, <code>inf</code>, <code>-nan</code>, and
-  <code>nan</code>, as is allowed by it’s binary format.</p>
+  number.</p>
+  <pre class="language-fql query"><code>/float(-inf,nan)=1.234e4732</code></pre>
   <p>The <code>str</code> type is the only element type allowed in
   directory paths. If a directory string only contains alphanumericals,
   underscores, dashes, and periods then the quotes may not be
@@ -184,15 +188,15 @@
   <pre class="language-fql query"><code>/quoteless-string_in.dir(true)=false
 /&quot;other ch@r@cters must be quoted!&quot;(20)=32.3</code></pre>
   <p>Quoted strings may contain quotes via backslash escapes.</p>
-  <pre class="language-fql query"><code>/my/dir(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
+  <pre class="language-fql query"><code>/escape(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
   <p>The hexidecimal numbers of the <code>uuid</code> and
   <code>bytes</code> types may be upper, lower, or mixed case.</p>
-  <pre class="language-fql query"><code>/bin(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9</code></pre>
+  <pre class="language-fql query"><code>/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9</code></pre>
   <p>The <code>tup</code> type may contain any of the data elements,
   including sub-tuples. Like tuples, a query’s value may contain any of
   the data elements.</p>
-  <pre class="language-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
-/region/east_asia(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
+  <pre class="language-fql query"><code>/tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
+/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
   <h1 id="value-encoding">Value Encoding</h1>
   <p>The directory and tuple layers are responsible for encoding the
   data elements in the key. As for the value, Foundation DB doesn’t
