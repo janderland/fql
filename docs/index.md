@@ -282,6 +282,9 @@ The tables below shows which options are supported for the
 | `i32`      | Signed 32-bit   |
 | `i64`      | Signed 64-bit   |
 
+</div>
+<div>
+
 | Num Options | Description   |
 |:------------|:--------------|
 | `big`       | Big endian    |

@@ -101,7 +101,44 @@
       'append',
       'sum',
       'count',
+      'big',
+      'lil',
+      'i8',
+      'i16',
+      'i32',
+      'i64',
+      'u8',
+      'u16',
+      'u32',
+      'u64',
+      'f32',
+      'f64',
+      'f80',
     ].join(' '),
+  };
+
+  const OPTIONS = {
+    scope: 'options',
+    begin: /\[/,
+    end: /]/,
+    keywords: {
+      $$pattern: /[^,]+/,
+      keyword: [
+        'big',
+        'lil',
+        'i8',
+        'i16',
+        'i32',
+        'i64',
+        'u8',
+        'u16',
+        'u32',
+        'u64',
+        'f32',
+        'f64',
+        'f80',
+      ],
+    },
   };
 
   const VARIABLE = {
@@ -125,6 +162,9 @@
         'count',
       ],
     },
+    contains: [
+      OPTIONS,
+    ],
   };
 
   const REFERENCE = {
@@ -163,6 +203,7 @@
       UUID,
       BYTES,
       NUMBER,
+      OPTIONS,
     ],
   };
 
@@ -179,6 +220,7 @@
       UUID,
       BYTES,
       NUMBER,
+      OPTIONS,
     ],
   };
 
@@ -190,6 +232,7 @@
       reference: 'variable',
       escape: 'subst',
       accent: 'title',
+      options: 'title',
     },
     contains: [
       COMMENT, 
