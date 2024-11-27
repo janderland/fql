@@ -32,7 +32,7 @@
     <li><a href="#overview" id="toc-overview">Overview</a></li>
     <li><a href="#data-elements" id="toc-data-elements">Data
     Elements</a></li>
-    <li><a href="#value-encoding" id="toc-value-encoding">Value
+    <li><a href="#element-encoding" id="toc-element-encoding">Element
     Encoding</a></li>
     <li><a href="#holes-schemas" id="toc-holes-schemas">Holes &amp;
     Schemas</a></li>
@@ -195,15 +195,20 @@
   <p>The <code>tup</code> type may contain any of the data elements,
   including sub-tuples. Like tuples, a query’s value may contain any of
   the data elements.</p>
-  <pre class="language-fql query"><code>/tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
-/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
-  <h1 id="value-encoding">Value Encoding</h1>
-  <p>The directory and tuple layers are responsible for encoding the
-  data elements in the key. As for the value, Foundation DB doesn’t
-  provide a standard encoding.</p>
-  <p>FQL provides value encodings for each of the data elements. Some
-  elements have more than one value encoding. The default encoding for
-  each type is shown below.</p>
+  <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
+/tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
+  <h1 id="element-encoding">Element Encoding</h1>
+  <p>In the key, the directory and tuple layers are responsible for
+  encoding the data elements. In the value, the tuple layer may be used,
+  but FQL also supports other encodings known as “raw values”.</p>
+  <pre><code>/tuple_value()={4000}
+/raw_value()=4000</code></pre>
+  <p>Note that, as a raw value, the <code>int</code> type doesn’t
+  support an encoding for arbitrarily large integers. As a value, you’ll
+  need to encode such integers using the tuple layer.</p>
+  <pre class="language-fql query"><code>/int()={9223372036854775808}</code></pre>
+  <p>Below, you can see the default encodings of each type when used as
+  a raw value.</p>
   <div>
   <table>
   <thead>
@@ -224,11 +229,11 @@
   </tr>
   <tr>
   <td style="text-align: left;"><code>int</code></td>
-  <td style="text-align: left;">64-bit, 1’s compliment</td>
+  <td style="text-align: left;">64-bit, 1’s compliment, big endian</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>num</code></td>
-  <td style="text-align: left;">IEEE 754</td>
+  <td style="text-align: left;">64-bit, IEEE 754, big endian</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>str</code></td>
@@ -250,10 +255,105 @@
   </table>
   </div>
   <p>The tuple layer supports a unique encoding for <code>nil</code>,
-  but as a value <code>nil</code> is equivalent to an empty byte array.
-  This makes the following two queries equivalent.</p>
+  but as a raw value <code>nil</code> is equivalent to an empty byte
+  array. This makes the following two queries equivalent.</p>
   <pre class="language-fql query"><code>/entry(537856)=nil
 /entry(537856)=0x</code></pre>
+  <p>Whether encoded using the tuple layer or as a raw value, the
+  <code>int</code> and <code>num</code> types support several different
+  encodings. A non-default encoding may be specified using the <a
+  href="#options">options</a> syntax. Options are specified in a braced
+  list after the element. If the element’s value cannot be represented
+  by specified encoding then the query is invalid.</p>
+  <pre class="language-fql query"><code>/numbers(362342[i16])=32.55[f32]</code></pre>
+  <p>By default, <a href="#holes-&amp;-schemas">variables</a> will
+  decode any encoding for its types. Options can be applied to a
+  variable’s types to limit which encoding will match the schema.</p>
+  <pre class="language-fql query"><code>/numbers(&lt;int[i16,big]&gt;)=&lt;num[f32]&gt;</code></pre>
+  <p>The tables below shows which options are supported for the
+  <code>int</code> and <code>num</code> types.</p>
+  <div>
+  <table>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Int Option</th>
+  <th style="text-align: left;">Description</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>big</code></td>
+  <td style="text-align: left;">Big endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>lil</code></td>
+  <td style="text-align: left;">Little Endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u8</code></td>
+  <td style="text-align: left;">Unsigned 8-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u16</code></td>
+  <td style="text-align: left;">Unsigned 16-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u32</code></td>
+  <td style="text-align: left;">Unsigned 32-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u64</code></td>
+  <td style="text-align: left;">Unsigned 64-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i8</code></td>
+  <td style="text-align: left;">Signed 8-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i16</code></td>
+  <td style="text-align: left;">Signed 16-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i32</code></td>
+  <td style="text-align: left;">Signed 32-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i64</code></td>
+  <td style="text-align: left;">Signed 64-bit</td>
+  </tr>
+  </tbody>
+  </table>
+  <table>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Num Options</th>
+  <th style="text-align: left;">Description</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>big</code></td>
+  <td style="text-align: left;">Big endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>lil</code></td>
+  <td style="text-align: left;">Little Endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>f32</code></td>
+  <td style="text-align: left;">32-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>f64</code></td>
+  <td style="text-align: left;">64-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>f80</code></td>
+  <td style="text-align: left;">80-bit</td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
   <h1 id="holes-schemas">Holes &amp; Schemas</h1>
   <p>A hole is any of the following syntax constructs: variables,
   references, and the <code>...</code> token. Holes are used to define a
@@ -314,7 +414,8 @@
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
   <h1 id="options">Options</h1>
-  <p>TODO: Write this section.</p>
+  <p>As shown in the [element encoding][#element-encoding] section,
+  options…</p>
   <h1 id="basic-queries">Basic Queries</h1>
   <p>FQL queries can mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of

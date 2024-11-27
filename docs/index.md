@@ -192,43 +192,105 @@ including sub-tuples. Like tuples, a query's value may
 contain any of the data elements.
 
 ```language-fql {.query}
-/tuple/value(22.3,-8)=("rain","fog")
 /sub/tuple("japan",("sub",nil))=0xff
+/tuple/value(22.3,-8)=("rain","fog")
 ```
 
-# Value Encoding
+# Element Encoding
 
-The directory and tuple layers are responsible for encoding
-the data elements in the key. As for the value, Foundation
-DB doesn't provide a standard encoding.
+In the key, the directory and tuple layers are responsible
+for encoding the data elements. In the value, the tuple
+layer may be used, but FQL also supports other encodings
+known as "raw values".
 
-FQL provides value encodings for each of the data elements.
-Some elements have more than one value encoding. The default
-encoding for each type is shown below.
+```
+/tuple_value()={4000}
+/raw_value()=4000
+```
+
+Note that, as a raw value, the `int` type doesn't support an
+encoding for arbitrarily large integers. As a value, you'll
+need to encode such integers using the tuple layer.
+
+```language-fql {.query}
+/int()={9223372036854775808}
+```
+
+Below, you can see the default encodings of each type when
+used as a raw value.
 
 <div>
 
-| Type    | Encoding                        |
-|:--------|:--------------------------------|
-| `nil`   | empty byte array                |
-| `bool`  | single byte, `0x00` means false |
-| `int`   | 64-bit, 1's compliment          |
-| `num`   | IEEE 754                        |
-| `str`   | UTF-8                           |
-| `uuid`  | RFC 4122                        |
-| `bytes` | as provided                     |
-| `tup`   | tuple layer                     |
+| Type    | Encoding                           |
+|:--------|:-----------------------------------|
+| `nil`   | empty byte array                   |
+| `bool`  | single byte, `0x00` means false    |
+| `int`   | 64-bit, 1's compliment, big endian |
+| `num`   | 64-bit, IEEE 754, big endian       |
+| `str`   | UTF-8                              |
+| `uuid`  | RFC 4122                           |
+| `bytes` | as provided                        |
+| `tup`   | tuple layer                        |
 
 </div>
 
 The tuple layer supports a unique encoding for `nil`, but as
-a value `nil` is equivalent to an empty byte array. This
+a raw value `nil` is equivalent to an empty byte array. This
 makes the following two queries equivalent.
 
 ```language-fql {.query}
 /entry(537856)=nil
 /entry(537856)=0x
 ```
+
+Whether encoded using the tuple layer or as a raw value, the
+`int` and `num` types support several different encodings.
+A non-default encoding may be specified using the
+[options](#options) syntax. Options are specified in
+a braced list after the element. If the element's value
+cannot be represented by specified encoding then the query
+is invalid.
+
+```language-fql {.query}
+/numbers(362342[i16])=32.55[f32]
+```
+
+By default, [variables](#holes-&-schemas) will decode any
+encoding for its types. Options can be applied to
+a variable's types to limit which encoding will match the
+schema.
+
+```language-fql {.query}
+/numbers(<int[i16,big]>)=<num[f32]>
+```
+
+The tables below shows which options are supported for the
+`int` and `num` types.
+
+<div>
+
+| Int Option | Description     |
+|:-----------|:----------------|
+| `big`      | Big endian      |
+| `lil`      | Little Endian   |
+| `u8`       | Unsigned 8-bit  |
+| `u16`      | Unsigned 16-bit |
+| `u32`      | Unsigned 32-bit |
+| `u64`      | Unsigned 64-bit |
+| `i8`       | Signed 8-bit    |
+| `i16`      | Signed 16-bit   |
+| `i32`      | Signed 32-bit   |
+| `i64`      | Signed 64-bit   |
+
+| Num Options | Description   |
+|:------------|:--------------|
+| `big`       | Big endian    |
+| `lil`       | Little Endian |
+| `f32`       | 32-bit        |
+| `f64`       | 64-bit        |
+| `f80`       | 80-bit        |
+
+</div>
 
 # Holes & Schemas
 
@@ -333,7 +395,8 @@ line. They can be used to describe a tuple's elements.
 
 # Options
 
-TODO: Write this section.
+As shown in the [element encoding][#element-encoding]
+section, options... 
 
 # Basic Queries
 
