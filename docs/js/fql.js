@@ -122,7 +122,7 @@
     begin: /\[/,
     end: /]/,
     keywords: {
-      $$pattern: /[^,]+/,
+      $$pattern: /[^,:]+/,
       keyword: [
         'big',
         'lil',
@@ -137,8 +137,22 @@
         'f32',
         'f64',
         'f80',
+        'reverse',
+        'limit',
       ],
     },
+    contains: [
+      {
+        begin: [
+          /:/,
+          /[^,\]]/
+        ],
+        beginScope: {
+          1: 'option',
+          2: 'number',
+        },
+      },
+    ],
   };
 
   const VARIABLE = {
@@ -246,6 +260,7 @@
       UUID,
       BYTES,
       NUMBER,
+      OPTIONS,
       { // Highlight lone bar for inline text.
         scope: 'variable',
         begin: /\|/,

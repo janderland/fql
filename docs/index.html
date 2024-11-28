@@ -198,14 +198,14 @@
   <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
 /tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
   <h1 id="element-encoding">Element Encoding</h1>
-  <p>In the key, the directory and tuple layers are responsible for
-  encoding the data elements. In the value, the tuple layer may be used,
-  but FQL also supports other encodings known as “raw values”.</p>
+  <p>For data elements in the key, the directory and tuple layers are
+  responsible for data encoding. In the value, the tuple layer may be
+  used, but FQL supports other encodings known as “raw values”.</p>
   <pre><code>/tuple_value()={4000}
 /raw_value()=4000</code></pre>
-  <p>Note that, as a raw value, the <code>int</code> type doesn’t
-  support an encoding for arbitrarily large integers. As a value, you’ll
-  need to encode such integers using the tuple layer.</p>
+  <p>As a raw value, the <code>int</code> type doesn’t support an
+  encoding for arbitrarily large integers. As a value, you’ll need to
+  encode such integers using the tuple layer.</p>
   <pre class="language-fql query"><code>/int()={9223372036854775808}</code></pre>
   <p>Below, you can see the default encodings of each type when used as
   a raw value.</p>
@@ -416,8 +416,26 @@
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
   <h1 id="options">Options</h1>
-  <p>As shown in the [element encoding][#element-encoding] section,
-  options…</p>
+  <p>Options provide a way to modify the default behavior of data
+  elements, variable types, and queries. Options are specified as a
+  comma separated list wrapped in braces.</p>
+  <p>For instance, to specify that an <code>int</code> should be encoded
+  as a little-endian unsigned 8-bit integer, the following options would
+  be included after the number.</p>
+  <pre class="language-fql"><code>3548[u8,lil]</code></pre>
+  <p>Similarly, if a variable should only match against a big-endian
+  32-bit float then the following option would be included after the
+  <code>num</code> type.</p>
+  <pre class="language-fql"><code>&lt;num[f32,big]&gt;</code></pre>
+  <p>Query options are specified on the line before the query. For
+  instance, to specify that a range-read query should read in reverse
+  and only read 5 items, the following options would be included before
+  the query.</p>
+  <pre class="language-fql query"><code>[reverse,limit:5]
+/my/integers(&lt;int&gt;)=nil</code></pre>
+  <p>Notice that the <code>limit</code> option includes an argument
+  after the colon. Some options include a single argument to further
+  specify the option’s behavior.</p>
   <h1 id="basic-queries">Basic Queries</h1>
   <p>FQL queries can mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of

@@ -198,19 +198,19 @@ contain any of the data elements.
 
 # Element Encoding
 
-In the key, the directory and tuple layers are responsible
-for encoding the data elements. In the value, the tuple
-layer may be used, but FQL also supports other encodings
-known as "raw values".
+For data elements in the key, the directory and tuple layers
+are responsible for data encoding. In the value, the tuple
+layer may be used, but FQL supports other encodings known as
+"raw values".
 
 ```
 /tuple_value()={4000}
 /raw_value()=4000
 ```
 
-Note that, as a raw value, the `int` type doesn't support an
-encoding for arbitrarily large integers. As a value, you'll
-need to encode such integers using the tuple layer.
+As a raw value, the `int` type doesn't support an encoding
+for arbitrarily large integers. As a value, you'll need to
+encode such integers using the tuple layer.
 
 ```language-fql {.query}
 /int()={9223372036854775808}
@@ -398,8 +398,39 @@ line. They can be used to describe a tuple's elements.
 
 # Options
 
-As shown in the [element encoding][#element-encoding]
-section, options... 
+Options provide a way to modify the default behavior of data
+elements, variable types, and queries. Options are specified
+as a comma separated list wrapped in braces.
+
+For instance, to specify that an `int` should be encoded as
+a little-endian unsigned 8-bit integer, the following
+options would be included after the number.
+
+```language-fql
+3548[u8,lil]
+```
+
+Similarly, if a variable should only match against
+a big-endian 32-bit float then the following option would be
+included after the `num` type.
+
+```language-fql
+<num[f32,big]>
+```
+
+Query options are specified on the line before the query.
+For instance, to specify that a range-read query should read
+in reverse and only read 5 items, the following options
+would be included before the query.
+
+```language-fql {.query}
+[reverse,limit:5]
+/my/integers(<int>)=nil
+```
+
+Notice that the `limit` option includes an argument after
+the colon. Some options include a single argument to further
+specify the option's behavior.
 
 # Basic Queries
 
