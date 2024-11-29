@@ -1,6 +1,7 @@
 # 'builder' includes all build & testing dependencies.
 FROM debian:12 AS builder
 
+# hadolint ignore=DL3008
 RUN apt-get update &&\
     apt-get install --no-install-recommends -y \
       build-essential=12.9 \
