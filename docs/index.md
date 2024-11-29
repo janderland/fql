@@ -1037,18 +1037,12 @@ func _() {
 By summer of 2025, I'd like to have the following items
 completed:
 
-- Indirection & aggregation queries implemented as described
-  in this document.
+- Implement all features described in this document.
 
 - Design and document the syntax for doing the following
   features.
 
   - Separating queries into multiple transactions.
-
-  - Set options at both the query & transaction level.
-    Options control things like range-read direction
-    & limits, endianness of values, and whether write
-    queries are allowed.
 
   - Meta language for aliasing queries or parts of queries.
     This language would provide type-safe templating with
