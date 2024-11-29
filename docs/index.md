@@ -24,10 +24,11 @@ include-before: |
 
 # Overview
 
-FQL is specified as a [context-free
-grammar](https://github.com/janderland/fql/blob/main/syntax.ebnf).
-The queries look like key-values encoded using the directory
+FQL is specified as a context-free [grammar][]. The
+queries look like key-values encoded using the directory
 & tuple layers.
+
+[grammar]: https://github.com/janderland/fql/blob/main/syntax.ebnf
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -47,10 +48,7 @@ as shown below.
 
 The query above has a variable `<int>` as its value.
 Variables act as placeholders for any of the supported [data
-elements](#data-elements). In this case, the variable also
-tells FQL how to decode the value's bytes. This query will
-return a single key-value from the database, if such a key
-exists.
+elements](#data-elements).
 
 FQL queries can also perform range reads & filtering by
 including a variable in the key's tuple. The query below
@@ -126,53 +124,50 @@ a directory path.
 # Data Elements
 
 An FQL query contains instances of data elements. These
-mirror the types of elements found in the [tuple
-layer](https://github.com/apple/foundationdb/blob/main/design/tuple.md).
-Descriptions of these elements can be seen below.
+mirror the types of elements found in the [tuple layer][].
+
+[tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
 <div>
 
 | Type    | Description    | Example                                |
 |:--------|:---------------|:---------------------------------------|
 | `nil`   | Empty Type     | `nil`                                  |
-| `bool`  | Boolean        | `true`                                 |
-| `int`   | Signed Integer | `-14`                                  |
-| `num`   | Floating Point | `33.4`                                 |
-| `str`   | Unicode String | `"string"`                             |
+| `bool`  | Boolean        | `true` `false`                         |
+| `int`   | Signed Integer | `-14` `3033`                           |
+| `num`   | Floating Point | `33.4` `-3.2e5`                        |
+| `str`   | Unicode String | `"happy😁"` `"\"quoted\""`             |
 | `uuid`  | UUID           | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `bytes` | Byte String    | `0xa2bff2438312aac032`                 |
 | `tup`   | Tuple          | `("hello",27.4,nil)`                   |
 
 </div>
 
-The `nil` type allows for a single value which is also
-`nil`. The tuple layer supports a unique encoding for `nil`.
-As a value, `nil` is equivalent to an empty byte array, so
-the following queries are semantically equivalent:
+The `nil` type may only be instantiated as the element
+`nil`. The `int` type may be instantiated as any arbitrarily
+large integer. 
 
-```language-fql {.query}
-/entry(537856)=nil
-/entry(537856)=0x
+```
+/int(9223372036854775808)=nil
 ```
 
-The `int` type allows for arbitrarily large integers. The
-`num` type allows for 64-bit floating-point numbers. For
-now, the `num` type does not support arbitrary precision
-because the tuple layer [advises
-against](https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal)
-using it's abitrarily-sized decimal encoding. Support for
-arbitrarily-sized floating-point numbers will
-be revisited in the future.
+The `num` type may be instantiated as any real number
+between `-1.18e4932` and `1.18e4932`, and may use scientific
+notation. The type may also be instantiated as the tokens
+`-inf`, `inf`, `-nan`, or `nan`. The element is represented
+as an 80-bit extended double [floating-point][] and will
+snap to the nearest representable number.
 
-The `str` type supports unicode strings, including unicode
-escape sequences. FQL has not chosen a unicode escape
-syntax, but it will be similar to what is found in other
-programming languages.
+[floating-point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
-Strings are the only data element allowed in directories. If
-a directory string only contains alphanumericals,
-underscores, dashes, and periods then the quotes don't need
-to be included.
+```language-fql {.query}
+/float(-inf,nan)=1.234e4732
+```
+
+The `str` type is the only element type allowed in directory
+paths. If a directory string only contains alphanumericals,
+underscores, dashes, and periods then the quotes may not be
+included.
 
 ```language-fql {.query}
 /quoteless-string_in.dir(true)=false
@@ -182,53 +177,137 @@ to be included.
 Quoted strings may contain quotes via backslash escapes.
 
 ```language-fql {.query}
-/my/dir("I said \"hello\"")=nil
+/escape("I said \"hello\"")=nil
 ```
 
-The 'tup' type may contain any of the data elements,
+The hexidecimal numbers of the `uuid` and `bytes` types may
+be upper, lower, or mixed case.
+
+```language-fql {.query}
+/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
+```
+
+The `tup` type may contain any of the data elements,
 including sub-tuples. Like tuples, a query's value may
 contain any of the data elements.
 
 ```language-fql {.query}
-/region/north_america(22.3,-8)=("rain","fog")
-/region/east_asia("japan",("sub",nil))=0xff
+/sub/tuple("japan",("sub",nil))=0xff
+/tuple/value(22.3,-8)=("rain","fog")
 ```
 
-# Value Encoding
+# Element Encoding
 
-The directory and tuple layers are responsible for encoding
-the data elements in the key. As for the value, FDB doesn't
-provide a standard encoding.
+For data elements in the key, the directory and tuple layers
+are responsible for data encoding. In the value, the tuple
+layer may be used, but FQL supports other encodings known as
+"raw values".
 
-FQL provides default value encoding for each of the data
-elements, as show below. The upcoming "options" syntax will
-allow queries to specify alternative encodings for each data
-element.
+```
+/tuple_value()={4000}
+/raw_value()=4000
+```
+
+As a raw value, the `int` type doesn't support an encoding
+for arbitrarily large integers. As a value, you'll need to
+encode such integers using the tuple layer.
+
+```language-fql {.query}
+/int()={9223372036854775808}
+```
+
+Below, you can see the default encodings of each type when
+used as a raw value.
 
 <div>
 
-| Type    | Encoding                        |
-|:--------|:--------------------------------|
-| `nil`   | empty value                     |
-| `bool`  | single byte, `0x00` means false |
-| `int`   | 64-bit, 1's compliment          |
-| `num`   | IEEE 754                        |
-| `str`   | Unicode                         |
-| `uuid`  | RFC 4122                        |
-| `bytes` | as provided                     |
-| `tup`   | tuple layer                     |
+| Type    | Encoding                           |
+|:--------|:-----------------------------------|
+| `nil`   | empty byte array                   |
+| `bool`  | single byte, `0x00` means false    |
+| `int`   | 64-bit, 1's compliment, big endian |
+| `num`   | 64-bit, IEEE 754, big endian       |
+| `str`   | UTF-8                              |
+| `uuid`  | RFC 4122                           |
+| `bytes` | as provided                        |
+| `tup`   | tuple layer                        |
 
 </div>
 
-# Variables & Schemas
+The tuple layer supports a unique encoding for `nil`, but as
+a raw value `nil` is equivalent to an empty byte array. This
+makes the following two queries equivalent.
 
-Variables allow FQL to describe key-value schemas. Any [data
-element](#data-elements) may be represented with a variable.
-Variables are specified as a list of element types,
-separated by `|`, wrapped in angled braces.
+```language-fql {.query}
+/entry(537856)=nil
+/entry(537856)=0x
+```
+
+Whether encoded using the tuple layer or as a raw value, the
+`int` and `num` types support several different encodings.
+A non-default encoding may be specified using the
+[options](#options) syntax. Options are specified in
+a braced list after the element. If the element's value
+cannot be represented by specified encoding then the query
+is invalid.
+
+```language-fql {.query}
+/numbers(362342[i16])=32.55[f32]
+```
+
+By default, [variables](#holes-&-schemas) will decode any
+encoding for its types. Options can be applied to
+a variable's types to limit which encoding will match the
+schema.
+
+```language-fql {.query}
+/numbers(<int[i16,big]>)=<num[f32]>
+```
+
+The tables below shows which options are supported for the
+`int` and `num` types.
+
+<div>
+
+| Int Option | Description     |
+|:-----------|:----------------|
+| `big`      | Big endian      |
+| `lil`      | Little Endian   |
+| `u8`       | Unsigned 8-bit  |
+| `u16`      | Unsigned 16-bit |
+| `u32`      | Unsigned 32-bit |
+| `u64`      | Unsigned 64-bit |
+| `i8`       | Signed 8-bit    |
+| `i16`      | Signed 16-bit   |
+| `i32`      | Signed 32-bit   |
+| `i64`      | Signed 64-bit   |
+
+</div>
+<div>
+
+| Num Options | Description   |
+|:------------|:--------------|
+| `big`       | Big endian    |
+| `lil`       | Little Endian |
+| `f32`       | 32-bit        |
+| `f64`       | 64-bit        |
+| `f80`       | 80-bit        |
+
+</div>
+
+# Holes & Schemas
+
+A hole is any of the following syntax constructs: variables,
+references, and the `...` token. Holes are used to define
+a key-value schema by acting as placeholders for one or more
+data elements.
+
+A single [data element](#data-elements) may be represented
+with a variable. Variables are specified as a list of
+element types, separated by `|`, wrapped in angled braces.
 
 ```language-fql
-<uint|str|uuid|bytes>
+<int|str|uuid|bytes>
 ```
 
 The variable's type list describes which data elements are
@@ -243,7 +322,7 @@ element types.
 ```language-fql {.result}
 /user(0,"jon",0xffab0c)=nil
 /user(20,"roger",22.3)=0xff
-/user(21,"",nil)="nothing"
+/user(21,"",nil)=nil
 ```
 
 Before the type list, a variable can be given a name. This
@@ -261,6 +340,37 @@ queries, allowing for [index indirection](#indirection).
 /user(411,"chevy")=nil
 ```
 
+Named variables must include at least one type. To allow
+named variables to match any element type, use the `any`
+type.
+
+```language-fql
+/stuff(<thing:any>)
+/count(:thing,<int>)
+```
+
+```language-fql {.result}
+/count("cat",10)
+/count(42,1)
+/count(0x5fae,3)
+```
+
+The `...` token represents any number of data elements of
+any type.
+
+```language-fql
+/tuples(0x00,...)
+```
+
+```language-fql {.result}
+/tuples(0x00,"something")=nil
+/tuples(0x00,42,43,44)=0xabcf
+/tuples(0x00)=nil
+```
+
+> ❓ Currently, the `...` token is only allowed as the last
+> element of a tuple. This will be revisited in the future.
+
 # Space & Comments
 
 Whitespace and newlines are allowed within a tuple, between
@@ -268,8 +378,8 @@ its elements.
 
 ```language-fql {.query}
 /account/private(
-  <uint>,
-  <uint>,
+  <int>,
+  <int>,
   <str>,
 )=<int>
 ```
@@ -280,28 +390,63 @@ line. They can be used to describe a tuple's elements.
 ```language-fql
 % private account balances
 /account/private(
-  <uint>, % user ID
-  <uint>, % group ID
+  <int>,  % group ID
+  <int>,  % account ID
   <str>,  % account name
 )=<int>   % balance in USD
 ```
 
+# Options
+
+Options provide a way to modify the default behavior of data
+elements, variable types, and queries. Options are specified
+as a comma separated list wrapped in braces.
+
+For instance, to specify that an `int` should be encoded as
+a little-endian unsigned 8-bit integer, the following
+options would be included after the number.
+
+```language-fql
+3548[u8,lil]
+```
+
+Similarly, if a variable should only match against
+a big-endian 32-bit float then the following option would be
+included after the `num` type.
+
+```language-fql
+<num[f32,big]>
+```
+
+Query options are specified on the line before the query.
+For instance, to specify that a range-read query should read
+in reverse and only read 5 items, the following options
+would be included before the query.
+
+```language-fql {.query}
+[reverse,limit:5]
+/my/integers(<int>)=nil
+```
+
+Notice that the `limit` option includes an argument after
+the colon. Some options include a single argument to further
+specify the option's behavior.
+
 # Basic Queries
 
-FQL queries can write/clear a single key-value, read one or
-more key-values, or list directories. Throughout this
-section, snippets of Go code are included to show how the
-queries interact with the FDB API.
+FQL queries can mutate a single key-value, read one or more
+key-values, or list directories. Throughout this section,
+snippets of Go code are included which approximate how the
+queries interact with the Foundation DB API.
 
 ## Mutations
 
-Queries lacking [variables](#variables-schemas) and the
-`...` token perform mutations on the database by either
-writing or clearing a key-value.
+Queries lacking [holes](#holes-schemas) perform mutations on
+the database by either writing or clearing a key-value.
 
-> Queries lacking a value altogether imply an empty
-> [variable](#variables-schemas) as the value and should not
-> be confused with mutation queries.
+> ❗ Queries lacking a value altogether imply an empty
+> [variable](#holes-schemas) as the value and should not be
+> confused with mutation queries.
 
 Mutation queries with a [data element](#data-elements) as
 their value perform a write operation.
@@ -350,17 +495,14 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 
 ## Reads
 
-Queries containing a [variable](#variables-schemas) or the
-`...` token read one or more key-values. The query defines
-a schema which the returned key-values must conform to.
+Queries containing [holes](#holes-schemas) read one or more
+key-values. If the holes only appears in the value, then
+a single key-value is returned, if one matching the schema
+exists.
 
-If the variable or `...` token only appears in the query's
-value, then it returns a single key-value, if one matching
-the schema exists.
-
-> Queries lacking a value altogether imply an empty
-> [variable](#variables-schemas) as the value, and are
-> therefore read queries.
+> ❗ Queries lacking a value altogether imply an empty
+> [variable](#holes-schemas) as the value which makes them
+> read queries.
 
 ```language-fql {.query}
 /my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
@@ -420,9 +562,9 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-Queries with [variables](#variables-schemas) or the `...`
-token in their key (and optionally in their value) result in
-a range of key-values being read.
+Queries with [variables](#holes-schemas) in their key (and
+optionally in their value) result in a range of key-values
+being read.
 
 ```language-fql {.query}
 /people("coders",...)
@@ -600,10 +742,8 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 
 # Advanced Queries
 
-Besides basic
-[CRUD](https://en.wikipedia.org/wiki/Create,_read,_update_and_delete)
-operations, FQL is capable of performing indirection and
-aggregation queries.
+Besides basic CRUD operations, FQL is capable of performing
+indirection and aggregation queries.
 
 ## Indirection
 
@@ -674,11 +814,11 @@ Aggregation queries read multiple key-values and combine
 them into a single output key-value.
 
 Foundation DB performs best when key-values are kept small.
-When [storing large
-blobs](https://apple.github.io/foundationdb/blob.html), the
-blobs are usually split into 10 kB chunks and stored as
-values. The respective keys contain the byte offset of the
-chunks.
+When storing large [blobs][], the blobs are usually split
+into 10 kB chunks and stored as values. The respective keys
+contain the byte offset of the chunks.
+
+[blobs]: https://apple.github.io/foundationdb/blob.html
 
 ```language-fql {.query}
 /blob(
@@ -732,8 +872,9 @@ The FQL project provides an application for executing
 queries and exploring the data, similar to `psql` for
 Postgres. This libraries powering this application are
 exposed as a Go API, allowing FQL to be used as a Foundation
-DB
-[layer](https://apple.github.io/foundationdb/layer-concept.html).
+DB [layer][];
+
+[layer]: https://apple.github.io/foundationdb/layer-concept.html
 
 ## Command Line
 
@@ -896,18 +1037,12 @@ func _() {
 By summer of 2025, I'd like to have the following items
 completed:
 
-- Indirection & aggregation queries implemented as described
-  in this document.
+- Implement all features described in this document.
 
 - Design and document the syntax for doing the following
   features.
 
   - Separating queries into multiple transactions.
-
-  - Set options at both the query & transaction level.
-    Options control things like range-read direction
-    & limits, endianness of values, and whether write
-    queries are allowed.
 
   - Meta language for aliasing queries or parts of queries.
     This language would provide type-safe templating with

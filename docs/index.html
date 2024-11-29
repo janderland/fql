@@ -32,12 +32,13 @@
     <li><a href="#overview" id="toc-overview">Overview</a></li>
     <li><a href="#data-elements" id="toc-data-elements">Data
     Elements</a></li>
-    <li><a href="#value-encoding" id="toc-value-encoding">Value
+    <li><a href="#element-encoding" id="toc-element-encoding">Element
     Encoding</a></li>
-    <li><a href="#variables-schemas"
-    id="toc-variables-schemas">Variables &amp; Schemas</a></li>
+    <li><a href="#holes-schemas" id="toc-holes-schemas">Holes &amp;
+    Schemas</a></li>
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
+    <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#basic-queries" id="toc-basic-queries">Basic
     Queries</a>
     <ul>
@@ -62,10 +63,10 @@
     <li><a href="#roadmap" id="toc-roadmap">Roadmap</a></li>
     </ul>
   <h1 id="overview">Overview</h1>
-  <p>FQL is specified as a <a
-  href="https://github.com/janderland/fql/blob/main/syntax.ebnf">context-free
-  grammar</a>. The queries look like key-values encoded using the
-  directory &amp; tuple layers.</p>
+  <p>FQL is specified as a context-free <a
+  href="https://github.com/janderland/fql/blob/main/syntax.ebnf">grammar</a>.
+  The queries look like key-values encoded using the directory &amp;
+  tuple layers.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>FQL queries may define a single key-value to be written, as shown
   above, or may define a set of key-values to be read, as shown
@@ -74,9 +75,7 @@
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>The query above has a variable <code>&lt;int&gt;</code> as its
   value. Variables act as placeholders for any of the supported <a
-  href="#data-elements">data elements</a>. In this case, the variable
-  also tells FQL how to decode the value’s bytes. This query will return
-  a single key-value from the database, if such a key exists.</p>
+  href="#data-elements">data elements</a>.</p>
   <p>FQL queries can also perform range reads &amp; filtering by
   including a variable in the key’s tuple. The query below will return
   all key-values which conform to the schema defined by the query.</p>
@@ -111,7 +110,7 @@
   <p>An FQL query contains instances of data elements. These mirror the
   types of elements found in the <a
   href="https://github.com/apple/foundationdb/blob/main/design/tuple.md">tuple
-  layer</a>. Descriptions of these elements can be seen below.</p>
+  layer</a>.</p>
   <div>
   <table>
   <thead>
@@ -130,22 +129,25 @@
   <tr>
   <td style="text-align: left;"><code>bool</code></td>
   <td style="text-align: left;">Boolean</td>
-  <td style="text-align: left;"><code>true</code></td>
+  <td style="text-align: left;"><code>true</code>
+  <code>false</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>int</code></td>
   <td style="text-align: left;">Signed Integer</td>
-  <td style="text-align: left;"><code>-14</code></td>
+  <td style="text-align: left;"><code>-14</code> <code>3033</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>num</code></td>
   <td style="text-align: left;">Floating Point</td>
-  <td style="text-align: left;"><code>33.4</code></td>
+  <td style="text-align: left;"><code>33.4</code>
+  <code>-3.2e5</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>str</code></td>
   <td style="text-align: left;">Unicode String</td>
-  <td style="text-align: left;"><code>"string"</code></td>
+  <td style="text-align: left;"><code>"happy😁"</code>
+  <code>"\"quoted\""</code></td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>uuid</code></td>
@@ -166,44 +168,47 @@
   </tbody>
   </table>
   </div>
-  <p>The <code>nil</code> type allows for a single value which is also
-  <code>nil</code>. The tuple layer supports a unique encoding for
-  <code>nil</code>. As a value, <code>nil</code> is equivalent to an
-  empty byte array, so the following queries are semantically
-  equivalent:</p>
-  <pre class="language-fql query"><code>/entry(537856)=nil
-/entry(537856)=0x</code></pre>
-  <p>The <code>int</code> type allows for arbitrarily large integers.
-  The <code>num</code> type allows for 64-bit floating-point numbers.
-  For now, the <code>num</code> type does not support arbitrary
-  precision because the tuple layer <a
-  href="https://github.com/apple/foundationdb/blob/main/design/tuple.md#arbitrary-precision-decimal">advises
-  against</a> using it’s abitrarily-sized decimal encoding. Support for
-  arbitrarily-sized floating-point numbers will be revisited in the
-  future.</p>
-  <p>The <code>str</code> type supports unicode strings, including
-  unicode escape sequences. FQL has not chosen a unicode escape syntax,
-  but it will be similar to what is found in other programming
-  languages.</p>
-  <p>Strings are the only data element allowed in directories. If a
-  directory string only contains alphanumericals, underscores, dashes,
-  and periods then the quotes don’t need to be included.</p>
+  <p>The <code>nil</code> type may only be instantiated as the element
+  <code>nil</code>. The <code>int</code> type may be instantiated as any
+  arbitrarily large integer.</p>
+  <pre><code>/int(9223372036854775808)=nil</code></pre>
+  <p>The <code>num</code> type may be instantiated as any real number
+  between <code>-1.18e4932</code> and <code>1.18e4932</code>, and may
+  use scientific notation. The type may also be instantiated as the
+  tokens <code>-inf</code>, <code>inf</code>, <code>-nan</code>, or
+  <code>nan</code>. The element is represented as an 80-bit extended
+  double <a
+  href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">floating-point</a>
+  and will snap to the nearest representable number.</p>
+  <pre class="language-fql query"><code>/float(-inf,nan)=1.234e4732</code></pre>
+  <p>The <code>str</code> type is the only element type allowed in
+  directory paths. If a directory string only contains alphanumericals,
+  underscores, dashes, and periods then the quotes may not be
+  included.</p>
   <pre class="language-fql query"><code>/quoteless-string_in.dir(true)=false
 /&quot;other ch@r@cters must be quoted!&quot;(20)=32.3</code></pre>
   <p>Quoted strings may contain quotes via backslash escapes.</p>
-  <pre class="language-fql query"><code>/my/dir(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
-  <p>The ‘tup’ type may contain any of the data elements, including
-  sub-tuples. Like tuples, a query’s value may contain any of the data
-  elements.</p>
-  <pre class="language-fql query"><code>/region/north_america(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)
-/region/east_asia(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff</code></pre>
-  <h1 id="value-encoding">Value Encoding</h1>
-  <p>The directory and tuple layers are responsible for encoding the
-  data elements in the key. As for the value, FDB doesn’t provide a
-  standard encoding.</p>
-  <p>FQL provides default value encoding for each of the data elements,
-  as show below. The upcoming “options” syntax will allow queries to
-  specify alternative encodings for each data element.</p>
+  <pre class="language-fql query"><code>/escape(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
+  <p>The hexidecimal numbers of the <code>uuid</code> and
+  <code>bytes</code> types may be upper, lower, or mixed case.</p>
+  <pre class="language-fql query"><code>/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9</code></pre>
+  <p>The <code>tup</code> type may contain any of the data elements,
+  including sub-tuples. Like tuples, a query’s value may contain any of
+  the data elements.</p>
+  <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
+/tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
+  <h1 id="element-encoding">Element Encoding</h1>
+  <p>For data elements in the key, the directory and tuple layers are
+  responsible for data encoding. In the value, the tuple layer may be
+  used, but FQL supports other encodings known as “raw values”.</p>
+  <pre><code>/tuple_value()={4000}
+/raw_value()=4000</code></pre>
+  <p>As a raw value, the <code>int</code> type doesn’t support an
+  encoding for arbitrarily large integers. As a value, you’ll need to
+  encode such integers using the tuple layer.</p>
+  <pre class="language-fql query"><code>/int()={9223372036854775808}</code></pre>
+  <p>Below, you can see the default encodings of each type when used as
+  a raw value.</p>
   <div>
   <table>
   <thead>
@@ -215,7 +220,7 @@
   <tbody>
   <tr>
   <td style="text-align: left;"><code>nil</code></td>
-  <td style="text-align: left;">empty value</td>
+  <td style="text-align: left;">empty byte array</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>bool</code></td>
@@ -224,15 +229,15 @@
   </tr>
   <tr>
   <td style="text-align: left;"><code>int</code></td>
-  <td style="text-align: left;">64-bit, 1’s compliment</td>
+  <td style="text-align: left;">64-bit, 1’s compliment, big endian</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>num</code></td>
-  <td style="text-align: left;">IEEE 754</td>
+  <td style="text-align: left;">64-bit, IEEE 754, big endian</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>str</code></td>
-  <td style="text-align: left;">Unicode</td>
+  <td style="text-align: left;">UTF-8</td>
   </tr>
   <tr>
   <td style="text-align: left;"><code>uuid</code></td>
@@ -249,19 +254,125 @@
   </tbody>
   </table>
   </div>
-  <h1 id="variables-schemas">Variables &amp; Schemas</h1>
-  <p>Variables allow FQL to describe key-value schemas. Any <a
-  href="#data-elements">data element</a> may be represented with a
-  variable. Variables are specified as a list of element types,
-  separated by <code>|</code>, wrapped in angled braces.</p>
-  <pre class="language-fql"><code>&lt;uint|str|uuid|bytes&gt;</code></pre>
+  <p>The tuple layer supports a unique encoding for <code>nil</code>,
+  but as a raw value <code>nil</code> is equivalent to an empty byte
+  array. This makes the following two queries equivalent.</p>
+  <pre class="language-fql query"><code>/entry(537856)=nil
+/entry(537856)=0x</code></pre>
+  <p>Whether encoded using the tuple layer or as a raw value, the
+  <code>int</code> and <code>num</code> types support several different
+  encodings. A non-default encoding may be specified using the <a
+  href="#options">options</a> syntax. Options are specified in a braced
+  list after the element. If the element’s value cannot be represented
+  by specified encoding then the query is invalid.</p>
+  <pre class="language-fql query"><code>/numbers(362342[i16])=32.55[f32]</code></pre>
+  <p>By default, <a href="#holes-&amp;-schemas">variables</a> will
+  decode any encoding for its types. Options can be applied to a
+  variable’s types to limit which encoding will match the schema.</p>
+  <pre class="language-fql query"><code>/numbers(&lt;int[i16,big]&gt;)=&lt;num[f32]&gt;</code></pre>
+  <p>The tables below shows which options are supported for the
+  <code>int</code> and <code>num</code> types.</p>
+  <div>
+  <table>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Int Option</th>
+  <th style="text-align: left;">Description</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>big</code></td>
+  <td style="text-align: left;">Big endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>lil</code></td>
+  <td style="text-align: left;">Little Endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u8</code></td>
+  <td style="text-align: left;">Unsigned 8-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u16</code></td>
+  <td style="text-align: left;">Unsigned 16-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u32</code></td>
+  <td style="text-align: left;">Unsigned 32-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u64</code></td>
+  <td style="text-align: left;">Unsigned 64-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i8</code></td>
+  <td style="text-align: left;">Signed 8-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i16</code></td>
+  <td style="text-align: left;">Signed 16-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i32</code></td>
+  <td style="text-align: left;">Signed 32-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i64</code></td>
+  <td style="text-align: left;">Signed 64-bit</td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <div>
+  <table>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Num Options</th>
+  <th style="text-align: left;">Description</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>big</code></td>
+  <td style="text-align: left;">Big endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>lil</code></td>
+  <td style="text-align: left;">Little Endian</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>f32</code></td>
+  <td style="text-align: left;">32-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>f64</code></td>
+  <td style="text-align: left;">64-bit</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>f80</code></td>
+  <td style="text-align: left;">80-bit</td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <h1 id="holes-schemas">Holes &amp; Schemas</h1>
+  <p>A hole is any of the following syntax constructs: variables,
+  references, and the <code>...</code> token. Holes are used to define a
+  key-value schema by acting as placeholders for one or more data
+  elements.</p>
+  <p>A single <a href="#data-elements">data element</a> may be
+  represented with a variable. Variables are specified as a list of
+  element types, separated by <code>|</code>, wrapped in angled
+  braces.</p>
+  <pre class="language-fql"><code>&lt;int|str|uuid|bytes&gt;</code></pre>
   <p>The variable’s type list describes which data elements are allowed
   at the variable’s position. A variable may be empty, including no
   element types, meaning it represents all element types.</p>
   <pre class="language-fql query"><code>/user(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
   <pre class="language-fql result"><code>/user(0,&quot;jon&quot;,0xffab0c)=nil
 /user(20,&quot;roger&quot;,22.3)=0xff
-/user(21,&quot;&quot;,nil)=&quot;nothing&quot;</code></pre>
+/user(21,&quot;&quot;,nil)=nil</code></pre>
   <p>Before the type list, a variable can be given a name. This name is
   used to reference the variable in subsequent queries, allowing for <a
   href="#indirection">index indirection</a>.</p>
@@ -270,34 +381,73 @@
   <pre class="language-fql result"><code>/user(33,&quot;mazda&quot;)=nil
 /user(320,&quot;ford&quot;)=nil
 /user(411,&quot;chevy&quot;)=nil</code></pre>
+  <p>Named variables must include at least one type. To allow named
+  variables to match any element type, use the <code>any</code>
+  type.</p>
+  <pre class="language-fql"><code>/stuff(&lt;thing:any&gt;)
+/count(:thing,&lt;int&gt;)</code></pre>
+  <pre class="language-fql result"><code>/count(&quot;cat&quot;,10)
+/count(42,1)
+/count(0x5fae,3)</code></pre>
+  <p>The <code>...</code> token represents any number of data elements
+  of any type.</p>
+  <pre class="language-fql"><code>/tuples(0x00,...)</code></pre>
+  <pre class="language-fql result"><code>/tuples(0x00,&quot;something&quot;)=nil
+/tuples(0x00,42,43,44)=0xabcf
+/tuples(0x00)=nil</code></pre>
+  <blockquote>
+  <p>❓ Currently, the <code>...</code> token is only allowed as the
+  last element of a tuple. This will be revisited in the future.</p>
+  </blockquote>
   <h1 id="space-comments">Space &amp; Comments</h1>
   <p>Whitespace and newlines are allowed within a tuple, between its
   elements.</p>
   <pre class="language-fql query"><code>/account/private(
-  &lt;uint&gt;,
-  &lt;uint&gt;,
+  &lt;int&gt;,
+  &lt;int&gt;,
   &lt;str&gt;,
 )=&lt;int&gt;</code></pre>
   <p>Comments start with a <code>%</code> and continue until the end of
   the line. They can be used to describe a tuple’s elements.</p>
   <pre class="language-fql"><code>% private account balances
 /account/private(
-  &lt;uint&gt;, % user ID
-  &lt;uint&gt;, % group ID
+  &lt;int&gt;,  % group ID
+  &lt;int&gt;,  % account ID
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
+  <h1 id="options">Options</h1>
+  <p>Options provide a way to modify the default behavior of data
+  elements, variable types, and queries. Options are specified as a
+  comma separated list wrapped in braces.</p>
+  <p>For instance, to specify that an <code>int</code> should be encoded
+  as a little-endian unsigned 8-bit integer, the following options would
+  be included after the number.</p>
+  <pre class="language-fql"><code>3548[u8,lil]</code></pre>
+  <p>Similarly, if a variable should only match against a big-endian
+  32-bit float then the following option would be included after the
+  <code>num</code> type.</p>
+  <pre class="language-fql"><code>&lt;num[f32,big]&gt;</code></pre>
+  <p>Query options are specified on the line before the query. For
+  instance, to specify that a range-read query should read in reverse
+  and only read 5 items, the following options would be included before
+  the query.</p>
+  <pre class="language-fql query"><code>[reverse,limit:5]
+/my/integers(&lt;int&gt;)=nil</code></pre>
+  <p>Notice that the <code>limit</code> option includes an argument
+  after the colon. Some options include a single argument to further
+  specify the option’s behavior.</p>
   <h1 id="basic-queries">Basic Queries</h1>
-  <p>FQL queries can write/clear a single key-value, read one or more
+  <p>FQL queries can mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of
-  Go code are included to show how the queries interact with the FDB
-  API.</p>
+  Go code are included which approximate how the queries interact with
+  the Foundation DB API.</p>
   <h2 id="mutations">Mutations</h2>
-  <p>Queries lacking <a href="#variables-schemas">variables</a> and the
-  <code>...</code> token perform mutations on the database by either
-  writing or clearing a key-value.</p>
+  <p>Queries lacking <a href="#holes-schemas">holes</a> perform
+  mutations on the database by either writing or clearing a
+  key-value.</p>
   <blockquote>
-  <p>Queries lacking a value altogether imply an empty <a
-  href="#variables-schemas">variable</a> as the value and should not be
+  <p>❗ Queries lacking a value altogether imply an empty <a
+  href="#holes-schemas">variable</a> as the value and should not be
   confused with mutation queries.</p>
   </blockquote>
   <p>Mutation queries with a <a href="#data-elements">data element</a>
@@ -332,16 +482,13 @@
   return nil, nil
 })</code></pre>
   <h2 id="reads">Reads</h2>
-  <p>Queries containing a <a href="#variables-schemas">variable</a> or
-  the <code>...</code> token read one or more key-values. The query
-  defines a schema which the returned key-values must conform to.</p>
-  <p>If the variable or <code>...</code> token only appears in the
-  query’s value, then it returns a single key-value, if one matching the
-  schema exists.</p>
+  <p>Queries containing <a href="#holes-schemas">holes</a> read one or
+  more key-values. If the holes only appears in the value, then a single
+  key-value is returned, if one matching the schema exists.</p>
   <blockquote>
-  <p>Queries lacking a value altogether imply an empty <a
-  href="#variables-schemas">variable</a> as the value, and are therefore
-  read queries.</p>
+  <p>❗ Queries lacking a value altogether imply an empty <a
+  href="#holes-schemas">variable</a> as the value which makes them read
+  queries.</p>
   </blockquote>
   <pre class="language-fql query"><code>/my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
   <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
@@ -387,9 +534,9 @@
   // No value decoding...
   return tr.MustGet(dir.Pack(tuple.Tuple{10139})), nil
 })</code></pre>
-  <p>Queries with <a href="#variables-schemas">variables</a> or the
-  <code>...</code> token in their key (and optionally in their value)
-  result in a range of key-values being read.</p>
+  <p>Queries with <a href="#holes-schemas">variables</a> in their key
+  (and optionally in their value) result in a range of key-values being
+  read.</p>
   <pre class="language-fql query"><code>/people(&quot;coders&quot;,...)</code></pre>
   <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
   dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
@@ -532,10 +679,8 @@
   return results, nil
 })</code></pre>
   <h1 id="advanced-queries">Advanced Queries</h1>
-  <p>Besides basic <a
-  href="https://en.wikipedia.org/wiki/Create,_read,_update_and_delete">CRUD</a>
-  operations, FQL is capable of performing indirection and aggregation
-  queries.</p>
+  <p>Besides basic CRUD operations, FQL is capable of performing
+  indirection and aggregation queries.</p>
   <h2 id="indirection">Indirection</h2>
   <blockquote>
   <p>🚧 Indirection is still being implemented.</p>
@@ -579,10 +724,11 @@
   </blockquote>
   <p>Aggregation queries read multiple key-values and combine them into
   a single output key-value.</p>
-  <p>Foundation DB performs best when key-values are kept small. When <a
-  href="https://apple.github.io/foundationdb/blob.html">storing large
-  blobs</a>, the blobs are usually split into 10 kB chunks and stored as
-  values. The respective keys contain the byte offset of the chunks.</p>
+  <p>Foundation DB performs best when key-values are kept small. When
+  storing large <a
+  href="https://apple.github.io/foundationdb/blob.html">blobs</a>, the
+  blobs are usually split into 10 kB chunks and stored as values. The
+  respective keys contain the byte offset of the chunks.</p>
   <pre class="language-fql query"><code>/blob(
   &quot;audio.wav&quot;,  % The identifier of the blob.
   &lt;offset:int&gt;, % The byte offset within the blob.
@@ -639,7 +785,7 @@
   exploring the data, similar to <code>psql</code> for Postgres. This
   libraries powering this application are exposed as a Go API, allowing
   FQL to be used as a Foundation DB <a
-  href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>.</p>
+  href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>;</p>
   <h2 id="command-line">Command Line</h2>
   <div class="language-bash">
   <h3 id="headless">Headless</h3>
@@ -770,15 +916,11 @@ func _() {
   <p>By summer of 2025, I’d like to have the following items
   completed:</p>
   <ul>
-  <li><p>Indirection &amp; aggregation queries implemented as described
-  in this document.</p></li>
+  <li><p>Implement all features described in this document.</p></li>
   <li><p>Design and document the syntax for doing the following
   features.</p>
   <ul>
   <li><p>Separating queries into multiple transactions.</p></li>
-  <li><p>Set options at both the query &amp; transaction level. Options
-  control things like range-read direction &amp; limits, endianness of
-  values, and whether write queries are allowed.</p></li>
   <li><p>Meta language for aliasing queries or parts of queries. This
   language would provide type-safe templating with the goal of reducing
   repetition in a query file.</p></li>

@@ -15,12 +15,16 @@
       /\d+/,
       /\.?/,
       /\d*/,
+      /e?/,
+      /\d*/,
     ],
     beginScope: {
       1: 'accent',
       2: 'number',
       3: 'accent',
       4: 'number',
+      5: 'accent',
+      6: 'number',
     },
   };
 
@@ -71,7 +75,7 @@
 
   const DSTRING = {
     scope: 'section',
-    begin: /[\w\.]/,
+    begin: /[\w\.\-]/,
   };
 
   const KEYWORD = {
@@ -79,11 +83,14 @@
     beginKeywords: [
       'true',
       'false',
+      '-inf',
+      'inf',
+      '-nan',
+      'nan',
       'clear',
       'nil',
       'any',
       'int',
-      'uint',
       'bool',
       'num',
       'bint',
@@ -94,7 +101,60 @@
       'append',
       'sum',
       'count',
+      'big',
+      'lil',
+      'i8',
+      'i16',
+      'i32',
+      'i64',
+      'u8',
+      'u16',
+      'u32',
+      'u64',
+      'f32',
+      'f64',
+      'f80',
+      'reverse',
+      'limit',
     ].join(' '),
+  };
+
+  const OPTIONS = {
+    scope: 'options',
+    begin: /\[/,
+    end: /]/,
+    keywords: {
+      $$pattern: /[^,:]+/,
+      keyword: [
+        'big',
+        'lil',
+        'i8',
+        'i16',
+        'i32',
+        'i64',
+        'u8',
+        'u16',
+        'u32',
+        'u64',
+        'f32',
+        'f64',
+        'f80',
+        'reverse',
+        'limit',
+      ],
+    },
+    contains: [
+      {
+        begin: [
+          /:/,
+          /[^,\]]/
+        ],
+        beginScope: {
+          1: 'option',
+          2: 'number',
+        },
+      },
+    ],
   };
 
   const VARIABLE = {
@@ -106,7 +166,6 @@
       keyword: [
         'any',
         'int',
-        'uint',
         'bool',
         'num',
         'bint',
@@ -119,6 +178,9 @@
         'count',
       ],
     },
+    contains: [
+      OPTIONS,
+    ],
   };
 
   const REFERENCE = {
@@ -157,6 +219,7 @@
       UUID,
       BYTES,
       NUMBER,
+      OPTIONS,
     ],
   };
 
@@ -173,6 +236,7 @@
       UUID,
       BYTES,
       NUMBER,
+      OPTIONS,
     ],
   };
 
@@ -184,6 +248,7 @@
       reference: 'variable',
       escape: 'subst',
       accent: 'title',
+      options: 'title',
     },
     contains: [
       COMMENT, 
@@ -197,6 +262,7 @@
       UUID,
       BYTES,
       NUMBER,
+      OPTIONS,
       { // Highlight lone bar for inline text.
         scope: 'variable',
         begin: /\|/,
