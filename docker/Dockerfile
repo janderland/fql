@@ -5,8 +5,12 @@ RUN apt-get update &&\
     apt-get install --no-install-recommends -y \
       build-essential=12.9 \
       ca-certificates=20230311 \
-      git=1:2.39.5-0+deb12u1 \
-      curl=7.88.1-10+deb12u7 &&\
+      # git=1:2.39.5-0+deb12u1 \
+      # curl=7.88.1-10+deb12u7 &&\
+      # Specific versions of git/curl break every
+      # couple weeks.
+      # TODO: Find a better way to pin versions.
+      git curl &&\
     apt-get clean &&\
     rm -rf /var/lib/apt/lists/*
 
