@@ -23,8 +23,8 @@
 /user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,0x0ffa83,42.2)=nil</code></pre>
     <p>FQL is an <a href="https://github.com/janderland/fql">open
     source</a> query language for <a
-    href="https://www.foundationdb.org/">Foundation DB</a>. It’s query
-    semantics mirror Foundation DB’s <a
+    href="https://www.foundationdb.org/">FoundationDB</a>. It’s query
+    semantics mirror FoundationDB’s <a
     href="https://apple.github.io/foundationdb/data-modeling.html">core
     data model</a>. Fundamental patterns like range-reads and
     indirection are first class citizens.</p>
@@ -440,7 +440,7 @@
   <p>FQL queries can mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of
   Go code are included which approximate how the queries interact with
-  the Foundation DB API.</p>
+  the FoundationDB API.</p>
   <h2 id="mutations">Mutations</h2>
   <p>Queries lacking <a href="#holes-schemas">holes</a> perform
   mutations on the database by either writing or clearing a
@@ -613,7 +613,7 @@
   token determines the range read prefix used by FQL. For this
   particular query, the prefix would be as follows:</p>
   <pre class="language-fql query"><code>/people(3392)</code></pre>
-  <p>Foundation DB will stream all key-values with this prefix to the
+  <p>FoundationDB will stream all key-values with this prefix to the
   client. As they are received, the client will filter out key-values
   which don’t match the query’s schema. Below you can see a Go
   implementation of how this filtering would work.</p>
@@ -687,9 +687,8 @@
   </blockquote>
   <p>Indirection queries are similar to SQL joins. They associate
   different groups of key-values via some shared data element.</p>
-  <p>In Foundation DB, indexes are implemented using indirection.
-  Suppose we have a large list of people, one key-value for each
-  person.</p>
+  <p>In FoundationDB, indexes are implemented using indirection. Suppose
+  we have a large list of people, one key-value for each person.</p>
   <pre class="language-fql query"><code>/people(
   &lt;int&gt;, % ID
   &lt;str&gt;, % First Name
@@ -724,7 +723,7 @@
   </blockquote>
   <p>Aggregation queries read multiple key-values and combine them into
   a single output key-value.</p>
-  <p>Foundation DB performs best when key-values are kept small. When
+  <p>FoundationDB performs best when key-values are kept small. When
   storing large <a
   href="https://apple.github.io/foundationdb/blob.html">blobs</a>, the
   blobs are usually split into 10 kB chunks and stored as values. The

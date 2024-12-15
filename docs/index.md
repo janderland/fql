@@ -15,8 +15,8 @@ include-before: |
   ```
   FQL is an [open source](https://github.com/janderland/fql)
   query language for
-  [Foundation DB](https://www.foundationdb.org/). It's query
-  semantics mirror Foundation DB's [core data
+  [FoundationDB](https://www.foundationdb.org/). It's query
+  semantics mirror FoundationDB's [core data
   model](https://apple.github.io/foundationdb/data-modeling.html).
   Fundamental patterns like range-reads and indirection are first
   class citizens.
@@ -437,7 +437,7 @@ specify the option's behavior.
 FQL queries can mutate a single key-value, read one or more
 key-values, or list directories. Throughout this section,
 snippets of Go code are included which approximate how the
-queries interact with the Foundation DB API.
+queries interact with the FoundationDB API.
 
 ## Mutations
 
@@ -670,7 +670,7 @@ particular query, the prefix would be as follows:
 /people(3392)
 ```
 
-Foundation DB will stream all key-values with this prefix to
+FoundationDB will stream all key-values with this prefix to
 the client. As they are received, the client will filter out
 key-values which don't match the query's schema. Below you
 can see a Go implementation of how this filtering would
@@ -752,7 +752,7 @@ indirection and aggregation queries.
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
 
-In Foundation DB, indexes are implemented using indirection.
+In FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
 each person.
 
@@ -813,7 +813,7 @@ subset from the "people" directory.
 Aggregation queries read multiple key-values and combine
 them into a single output key-value.
 
-Foundation DB performs best when key-values are kept small.
+FoundationDB performs best when key-values are kept small.
 When storing large [blobs][], the blobs are usually split
 into 10 kB chunks and stored as values. The respective keys
 contain the byte offset of the chunks.
