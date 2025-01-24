@@ -185,13 +185,13 @@
   href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">floating-point</a>
   and will snap to the nearest representable number.</p>
   <pre class="language-fql query"><code>/float(-inf,nan)=1.234e4732</code></pre>
-  <p>The <code>str</code> type is the only element type allowed in
+  <p>The <code>str</code> type may be instantiated as a unicode string
+  wrapped in double quotes. It is the only element type allowed in
   directory paths. If a directory string only contains alphanumericals,
-  underscores, dashes, and periods then the quotes may not be
-  included.</p>
+  underscores, dashes, and periods then the quotes may be excluded.</p>
   <pre class="language-fql query"><code>/quoteless-string_in.dir(true)=false
-/&quot;other ch@r@cters must be quoted!&quot;(20)=32.3</code></pre>
-  <p>Quoted strings may contain quotes via backslash escapes.</p>
+/&quot;other ch@r@cters must be &#39;quoted&#39;&quot;(20)=32.3</code></pre>
+  <p>Quoted strings may contain double quotes via backslash escapes.</p>
   <pre class="language-fql query"><code>/escape(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
   <p>The hexidecimal numbers of the <code>uuid</code> and
   <code>bytes</code> types may be upper, lower, or mixed case.</p>
@@ -205,12 +205,12 @@
   <p>For data elements in the key, the directory and tuple layers are
   responsible for data encoding. In the value, the tuple layer may be
   used, but FQL supports other encodings known as “raw values”.</p>
-  <pre><code>/tuple_value()={4000}
-/raw_value()=4000</code></pre>
+  <pre><code>/tuple_value(42)=(4000)
+/raw_value(43)=4000</code></pre>
   <p>As a raw value, the <code>int</code> type doesn’t support an
   encoding for arbitrarily large integers. As a value, you’ll need to
   encode such integers using the tuple layer.</p>
-  <pre class="language-fql query"><code>/int()={9223372036854775808}</code></pre>
+  <pre class="language-fql query"><code>/int(&quot;big int&quot;)=(9223372036854775808)</code></pre>
   <p>Below, you can see the default encodings of each type when used as
   a raw value.</p>
   <div>

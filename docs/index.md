@@ -150,7 +150,7 @@ mirror the types of elements found in the [tuple layer][].
 
 The `nil` type may only be instantiated as the element
 `nil`. The `int` type may be instantiated as any arbitrarily
-large integer. 
+large integer.
 
 ```
 /int(9223372036854775808)=nil
@@ -169,17 +169,19 @@ snap to the nearest representable number.
 /float(-inf,nan)=1.234e4732
 ```
 
-The `str` type is the only element type allowed in directory
-paths. If a directory string only contains alphanumericals,
-underscores, dashes, and periods then the quotes may not be
-included.
+The `str` type may be instantiated as a unicode string
+wrapped in double quotes. It is the only element type
+allowed in directory paths. If a directory string only
+contains alphanumericals, underscores, dashes, and periods
+then the quotes may be excluded.
 
 ```language-fql {.query}
 /quoteless-string_in.dir(true)=false
-/"other ch@r@cters must be quoted!"(20)=32.3
+/"other ch@r@cters must be 'quoted'"(20)=32.3
 ```
 
-Quoted strings may contain quotes via backslash escapes.
+Quoted strings may contain double quotes via backslash
+escapes.
 
 ```language-fql {.query}
 /escape("I said \"hello\"")=nil
@@ -209,8 +211,8 @@ layer may be used, but FQL supports other encodings known as
 "raw values".
 
 ```
-/tuple_value()={4000}
-/raw_value()=4000
+/tuple_value(42)=(4000)
+/raw_value(43)=4000
 ```
 
 As a raw value, the `int` type doesn't support an encoding
@@ -218,7 +220,7 @@ for arbitrarily large integers. As a value, you'll need to
 encode such integers using the tuple layer.
 
 ```language-fql {.query}
-/int()={9223372036854775808}
+/int("big int")=(9223372036854775808)
 ```
 
 Below, you can see the default encodings of each type when
