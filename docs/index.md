@@ -15,8 +15,8 @@ include-before: |
   ```
   FQL is an [open source](https://github.com/janderland/fql)
   query language for
-  [Foundation DB](https://www.foundationdb.org/). It's query
-  semantics mirror Foundation DB's [core data
+  [FoundationDB](https://www.foundationdb.org/). It's query
+  semantics mirror FoundationDB's [core data
   model](https://apple.github.io/foundationdb/data-modeling.html).
   Fundamental patterns like range-reads and indirection are first
   class citizens.
@@ -50,7 +50,7 @@ The query above has a variable `<int>` as its value.
 Variables act as placeholders for any of the supported [data
 elements](#data-elements).
 
-FQL queries can also perform range reads & filtering by
+FQL queries may also perform range reads & filtering by
 including a variable in the key's tuple. The query below
 will return all key-values which conform to the schema
 defined by the query.
@@ -64,7 +64,7 @@ defined by the query.
 /my/directory(42,"tuple")=nil
 ```
 
-All key-values with a certain key prefix can be range read
+All key-values with a certain key prefix may be range read
 by ending the key's tuple with `...`.
 
 ```language-fql {.query}
@@ -103,14 +103,14 @@ the read on all directory paths matching the schema.
 /your/directory("my","tuple")=nil
 ```
 
-Key-values can be cleared by using the special `clear` token
+Key-values may be cleared by using the special `clear` token
 as the value.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=clear
 ```
 
-The directory layer can be queried by only including
+The directory layer may be queried by only including
 a directory path.
 
 ```language-fql {.query}
@@ -256,7 +256,7 @@ is invalid.
 ```
 
 By default, [variables](#holes-&-schemas) will decode any
-encoding for its types. Options can be applied to
+encoding for its types. Options may be applied to
 a variable's types to limit which encoding will match the
 schema.
 
@@ -325,7 +325,7 @@ element types.
 /user(21,"",nil)=nil
 ```
 
-Before the type list, a variable can be given a name. This
+Before the type list, a variable may be given a name. This
 name is used to reference the variable in subsequent
 queries, allowing for [index indirection](#indirection).
 
@@ -434,10 +434,10 @@ specify the option's behavior.
 
 # Basic Queries
 
-FQL queries can mutate a single key-value, read one or more
+FQL queries may mutate a single key-value, read one or more
 key-values, or list directories. Throughout this section,
 snippets of Go code are included which approximate how the
-queries interact with the Foundation DB API.
+queries interact with the FoundationDB API.
 
 ## Mutations
 
@@ -670,7 +670,7 @@ particular query, the prefix would be as follows:
 /people(3392)
 ```
 
-Foundation DB will stream all key-values with this prefix to
+FoundationDB will stream all key-values with this prefix to
 the client. As they are received, the client will filter out
 key-values which don't match the query's schema. Below you
 can see a Go implementation of how this filtering would
@@ -752,7 +752,7 @@ indirection and aggregation queries.
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
 
-In Foundation DB, indexes are implemented using indirection.
+In FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
 each person.
 
@@ -813,7 +813,7 @@ subset from the "people" directory.
 Aggregation queries read multiple key-values and combine
 them into a single output key-value.
 
-Foundation DB performs best when key-values are kept small.
+FoundationDB performs best when key-values are kept small.
 When storing large [blobs][], the blobs are usually split
 into 10 kB chunks and stored as values. The respective keys
 contain the byte offset of the chunks.
