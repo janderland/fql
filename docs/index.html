@@ -68,9 +68,9 @@
   The queries look like key-values encoded using the directory &amp;
   tuple layers.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
-  <p>FQL queries may define a single key-value to be written (as shown
-  above) or may define a set of key-values to be read (as shown
-  below).</p>
+  <p>FQL queries may define a single key-value to be written, as shown
+  above, or may define a set of key-values to be read, as shown
+  below.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;int&gt;</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>The query above has a variable <code>&lt;int&gt;</code> as its
@@ -83,6 +83,9 @@
   <pre class="language-fql query"><code>/my/directory(&lt;&gt;,&quot;tuple&quot;)=nil</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;your&quot;,&quot;tuple&quot;)=nil
 /my/directory(42,&quot;tuple&quot;)=nil</code></pre>
+  <p>The variable in the query above lacks a type. This means the schema
+  allows any <a href="#data-elements">data-element</a> at the variable’s
+  position.</p>
   <p>All key-values with a certain key prefix may be range read by
   ending the key’s tuple with <code>...</code>.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)=&lt;&gt;</code></pre>
