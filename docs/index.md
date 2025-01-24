@@ -34,9 +34,9 @@ queries look like key-values encoded using the directory
 /my/directory("my","tuple")=4000
 ```
 
-FQL queries may define a single key-value to be written (as
-shown above) or may define a set of key-values to be read
-(as shown below).
+FQL queries may define a single key-value to be written, as
+shown above, or may define a set of key-values to be read,
+as shown below.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=<int>
@@ -64,6 +64,10 @@ defined by the query.
 /my/directory("your","tuple")=nil
 /my/directory(42,"tuple")=nil
 ```
+
+The variable in the query above lacks a type. This means the
+schema allows any [data-element](#data-elements) at the
+variable's position.
 
 All key-values with a certain key prefix may be range read
 by ending the key's tuple with `...`.
