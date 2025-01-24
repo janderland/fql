@@ -34,9 +34,9 @@ queries look like key-values encoded using the directory
 /my/directory("my","tuple")=4000
 ```
 
-FQL queries may define a single key-value to be written, as
-shown above, or may define a set of key-values to be read,
-as shown below.
+FQL queries may define a single key-value to be written (as
+shown above) or may define a set of key-values to be read
+(as shown below).
 
 ```language-fql {.query}
 /my/directory("my","tuple")=<int>
@@ -48,7 +48,8 @@ as shown below.
 
 The query above has a variable `<int>` as its value.
 Variables act as placeholders for any of the supported [data
-elements](#data-elements).
+elements](#data-elements). When variables are included as
+a value, they tell FQL how to decode the value bytes.
 
 FQL queries may also perform range reads & filtering by
 including a variable in the key's tuple. The query below
