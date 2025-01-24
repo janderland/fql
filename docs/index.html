@@ -68,14 +68,15 @@
   The queries look like key-values encoded using the directory &amp;
   tuple layers.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
-  <p>FQL queries may define a single key-value to be written, as shown
-  above, or may define a set of key-values to be read, as shown
-  below.</p>
+  <p>FQL queries may define a single key-value to be written (as shown
+  above) or may define a set of key-values to be read (as shown
+  below).</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;int&gt;</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>The query above has a variable <code>&lt;int&gt;</code> as its
   value. Variables act as placeholders for any of the supported <a
-  href="#data-elements">data elements</a>.</p>
+  href="#data-elements">data elements</a>. When variables are included
+  as a value, they tell FQL how to decode the value bytes.</p>
   <p>FQL queries may also perform range reads &amp; filtering by
   including a variable in the key’s tuple. The query below will return
   all key-values which conform to the schema defined by the query.</p>
