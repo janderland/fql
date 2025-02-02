@@ -205,10 +205,10 @@ contain any of the data elements.
 
 # Element Encoding
 
-For data elements in the key, the directory and tuple layers
-are responsible for data encoding. In the value, the tuple
-layer may be used, but FQL supports other encodings known as
-"raw values".
+For encoding data elements in the key, FQL uses the
+directory and tuple layers. For encoding data elements in
+the value, the tuple layer may be used, but FQL also
+supports other encodings known as "raw values".
 
 ```
 /tuple_value(42)=(4000)
@@ -228,7 +228,7 @@ used as a raw value.
 
 <div>
 
-| Type    | Encoding                           |
+| Type    | Raw Value Encoding                 |
 |:--------|:-----------------------------------|
 | `nil`   | empty byte array                   |
 | `bool`  | single byte, `0x00` means false    |
