@@ -139,6 +139,7 @@ Lines starting with `%` are ignored as commas.
 /my/directory(5)=nil 
 /my/directory(6)=nil
 
+
 ```
 
 # Data Elements
@@ -150,7 +151,7 @@ mirror the types of elements found in the [tuple layer][].
 
 <div>
 
-| Type    | Description    | Example                                |
+| Type    | Description    | Examples                               |
 |:--------|:---------------|:---------------------------------------|
 | `nil`   | Empty Type     | `nil`                                  |
 | `bool`  | Boolean        | `true` `false`                         |
@@ -165,21 +166,21 @@ mirror the types of elements found in the [tuple layer][].
 
 The `nil` type may only be instantiated as the element
 `nil`. The `int` type may be instantiated as any arbitrarily
-large integer.
+large integer. For example, the integer in the query below
+doesn't fit in a 64-bit value.
 
 ```
-% The integer below won't fit in 64-bits.
-/big_num(9223372036854775808)=nil
+/big_num(92233720368547758084)=nil
 ```
 
-The `num` type may be instantiated as any real number
-between `-1.18e4932` and `1.18e4932`, and may use scientific
-notation. The type may also be instantiated as the tokens
-`-inf`, `inf`, `-nan`, or `nan`. The element is represented
-as an 80-bit extended double [floating-point][] and will
-snap to the nearest representable number.
+The `num` type may be instantiated as any real number which
+can be approximated by an [80-bit floating point][] value,
+in accordance with IEEE 754. Scientific notation may be
+used. The type may also be instantiated as the tokens
+`-inf`, `inf`, `-nan`, or `nan`. The implementation
+determines the exact range of allowed values.
 
-[floating-point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
+[80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```language-fql {.query}
 /float(-inf,nan)=1.234e4732
@@ -189,22 +190,19 @@ The `str` type may be instantiated as a unicode string
 wrapped in double quotes. It is the only element type
 allowed in directory paths. If a directory string only
 contains alphanumericals, underscores, dashes, and periods
-then the quotes may be excluded.
+then the quotes may be excluded. Quoted strings may contain
+double quotes via backslash escapes.
 
 ```language-fql {.query}
-/quoteless-string_in.dir(true)=false
+/quoteless-string_in.dir("escape \"wow\"")=false
 /"other ch@r@cters must be 'quoted'"(20)=32.3
 ```
 
-Quoted strings may contain double quotes via backslash
-escapes.
-
-```language-fql {.query}
-/escape("I said \"hello\"")=nil
-```
-
-The hexidecimal numbers of the `uuid` and `bytes` types may
-be upper, lower, or mixed case.
+The `uuid` and `bytes` may be instantiated using upper,
+lower, or mixed case hexidecimal numbers. For `uuid`, the
+numbers are grouped in the standard 8, 4, 4, 4, 12 format.
+For `bytes`, any even number of hexidecimal digits are
+prefixed by `0x`.
 
 ```language-fql {.query}
 /hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
