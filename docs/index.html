@@ -110,6 +110,10 @@
   path.</p>
   <pre class="language-fql query"><code>/my/&lt;&gt;</code></pre>
   <pre class="language-fql result"><code>/my/directory</code></pre>
+  <p>Lines starting with <code>%</code> are ignored as commas.</p>
+  <pre class="language-fql query"><code>% The query below scans the
+% entire &#39;/my/dir&#39; directory.
+/my/dir(...)</code></pre>
   <h1 id="data-elements">Data Elements</h1>
   <p>An FQL query contains instances of data elements. These mirror the
   types of elements found in the <a
@@ -175,7 +179,8 @@
   <p>The <code>nil</code> type may only be instantiated as the element
   <code>nil</code>. The <code>int</code> type may be instantiated as any
   arbitrarily large integer.</p>
-  <pre><code>/int(9223372036854775808)=nil</code></pre>
+  <pre><code>% The integer below won&#39;t fit in 64-bits.
+/big_num(9223372036854775808)=nil</code></pre>
   <p>The <code>num</code> type may be instantiated as any real number
   between <code>-1.18e4932</code> and <code>1.18e4932</code>, and may
   use scientific notation. The type may also be instantiated as the
@@ -202,9 +207,10 @@
   <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
 /tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
   <h1 id="element-encoding">Element Encoding</h1>
-  <p>For data elements in the key, the directory and tuple layers are
-  responsible for data encoding. In the value, the tuple layer may be
-  used, but FQL supports other encodings known as “raw values”.</p>
+  <p>For encoding data elements in the key, FQL uses the directory and
+  tuple layers. For encoding data elements in the value, the tuple layer
+  may be used, but FQL also supports other encodings known as “raw
+  values”.</p>
   <pre><code>/tuple_value(42)=(4000)
 /raw_value(43)=4000</code></pre>
   <p>As a raw value, the <code>int</code> type doesn’t support an
@@ -218,7 +224,7 @@
   <thead>
   <tr>
   <th style="text-align: left;">Type</th>
-  <th style="text-align: left;">Encoding</th>
+  <th style="text-align: left;">Raw Value Encoding</th>
   </tr>
   </thead>
   <tbody>
