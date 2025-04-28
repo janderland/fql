@@ -113,7 +113,12 @@
   <p>Lines starting with <code>%</code> are ignored as commas.</p>
   <pre class="language-fql query"><code>% The query below scans the
 % entire &#39;/my/dir&#39; directory.
-/my/dir(...)</code></pre>
+/my/directory(...)</code></pre>
+  <pre class="language-fql result"><code>
+/my/directory(5)=nil 
+/my/directory(6)=nil
+
+</code></pre>
   <h1 id="data-elements">Data Elements</h1>
   <p>An FQL query contains instances of data elements. These mirror the
   types of elements found in the <a
@@ -125,7 +130,7 @@
   <tr>
   <th style="text-align: left;">Type</th>
   <th style="text-align: left;">Description</th>
-  <th style="text-align: left;">Example</th>
+  <th style="text-align: left;">Examples</th>
   </tr>
   </thead>
   <tbody>
@@ -178,28 +183,30 @@
   </div>
   <p>The <code>nil</code> type may only be instantiated as the element
   <code>nil</code>. The <code>int</code> type may be instantiated as any
-  arbitrarily large integer.</p>
-  <pre><code>% The integer below won&#39;t fit in 64-bits.
-/big_num(9223372036854775808)=nil</code></pre>
+  arbitrarily large integer. For example, the integer in the query below
+  doesn’t fit in a 64-bit value.</p>
+  <pre><code>/big_num(92233720368547758084)=nil</code></pre>
   <p>The <code>num</code> type may be instantiated as any real number
-  between <code>-1.18e4932</code> and <code>1.18e4932</code>, and may
-  use scientific notation. The type may also be instantiated as the
-  tokens <code>-inf</code>, <code>inf</code>, <code>-nan</code>, or
-  <code>nan</code>. The element is represented as an 80-bit extended
-  double <a
-  href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">floating-point</a>
-  and will snap to the nearest representable number.</p>
+  which can be approximated by an <a
+  href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">80-bit
+  floating point</a> value, in accordance with IEEE 754. Scientific
+  notation may be used. The type may also be instantiated as the tokens
+  <code>-inf</code>, <code>inf</code>, <code>-nan</code>, or
+  <code>nan</code>. The implementation determines the exact range of
+  allowed values.</p>
   <pre class="language-fql query"><code>/float(-inf,nan)=1.234e4732</code></pre>
   <p>The <code>str</code> type may be instantiated as a unicode string
   wrapped in double quotes. It is the only element type allowed in
   directory paths. If a directory string only contains alphanumericals,
-  underscores, dashes, and periods then the quotes may be excluded.</p>
-  <pre class="language-fql query"><code>/quoteless-string_in.dir(true)=false
+  underscores, dashes, and periods then the quotes may be excluded.
+  Quoted strings may contain double quotes via backslash escapes.</p>
+  <pre class="language-fql query"><code>/quoteless-string_in.dir(&quot;escape \&quot;wow\&quot;&quot;)=false
 /&quot;other ch@r@cters must be &#39;quoted&#39;&quot;(20)=32.3</code></pre>
-  <p>Quoted strings may contain double quotes via backslash escapes.</p>
-  <pre class="language-fql query"><code>/escape(&quot;I said \&quot;hello\&quot;&quot;)=nil</code></pre>
-  <p>The hexidecimal numbers of the <code>uuid</code> and
-  <code>bytes</code> types may be upper, lower, or mixed case.</p>
+  <p>The <code>uuid</code> and <code>bytes</code> may be instantiated
+  using upper, lower, or mixed case hexidecimal numbers. For
+  <code>uuid</code>, the numbers are grouped in the standard 8, 4, 4, 4,
+  12 format. For <code>bytes</code>, any even number of hexidecimal
+  digits are prefixed by <code>0x</code>.</p>
   <pre class="language-fql query"><code>/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9</code></pre>
   <p>The <code>tup</code> type may contain any of the data elements,
   including sub-tuples. Like tuples, a query’s value may contain any of
