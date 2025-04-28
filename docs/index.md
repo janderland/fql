@@ -135,11 +135,8 @@ Lines starting with `%` are ignored as commas.
 ```
 
 ```language-fql {.result} 
-
 /my/directory(5)=nil 
 /my/directory(6)=nil
-
-
 ```
 
 # Data Elements
