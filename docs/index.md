@@ -126,6 +126,21 @@ a directory path.
 /my/directory
 ```
 
+Lines starting with `%` are ignored as commas.
+
+```language-fql {.query}
+% The query below scans the
+% entire '/my/dir' directory.
+/my/directory(...)
+```
+
+```language-fql {.result} 
+
+/my/directory(5)=nil 
+/my/directory(6)=nil
+
+```
+
 # Data Elements
 
 An FQL query contains instances of data elements. These
@@ -153,7 +168,8 @@ The `nil` type may only be instantiated as the element
 large integer.
 
 ```
-/int(9223372036854775808)=nil
+% The integer below won't fit in 64-bits.
+/big_num(9223372036854775808)=nil
 ```
 
 The `num` type may be instantiated as any real number
