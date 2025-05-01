@@ -172,10 +172,10 @@ doesn't fit in a 64-bit value.
 
 The `num` type may be instantiated as any real number which
 can be approximated by an [80-bit floating point][] value,
-in accordance with IEEE 754. Scientific notation may be
-used. The type may also be instantiated as the tokens
-`-inf`, `inf`, `-nan`, or `nan`. The implementation
-determines the exact range of allowed values.
+in accordance with IEEE 754. The implementation determines
+the exact range of allowed values. Scientific notation may
+be used. The type may also be instantiated as the tokens
+`-inf`, `inf`, `-nan`, or `nan`. 
 
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
