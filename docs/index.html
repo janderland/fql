@@ -186,11 +186,11 @@
   <p>The <code>num</code> type may be instantiated as any real number
   which can be approximated by an <a
   href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">80-bit
-  floating point</a> value, in accordance with IEEE 754. Scientific
-  notation may be used. The type may also be instantiated as the tokens
-  <code>-inf</code>, <code>inf</code>, <code>-nan</code>, or
-  <code>nan</code>. The implementation determines the exact range of
-  allowed values.</p>
+  floating point</a> value, in accordance with IEEE 754. The
+  implementation determines the exact range of allowed values.
+  Scientific notation may be used. The type may also be instantiated as
+  the tokens <code>-inf</code>, <code>inf</code>, <code>-nan</code>, or
+  <code>nan</code>.</p>
   <pre class="language-fql query"><code>/float(-inf,nan)=1.234e4732</code></pre>
   <p>The <code>str</code> type may be instantiated as a unicode string
   wrapped in double quotes. It is the only element type allowed in
