@@ -34,14 +34,11 @@
     Elements</a></li>
     <li><a href="#element-encoding" id="toc-element-encoding">Element
     Encoding</a></li>
-    <li><a href="#key" id="toc-key">Key</a>
-    <ul>
-    <li><a href="#decoding" id="toc-decoding">Decoding</a></li>
-    </ul></li>
+    <li><a href="#key" id="toc-key">Key</a></li>
     <li><a href="#value" id="toc-value">Value</a>
     <ul>
     <li><a href="#encoding" id="toc-encoding">Encoding</a></li>
-    <li><a href="#decoding-1" id="toc-decoding-1">Decoding</a></li>
+    <li><a href="#decoding" id="toc-decoding">Decoding</a></li>
     </ul></li>
     <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#holes-schemas" id="toc-holes-schemas">Holes &amp;
@@ -220,7 +217,8 @@
   how to encode data elements based on their data type, position within
   the query, and associated options.</p>
   <h1 id="key">Key</h1>
-  <p>Keys are always encoded using the directory and tuple layers.</p>
+  <p>Keys are always encoded using the directory and tuple layers. Write
+  queries create directories if they do not exist.</p>
   <pre class="language-fql query"><code>/directory/&quot;p@th&quot;(nil, 57223, 0xa8ff03)=nil</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
   dir, err := directory.CreateOrOpen(tr, []string{&quot;directory&quot;, &quot;p@th&quot;}, nil)
@@ -231,7 +229,10 @@
   tr.Set(dir.Pack(tuple.Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
   return nil, nil
 })</code></pre>
-  <p>The same layers are used for decoding the key.</p>
+  <p>The same layers are used for decoding the key. If a query reads
+  from a directory which doesn’t exist, nothing is returned. The tuple
+  layer encodes metadata about element types, allowing FQL to decode
+  keys without a schema.</p>
   <pre class="language-fql query"><code>/directory/&lt;&gt;(...)</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
   dir, err := directory.Open(tr, []string{&quot;directory&quot;}, nil)
@@ -269,10 +270,9 @@
   }
   return results, nil
 })</code></pre>
-  <h2 id="decoding">Decoding</h2>
   <h1 id="value">Value</h1>
   <h2 id="encoding">Encoding</h2>
-  <h2 id="decoding-1">Decoding</h2>
+  <h2 id="decoding">Decoding</h2>
   <h1 id="options">Options</h1>
   <p>For data elements in the value, FoundationDB lacks an encoding
   convention. FQL supports several value encodings which ideally cover
