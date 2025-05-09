@@ -212,7 +212,8 @@ options.
 # Key
 
 Keys are always encoded using the directory and tuple
-layers.
+layers. Write queries create directories if they do not
+exist.
 
 ```language-fql {.query}
 /directory/"p@th"(nil, 57223, 0xa8ff03)=nil
@@ -230,7 +231,10 @@ db.Transact(func(tr fdb.Transaction) (any, error) {
 })
 ```
 
-The same layers are used for decoding the key.
+The same layers are used for decoding the key. If a query
+reads from a directory which doesn't exist, nothing is
+returned. The tuple layer encodes metadata about element
+types, allowing FQL to decode keys without a schema.
 
 ```language-fql {.query}
 /directory/<>(...)
@@ -276,6 +280,8 @@ db.Transact(func(tr fdb.Transaction) (any, error) {
 ```
 
 # Value
+
+
 
 ## Encoding
 
