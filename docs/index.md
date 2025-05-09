@@ -126,19 +126,6 @@ a directory path.
 /my/directory
 ```
 
-Lines starting with `%` are ignored as commas.
-
-```language-fql {.query}
-% The query below scans the
-% entire '/my/dir' directory.
-/my/directory(...)
-```
-
-```language-fql {.result} 
-/my/directory(5)=nil 
-/my/directory(6)=nil
-```
-
 # Data Elements
 
 An FQL query contains instances of data elements. These
@@ -215,6 +202,92 @@ contain any of the data elements.
 ```
 
 # Element Encoding
+
+FoundationDB stores the keys and values as simple byte
+strings leaving the client responsible for encoding the
+data. FQL determines how to encode data elements based on
+their data type, position within the query, and associated
+options.
+
+# Key
+
+Keys are always encoded using the directory and tuple
+layers.
+
+```language-fql {.query}
+/directory/"p@th"(nil, 57223, 0xa8ff03)=nil
+```
+
+```lang-go {.equiv-go}
+db.Transact(func(tr fdb.Transaction) (any, error) {
+  dir, err := directory.CreateOrOpen(tr, []string{"directory", "p@th"}, nil)
+  if err != nil {
+    return nil, err
+  }
+
+  tr.Set(dir.Pack(tuple.Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
+  return nil, nil
+})
+```
+
+The same layers are used for decoding the key.
+
+```language-fql {.query}
+/directory/<>(...)
+```
+
+```lang-go {.equiv-go}
+db.Transact(func(tr fdb.Transaction) (any, error) {
+  dir, err := directory.Open(tr, []string{"directory"}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  subDirs, err := dir.List(tr, nil)
+  if err != nil {
+    return nil, err
+  }
+  
+  var results []KeyValue
+  for _, dir := range subDirs {
+    iter := tr.GetRange(dir, fdb.RangeOptions{}).Iterator()
+    for iter.Advance() {
+      kv := iter.MustGet()
+
+      tup, err := dir.Unpack(kv.Key)
+      if err != nil {
+        return results, err
+      }
+
+      results = append(results, KeyValue{
+        Key: Key{
+          Directory: dir,
+          Tuple: tup,
+        },
+        Value: kv.Value,
+      })
+    }
+  }
+  return results, nil
+})
+```
+
+# Value
+
+## Encoding
+
+## Decoding
+
+# Options
+
+For data elements in the value, FoundationDB lacks an
+encoding convention. FQL supports several value encodings
+which ideally cover the most common usecases. For other
+cases, values may be encoded externally and included in the
+query as a byte string.
 
 For encoding data elements in the key, FQL uses the
 directory and tuple layers. For encoding data elements in

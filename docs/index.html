@@ -34,11 +34,21 @@
     Elements</a></li>
     <li><a href="#element-encoding" id="toc-element-encoding">Element
     Encoding</a></li>
+    <li><a href="#key" id="toc-key">Key</a>
+    <ul>
+    <li><a href="#decoding" id="toc-decoding">Decoding</a></li>
+    </ul></li>
+    <li><a href="#value" id="toc-value">Value</a>
+    <ul>
+    <li><a href="#encoding" id="toc-encoding">Encoding</a></li>
+    <li><a href="#decoding-1" id="toc-decoding-1">Decoding</a></li>
+    </ul></li>
+    <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#holes-schemas" id="toc-holes-schemas">Holes &amp;
     Schemas</a></li>
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
-    <li><a href="#options" id="toc-options">Options</a></li>
+    <li><a href="#options-1" id="toc-options-1">Options</a></li>
     <li><a href="#basic-queries" id="toc-basic-queries">Basic
     Queries</a>
     <ul>
@@ -110,12 +120,6 @@
   path.</p>
   <pre class="language-fql query"><code>/my/&lt;&gt;</code></pre>
   <pre class="language-fql result"><code>/my/directory</code></pre>
-  <p>Lines starting with <code>%</code> are ignored as commas.</p>
-  <pre class="language-fql query"><code>% The query below scans the
-% entire &#39;/my/dir&#39; directory.
-/my/directory(...)</code></pre>
-  <pre class="language-fql result"><code>/my/directory(5)=nil 
-/my/directory(6)=nil</code></pre>
   <h1 id="data-elements">Data Elements</h1>
   <p>An FQL query contains instances of data elements. These mirror the
   types of elements found in the <a
@@ -211,6 +215,69 @@
   <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
 /tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
   <h1 id="element-encoding">Element Encoding</h1>
+  <p>FoundationDB stores the keys and values as simple byte strings
+  leaving the client responsible for encoding the data. FQL determines
+  how to encode data elements based on their data type, position within
+  the query, and associated options.</p>
+  <h1 id="key">Key</h1>
+  <p>Keys are always encoded using the directory and tuple layers.</p>
+  <pre class="language-fql query"><code>/directory/&quot;p@th&quot;(nil, 57223, 0xa8ff03)=nil</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
+  dir, err := directory.CreateOrOpen(tr, []string{&quot;directory&quot;, &quot;p@th&quot;}, nil)
+  if err != nil {
+    return nil, err
+  }
+
+  tr.Set(dir.Pack(tuple.Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
+  return nil, nil
+})</code></pre>
+  <p>The same layers are used for decoding the key.</p>
+  <pre class="language-fql query"><code>/directory/&lt;&gt;(...)</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
+  dir, err := directory.Open(tr, []string{&quot;directory&quot;}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  subDirs, err := dir.List(tr, nil)
+  if err != nil {
+    return nil, err
+  }
+  
+  var results []KeyValue
+  for _, dir := range subDirs {
+    iter := tr.GetRange(dir, fdb.RangeOptions{}).Iterator()
+    for iter.Advance() {
+      kv := iter.MustGet()
+
+      tup, err := dir.Unpack(kv.Key)
+      if err != nil {
+        return results, err
+      }
+
+      results = append(results, KeyValue{
+        Key: Key{
+          Directory: dir,
+          Tuple: tup,
+        },
+        Value: kv.Value,
+      })
+    }
+  }
+  return results, nil
+})</code></pre>
+  <h2 id="decoding">Decoding</h2>
+  <h1 id="value">Value</h1>
+  <h2 id="encoding">Encoding</h2>
+  <h2 id="decoding-1">Decoding</h2>
+  <h1 id="options">Options</h1>
+  <p>For data elements in the value, FoundationDB lacks an encoding
+  convention. FQL supports several value encodings which ideally cover
+  the most common usecases. For other cases, values may be encoded
+  externally and included in the query as a byte string.</p>
   <p>For encoding data elements in the key, FQL uses the directory and
   tuple layers. For encoding data elements in the value, the tuple layer
   may be used, but FQL also supports other encodings known as “raw
@@ -429,7 +496,7 @@
   &lt;int&gt;,  % account ID
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
-  <h1 id="options">Options</h1>
+  <h1 id="options-1">Options</h1>
   <p>Options provide a way to modify the default behavior of data
   elements, variable types, and queries. Options are specified as a
   comma separated list wrapped in braces.</p>
