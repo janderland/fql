@@ -101,8 +101,8 @@
       'append',
       'sum',
       'count',
-      'big',
-      'lil',
+      'be',
+      'le',
       'i8',
       'i16',
       'i32',
@@ -126,8 +126,8 @@
     keywords: {
       $$pattern: /[^,:]+/,
       keyword: [
-        'big',
-        'lil',
+        'be',
+        'le',
         'i8',
         'i16',
         'i32',

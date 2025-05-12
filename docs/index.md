@@ -216,17 +216,17 @@ layers. Write queries create directories if they do not
 exist.
 
 ```language-fql {.query}
-/directory/"p@th"(nil, 57223, 0xa8ff03)=nil
+/directory/"p@th"(nil,57223,0xa8ff03)=nil
 ```
 
 ```lang-go {.equiv-go}
-db.Transact(func(tr fdb.Transaction) (any, error) {
-  dir, err := directory.CreateOrOpen(tr, []string{"directory", "p@th"}, nil)
+db.Transact(func(tr Transaction) (any, error) {
+  dir, err := CreateOrOpenDir(tr, []string{"directory", "p@th"})
   if err != nil {
     return nil, err
   }
 
-  tr.Set(dir.Pack(tuple.Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
+  tr.Set(dir.Pack(Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
   return nil, nil
 })
 ```
@@ -241,25 +241,28 @@ types, allowing FQL to decode keys without a schema.
 ```
 
 ```lang-go {.equiv-go}
-db.Transact(func(tr fdb.Transaction) (any, error) {
-  dir, err := directory.Open(tr, []string{"directory"}, nil)
+db.Transact(func(tr Transaction) (any, error) {
+  dir, err := OpenDir(tr, []string{"directory"})
   if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
+    if err == DirNotExists {
       return nil, nil
     }
     return nil, err
   }
 
-  subDirs, err := dir.List(tr, nil)
+  subDirs, err := dir.List(tr)
   if err != nil {
     return nil, err
   }
   
   var results []KeyValue
   for _, dir := range subDirs {
-    iter := tr.GetRange(dir, fdb.RangeOptions{}).Iterator()
+    iter := tr.GetRange(dir).Iterator()
     for iter.Advance() {
-      kv := iter.MustGet()
+      kv, err := iter.Get()
+      if err != nil {
+        return results, err
+      }
 
       tup, err := dir.Unpack(kv.Key)
       if err != nil {
@@ -281,11 +284,44 @@ db.Transact(func(tr fdb.Transaction) (any, error) {
 
 # Value
 
+Most data elements in the value position are encoded using
+the tuple layer. The element is encoded as the single member
+of a tuple. For instance, the value `42` is encoded as the
+tuple `(42)`. The exceptions to this rule are when values
+are tuples, which are not wrapped with another tuple; and
+byte strings, which are used as-is for the value. This
+default encoding allows FQL to decode a value without
+a schema.
 
+```language-fql {.query} 
+/people/age("jon","smith")=42
+```
 
-## Encoding
+```lang-go {.equiv-go}
+db.Transact(func(tr Transaction) (any, error) {
+  dir := // create or open the directory...
+  key := // encoding the key...
 
-## Decoding
+  val, err := PackTup(Tuple{42})
+  if err != nil {
+    return nil, err
+  }
+
+  tr.Set(key, val)
+  return nil, nil
+})
+```
+
+Using options, values can be encoded in other ways. For
+instance, the option `int16` tells FQL to encode an integer
+using 16-bits in network byte order. The byte order can be
+explicitly specified using the options `le` and `be` for
+little and big endian respectively. In the next section,
+you'll see a full list of encoding options.
+
+```language-fql {.query}
+/numbers/big("37")=37[i16,be]
+```
 
 # Options
 
