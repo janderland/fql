@@ -35,11 +35,7 @@
     <li><a href="#element-encoding" id="toc-element-encoding">Element
     Encoding</a></li>
     <li><a href="#key" id="toc-key">Key</a></li>
-    <li><a href="#value" id="toc-value">Value</a>
-    <ul>
-    <li><a href="#encoding" id="toc-encoding">Encoding</a></li>
-    <li><a href="#decoding" id="toc-decoding">Decoding</a></li>
-    </ul></li>
+    <li><a href="#value" id="toc-value">Value</a></li>
     <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#holes-schemas" id="toc-holes-schemas">Holes &amp;
     Schemas</a></li>
@@ -219,14 +215,14 @@
   <h1 id="key">Key</h1>
   <p>Keys are always encoded using the directory and tuple layers. Write
   queries create directories if they do not exist.</p>
-  <pre class="language-fql query"><code>/directory/&quot;p@th&quot;(nil, 57223, 0xa8ff03)=nil</code></pre>
-  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
-  dir, err := directory.CreateOrOpen(tr, []string{&quot;directory&quot;, &quot;p@th&quot;}, nil)
+  <pre class="language-fql query"><code>/directory/&quot;p@th&quot;(nil,57223,0xa8ff03)=nil</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
+  dir, err := CreateOrOpenDir(tr, []string{&quot;directory&quot;, &quot;p@th&quot;})
   if err != nil {
     return nil, err
   }
 
-  tr.Set(dir.Pack(tuple.Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
+  tr.Set(dir.Pack(Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
   return nil, nil
 })</code></pre>
   <p>The same layers are used for decoding the key. If a query reads
@@ -234,25 +230,28 @@
   layer encodes metadata about element types, allowing FQL to decode
   keys without a schema.</p>
   <pre class="language-fql query"><code>/directory/&lt;&gt;(...)</code></pre>
-  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
-  dir, err := directory.Open(tr, []string{&quot;directory&quot;}, nil)
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
+  dir, err := OpenDir(tr, []string{&quot;directory&quot;})
   if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
+    if err == DirNotExists {
       return nil, nil
     }
     return nil, err
   }
 
-  subDirs, err := dir.List(tr, nil)
+  subDirs, err := dir.List(tr)
   if err != nil {
     return nil, err
   }
   
   var results []KeyValue
   for _, dir := range subDirs {
-    iter := tr.GetRange(dir, fdb.RangeOptions{}).Iterator()
+    iter := tr.GetRange(dir).Iterator()
     for iter.Advance() {
-      kv := iter.MustGet()
+      kv, err := iter.Get()
+      if err != nil {
+        return results, err
+      }
 
       tup, err := dir.Unpack(kv.Key)
       if err != nil {
@@ -271,8 +270,33 @@
   return results, nil
 })</code></pre>
   <h1 id="value">Value</h1>
-  <h2 id="encoding">Encoding</h2>
-  <h2 id="decoding">Decoding</h2>
+  <p>Most data elements in the value position are encoded using the
+  tuple layer. The element is encoded as the single member of a tuple.
+  For instance, the value <code>42</code> is encoded as the tuple
+  <code>(42)</code>. The exceptions to this rule are when values are
+  tuples, which are not wrapped with another tuple; and byte strings,
+  which are used as-is for the value. This default encoding allows FQL
+  to decode a value without a schema.</p>
+  <pre class="language-fql query"><code>/people/age(&quot;jon&quot;,&quot;smith&quot;)=42</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
+  dir := // create or open the directory...
+  key := // encoding the key...
+
+  val, err := PackTup(Tuple{42})
+  if err != nil {
+    return nil, err
+  }
+
+  tr.Set(key, val)
+  return nil, nil
+})</code></pre>
+  <p>Using options, values can be encoded in other ways. For instance,
+  the option <code>int16</code> tells FQL to encode an integer using
+  16-bits in network byte order. The byte order can be explicitly
+  specified using the options <code>le</code> and <code>be</code> for
+  little and big endian respectively. In the next section, you’ll see a
+  full list of encoding options.</p>
+  <pre class="language-fql query"><code>/numbers/big(&quot;37&quot;)=37[i16,be]</code></pre>
   <h1 id="options">Options</h1>
   <p>For data elements in the value, FoundationDB lacks an encoding
   convention. FQL supports several value encodings which ideally cover
