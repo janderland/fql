@@ -24,11 +24,15 @@ include-before: |
 
 # Overview
 
-FQL is specified as a context-free [grammar][]. The
-queries look like key-values encoded using the directory
-& tuple layers.
+FQL is specified as a context-free [grammar][]. The queries
+look like key-values encoded using the [directory][]
+& [tuple][] layers. To the left of the `=` is the key which
+includes a directory path and tuple. To the right of the `=`
+is the value.
 
 [grammar]: https://github.com/janderland/fql/blob/main/syntax.ebnf
+[directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
+[tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -48,8 +52,7 @@ as shown below.
 
 The query above has a variable `<int>` as its value.
 Variables act as placeholders for any of the supported [data
-elements](#data-elements). When variables are included as
-a value, they tell FQL how to decode the value bytes.
+elements](#data-elements). 
 
 FQL queries may also perform range reads & filtering by
 including a variable in the key's tuple. The query below
@@ -182,11 +185,11 @@ double quotes via backslash escapes.
 /"other ch@r@cters must be 'quoted'"(20)=32.3
 ```
 
-The `uuid` and `bytes` may be instantiated using upper,
-lower, or mixed case hexidecimal numbers. For `uuid`, the
-numbers are grouped in the standard 8, 4, 4, 4, 12 format.
-For `bytes`, any even number of hexidecimal digits are
-prefixed by `0x`.
+The `uuid` and `bytes` types may be instantiated using
+upper, lower, or mixed case hexidecimal numbers. For `uuid`,
+the numbers are grouped in the standard 8, 4, 4, 4, 12
+format. For `bytes`, any even number of hexidecimal digits
+are prefixed by `0x`.
 
 ```language-fql {.query}
 /hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
@@ -199,6 +202,103 @@ contain any of the data elements.
 ```language-fql {.query}
 /sub/tuple("japan",("sub",nil))=0xff
 /tuple/value(22.3,-8)=("rain","fog")
+```
+
+# Holes & Schemas
+
+A hole is any of the following syntax constructs: variables,
+references, and the `...` token. Holes are used to define
+a key-value schema by acting as placeholders for one or more
+data elements.
+
+A single [data element](#data-elements) may be represented
+with a variable. Variables are specified as a list of
+element types, separated by `|`, wrapped in angled braces.
+
+```language-fql
+<int|str|uuid|bytes>
+```
+
+The variable's type list describes which data elements are
+allowed at the variable's position. A variable may be empty,
+including no element types, meaning it represents all
+element types.
+
+```language-fql {.query}
+/user(<int>,<str>,<>)=<>
+```
+
+```language-fql {.result}
+/user(0,"jon",0xffab0c)=nil
+/user(20,"roger",22.3)=0xff
+/user(21,"",nil)=nil
+```
+
+Before the type list, a variable may be given a name. This
+name is used to reference the variable in subsequent
+queries, allowing for [index indirection](#indirection).
+
+```language-fql {.query}
+/index("cars",<varName:int>)
+/data(:varName,...)
+```
+
+```language-fql {.result}
+/data(33,"mazda")=nil
+/data(320,"ford")=nil
+/data(411,"chevy")=nil
+```
+
+Named variables must include at least one type. To allow
+named variables to match any element type, use the `any`
+type.
+
+```language-fql
+/stuff(<thing:any>)
+```
+
+```language-fql {.result}
+/stuff("cat")
+/stuff(42)
+/stuff(0x5fae)
+```
+
+The `...` token represents any number of data elements of
+any type. It is only allowed as the last element of a tuple.
+
+```language-fql
+/tuples(0x00,...)
+```
+
+```language-fql {.result}
+/tuples(0x00)=nil
+/tuples(0x00,"something")=nil
+/tuples(0x00,42,43,44)=0xabcf
+```
+
+# Space & Comments
+
+Whitespace and newlines are allowed within a tuple, between
+its elements.
+
+```language-fql {.query}
+/account/private(
+  <int>,
+  <int>,
+  <str>,
+)=<int>
+```
+
+Comments start with a `%` and continue until the end of the
+line. They can be used to describe a tuple's elements.
+
+```language-fql
+% private account balances
+/account/private(
+  <int>,  % group ID
+  <int>,  % account ID
+  <str>,  % account name
+)=<int>   % balance in USD
 ```
 
 # Element Encoding
@@ -287,11 +387,12 @@ db.Transact(func(tr Transaction) (any, error) {
 Most data elements in the value position are encoded using
 the tuple layer. The element is encoded as the single member
 of a tuple. For instance, the value `42` is encoded as the
-tuple `(42)`. The exceptions to this rule are when values
-are tuples, which are not wrapped with another tuple; and
-byte strings, which are used as-is for the value. This
-default encoding allows FQL to decode a value without
-a schema.
+tuple `(42)`.
+
+The exceptions to this rule are when values are tuples,
+which are not wrapped with another tuple; and byte strings,
+which are used as-is for the value. This default encoding
+allows FQL to decode a value without a schema.
 
 ```language-fql {.query} 
 /people/age("jon","smith")=42
@@ -325,32 +426,12 @@ you'll see a full list of encoding options.
 
 # Options
 
-For data elements in the value, FoundationDB lacks an
-encoding convention. FQL supports several value encodings
-which ideally cover the most common usecases. For other
-cases, values may be encoded externally and included in the
-query as a byte string.
+Options modify the semantics of data elements, data types,
+and queries. They can instruct FQL to perform additional
+validation, use alternative encodings, or limit query
+duration and result count.
 
-For encoding data elements in the key, FQL uses the
-directory and tuple layers. For encoding data elements in
-the value, the tuple layer may be used, but FQL also
-supports other encodings known as "raw values".
-
-```
-/tuple_value(42)=(4000)
-/raw_value(43)=4000
-```
-
-As a raw value, the `int` type doesn't support an encoding
-for arbitrarily large integers. As a value, you'll need to
-encode such integers using the tuple layer.
-
-```language-fql {.query}
-/int("big int")=(9223372036854775808)
-```
-
-Below, you can see the default encodings of each type when
-used as a raw value.
+## Data Elements
 
 <div>
 
@@ -367,14 +448,9 @@ used as a raw value.
 
 </div>
 
-The tuple layer supports a unique encoding for `nil`, but as
-a raw value `nil` is equivalent to an empty byte array. This
-makes the following two queries equivalent.
+## Data Types
 
-```language-fql {.query}
-/entry(537856)=nil
-/entry(537856)=0x
-```
+## Queries
 
 Whether encoded using the tuple layer or as a raw value, the
 `int` and `num` types support several different encodings.
@@ -428,106 +504,6 @@ The tables below shows which options are supported for the
 
 </div>
 
-# Holes & Schemas
-
-A hole is any of the following syntax constructs: variables,
-references, and the `...` token. Holes are used to define
-a key-value schema by acting as placeholders for one or more
-data elements.
-
-A single [data element](#data-elements) may be represented
-with a variable. Variables are specified as a list of
-element types, separated by `|`, wrapped in angled braces.
-
-```language-fql
-<int|str|uuid|bytes>
-```
-
-The variable's type list describes which data elements are
-allowed at the variable's position. A variable may be empty,
-including no element types, meaning it represents all
-element types.
-
-```language-fql {.query}
-/user(<int>,<str>,<>)=<>
-```
-
-```language-fql {.result}
-/user(0,"jon",0xffab0c)=nil
-/user(20,"roger",22.3)=0xff
-/user(21,"",nil)=nil
-```
-
-Before the type list, a variable may be given a name. This
-name is used to reference the variable in subsequent
-queries, allowing for [index indirection](#indirection).
-
-```language-fql {.query}
-/index("cars",<varName:int>)
-/data(:varName,...)
-```
-
-```language-fql {.result}
-/user(33,"mazda")=nil
-/user(320,"ford")=nil
-/user(411,"chevy")=nil
-```
-
-Named variables must include at least one type. To allow
-named variables to match any element type, use the `any`
-type.
-
-```language-fql
-/stuff(<thing:any>)
-/count(:thing,<int>)
-```
-
-```language-fql {.result}
-/count("cat",10)
-/count(42,1)
-/count(0x5fae,3)
-```
-
-The `...` token represents any number of data elements of
-any type.
-
-```language-fql
-/tuples(0x00,...)
-```
-
-```language-fql {.result}
-/tuples(0x00,"something")=nil
-/tuples(0x00,42,43,44)=0xabcf
-/tuples(0x00)=nil
-```
-
-> ❓ Currently, the `...` token is only allowed as the last
-> element of a tuple. This will be revisited in the future.
-
-# Space & Comments
-
-Whitespace and newlines are allowed within a tuple, between
-its elements.
-
-```language-fql {.query}
-/account/private(
-  <int>,
-  <int>,
-  <str>,
-)=<int>
-```
-
-Comments start with a `%` and continue until the end of the
-line. They can be used to describe a tuple's elements.
-
-```language-fql
-% private account balances
-/account/private(
-  <int>,  % group ID
-  <int>,  % account ID
-  <str>,  % account name
-)=<int>   % balance in USD
-```
 
 # Options
 

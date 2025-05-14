@@ -32,15 +32,21 @@
     <li><a href="#overview" id="toc-overview">Overview</a></li>
     <li><a href="#data-elements" id="toc-data-elements">Data
     Elements</a></li>
-    <li><a href="#element-encoding" id="toc-element-encoding">Element
-    Encoding</a></li>
-    <li><a href="#key" id="toc-key">Key</a></li>
-    <li><a href="#value" id="toc-value">Value</a></li>
-    <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#holes-schemas" id="toc-holes-schemas">Holes &amp;
     Schemas</a></li>
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
+    <li><a href="#element-encoding" id="toc-element-encoding">Element
+    Encoding</a></li>
+    <li><a href="#key" id="toc-key">Key</a></li>
+    <li><a href="#value" id="toc-value">Value</a></li>
+    <li><a href="#options" id="toc-options">Options</a>
+    <ul>
+    <li><a href="#data-elements-1" id="toc-data-elements-1">Data
+    Elements</a></li>
+    <li><a href="#data-types" id="toc-data-types">Data Types</a></li>
+    <li><a href="#queries" id="toc-queries">Queries</a></li>
+    </ul></li>
     <li><a href="#options-1" id="toc-options-1">Options</a></li>
     <li><a href="#basic-queries" id="toc-basic-queries">Basic
     Queries</a>
@@ -68,8 +74,13 @@
   <h1 id="overview">Overview</h1>
   <p>FQL is specified as a context-free <a
   href="https://github.com/janderland/fql/blob/main/syntax.ebnf">grammar</a>.
-  The queries look like key-values encoded using the directory &amp;
-  tuple layers.</p>
+  The queries look like key-values encoded using the <a
+  href="https://apple.github.io/foundationdb/developer-guide.html#directories">directory</a>
+  &amp; <a
+  href="https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples">tuple</a>
+  layers. To the left of the <code>=</code> is the key which includes a
+  directory path and tuple. To the right of the <code>=</code> is the
+  value.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>FQL queries may define a single key-value to be written, as shown
   above, or may define a set of key-values to be read, as shown
@@ -78,8 +89,7 @@
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>The query above has a variable <code>&lt;int&gt;</code> as its
   value. Variables act as placeholders for any of the supported <a
-  href="#data-elements">data elements</a>. When variables are included
-  as a value, they tell FQL how to decode the value bytes.</p>
+  href="#data-elements">data elements</a>.</p>
   <p>FQL queries may also perform range reads &amp; filtering by
   including a variable in the key’s tuple. The query below will return
   all key-values which conform to the schema defined by the query.</p>
@@ -196,17 +206,71 @@
   Quoted strings may contain double quotes via backslash escapes.</p>
   <pre class="language-fql query"><code>/quoteless-string_in.dir(&quot;escape \&quot;wow\&quot;&quot;)=false
 /&quot;other ch@r@cters must be &#39;quoted&#39;&quot;(20)=32.3</code></pre>
-  <p>The <code>uuid</code> and <code>bytes</code> may be instantiated
-  using upper, lower, or mixed case hexidecimal numbers. For
-  <code>uuid</code>, the numbers are grouped in the standard 8, 4, 4, 4,
-  12 format. For <code>bytes</code>, any even number of hexidecimal
-  digits are prefixed by <code>0x</code>.</p>
+  <p>The <code>uuid</code> and <code>bytes</code> types may be
+  instantiated using upper, lower, or mixed case hexidecimal numbers.
+  For <code>uuid</code>, the numbers are grouped in the standard 8, 4,
+  4, 4, 12 format. For <code>bytes</code>, any even number of
+  hexidecimal digits are prefixed by <code>0x</code>.</p>
   <pre class="language-fql query"><code>/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9</code></pre>
   <p>The <code>tup</code> type may contain any of the data elements,
   including sub-tuples. Like tuples, a query’s value may contain any of
   the data elements.</p>
   <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
 /tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
+  <h1 id="holes-schemas">Holes &amp; Schemas</h1>
+  <p>A hole is any of the following syntax constructs: variables,
+  references, and the <code>...</code> token. Holes are used to define a
+  key-value schema by acting as placeholders for one or more data
+  elements.</p>
+  <p>A single <a href="#data-elements">data element</a> may be
+  represented with a variable. Variables are specified as a list of
+  element types, separated by <code>|</code>, wrapped in angled
+  braces.</p>
+  <pre class="language-fql"><code>&lt;int|str|uuid|bytes&gt;</code></pre>
+  <p>The variable’s type list describes which data elements are allowed
+  at the variable’s position. A variable may be empty, including no
+  element types, meaning it represents all element types.</p>
+  <pre class="language-fql query"><code>/user(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
+  <pre class="language-fql result"><code>/user(0,&quot;jon&quot;,0xffab0c)=nil
+/user(20,&quot;roger&quot;,22.3)=0xff
+/user(21,&quot;&quot;,nil)=nil</code></pre>
+  <p>Before the type list, a variable may be given a name. This name is
+  used to reference the variable in subsequent queries, allowing for <a
+  href="#indirection">index indirection</a>.</p>
+  <pre class="language-fql query"><code>/index(&quot;cars&quot;,&lt;varName:int&gt;)
+/data(:varName,...)</code></pre>
+  <pre class="language-fql result"><code>/data(33,&quot;mazda&quot;)=nil
+/data(320,&quot;ford&quot;)=nil
+/data(411,&quot;chevy&quot;)=nil</code></pre>
+  <p>Named variables must include at least one type. To allow named
+  variables to match any element type, use the <code>any</code>
+  type.</p>
+  <pre class="language-fql"><code>/stuff(&lt;thing:any&gt;)</code></pre>
+  <pre class="language-fql result"><code>/stuff(&quot;cat&quot;)
+/stuff(42)
+/stuff(0x5fae)</code></pre>
+  <p>The <code>...</code> token represents any number of data elements
+  of any type. It is only allowed as the last element of a tuple.</p>
+  <pre class="language-fql"><code>/tuples(0x00,...)</code></pre>
+  <pre class="language-fql result"><code>/tuples(0x00)=nil
+/tuples(0x00,&quot;something&quot;)=nil
+/tuples(0x00,42,43,44)=0xabcf</code></pre>
+  <h1 id="space-comments">Space &amp; Comments</h1>
+  <p>Whitespace and newlines are allowed within a tuple, between its
+  elements.</p>
+  <pre class="language-fql query"><code>/account/private(
+  &lt;int&gt;,
+  &lt;int&gt;,
+  &lt;str&gt;,
+)=&lt;int&gt;</code></pre>
+  <p>Comments start with a <code>%</code> and continue until the end of
+  the line. They can be used to describe a tuple’s elements.</p>
+  <pre class="language-fql"><code>% private account balances
+/account/private(
+  &lt;int&gt;,  % group ID
+  &lt;int&gt;,  % account ID
+  &lt;str&gt;,  % account name
+)=&lt;int&gt;   % balance in USD</code></pre>
   <h1 id="element-encoding">Element Encoding</h1>
   <p>FoundationDB stores the keys and values as simple byte strings
   leaving the client responsible for encoding the data. FQL determines
@@ -273,10 +337,11 @@
   <p>Most data elements in the value position are encoded using the
   tuple layer. The element is encoded as the single member of a tuple.
   For instance, the value <code>42</code> is encoded as the tuple
-  <code>(42)</code>. The exceptions to this rule are when values are
-  tuples, which are not wrapped with another tuple; and byte strings,
-  which are used as-is for the value. This default encoding allows FQL
-  to decode a value without a schema.</p>
+  <code>(42)</code>.</p>
+  <p>The exceptions to this rule are when values are tuples, which are
+  not wrapped with another tuple; and byte strings, which are used as-is
+  for the value. This default encoding allows FQL to decode a value
+  without a schema.</p>
   <pre class="language-fql query"><code>/people/age(&quot;jon&quot;,&quot;smith&quot;)=42</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
   dir := // create or open the directory...
@@ -298,22 +363,10 @@
   full list of encoding options.</p>
   <pre class="language-fql query"><code>/numbers/big(&quot;37&quot;)=37[i16,be]</code></pre>
   <h1 id="options">Options</h1>
-  <p>For data elements in the value, FoundationDB lacks an encoding
-  convention. FQL supports several value encodings which ideally cover
-  the most common usecases. For other cases, values may be encoded
-  externally and included in the query as a byte string.</p>
-  <p>For encoding data elements in the key, FQL uses the directory and
-  tuple layers. For encoding data elements in the value, the tuple layer
-  may be used, but FQL also supports other encodings known as “raw
-  values”.</p>
-  <pre><code>/tuple_value(42)=(4000)
-/raw_value(43)=4000</code></pre>
-  <p>As a raw value, the <code>int</code> type doesn’t support an
-  encoding for arbitrarily large integers. As a value, you’ll need to
-  encode such integers using the tuple layer.</p>
-  <pre class="language-fql query"><code>/int(&quot;big int&quot;)=(9223372036854775808)</code></pre>
-  <p>Below, you can see the default encodings of each type when used as
-  a raw value.</p>
+  <p>Options modify the semantics of data elements, data types, and
+  queries. They can instruct FQL to perform additional validation, use
+  alternative encodings, or limit query duration and result count.</p>
+  <h2 id="data-elements-1">Data Elements</h2>
   <div>
   <table>
   <thead>
@@ -359,11 +412,8 @@
   </tbody>
   </table>
   </div>
-  <p>The tuple layer supports a unique encoding for <code>nil</code>,
-  but as a raw value <code>nil</code> is equivalent to an empty byte
-  array. This makes the following two queries equivalent.</p>
-  <pre class="language-fql query"><code>/entry(537856)=nil
-/entry(537856)=0x</code></pre>
+  <h2 id="data-types">Data Types</h2>
+  <h2 id="queries">Queries</h2>
   <p>Whether encoded using the tuple layer or as a raw value, the
   <code>int</code> and <code>num</code> types support several different
   encodings. A non-default encoding may be specified using the <a
@@ -461,65 +511,6 @@
   </tbody>
   </table>
   </div>
-  <h1 id="holes-schemas">Holes &amp; Schemas</h1>
-  <p>A hole is any of the following syntax constructs: variables,
-  references, and the <code>...</code> token. Holes are used to define a
-  key-value schema by acting as placeholders for one or more data
-  elements.</p>
-  <p>A single <a href="#data-elements">data element</a> may be
-  represented with a variable. Variables are specified as a list of
-  element types, separated by <code>|</code>, wrapped in angled
-  braces.</p>
-  <pre class="language-fql"><code>&lt;int|str|uuid|bytes&gt;</code></pre>
-  <p>The variable’s type list describes which data elements are allowed
-  at the variable’s position. A variable may be empty, including no
-  element types, meaning it represents all element types.</p>
-  <pre class="language-fql query"><code>/user(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
-  <pre class="language-fql result"><code>/user(0,&quot;jon&quot;,0xffab0c)=nil
-/user(20,&quot;roger&quot;,22.3)=0xff
-/user(21,&quot;&quot;,nil)=nil</code></pre>
-  <p>Before the type list, a variable may be given a name. This name is
-  used to reference the variable in subsequent queries, allowing for <a
-  href="#indirection">index indirection</a>.</p>
-  <pre class="language-fql query"><code>/index(&quot;cars&quot;,&lt;varName:int&gt;)
-/data(:varName,...)</code></pre>
-  <pre class="language-fql result"><code>/user(33,&quot;mazda&quot;)=nil
-/user(320,&quot;ford&quot;)=nil
-/user(411,&quot;chevy&quot;)=nil</code></pre>
-  <p>Named variables must include at least one type. To allow named
-  variables to match any element type, use the <code>any</code>
-  type.</p>
-  <pre class="language-fql"><code>/stuff(&lt;thing:any&gt;)
-/count(:thing,&lt;int&gt;)</code></pre>
-  <pre class="language-fql result"><code>/count(&quot;cat&quot;,10)
-/count(42,1)
-/count(0x5fae,3)</code></pre>
-  <p>The <code>...</code> token represents any number of data elements
-  of any type.</p>
-  <pre class="language-fql"><code>/tuples(0x00,...)</code></pre>
-  <pre class="language-fql result"><code>/tuples(0x00,&quot;something&quot;)=nil
-/tuples(0x00,42,43,44)=0xabcf
-/tuples(0x00)=nil</code></pre>
-  <blockquote>
-  <p>❓ Currently, the <code>...</code> token is only allowed as the
-  last element of a tuple. This will be revisited in the future.</p>
-  </blockquote>
-  <h1 id="space-comments">Space &amp; Comments</h1>
-  <p>Whitespace and newlines are allowed within a tuple, between its
-  elements.</p>
-  <pre class="language-fql query"><code>/account/private(
-  &lt;int&gt;,
-  &lt;int&gt;,
-  &lt;str&gt;,
-)=&lt;int&gt;</code></pre>
-  <p>Comments start with a <code>%</code> and continue until the end of
-  the line. They can be used to describe a tuple’s elements.</p>
-  <pre class="language-fql"><code>% private account balances
-/account/private(
-  &lt;int&gt;,  % group ID
-  &lt;int&gt;,  % account ID
-  &lt;str&gt;,  % account name
-)=&lt;int&gt;   % balance in USD</code></pre>
   <h1 id="options-1">Options</h1>
   <p>Options provide a way to modify the default behavior of data
   elements, variable types, and queries. Options are specified as a
