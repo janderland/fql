@@ -127,3 +127,20 @@ func (x MaybeMore) Eq(e interface{}) bool {
 	_, ok := e.(MaybeMore)
 	return ok
 }
+
+func (x VStamp) Eq(e interface{}) bool {
+	v, ok := e.(VStamp)
+	if !ok {
+		return false
+	}
+	return x.UserVersion == v.UserVersion &&
+		bytes.Equal(x.TxVersion[:], v.TxVersion[:])
+}
+
+func (x VStampFuture) Eq(e interface{}) bool {
+	v, ok := e.(VStampFuture)
+	if !ok {
+		return false
+	}
+	return x.UserVersion == v.UserVersion
+}
