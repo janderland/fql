@@ -118,3 +118,11 @@ func (x *formatData) ForBytes(in q.Bytes) {
 func (x *formatData) ForClear(in q.Clear) {
 	x.format.Clear(in)
 }
+
+func (x *formatData) ForVStamp(in q.VStamp) {
+	x.format.VStamp(in)
+}
+
+func (x *formatData) ForVStampFuture(in q.VStampFuture) {
+	x.format.VStampFuture(in)
+}

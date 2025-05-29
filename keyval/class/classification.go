@@ -51,6 +51,10 @@ func (x *tupClassification) ForUUID(q.UUID) {}
 
 func (x *tupClassification) ForBytes(q.Bytes) {}
 
+func (x *tupClassification) ForVStamp(q.VStamp) {}
+
+func (x *tupClassification) ForVStampFuture(q.VStampFuture) {}
+
 type valClassification struct{ out subClass }
 
 func (x *valClassification) ForTuple(e q.Tuple) {
