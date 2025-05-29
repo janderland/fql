@@ -160,6 +160,12 @@ type (
 		UserVersion uint16
 	}
 
+	// VStampFuture represents a versionstamp within in a Tuple
+	// which has yet to be assigned. Versionstamps are assigned
+	// when the transaction commits. VStampFuture should only be
+	// used in write queries. After the write is completed,
+	// reading the resultant key-value will produce a VStamp
+	// where the VStampFuture used to be.
 	VStampFuture struct {
 		UserVersion uint16
 	}
