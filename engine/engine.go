@@ -96,13 +96,11 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
 func (x *Engine) Set(query keyval.KeyValue) error {
-	vstamp := false
-
-	switch c := class.Classify(query); c {
-	case class.Constant, class.VStamp:
-		vstamp = c == class.VStamp
+	queryClass := class.Classify(query)
+	switch queryClass {
 	default:
-		return errors.New("query not constant class")
+		return errors.Errorf("invalid query class %s", queryClass)
+	case class.Constant, class.VStamp:
 	}
 
 	path, err := convert.ToStringArray(query.Key.Directory)
@@ -129,7 +127,7 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 		}
 
 		var keyBytes fdb.Key
-		if vstamp {
+		if queryClass == class.VStamp {
 			keyBytes, err = tup.PackWithVersionstamp(dir.Bytes())
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to pack key")
