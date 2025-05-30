@@ -39,7 +39,7 @@ script takes care of starting an FDB cluster and providing the
 cluster file as the first argument. Note that this is the same
 FDB instance used by the 'verify' task.
 
-  ./build.sh --run --write -q '/my/dir{"hi"}=nil'
+  ./build.sh --run --write -q '/my/dir("hi")=nil'
 
 After this, the script ends. If any of the requested tasks fail
 then the script exits immediately.
@@ -221,7 +221,7 @@ if [[ -n "$IMAGE_BUILD" ]]; then
 fi
 
 if [[ -n "$BUILD_COMMAND" ]]; then
-  (set -x; docker compose run build /bin/sh -c "$BUILD_COMMAND")
+  (set -x; docker compose run --rm build /bin/sh -c "$BUILD_COMMAND")
 fi
 
 if [[ -n "$IMAGE_FQL" ]]; then
@@ -229,5 +229,5 @@ if [[ -n "$IMAGE_FQL" ]]; then
 fi
 
 if [[ -n "$RUN_FQL" ]]; then
-  (set -x; docker compose run fql 'docker:docker@{fdb}:4500' "${FQL_ARGS[@]}")
+  (set -x; docker compose run --rm fql 'docker:docker@{fdb}:4500' "${FQL_ARGS[@]}")
 fi
