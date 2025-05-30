@@ -24,6 +24,16 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
+			kind: VStamp,
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("my"), q.String("dir")},
+					Tuple:     q.Tuple{q.Int(123), q.VStampFuture{UserVersion: 202}, q.String("wow")},
+				},
+				Value: q.Int(-38),
+			},
+		},
+		{
 			kind: Clear,
 			kv: q.KeyValue{
 				Key: q.Key{
@@ -74,7 +84,7 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
-			kind: VariableClear,
+			kind: Class(""),
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -133,7 +143,7 @@ func TestClassifyNil(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			kind := Classify(test.kv)
-			require.Equal(t, Nil, kind)
+			require.Equal(t, Class(""), kind)
 		})
 	}
 }

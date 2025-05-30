@@ -8,26 +8,47 @@ var (
 	_ q.ValueOperation     = &valClassification{}
 )
 
-type dirClassification struct{ out subClass }
+type dirClassification struct{ 
+	hasVariable bool
+}
+
+func (x *dirClassification) orFields(c character) character {
+	c.hasVariable = c.hasVariable || x.hasVariable
+	return c
+}
 
 func (x *dirClassification) ForString(q.String) {}
 
 func (x *dirClassification) ForVariable(q.Variable) {
-	x.out = variableSubClass
+	x.hasVariable = true
 }
 
-type tupClassification struct{ out subClass }
+type tupClassification struct{ 
+	hasVariable bool
+	hasVStampFut bool
+	hasNil bool
+}
+
+func (x *tupClassification) orFields(c character) character {
+	c.hasVariable = c.hasVariable || x.hasVariable
+	c.hasVStamp = c.hasVStamp || x.hasVStampFut
+	c.hasNil = c.hasNil || x.hasNil
+	return c
+}
 
 func (x *tupClassification) ForTuple(e q.Tuple) {
-	x.out = classifyTuple(e)
+	class := classifyTuple(e)
+	x.hasVariable = x.hasVariable || class.hasVariable
+	x.hasVStampFut = x.hasVStampFut || class.hasVStamp
+	x.hasNil = x.hasNil || class.hasNil
 }
 
 func (x *tupClassification) ForVariable(q.Variable) {
-	x.out = variableSubClass
+	x.hasVariable = true
 }
 
 func (x *tupClassification) ForMaybeMore(q.MaybeMore) {
-	x.out = variableSubClass
+	x.hasVariable = true
 }
 
 func (x *tupClassification) ForNil(q.Nil) {}
@@ -53,20 +74,32 @@ func (x *tupClassification) ForBytes(q.Bytes) {}
 
 func (x *tupClassification) ForVStamp(q.VStamp) {}
 
-func (x *tupClassification) ForVStampFuture(q.VStampFuture) {}
+func (x *tupClassification) ForVStampFuture(q.VStampFuture) {
+	x.hasVStampFut = true
+}
 
-type valClassification struct{ out subClass }
+type valClassification struct{ 
+	hasVariable bool
+	hasClear bool
+}
+
+func (x *valClassification) orFields(c character) character {
+	c.hasVariable = c.hasVariable || x.hasVariable
+	c.hasClear = c.hasClear || x.hasClear
+	return c
+}
 
 func (x *valClassification) ForTuple(e q.Tuple) {
-	x.out = classifyTuple(e)
+	class := classifyTuple(e)
+	x.hasVariable = x.hasVariable || class.hasVariable
 }
 
 func (x *valClassification) ForVariable(q.Variable) {
-	x.out = variableSubClass
+	x.hasVariable = true
 }
 
 func (x *valClassification) ForClear(q.Clear) {
-	x.out = clearSubClass
+	x.hasClear = true
 }
 
 func (x *valClassification) ForNil(q.Nil) {}

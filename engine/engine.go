@@ -95,7 +95,10 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
 func (x *Engine) Set(query keyval.KeyValue) error {
-	if class.Classify(query) != class.Constant {
+	switch class.Classify(query) {
+	case class.Constant, class.VStamp:
+		break // allowed classes
+	default:
 		return errors.New("query not constant class")
 	}
 

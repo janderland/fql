@@ -1,7 +1,12 @@
 // Package class classifies a key-value by the kind of operation it represents.
 package class
 
-import q "github.com/janderland/fql/keyval"
+import (
+	"fmt"
+	"strings"
+
+	q "github.com/janderland/fql/keyval"
+)
 
 // Class categorizes a KeyValue.
 type Class string
@@ -11,6 +16,12 @@ const (
 	// MaybeMore, or Clear. This kind of KeyValue can be used to
 	// perform a set operation or is returned by a get operation.
 	Constant Class = "constant"
+
+	// VStamp specifies that the KeyValue contains a VStampFuture.
+	// This kind of KeyValue can only be used to perform a set
+	// operation. When the KeyValue is later read, the VStampFuture
+	// we be replaced by a VStamp.
+	VStamp Class = "vstamp"
 
 	// Clear specifies that the KeyValue has no Variable or
 	// MaybeMore and has a Clear Value. This kind of KeyValue can
@@ -28,113 +39,144 @@ const (
 	// This kind of KeyValue can be used to perform a get
 	// operation that returns multiple KeyValue.
 	ReadRange Class = "range"
-
-	// VariableClear specifies that the KeyValue has a
-	// Variable or MaybeMore in its Key and has a Clear for
-	// its value. This is an invalid class of KeyValue.
-	VariableClear Class = "variable clear"
-
-	// Nil specifies that the KeyValue contains a nil (not keyval.Nil).
-	// This is an invalid class of KeyValue.
-	Nil Class = "nil"
 )
 
-// subClass categorizes the Key, Directory,
-// Tuple, and Value within a KeyValue.
-type subClass int
+type character struct {
+	hasVariable bool
+	hasVStamp   bool
+	hasClear    bool
+	hasNil      bool
+}
 
-const (
-	// constantSubClass specifies that the component contains no
-	// Variable, MaybeMore, or Clear.
-	constantSubClass subClass = iota
+func (x *character) orFields(c character) character {
+	return character{
+		hasVariable: x.hasVariable || c.hasVariable,
+		hasVStamp:   x.hasVStamp || c.hasVStamp,
+		hasClear:    x.hasClear || c.hasClear,
+		hasNil:      x.hasNil || c.hasNil,
+	}
+}
 
-	// variableSubClass specifies that the component contains a
-	// Variable or MaybeMore.
-	variableSubClass
+func (x *character) String() string {
+	var (
+		str   strings.Builder
+		empty = true
+	)
+	str.WriteRune('[')
+	if x.hasVariable {
+		empty = false
+		str.WriteString("var")
+	}
+	if x.hasVStamp {
+		if !empty {
+			str.WriteRune(',')
+		}
+		empty = false
+		str.WriteString("vstamp")
+	}
+	if x.hasClear {
+		if !empty {
+			str.WriteRune(',')
+		}
+		empty = false
+		str.WriteString("clear")
+	}
+	if x.hasNil {
+		if !empty {
+			str.WriteRune(',')
+		}
+		str.WriteString("nil")
+	}
+	str.WriteRune(']')
+	return str.String()
+}
 
-	// clearSubClass specifies that the component contains a Clear.
-	clearSubClass
-
-	// nilSubClass specifies that the component contains a nil, which
-	// isn't allowed in any part of the key-value. This shouldn't be
-	// confused with an instance of the Nil type.
-	nilSubClass
-)
+// invalidClass returns a Class describing the
+// invalid characterstics of the key-value.
+func invalidClass(c character) Class {
+	return Class(fmt.Sprintf("invalid%s", c.String()))
+}
 
 // Classify returns the Class of the given KeyValue.
 func Classify(kv q.KeyValue) Class {
 	keyClass := classifyKey(kv.Key)
-	valClass := classifyValue(kv.Value)
+	kvClass := keyClass.orFields(classifyValue(kv.Value))
 
-	// If a nil is present in any part of the key, the Nil class
-	// takes precedence.
-	if keyClass == nilSubClass || valClass == nilSubClass {
-		return Nil
+	// KeyValues should never contain `nil`.
+	if kvClass.hasNil {
+		return invalidClass(kvClass)
 	}
 
-	// If the key is constant, then this query will only affect
-	// a single key and the value will dictate what kind of
-	// single-key query it will be.
-	if keyClass == constantSubClass {
-		switch valClass {
-		case clearSubClass:
-			return Clear
-		case variableSubClass:
-			return ReadSingle
-		default:
-			return Constant
+	// Ensure that, at most, one of the following bools is true.
+	bools := []bool{kvClass.hasVariable, kvClass.hasVStamp, kvClass.hasClear}
+	for i, b1 := range bools {
+		for j, b2 := range bools {
+			if i == j {
+				continue
+			}
+			if b1 && b2 {
+				return invalidClass(kvClass)
+			}
 		}
 	}
 
-	// If the key is not constant then the query should be a
-	// range read, unless it has a Clear instance for its
-	// value.
-	if valClass == clearSubClass {
-		return VariableClear
+	// After the loop above, we know at most
+	// one of the cases below will execute.
+	switch {
+	case kvClass.hasVariable:
+		if keyClass.hasVariable {
+			return ReadRange
+		}
+		return ReadSingle
+	case kvClass.hasVStamp:
+		return VStamp
+	case kvClass.hasClear:
+		return Clear
+	default:
+		return Constant
 	}
-	return ReadRange
 }
 
-func classifyKey(key q.Key) subClass {
-	dirClass := classifyDir(key.Directory)
-	tupClass := classifyTuple(key.Tuple)
-
-	if dirClass == nilSubClass || tupClass == nilSubClass {
-		return nilSubClass
-	}
-	if dirClass == variableSubClass || tupClass == variableSubClass {
-		return variableSubClass
-	}
-	return constantSubClass
+func classifyKey(key q.Key) character {
+	c := classifyDir(key.Directory)
+	return c.orFields(classifyTuple(key.Tuple))
 }
 
-func classifyDir(dir q.Directory) subClass {
-	class := dirClassification{}
+func classifyDir(dir q.Directory) character {
+	var (
+		class dirClassification
+		out   character
+	)
 	for _, element := range dir {
 		if element == nil {
-			return nilSubClass
+			out.hasNil = true
+			continue
 		}
 		element.DirElement(&class)
 	}
-	return class.out
+	return class.orFields(out)
 }
 
-func classifyTuple(tup q.Tuple) subClass {
-	class := tupClassification{}
+func classifyTuple(tup q.Tuple) character {
+	var (
+		class tupClassification
+		out   character
+	)
 	for _, element := range tup {
 		if element == nil {
-			return nilSubClass
+			out.hasNil = true
+			continue
 		}
 		element.TupElement(&class)
 	}
-	return class.out
+	return class.orFields(out)
 }
 
-func classifyValue(val q.Value) subClass {
+func classifyValue(val q.Value) character {
 	if val == nil {
-		return nilSubClass
+		return character{hasNil: true}
 	}
-	class := valClassification{}
+	var class valClassification
 	val.Value(&class)
-	return class.out
+	return class.orFields(character{})
 }
