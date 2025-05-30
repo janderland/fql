@@ -84,7 +84,7 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
-			kind: Class(""),
+			kind: Class("invalid[var,clear]"),
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
@@ -143,7 +143,7 @@ func TestClassifyNil(t *testing.T) {
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			kind := Classify(test.kv)
-			require.Equal(t, Class(""), kind)
+			require.Regexp(t, `invalid\[.*nil.*\]`, string(kind))
 		})
 	}
 }
