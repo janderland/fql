@@ -8,6 +8,7 @@ services:
   build:
     container_name: "build"
     image: "docker.io/janderland/fql-build:${DOCKER_TAG}"
+    pull_policy: "never"
     platform: "linux/amd64"
     build:
       context: "./docker"
