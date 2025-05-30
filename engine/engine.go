@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 
+	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -95,9 +96,11 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
 func (x *Engine) Set(query keyval.KeyValue) error {
-	switch class.Classify(query) {
+	vstamp := false
+
+	switch c := class.Classify(query); c {
 	case class.Constant, class.VStamp:
-		break // allowed classes
+		vstamp = c == class.VStamp
 	default:
 		return errors.New("query not constant class")
 	}
@@ -125,7 +128,17 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
 		}
 
-		tr.Set(dir.Pack(tup), valueBytes)
+		var keyBytes fdb.Key
+		if vstamp {
+			keyBytes, err = tup.PackWithVersionstamp(dir.Bytes())
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to pack key")
+			}
+		} else {
+			keyBytes = dir.Pack(tup)
+		}
+
+		tr.Set(keyBytes, valueBytes)
 		return nil, nil
 	})
 	return errors.Wrap(err, "transaction failed")
