@@ -126,17 +126,16 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
 		}
 
-		var keyBytes fdb.Key
-		if queryClass == class.VStamp {
-			keyBytes, err = tup.PackWithVersionstamp(dir.Bytes())
-			if err != nil {
-				return nil, errors.Wrap(err, "failed to pack key")
-			}
-		} else {
-			keyBytes = dir.Pack(tup)
+		if queryClass == class.Constant {
+			tr.Set(dir.Pack(tup), valueBytes)
+			return nil, nil
 		}
 
-		tr.Set(keyBytes, valueBytes)
+		keyBytes, err := tup.PackWithVersionstamp(dir.Bytes())
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to pack key")
+		}
+		tr.SetWithVStampKey(fdb.Key(keyBytes), valueBytes)
 		return nil, nil
 	})
 	return errors.Wrap(err, "transaction failed")

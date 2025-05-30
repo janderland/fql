@@ -57,6 +57,12 @@ type (
 		// Set writes a key-value.
 		Set(fdb.KeyConvertible, []byte)
 
+		// Set writes a key-value. The key should contain
+		// the placeholder for a single versionstamp as
+		// described here:
+		// https://pkg.go.dev/github.com/apple/foundationdb/bindings/go/src/fdb#Transaction.SetVersionstampedKey
+		SetWithVStampKey(fdb.KeyConvertible, []byte)
+
 		// Clear deletes a key-value.
 		Clear(fdb.KeyConvertible)
 	}
@@ -179,6 +185,10 @@ func (x *transaction) DirCreateOrOpen(path []string) (directory.DirectorySubspac
 
 func (x *transaction) Set(key fdb.KeyConvertible, val []byte) {
 	x.tr.Set(key, val)
+}
+
+func (x *transaction) SetWithVStampKey(key fdb.KeyConvertible, val []byte) {
+	x.tr.SetVersionstampedKey(key, val)
 }
 
 func (x *transaction) Clear(key fdb.KeyConvertible) {

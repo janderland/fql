@@ -81,6 +81,12 @@ func FromFDBElement(in tuple.TupleElement) q.TupElement {
 	case tuple.Tuple:
 		return FromFDBTuple(in)
 
+	case tuple.Versionstamp:
+		return q.VStamp{
+			TxVersion: in.TransactionVersion,
+			UserVersion: in.UserVersion,
+		}
+
 	case []byte:
 		return q.Bytes(in)
 	case fdb.KeyConvertible:
