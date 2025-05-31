@@ -8,7 +8,7 @@ var (
 	_ q.ValueOperation     = &valClassification{}
 )
 
-type dirClassification struct{ 
+type dirClassification struct {
 	hasVariable bool
 }
 
@@ -23,23 +23,23 @@ func (x *dirClassification) ForVariable(q.Variable) {
 	x.hasVariable = true
 }
 
-type tupClassification struct{ 
-	hasVariable bool
-	hasVStampFut bool
-	hasNil bool
+type tupClassification struct {
+	vstampFutures int
+	hasVariable   bool
+	hasNil        bool
 }
 
 func (x *tupClassification) orFields(c character) character {
+	c.vstampFutures = c.vstampFutures + x.vstampFutures
 	c.hasVariable = c.hasVariable || x.hasVariable
-	c.hasVStamp = c.hasVStamp || x.hasVStampFut
 	c.hasNil = c.hasNil || x.hasNil
 	return c
 }
 
 func (x *tupClassification) ForTuple(e q.Tuple) {
 	class := classifyTuple(e)
+	x.vstampFutures = x.vstampFutures + class.vstampFutures
 	x.hasVariable = x.hasVariable || class.hasVariable
-	x.hasVStampFut = x.hasVStampFut || class.hasVStamp
 	x.hasNil = x.hasNil || class.hasNil
 }
 
@@ -75,15 +75,17 @@ func (x *tupClassification) ForBytes(q.Bytes) {}
 func (x *tupClassification) ForVStamp(q.VStamp) {}
 
 func (x *tupClassification) ForVStampFuture(q.VStampFuture) {
-	x.hasVStampFut = true
+	x.vstampFutures++
 }
 
-type valClassification struct{ 
-	hasVariable bool
-	hasClear bool
+type valClassification struct {
+	vstampFutures int
+	hasVariable   bool
+	hasClear      bool
 }
 
 func (x *valClassification) orFields(c character) character {
+	c.vstampFutures = c.vstampFutures + x.vstampFutures
 	c.hasVariable = c.hasVariable || x.hasVariable
 	c.hasClear = c.hasClear || x.hasClear
 	return c
@@ -91,6 +93,7 @@ func (x *valClassification) orFields(c character) character {
 
 func (x *valClassification) ForTuple(e q.Tuple) {
 	class := classifyTuple(e)
+	x.vstampFutures = x.vstampFutures + class.vstampFutures
 	x.hasVariable = x.hasVariable || class.hasVariable
 }
 

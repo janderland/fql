@@ -42,18 +42,18 @@ const (
 )
 
 type character struct {
-	hasVariable bool
-	hasVStamp   bool
-	hasClear    bool
-	hasNil      bool
+	vstampFutures int
+	hasVariable   bool
+	hasClear      bool
+	hasNil        bool
 }
 
 func (x *character) orFields(c character) character {
 	return character{
-		hasVariable: x.hasVariable || c.hasVariable,
-		hasVStamp:   x.hasVStamp || c.hasVStamp,
-		hasClear:    x.hasClear || c.hasClear,
-		hasNil:      x.hasNil || c.hasNil,
+		vstampFutures: x.vstampFutures + c.vstampFutures,
+		hasVariable:   x.hasVariable || c.hasVariable,
+		hasClear:      x.hasClear || c.hasClear,
+		hasNil:        x.hasNil || c.hasNil,
 	}
 }
 
@@ -67,12 +67,12 @@ func (x *character) String() string {
 		empty = false
 		str.WriteString("var")
 	}
-	if x.hasVStamp {
+	if x.vstampFutures > 0 {
 		if !empty {
 			str.WriteRune(',')
 		}
 		empty = false
-		str.WriteString("vstamp")
+		str.WriteString("vstamps")
 	}
 	if x.hasClear {
 		if !empty {
@@ -99,7 +99,8 @@ func invalidClass(c character) Class {
 
 // Classify returns the Class of the given KeyValue.
 func Classify(kv q.KeyValue) Class {
-	keyClass := classifyKey(kv.Key)
+	dirClass := classifyDir(kv.Key.Directory)
+	keyClass := dirClass.orFields(classifyTuple(kv.Key.Tuple))
 	kvClass := keyClass.orFields(classifyValue(kv.Value))
 
 	// KeyValues should never contain `nil`.
@@ -107,8 +108,13 @@ func Classify(kv q.KeyValue) Class {
 		return invalidClass(kvClass)
 	}
 
-	// Ensure that, at most, one of the following bools is true.
-	bools := []bool{kvClass.hasVariable, kvClass.hasVStamp, kvClass.hasClear}
+	// KeyValues should contain, at most, 1 VStampFuture.
+	if kvClass.vstampFutures > 1 {
+		return invalidClass(kvClass)
+	}
+
+	// Ensure that, at most, one of the conditions are true.
+	bools := []bool{kvClass.vstampFutures > 0, kvClass.hasVariable, kvClass.hasClear}
 	for i, b1 := range bools {
 		for j, b2 := range bools {
 			if i == j {
@@ -128,7 +134,7 @@ func Classify(kv q.KeyValue) Class {
 			return ReadRange
 		}
 		return ReadSingle
-	case kvClass.hasVStamp:
+	case kvClass.vstampFutures > 0:
 		return VStamp
 	case kvClass.hasClear:
 		return Clear
@@ -137,46 +143,41 @@ func Classify(kv q.KeyValue) Class {
 	}
 }
 
-func classifyKey(key q.Key) character {
-	c := classifyDir(key.Directory)
-	return c.orFields(classifyTuple(key.Tuple))
-}
-
 func classifyDir(dir q.Directory) character {
 	var (
-		class dirClassification
-		out   character
+		class  dirClassification
+		hasNil bool
 	)
 	for _, element := range dir {
 		if element == nil {
-			out.hasNil = true
+			hasNil = true
 			continue
 		}
 		element.DirElement(&class)
 	}
-	return class.orFields(out)
+	return class.orFields(character{hasNil: hasNil})
 }
 
 func classifyTuple(tup q.Tuple) character {
 	var (
-		class tupClassification
-		out   character
+		class  tupClassification
+		hasNil bool
 	)
 	for _, element := range tup {
 		if element == nil {
-			out.hasNil = true
+			hasNil = true
 			continue
 		}
 		element.TupElement(&class)
 	}
-	return class.orFields(out)
+	return class.orFields(character{hasNil: hasNil})
 }
 
 func classifyValue(val q.Value) character {
+	var class valClassification
 	if val == nil {
 		return character{hasNil: true}
 	}
-	var class valClassification
 	val.Value(&class)
 	return class.orFields(character{})
 }
