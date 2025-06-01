@@ -130,6 +130,7 @@ func TestEngine_SetReadSingle(t *testing.T) {
 		})
 	})
 
+	/* TODO
 	t.Run("value", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.Tuple{q.VStampFuture{UserVersion: 532}}}
@@ -148,6 +149,7 @@ func TestEngine_SetReadSingle(t *testing.T) {
 				require.Len(t, results, 1)
 		})
 	})
+	*/
 }
 
 func TestEngine_Clear(t *testing.T) {

@@ -41,15 +41,19 @@ const (
 	ReadRange Class = "range"
 )
 
-type character struct {
+// attributes describes the characterstics of a key-value,
+// which are relevant to it's classification.
+type attributes struct {
 	vstampFutures int
 	hasVariable   bool
 	hasClear      bool
 	hasNil        bool
 }
 
-func (x *character) orFields(c character) character {
-	return character{
+// merge combines the attributes of parts of a key-value
+// to infer the attributes of the whole key-value.
+func (x *attributes) merge(c attributes) attributes {
+	return attributes{
 		vstampFutures: x.vstampFutures + c.vstampFutures,
 		hasVariable:   x.hasVariable || c.hasVariable,
 		hasClear:      x.hasClear || c.hasClear,
@@ -57,51 +61,37 @@ func (x *character) orFields(c character) character {
 	}
 }
 
-func (x *character) String() string {
+// invalidClass creates a Class for a semantically
+// invalid key-values. The attributes are included
+// in the class to assist with debugging.
+func invalidClass(attr attributes) Class {
 	var (
 		str   strings.Builder
 		empty = true
 	)
-	str.WriteRune('[')
-	if x.hasVariable {
-		empty = false
-		str.WriteString("var")
-	}
-	if x.vstampFutures > 0 {
+	for substr, cond := range map[string]bool{
+		fmt.Sprintf("vstamps:%d", attr.vstampFutures): attr.vstampFutures > 0,
+		"var": attr.hasVariable,
+		"clear": attr.hasClear,
+		"nil": attr.hasNil,
+	} {
+		if !cond {
+			continue
+		}
 		if !empty {
 			str.WriteRune(',')
 		}
+		str.WriteString(substr)
 		empty = false
-		str.WriteString("vstamps")
 	}
-	if x.hasClear {
-		if !empty {
-			str.WriteRune(',')
-		}
-		empty = false
-		str.WriteString("clear")
-	}
-	if x.hasNil {
-		if !empty {
-			str.WriteRune(',')
-		}
-		str.WriteString("nil")
-	}
-	str.WriteRune(']')
-	return str.String()
-}
-
-// invalidClass returns a Class describing the
-// invalid characterstics of the key-value.
-func invalidClass(c character) Class {
-	return Class(fmt.Sprintf("invalid%s", c.String()))
+	return Class(fmt.Sprintf("invalid[%s]", str.String()))
 }
 
 // Classify returns the Class of the given KeyValue.
 func Classify(kv q.KeyValue) Class {
 	dirClass := classifyDir(kv.Key.Directory)
-	keyClass := dirClass.orFields(classifyTuple(kv.Key.Tuple))
-	kvClass := keyClass.orFields(classifyValue(kv.Value))
+	keyClass := dirClass.merge(classifyTuple(kv.Key.Tuple))
+	kvClass := keyClass.merge(classifyValue(kv.Value))
 
 	// KeyValues should never contain `nil`.
 	if kvClass.hasNil {
@@ -114,16 +104,18 @@ func Classify(kv q.KeyValue) Class {
 	}
 
 	// Ensure that, at most, one of the conditions are true.
-	bools := []bool{kvClass.vstampFutures > 0, kvClass.hasVariable, kvClass.hasClear}
-	for i, b1 := range bools {
-		for j, b2 := range bools {
-			if i == j {
-				continue
-			}
-			if b1 && b2 {
-				return invalidClass(kvClass)
-			}
+	count := 0
+	for _, cond := range []bool{
+		kvClass.vstampFutures > 0,
+		kvClass.hasVariable,
+		kvClass.hasClear,
+	} {
+		if cond {
+			count++
 		}
+	}
+	if count > 1 {
+		return invalidClass(kvClass)
 	}
 
 	// After the loop above, we know at most
@@ -143,7 +135,7 @@ func Classify(kv q.KeyValue) Class {
 	}
 }
 
-func classifyDir(dir q.Directory) character {
+func classifyDir(dir q.Directory) attributes {
 	var (
 		class  dirClassification
 		hasNil bool
@@ -155,10 +147,10 @@ func classifyDir(dir q.Directory) character {
 		}
 		element.DirElement(&class)
 	}
-	return class.orFields(character{hasNil: hasNil})
+	return class.orFields(attributes{hasNil: hasNil})
 }
 
-func classifyTuple(tup q.Tuple) character {
+func classifyTuple(tup q.Tuple) attributes {
 	var (
 		class  tupClassification
 		hasNil bool
@@ -170,14 +162,14 @@ func classifyTuple(tup q.Tuple) character {
 		}
 		element.TupElement(&class)
 	}
-	return class.orFields(character{hasNil: hasNil})
+	return class.orFields(attributes{hasNil: hasNil})
 }
 
-func classifyValue(val q.Value) character {
+func classifyValue(val q.Value) attributes {
 	var class valClassification
 	if val == nil {
-		return character{hasNil: true}
+		return attributes{hasNil: true}
 	}
 	val.Value(&class)
-	return class.orFields(character{})
+	return class.orFields(attributes{})
 }

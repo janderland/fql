@@ -12,7 +12,7 @@ type dirClassification struct {
 	hasVariable bool
 }
 
-func (x *dirClassification) orFields(c character) character {
+func (x *dirClassification) orFields(c attributes) attributes {
 	c.hasVariable = c.hasVariable || x.hasVariable
 	return c
 }
@@ -29,7 +29,7 @@ type tupClassification struct {
 	hasNil        bool
 }
 
-func (x *tupClassification) orFields(c character) character {
+func (x *tupClassification) orFields(c attributes) attributes {
 	c.vstampFutures = c.vstampFutures + x.vstampFutures
 	c.hasVariable = c.hasVariable || x.hasVariable
 	c.hasNil = c.hasNil || x.hasNil
@@ -84,7 +84,7 @@ type valClassification struct {
 	hasClear      bool
 }
 
-func (x *valClassification) orFields(c character) character {
+func (x *valClassification) orFields(c attributes) attributes {
 	c.vstampFutures = c.vstampFutures + x.vstampFutures
 	c.hasVariable = c.hasVariable || x.hasVariable
 	c.hasClear = c.hasClear || x.hasClear
