@@ -13,35 +13,82 @@ type Class string
 
 const (
 	// Constant specifies that the KeyValue has no Variable,
-	// MaybeMore, or Clear. This kind of KeyValue can be used to
-	// perform a set operation or is returned by a get operation.
+	// MaybeMore, Clear, or VStampFuture. This kind of KeyValue
+	// can be used to perform a set operation or is returned by
+	// a get operation.
 	Constant Class = "constant"
 
-	// VStamp specifies that the KeyValue contains a VStampFuture.
-	// This kind of KeyValue can only be used to perform a set
-	// operation. When the KeyValue is later read, the VStampFuture
-	// we be replaced by a VStamp.
+	// VStamp specifies that the KeyValue of the Constant class, but
+	// it contains a VStampFuture. This kind of KeyValue can only be
+	// used to perform a set operation. When the KeyValue is later
+	// read, the VStampFuture we be replaced by a VStamp.
 	VStamp Class = "vstamp"
 
-	// Clear specifies that the KeyValue has no Variable or
-	// MaybeMore and has a Clear Value. This kind of KeyValue can
-	// be used to perform a clear operation.
+	// Clear specifies that the KeyValue has no Variable, MaybeMore,
+	// or VStampFuture and has Clear as it's value. This kind of
+	// KeyValue can be used to perform a clear operation.
 	Clear Class = "clear"
 
-	// ReadSingle specifies that the KeyValue has a Variable
-	// Value and doesn't have a Variable or MaybeMore in its Key.
+	// ReadSingle specifies that the KeyValue has a Variable as it's
+	// value and doesn't have a Variable or MaybeMore in its Key. It
+	// also must not contain a VStampFuture anywhere in the KeyValue.
 	// This kind of KeyValue can be used to perform a get operation
 	// that returns a single KeyValue.
 	ReadSingle Class = "single"
 
 	// ReadRange specifies that the KeyValue has a Variable
-	// or MaybeMore in its Key and doesn't have a Clear Value.
-	// This kind of KeyValue can be used to perform a get
+	// or MaybeMore in its key and doesn't have a Clear as it's
+	// value. This kind of KeyValue can be used to perform a get
 	// operation that returns multiple KeyValue.
 	ReadRange Class = "range"
 )
 
-// attributes describes the characterstics of a key-value,
+// Classify returns the Class of the given KeyValue.
+func Classify(kv q.KeyValue) Class {
+	dirAttr := getAttributesOfDir(kv.Key.Directory)
+	keyAttr := dirAttr.merge(getAttributesOfTup(kv.Key.Tuple))
+	kvAttr := keyAttr.merge(getAttributesOfVal(kv.Value))
+
+	// KeyValues should never contain `nil`.
+	if kvAttr.hasNil {
+		return invalidClass(kvAttr)
+	}
+
+	// KeyValues should contain, at most, 1 VStampFuture.
+	if kvAttr.vstampFutures > 1 {
+		return invalidClass(kvAttr)
+	}
+
+	// Ensure that, at most, one of these conditions are true.
+	count := 0
+	for _, cond := range []bool{
+		kvAttr.vstampFutures > 0,
+		kvAttr.hasVariable,
+		kvAttr.hasClear,
+	} {
+		if cond {
+			count++
+		}
+	}
+	if count > 1 {
+		return invalidClass(kvAttr)
+	}
+
+	switch {
+	case keyAttr.hasVariable:
+		return ReadRange
+	case kvAttr.hasVariable:
+		return ReadSingle
+	case kvAttr.vstampFutures > 0:
+		return VStamp
+	case kvAttr.hasClear:
+		return Clear
+	default:
+		return Constant
+	}
+}
+
+// attributes describes the characterstics of a KeyValue,
 // which are relevant to it's classification.
 type attributes struct {
 	vstampFutures int
@@ -50,7 +97,7 @@ type attributes struct {
 	hasNil        bool
 }
 
-// merge combines the attributes of parts of a key-value
+// merge combines the attributes of parts of a KeyValue
 // to infer the attributes of the whole key-value.
 func (x *attributes) merge(c attributes) attributes {
 	return attributes{
@@ -62,8 +109,8 @@ func (x *attributes) merge(c attributes) attributes {
 }
 
 // invalidClass creates a Class for a semantically
-// invalid key-values. The attributes are included
-// in the class to assist with debugging.
+// invalid KeyValue. The relevant attributes are
+// included in the Class to assist with debugging.
 func invalidClass(attr attributes) Class {
 	var (
 		str   strings.Builder
@@ -71,9 +118,9 @@ func invalidClass(attr attributes) Class {
 	)
 	for substr, cond := range map[string]bool{
 		fmt.Sprintf("vstamps:%d", attr.vstampFutures): attr.vstampFutures > 0,
-		"var": attr.hasVariable,
+		"var":   attr.hasVariable,
 		"clear": attr.hasClear,
-		"nil": attr.hasNil,
+		"nil":   attr.hasNil,
 	} {
 		if !cond {
 			continue
@@ -85,91 +132,4 @@ func invalidClass(attr attributes) Class {
 		empty = false
 	}
 	return Class(fmt.Sprintf("invalid[%s]", str.String()))
-}
-
-// Classify returns the Class of the given KeyValue.
-func Classify(kv q.KeyValue) Class {
-	dirClass := classifyDir(kv.Key.Directory)
-	keyClass := dirClass.merge(classifyTuple(kv.Key.Tuple))
-	kvClass := keyClass.merge(classifyValue(kv.Value))
-
-	// KeyValues should never contain `nil`.
-	if kvClass.hasNil {
-		return invalidClass(kvClass)
-	}
-
-	// KeyValues should contain, at most, 1 VStampFuture.
-	if kvClass.vstampFutures > 1 {
-		return invalidClass(kvClass)
-	}
-
-	// Ensure that, at most, one of the conditions are true.
-	count := 0
-	for _, cond := range []bool{
-		kvClass.vstampFutures > 0,
-		kvClass.hasVariable,
-		kvClass.hasClear,
-	} {
-		if cond {
-			count++
-		}
-	}
-	if count > 1 {
-		return invalidClass(kvClass)
-	}
-
-	// After the loop above, we know at most
-	// one of the cases below will execute.
-	switch {
-	case kvClass.hasVariable:
-		if keyClass.hasVariable {
-			return ReadRange
-		}
-		return ReadSingle
-	case kvClass.vstampFutures > 0:
-		return VStamp
-	case kvClass.hasClear:
-		return Clear
-	default:
-		return Constant
-	}
-}
-
-func classifyDir(dir q.Directory) attributes {
-	var (
-		class  dirClassification
-		hasNil bool
-	)
-	for _, element := range dir {
-		if element == nil {
-			hasNil = true
-			continue
-		}
-		element.DirElement(&class)
-	}
-	return class.orFields(attributes{hasNil: hasNil})
-}
-
-func classifyTuple(tup q.Tuple) attributes {
-	var (
-		class  tupClassification
-		hasNil bool
-	)
-	for _, element := range tup {
-		if element == nil {
-			hasNil = true
-			continue
-		}
-		element.TupElement(&class)
-	}
-	return class.orFields(attributes{hasNil: hasNil})
-}
-
-func classifyValue(val q.Value) attributes {
-	var class valClassification
-	if val == nil {
-		return attributes{hasNil: true}
-	}
-	val.Value(&class)
-	return class.orFields(attributes{})
 }
