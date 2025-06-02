@@ -116,20 +116,40 @@ func invalidClass(attr attributes) Class {
 		str   strings.Builder
 		empty = true
 	)
-	for substr, cond := range map[string]bool{
-		fmt.Sprintf("vstamps:%d", attr.vstampFutures): attr.vstampFutures > 0,
-		"var":   attr.hasVariable,
-		"clear": attr.hasClear,
-		"nil":   attr.hasNil,
-	} {
-		if !cond {
+
+	parts := []struct {
+		cond   bool
+		substr string
+	}{
+		{
+			cond:   attr.vstampFutures > 0,
+			substr: fmt.Sprintf("vstamps:%d", attr.vstampFutures),
+		},
+		{
+			cond:   attr.hasVariable,
+			substr: "var",
+		},
+		{
+			cond:   attr.hasClear,
+			substr: "clear",
+		},
+		{
+			cond:   attr.hasNil,
+			substr: "nil",
+		},
+	}
+
+	str.WriteString("invalid[")
+	for _, part := range parts {
+		if !part.cond {
 			continue
 		}
 		if !empty {
 			str.WriteRune(',')
 		}
-		str.WriteString(substr)
+		str.WriteString(part.substr)
 		empty = false
 	}
-	return Class(fmt.Sprintf("invalid[%s]", str.String()))
+	str.WriteRune(']')
+	return Class(str.String())
 }

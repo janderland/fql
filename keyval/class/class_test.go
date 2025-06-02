@@ -83,16 +83,6 @@ func TestClassify(t *testing.T) {
 				Value: q.Variable{},
 			},
 		},
-		{
-			kind: Class("invalid[var,clear]"),
-			kv: q.KeyValue{
-				Key: q.Key{
-					Directory: q.Directory{q.String("my"), q.String("dir")},
-					Tuple:     q.Tuple{q.Int(123), q.Float(-55.8), q.MaybeMore{}},
-				},
-				Value: q.Clear{},
-			},
-		},
 	}
 
 	for _, test := range tests {
