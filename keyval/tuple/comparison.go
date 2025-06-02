@@ -1,4 +1,4 @@
-package compare
+package tuple
 
 import (
 	"github.com/pkg/errors"

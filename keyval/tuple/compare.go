@@ -1,5 +1,5 @@
 // Package compare validates tuples against a schema.
-package compare
+package tuple
 
 import (
 	q "github.com/janderland/fql/keyval"
