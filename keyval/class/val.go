@@ -3,12 +3,12 @@ package class
 import q "github.com/janderland/fql/keyval"
 
 func getAttributesOfVal(val q.Value) attributes {
-	var class valAttributes
+	var attr valAttributes
 	if val == nil {
 		return attributes{hasNil: true}
 	}
-	val.Value(&class)
-	return class.merge(attributes{})
+	val.Value(&attr)
+	return attr.merge(attributes{})
 }
 
 var _ q.ValueOperation = &valAttributes{}
