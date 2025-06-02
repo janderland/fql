@@ -315,7 +315,7 @@ func (x *Stream) goUnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr,
 			Value: keyval.Bytes(fromDB.Value),
 		}
 
-		if mismatch := tuple.Tuples(query, kv.Key.Tuple); mismatch != nil {
+		if mismatch := tuple.Compare(query, kv.Key.Tuple); mismatch != nil {
 			if filter {
 				continue
 			}

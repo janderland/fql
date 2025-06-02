@@ -77,7 +77,7 @@ func (x *comparison) ForTuple(e q.Tuple) {
 		x.out = []int{x.i}
 	}
 
-	mismatch := Tuples(e, val)
+	mismatch := Compare(e, val)
 	if len(mismatch) > 0 {
 		x.out = append([]int{x.i}, mismatch...)
 	}
