@@ -130,6 +130,21 @@ func TestEngine_SetReadSingle(t *testing.T) {
 		})
 	})
 
+	/* TODO: implement raw value vstamps.
+	t.Run("value", func(t *testing.T) {
+		testEnv(t, func(e Engine) {
+				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.VStampFuture{UserVersion: 532}}
+				err := e.Set(query)
+				require.NoError(t, err)
+
+				query.Value = q.Variable{q.VStampType}
+				kv, err := e.ReadSingle(query, SingleOpts{})
+				require.NoError(t, err)
+				require.NotNil(t, kv)
+		})
+	})
+	*/
+
 	t.Run("value tuple", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.Tuple{q.VStampFuture{UserVersion: 532}}}
