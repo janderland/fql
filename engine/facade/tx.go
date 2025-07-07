@@ -102,4 +102,6 @@ func (x *nilTransaction) Set(_ fdb.KeyConvertible, _ []byte) {}
 
 func (x *nilTransaction) SetWithVStampKey(_ fdb.KeyConvertible, _ []byte) {}
 
+func (x *nilTransaction) SetWithVStampValue(_ fdb.KeyConvertible, _ []byte) {}
+
 func (x *nilTransaction) Clear(_ fdb.KeyConvertible) {}

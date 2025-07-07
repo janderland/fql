@@ -16,6 +16,7 @@ import (
 	"github.com/janderland/fql/keyval"
 	"github.com/janderland/fql/keyval/class"
 	"github.com/janderland/fql/keyval/convert"
+	"github.com/janderland/fql/keyval/tuple"
 	"github.com/janderland/fql/keyval/values"
 )
 
@@ -96,11 +97,11 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
 func (x *Engine) Set(query keyval.KeyValue) error {
-	queryClass := class.Classify(query)
-	switch queryClass {
+	switch queryClass := class.Classify(query); queryClass {
+	case class.Constant, class.VStamp:
+		break
 	default:
 		return errors.Errorf("invalid query class %s", queryClass)
-	case class.Constant, class.VStamp:
 	}
 
 	path, err := convert.ToStringArray(query.Key.Directory)
@@ -108,9 +109,14 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	valueBytes, err := values.Pack(query.Value, x.order)
+	valueBytes, valueHasVStamp, err := values.Pack(query.Value, x.order)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
+	}
+
+	keyHasVStamp := tuple.HasVStampFuture(query.Key.Tuple)
+	if keyHasVStamp && valueHasVStamp {
+		return errors.New("query has vstamp in key and value")
 	}
 
 	_, err = x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
@@ -126,16 +132,23 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
 		}
 
-		if queryClass == class.Constant {
-			tr.Set(dir.Pack(tup), valueBytes)
+		// TODO: Create tuple.pack() function which supports VStamps.
+		if keyHasVStamp {
+			keyBytes, err := tup.PackWithVersionstamp(dir.Bytes())
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to pack key")
+			}
+
+			tr.SetWithVStampKey(fdb.Key(keyBytes), valueBytes)
 			return nil, nil
 		}
 
-		keyBytes, err := tup.PackWithVersionstamp(dir.Bytes())
-		if err != nil {
-			return nil, errors.Wrap(err, "failed to pack key")
+		if valueHasVStamp {
+			tr.SetWithVStampValue(dir.Pack(tup), valueBytes)
+			return nil, nil
 		}
-		tr.SetWithVStampKey(fdb.Key(keyBytes), valueBytes)
+
+		tr.Set(dir.Pack(tup), valueBytes)
 		return nil, nil
 	})
 	return errors.Wrap(err, "transaction failed")

@@ -19,13 +19,14 @@ type UnexpectedValueTypeErr struct {
 }
 
 // Pack serializes keyval.Value into a bytes string for writing to the DB.
-func Pack(val keyval.Value, order binary.ByteOrder) ([]byte, error) {
+// It also returns a bool which is true if the value contained a VStampFuture.
+func Pack(val keyval.Value, order binary.ByteOrder) ([]byte, bool, error) {
 	if val == nil {
-		return nil, errors.New("value cannot be nil")
+		return nil, false, errors.New("value cannot be nil")
 	}
 	s := serialization{order: order}
 	val.Value(&s)
-	return s.out, s.err
+	return s.packed, s.vstamp, s.err
 }
 
 // Unpack deserializes keyval.Value from a byte string read from the DB.

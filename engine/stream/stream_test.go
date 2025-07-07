@@ -359,7 +359,7 @@ func testEnv(t *testing.T, f func(facade.Transaction, Stream)) {
 }
 
 func packWithPanic(val q.Value) q.Bytes {
-	packed, err := values.Pack(val, byteOrder)
+	packed, _, err := values.Pack(val, byteOrder)
 	if err != nil {
 		panic(err)
 	}
@@ -419,7 +419,7 @@ func buildDirKVs(t *testing.T, dirs map[string]directory.DirectorySubspace, kvs 
 		tup, err := convert.ToFDBTuple(kv.Key.Tuple)
 		require.NoError(t, err, "failed to convert to FDB tuple")
 
-		val, err := values.Pack(kv.Value, byteOrder)
+		val, _, err := values.Pack(kv.Value, byteOrder)
 		require.NoError(t, err, "failed to pack value")
 
 		out = append(out, DirKV{

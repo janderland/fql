@@ -130,26 +130,18 @@ func TestEngine_SetReadSingle(t *testing.T) {
 		})
 	})
 
-	/* TODO
-	t.Run("value", func(t *testing.T) {
+	t.Run("value tuple", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.Tuple{q.VStampFuture{UserVersion: 532}}}
 				err := e.Set(query)
 				require.NoError(t, err)
 
-				query.Value = q.Variable{q.VStampType}
-				ctx, cancel1 := context.WithCancel(context.Background())
-				defer cancel1()
-
-				var results []q.KeyValue
-				for msg := range e.ReadRange(ctx, query, RangeOpts{}) {
-					require.NoError(t, msg.Err)
-					results = append(results, msg.KV)
-				}
-				require.Len(t, results, 1)
+				query.Value = q.Variable{q.TupleType}
+				kv, err := e.ReadSingle(query, SingleOpts{})
+				require.NoError(t, err)
+				require.NotNil(t, kv)
 		})
 	})
-	*/
 }
 
 func TestEngine_Clear(t *testing.T) {

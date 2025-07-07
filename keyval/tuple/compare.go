@@ -1,9 +1,7 @@
 // Package tuple contains utilities for tuples.
 package tuple
 
-import (
-	q "github.com/janderland/fql/keyval"
-)
+import q "github.com/janderland/fql/keyval"
 
 // Compare checks if the candidate Tuple conforms to the given schema.
 // The schema Tuple may contain Variable or MaybeMore while the candidate

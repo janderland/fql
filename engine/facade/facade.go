@@ -63,6 +63,9 @@ type (
 		// https://pkg.go.dev/github.com/apple/foundationdb/bindings/go/src/fdb#Transaction.SetVersionstampedKey
 		SetWithVStampKey(fdb.KeyConvertible, []byte)
 
+		// TOOD
+		SetWithVStampValue(fdb.KeyConvertible, []byte)
+
 		// Clear deletes a key-value.
 		Clear(fdb.KeyConvertible)
 	}
@@ -189,6 +192,10 @@ func (x *transaction) Set(key fdb.KeyConvertible, val []byte) {
 
 func (x *transaction) SetWithVStampKey(key fdb.KeyConvertible, val []byte) {
 	x.tr.SetVersionstampedKey(key, val)
+}
+
+func (x *transaction) SetWithVStampValue(key fdb.KeyConvertible, val []byte) {
+	x.tr.SetVersionstampedValue(key, val)
 }
 
 func (x *transaction) Clear(key fdb.KeyConvertible) {

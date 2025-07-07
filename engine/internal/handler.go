@@ -57,7 +57,7 @@ func NewValueHandler(query keyval.Value, order binary.ByteOrder, filter bool) (V
 			filter:   filter,
 		}, nil
 	} else {
-		packed, err := values.Pack(query, order)
+		packed, _, err := values.Pack(query, order)
 		if err != nil {
 			return nil, errors.Wrap(err, "failed to pack query")
 		}
