@@ -29,11 +29,9 @@ func TestPackUnpack(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			v, vstamp, err := Pack(test.val, order)
+			v, err := Pack(test.val, order, test.vstamp)
 			require.NoError(t, err)
 			require.NotNil(t, v)
-
-			require.Equal(t, test.vstamp, vstamp)
 
 			out, err := Unpack(v, test.typ, order)
 			require.NoError(t, err)
@@ -43,11 +41,9 @@ func TestPackUnpack(t *testing.T) {
 }
 
 func TestPackUnpackNil(t *testing.T) {
-	v, vstamp, err := Pack(nil, order)
+	v, err := Pack(nil, order, false)
 	require.Error(t, err)
 	require.Nil(t, v)
-
-	require.False(t, vstamp)
 
 	out, err := Unpack(nil, q.AnyType, order)
 	require.NoError(t, err)

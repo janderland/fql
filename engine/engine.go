@@ -16,7 +16,6 @@ import (
 	"github.com/janderland/fql/keyval"
 	"github.com/janderland/fql/keyval/class"
 	"github.com/janderland/fql/keyval/convert"
-	"github.com/janderland/fql/keyval/tuple"
 	"github.com/janderland/fql/keyval/values"
 )
 
@@ -97,7 +96,8 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
 func (x *Engine) Set(query keyval.KeyValue) error {
-	switch queryClass := class.Classify(query); queryClass {
+	queryClass := class.Classify(query)
+	switch queryClass {
 	case class.Constant, class.VStampKey, class.VStampVal:
 		break
 	default:
@@ -109,14 +109,9 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	valueBytes, valueHasVStamp, err := values.Pack(query.Value, x.order)
+	valueBytes, err := values.Pack(query.Value, x.order, queryClass == class.VStampVal)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
-	}
-
-	keyHasVStamp := tuple.HasVStampFuture(query.Key.Tuple)
-	if keyHasVStamp && valueHasVStamp {
-		return errors.New("query has vstamp in key and value")
 	}
 
 	_, err = x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
@@ -132,8 +127,8 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
 		}
 
-		// TODO: Create tuple.pack() function which supports VStamps.
-		if keyHasVStamp {
+		switch queryClass {
+		case class.VStampKey:
 			keyBytes, err := tup.PackWithVersionstamp(dir.Bytes())
 			if err != nil {
 				return nil, errors.Wrap(err, "failed to pack key")
@@ -141,15 +136,18 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 
 			tr.SetWithVStampKey(fdb.Key(keyBytes), valueBytes)
 			return nil, nil
-		}
 
-		if valueHasVStamp {
+		case class.VStampVal:
 			tr.SetWithVStampValue(dir.Pack(tup), valueBytes)
 			return nil, nil
-		}
 
-		tr.Set(dir.Pack(tup), valueBytes)
-		return nil, nil
+		case class.Constant:
+			tr.Set(dir.Pack(tup), valueBytes)
+			return nil, nil
+
+		default:
+			return nil, errors.Errorf("invalid query class %s", queryClass)
+		}
 	})
 	return errors.Wrap(err, "transaction failed")
 }

@@ -6,7 +6,6 @@ import (
 
 	q "github.com/janderland/fql/keyval"
 	"github.com/janderland/fql/keyval/convert"
-	"github.com/janderland/fql/keyval/tuple"
 	"github.com/pkg/errors"
 )
 
@@ -25,12 +24,11 @@ func (x *serialization) ForTuple(v q.Tuple) {
 		x.err = errors.Wrap(err, "failed to convert to FDB tuple")
 		return
 	}
-	if x.vstamp = tuple.HasVStampFuture(v); x.vstamp {
+	if x.vstamp {
 		x.packed, x.err = tup.PackWithVersionstamp(nil)
 		return
-	} else {
-		x.packed = tup.Pack()
-  }
+	} 
+	x.packed = tup.Pack()
 }
 
 func (x *serialization) ForInt(v q.Int) {
