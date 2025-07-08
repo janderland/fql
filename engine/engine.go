@@ -98,7 +98,7 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 // belong to [class.Constant].
 func (x *Engine) Set(query keyval.KeyValue) error {
 	switch queryClass := class.Classify(query); queryClass {
-	case class.Constant, class.VStamp:
+	case class.Constant, class.VStampKey, class.VStampVal:
 		break
 	default:
 		return errors.Errorf("invalid query class %s", queryClass)

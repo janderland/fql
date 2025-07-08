@@ -18,11 +18,17 @@ const (
 	// a get operation.
 	Constant Class = "constant"
 
-	// VStamp specifies that the KeyValue of the Constant class, but
-	// it contains a VStampFuture. This kind of KeyValue can only be
-	// used to perform a set operation. When the KeyValue is later
-	// read, the VStampFuture we be replaced by a VStamp.
-	VStamp Class = "vstamp"
+	// VStampKey specifies that the KeyValue of the Constant class,
+	// but it contains a VStampFuture in the key. This kind of KeyValue
+	// can only be used to perform a set operation. When the KeyValue
+	// is later read, the VStampFuture we be replaced by a VStampKey.
+	VStampKey Class = "vstampkey"
+
+	// VStampVal specifies that the KeyValue of the Constant class,
+	// but it contains a VStampFuture in the value. This kind of KeyValue
+	// can only be used to perform a set operation. When the KeyValue
+	// is later read, the VStampFuture we be replaced by a VStampKey.
+	VStampVal Class = "vstampval"
 
 	// Clear specifies that the KeyValue has no Variable, MaybeMore,
 	// or VStampFuture and has Clear as it's value. This kind of
@@ -80,7 +86,10 @@ func Classify(kv q.KeyValue) Class {
 	case kvAttr.hasVariable:
 		return ReadSingle
 	case kvAttr.vstampFutures > 0:
-		return VStamp
+		if keyAttr.vstampFutures > 0 {
+			return VStampKey
+		}
+		return VStampVal
 	case kvAttr.hasClear:
 		return Clear
 	default:

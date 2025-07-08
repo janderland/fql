@@ -24,13 +24,23 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
-			kind: VStamp,
+			kind: VStampKey,
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("my"), q.String("dir")},
 					Tuple:     q.Tuple{q.Int(123), q.VStampFuture{UserVersion: 202}, q.String("wow")},
 				},
 				Value: q.Int(-38),
+			},
+		},
+		{
+			kind: VStampVal,
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("my"), q.String("dir")},
+					Tuple:     q.Tuple{q.Int(123), q.String("wow")},
+				},
+				Value: q.Tuple{q.VStampFuture{UserVersion: 202}},
 			},
 		},
 		{
