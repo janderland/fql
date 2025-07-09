@@ -149,6 +149,11 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
 
+    --latest)
+      LATEST="x"
+      shift 1
+      ;;
+
     --image)
       for service in $(echo "$2" | tr "," "\n"); do
         case $service in
@@ -209,7 +214,7 @@ FQL_COMMAND=${FQL_ARGS[*]}
 echo "FQL_COMMAND=${FQL_COMMAND}"
 export FQL_COMMAND
 
-DOCKER_TAG="$(code_version)_fdb.$(fdb_version)"
+DOCKER_TAG="${LATEST:-$(code_version)}_fdb.$(fdb_version)"
 echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
 
