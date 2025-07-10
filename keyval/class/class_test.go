@@ -24,6 +24,26 @@ func TestClassify(t *testing.T) {
 			},
 		},
 		{
+			kind: VStampKey,
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("my"), q.String("dir")},
+					Tuple:     q.Tuple{q.Int(123), q.VStampFuture{UserVersion: 202}, q.String("wow")},
+				},
+				Value: q.Int(-38),
+			},
+		},
+		{
+			kind: VStampVal,
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("my"), q.String("dir")},
+					Tuple:     q.Tuple{q.Int(123), q.String("wow")},
+				},
+				Value: q.Tuple{q.VStampFuture{UserVersion: 202}},
+			},
+		},
+		{
 			kind: Clear,
 			kv: q.KeyValue{
 				Key: q.Key{
@@ -73,16 +93,6 @@ func TestClassify(t *testing.T) {
 				Value: q.Variable{},
 			},
 		},
-		{
-			kind: VariableClear,
-			kv: q.KeyValue{
-				Key: q.Key{
-					Directory: q.Directory{q.String("my"), q.String("dir")},
-					Tuple:     q.Tuple{q.Int(123), q.Float(-55.8), q.MaybeMore{}},
-				},
-				Value: q.Clear{},
-			},
-		},
 	}
 
 	for _, test := range tests {
@@ -93,13 +103,13 @@ func TestClassify(t *testing.T) {
 	}
 }
 
-func TestClassifyNil(t *testing.T) {
+func TestClassifyInvalid(t *testing.T) {
 	tests := []struct {
 		name string
 		kv   q.KeyValue
 	}{
 		{
-			name: "directory",
+			name: "nil directory",
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("hi"), nil, q.String("you")},
@@ -109,7 +119,7 @@ func TestClassifyNil(t *testing.T) {
 			},
 		},
 		{
-			name: "tuple",
+			name: "nil tuple",
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("hi"), q.String("you")},
@@ -119,7 +129,7 @@ func TestClassifyNil(t *testing.T) {
 			},
 		},
 		{
-			name: "value",
+			name: "nil value",
 			kv: q.KeyValue{
 				Key: q.Key{
 					Directory: q.Directory{q.String("hi"), q.String("you")},
@@ -128,12 +138,38 @@ func TestClassifyNil(t *testing.T) {
 				Value: nil,
 			},
 		},
+		{
+			name: "vstamp key & value",
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("where"), q.String("how?")},
+					Tuple: q.Tuple{
+						q.Int(42),
+						q.VStampFuture{UserVersion: 384},
+					},
+				},
+				Value: q.Tuple{q.VStampFuture{UserVersion: 384}},
+			},
+		},
+		{
+			name: "vstamp double",
+			kv: q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("where"), q.String("how?")},
+					Tuple: q.Tuple{
+						q.VStampFuture{UserVersion: 384},
+						q.VStampFuture{UserVersion: 400},
+					},
+				},
+				Value: q.Nil{},
+			},
+		},
 	}
 
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
 			kind := Classify(test.kv)
-			require.Equal(t, Nil, kind)
+			require.Regexp(t, "invalid", string(kind))
 		})
 	}
 }

@@ -13,7 +13,7 @@ import (
 	"github.com/janderland/fql/engine/facade"
 	"github.com/janderland/fql/engine/internal"
 	"github.com/janderland/fql/keyval"
-	"github.com/janderland/fql/keyval/compare"
+	"github.com/janderland/fql/keyval/tuple"
 	"github.com/janderland/fql/keyval/convert"
 )
 
@@ -315,7 +315,7 @@ func (x *Stream) goUnpackKeys(query keyval.Tuple, filter bool, in chan DirKVErr,
 			Value: keyval.Bytes(fromDB.Value),
 		}
 
-		if mismatch := compare.Tuples(query, kv.Key.Tuple); mismatch != nil {
+		if mismatch := tuple.Compare(query, kv.Key.Tuple); mismatch != nil {
 			if filter {
 				continue
 			}

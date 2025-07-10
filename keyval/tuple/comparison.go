@@ -1,4 +1,4 @@
-package compare
+package tuple
 
 import (
 	"github.com/pkg/errors"
@@ -77,7 +77,7 @@ func (x *comparison) ForTuple(e q.Tuple) {
 		x.out = []int{x.i}
 	}
 
-	mismatch := Tuples(e, val)
+	mismatch := Compare(e, val)
 	if len(mismatch) > 0 {
 		x.out = append([]int{x.i}, mismatch...)
 	}
@@ -155,6 +155,12 @@ loop:
 				break loop
 			}
 
+		case q.VStampType:
+			if _, ok := x.candidate.(q.VStamp); ok {
+				found = true
+				break
+			}
+
 		default:
 			panic(errors.Errorf("unrecognized variable type '%v'", vType))
 		}
@@ -169,4 +175,16 @@ func (x *comparison) ForMaybeMore(_ q.MaybeMore) {
 	// should have removed the trailing MaybeMore. So, any
 	// MaybeMore we encounter here is invalid.
 	x.out = []int{x.i}
+}
+
+func (x *comparison) ForVStamp(e q.VStamp) {
+	if !e.Eq(x.candidate) {
+		x.out = []int{x.i}
+	}
+}
+
+func (x *comparison) ForVStampFuture(e q.VStampFuture) {
+	if !e.Eq(x.candidate) {
+		x.out = []int{x.i}
+	}
 }

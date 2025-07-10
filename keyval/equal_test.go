@@ -98,3 +98,34 @@ func TestClear_Eq(t *testing.T) {
 	assert.True(t, x.Eq(Clear{}))
 	assert.False(t, x.Eq(Bool(false)))
 }
+
+func TestVStamp_Eq(t *testing.T) {
+	x := VStamp{
+		UserVersion: 587,
+		TxVersion: [10]byte{
+			0xa7, 0x32, 0x81, 0x89, 0xf3,
+			0xfc, 0xf4, 0xa2, 0xb4, 0x99,
+		},
+	}
+	assert.True(t, x.Eq(VStamp{
+		UserVersion: 587,
+		TxVersion: [10]byte{
+			0xa7, 0x32, 0x81, 0x89, 0xf3,
+			0xfc, 0xf4, 0xa2, 0xb4, 0x99,
+		},
+	}))
+	assert.False(t, x.Eq(VStamp{
+		UserVersion: 34,
+		TxVersion: [10]byte{
+			0xa7, 0x32, 0x81, 0x89, 0xf3,
+			0xfc, 0xf4, 0xa2, 0xb4, 0x99,
+		},
+	}))
+	assert.False(t, x.Eq(Float(22.8)))
+}
+
+func TestVStampFuture_Eq(t *testing.T) {
+	x := VStampFuture{UserVersion: 641}
+	assert.True(t, x.Eq(VStampFuture{UserVersion: 641}))
+	assert.False(t, x.Eq(Int(33)))
+}

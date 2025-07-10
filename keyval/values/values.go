@@ -19,13 +19,13 @@ type UnexpectedValueTypeErr struct {
 }
 
 // Pack serializes keyval.Value into a bytes string for writing to the DB.
-func Pack(val keyval.Value, order binary.ByteOrder) ([]byte, error) {
+func Pack(val keyval.Value, order binary.ByteOrder, vstamp bool) ([]byte, error) {
 	if val == nil {
 		return nil, errors.New("value cannot be nil")
 	}
-	s := serialization{order: order}
+	s := serialization{order: order, vstamp: vstamp}
 	val.Value(&s)
-	return s.out, s.err
+	return s.packed, s.err
 }
 
 // Unpack deserializes keyval.Value from a byte string read from the DB.

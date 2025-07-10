@@ -40,7 +40,7 @@ package keyval
 // TODO: Add BigInt to Tuple and Value.
 //go:generate go run ./operation -op-name Query     -param-name query      -types Directory,Key,KeyValue
 //go:generate go run ./operation -op-name Directory -param-name DirElement -types String,Variable
-//go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,MaybeMore
+//go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,MaybeMore,VStamp,VStampFuture
 //go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
 
 type (
@@ -153,6 +153,22 @@ type (
 	// either a TupElement or Value. When used as a Value, it's
 	// serialized as is.
 	Bytes []byte
+
+	// VStamp represents a versionstamp within a Tuple.
+	VStamp struct {
+		TxVersion   [10]byte
+		UserVersion uint16
+	}
+
+	// VStampFuture represents a versionstamp within in a Tuple
+	// which has yet to be assigned. Versionstamps are assigned
+	// when the transaction commits. VStampFuture should only be
+	// used in write queries. After the write is completed,
+	// reading the resultant key-value will produce a VStamp
+	// where the VStampFuture used to be.
+	VStampFuture struct {
+		UserVersion uint16
+	}
 )
 
 // ValueType defines the expected types of a Variable.
@@ -193,6 +209,9 @@ const (
 
 	// TupleType designates a Variable to allow Tuple values.
 	TupleType ValueType = "tuple"
+
+	// VStampType designates a Variable to allow Versionstamp values.
+	VStampType ValueType = "vstamp"
 )
 
 // AllTypes returns all valid values for ValueType.
@@ -209,5 +228,6 @@ func AllTypes() []ValueType {
 		BytesType,
 		UUIDType,
 		TupleType,
+		VStampType,
 	}
 }

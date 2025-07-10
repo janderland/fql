@@ -14,6 +14,8 @@ func TestPackUnpack(t *testing.T) {
 	tests := []struct {
 		val q.Value
 		typ q.ValueType
+
+		vstamp bool
 	}{
 		{val: q.Int(-5548), typ: q.IntType},
 		{val: q.Uint(128895), typ: q.UintType},
@@ -27,7 +29,7 @@ func TestPackUnpack(t *testing.T) {
 
 	for _, test := range tests {
 		t.Run(string(test.typ), func(t *testing.T) {
-			v, err := Pack(test.val, order)
+			v, err := Pack(test.val, order, test.vstamp)
 			require.NoError(t, err)
 			require.NotNil(t, v)
 
@@ -39,7 +41,7 @@ func TestPackUnpack(t *testing.T) {
 }
 
 func TestPackUnpackNil(t *testing.T) {
-	v, err := Pack(nil, order)
+	v, err := Pack(nil, order, false)
 	require.Error(t, err)
 	require.Nil(t, v)
 

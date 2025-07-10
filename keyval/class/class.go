@@ -1,140 +1,164 @@
 // Package class classifies a key-value by the kind of operation it represents.
 package class
 
-import q "github.com/janderland/fql/keyval"
+import (
+	"fmt"
+	"strings"
+
+	q "github.com/janderland/fql/keyval"
+)
 
 // Class categorizes a KeyValue.
 type Class string
 
 const (
 	// Constant specifies that the KeyValue has no Variable,
-	// MaybeMore, or Clear. This kind of KeyValue can be used to
-	// perform a set operation or is returned by a get operation.
+	// MaybeMore, Clear, or VStampFuture. This kind of KeyValue
+	// can be used to perform a set operation or is returned by
+	// a get operation.
 	Constant Class = "constant"
 
-	// Clear specifies that the KeyValue has no Variable or
-	// MaybeMore and has a Clear Value. This kind of KeyValue can
-	// be used to perform a clear operation.
+	// VStampKey specifies that the KeyValue of the Constant class,
+	// but it contains a VStampFuture in the key. This kind of KeyValue
+	// can only be used to perform a set operation. When the KeyValue
+	// is later read, the VStampFuture we be replaced by a VStampKey.
+	VStampKey Class = "vstampkey"
+
+	// VStampVal specifies that the KeyValue of the Constant class,
+	// but it contains a VStampFuture in the value. This kind of KeyValue
+	// can only be used to perform a set operation. When the KeyValue
+	// is later read, the VStampFuture we be replaced by a VStampKey.
+	VStampVal Class = "vstampval"
+
+	// Clear specifies that the KeyValue has no Variable, MaybeMore,
+	// or VStampFuture and has Clear as it's value. This kind of
+	// KeyValue can be used to perform a clear operation.
 	Clear Class = "clear"
 
-	// ReadSingle specifies that the KeyValue has a Variable
-	// Value and doesn't have a Variable or MaybeMore in its Key.
+	// ReadSingle specifies that the KeyValue has a Variable as it's
+	// value and doesn't have a Variable or MaybeMore in its Key. It
+	// also must not contain a VStampFuture anywhere in the KeyValue.
 	// This kind of KeyValue can be used to perform a get operation
 	// that returns a single KeyValue.
 	ReadSingle Class = "single"
 
 	// ReadRange specifies that the KeyValue has a Variable
-	// or MaybeMore in its Key and doesn't have a Clear Value.
-	// This kind of KeyValue can be used to perform a get
+	// or MaybeMore in its key and doesn't have a Clear as it's
+	// value. This kind of KeyValue can be used to perform a get
 	// operation that returns multiple KeyValue.
 	ReadRange Class = "range"
-
-	// VariableClear specifies that the KeyValue has a
-	// Variable or MaybeMore in its Key and has a Clear for
-	// its value. This is an invalid class of KeyValue.
-	VariableClear Class = "variable clear"
-
-	// Nil specifies that the KeyValue contains a nil (not keyval.Nil).
-	// This is an invalid class of KeyValue.
-	Nil Class = "nil"
-)
-
-// subClass categorizes the Key, Directory,
-// Tuple, and Value within a KeyValue.
-type subClass int
-
-const (
-	// constantSubClass specifies that the component contains no
-	// Variable, MaybeMore, or Clear.
-	constantSubClass subClass = iota
-
-	// variableSubClass specifies that the component contains a
-	// Variable or MaybeMore.
-	variableSubClass
-
-	// clearSubClass specifies that the component contains a Clear.
-	clearSubClass
-
-	// nilSubClass specifies that the component contains a nil, which
-	// isn't allowed in any part of the key-value. This shouldn't be
-	// confused with an instance of the Nil type.
-	nilSubClass
 )
 
 // Classify returns the Class of the given KeyValue.
 func Classify(kv q.KeyValue) Class {
-	keyClass := classifyKey(kv.Key)
-	valClass := classifyValue(kv.Value)
+	dirAttr := getAttributesOfDir(kv.Key.Directory)
+	keyAttr := dirAttr.merge(getAttributesOfTup(kv.Key.Tuple))
+	kvAttr := keyAttr.merge(getAttributesOfVal(kv.Value))
 
-	// If a nil is present in any part of the key, the Nil class
-	// takes precedence.
-	if keyClass == nilSubClass || valClass == nilSubClass {
-		return Nil
+	// KeyValues should never contain `nil`.
+	if kvAttr.hasNil {
+		return invalidClass(kvAttr)
 	}
 
-	// If the key is constant, then this query will only affect
-	// a single key and the value will dictate what kind of
-	// single-key query it will be.
-	if keyClass == constantSubClass {
-		switch valClass {
-		case clearSubClass:
-			return Clear
-		case variableSubClass:
-			return ReadSingle
-		default:
-			return Constant
+	// KeyValues should contain, at most, 1 VStampFuture.
+	if kvAttr.vstampFutures > 1 {
+		return invalidClass(kvAttr)
+	}
+
+	// Ensure that, at most, one of these conditions are true.
+	count := 0
+	for _, cond := range []bool{
+		kvAttr.vstampFutures > 0,
+		kvAttr.hasVariable,
+		kvAttr.hasClear,
+	} {
+		if cond {
+			count++
 		}
 	}
-
-	// If the key is not constant then the query should be a
-	// range read, unless it has a Clear instance for its
-	// value.
-	if valClass == clearSubClass {
-		return VariableClear
+	if count > 1 {
+		return invalidClass(kvAttr)
 	}
-	return ReadRange
-}
 
-func classifyKey(key q.Key) subClass {
-	dirClass := classifyDir(key.Directory)
-	tupClass := classifyTuple(key.Tuple)
-
-	if dirClass == nilSubClass || tupClass == nilSubClass {
-		return nilSubClass
-	}
-	if dirClass == variableSubClass || tupClass == variableSubClass {
-		return variableSubClass
-	}
-	return constantSubClass
-}
-
-func classifyDir(dir q.Directory) subClass {
-	class := dirClassification{}
-	for _, element := range dir {
-		if element == nil {
-			return nilSubClass
+	switch {
+	case keyAttr.hasVariable:
+		return ReadRange
+	case kvAttr.hasVariable:
+		return ReadSingle
+	case kvAttr.vstampFutures > 0:
+		if keyAttr.vstampFutures > 0 {
+			return VStampKey
 		}
-		element.DirElement(&class)
+		return VStampVal
+	case kvAttr.hasClear:
+		return Clear
+	default:
+		return Constant
 	}
-	return class.out
 }
 
-func classifyTuple(tup q.Tuple) subClass {
-	class := tupClassification{}
-	for _, element := range tup {
-		if element == nil {
-			return nilSubClass
+// attributes describes the characterstics of a KeyValue,
+// which are relevant to it's classification.
+type attributes struct {
+	vstampFutures int
+	hasVariable   bool
+	hasClear      bool
+	hasNil        bool
+}
+
+// merge combines the attributes of parts of a KeyValue
+// to infer the attributes of the whole key-value.
+func (x *attributes) merge(c attributes) attributes {
+	return attributes{
+		vstampFutures: x.vstampFutures + c.vstampFutures,
+		hasVariable:   x.hasVariable || c.hasVariable,
+		hasClear:      x.hasClear || c.hasClear,
+		hasNil:        x.hasNil || c.hasNil,
+	}
+}
+
+// invalidClass creates a Class for a semantically
+// invalid KeyValue. The relevant attributes are
+// included in the Class to assist with debugging.
+func invalidClass(attr attributes) Class {
+	var (
+		str   strings.Builder
+		empty = true
+	)
+
+	parts := []struct {
+		cond   bool
+		substr string
+	}{
+		{
+			cond:   attr.vstampFutures > 0,
+			substr: fmt.Sprintf("vstamps:%d", attr.vstampFutures),
+		},
+		{
+			cond:   attr.hasVariable,
+			substr: "var",
+		},
+		{
+			cond:   attr.hasClear,
+			substr: "clear",
+		},
+		{
+			cond:   attr.hasNil,
+			substr: "nil",
+		},
+	}
+
+	str.WriteString("invalid[")
+	for _, part := range parts {
+		if !part.cond {
+			continue
 		}
-		element.TupElement(&class)
+		if !empty {
+			str.WriteRune(',')
+		}
+		str.WriteString(part.substr)
+		empty = false
 	}
-	return class.out
-}
-
-func classifyValue(val q.Value) subClass {
-	if val == nil {
-		return nilSubClass
-	}
-	class := valClassification{}
-	val.Value(&class)
-	return class.out
+	str.WriteRune(']')
+	return Class(str.String())
 }

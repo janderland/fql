@@ -10,9 +10,10 @@ import (
 )
 
 type serialization struct {
-	order binary.ByteOrder
-	out   []byte
-	err   error
+	order  binary.ByteOrder
+	packed []byte
+	vstamp bool
+	err    error
 }
 
 var _ q.ValueOperation = &serialization{}
@@ -23,42 +24,46 @@ func (x *serialization) ForTuple(v q.Tuple) {
 		x.err = errors.Wrap(err, "failed to convert to FDB tuple")
 		return
 	}
-	x.out = tup.Pack()
+	if x.vstamp {
+		x.packed, x.err = tup.PackWithVersionstamp(nil)
+		return
+	} 
+	x.packed = tup.Pack()
 }
 
 func (x *serialization) ForInt(v q.Int) {
-	x.out = make([]byte, 8)
-	x.order.PutUint64(x.out, uint64(v))
+	x.packed = make([]byte, 8)
+	x.order.PutUint64(x.packed, uint64(v))
 }
 
 func (x *serialization) ForUint(v q.Uint) {
-	x.out = make([]byte, 8)
-	x.order.PutUint64(x.out, uint64(v))
+	x.packed = make([]byte, 8)
+	x.order.PutUint64(x.packed, uint64(v))
 }
 
 func (x *serialization) ForBool(v q.Bool) {
 	if v {
-		x.out = []byte{1}
+		x.packed = []byte{1}
 	} else {
-		x.out = []byte{0}
+		x.packed = []byte{0}
 	}
 }
 
 func (x *serialization) ForFloat(v q.Float) {
-	x.out = make([]byte, 8)
-	x.order.PutUint64(x.out, math.Float64bits(float64(v)))
+	x.packed = make([]byte, 8)
+	x.order.PutUint64(x.packed, math.Float64bits(float64(v)))
 }
 
 func (x *serialization) ForString(v q.String) {
-	x.out = []byte(v)
+	x.packed = []byte(v)
 }
 
 func (x *serialization) ForUUID(v q.UUID) {
-	x.out = v[:]
+	x.packed = v[:]
 }
 
 func (x *serialization) ForBytes(v q.Bytes) {
-	x.out = v
+	x.packed = v
 }
 
 func (x *serialization) ForNil(_ q.Nil) {}

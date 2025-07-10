@@ -62,3 +62,14 @@ func (x *conversion) ForVariable(q.Variable) {
 func (x *conversion) ForMaybeMore(q.MaybeMore) {
 	x.err = errors.New("cannot convert maybe-more")
 }
+
+func (x *conversion) ForVStamp(in q.VStamp) {
+	x.out = tuple.Versionstamp{
+		TransactionVersion: in.TxVersion,
+		UserVersion: in.UserVersion,
+	}
+}
+
+func (x *conversion) ForVStampFuture(in q.VStampFuture) {
+	x.out = tuple.IncompleteVersionstamp(in.UserVersion)
+}

@@ -1,4 +1,4 @@
-package compare
+package tuple
 
 import (
 	"testing"
@@ -21,7 +21,7 @@ func TestTuples(t *testing.T) {
 		pattern := make(q.Tuple, len(candidate))
 		require.Equal(t, copy(pattern, candidate), len(candidate))
 
-		mismatch := Tuples(pattern, candidate)
+		mismatch := Compare(pattern, candidate)
 		require.Empty(t, mismatch)
 	})
 
@@ -45,7 +45,7 @@ func TestTuples(t *testing.T) {
 
 		for _, test := range tests {
 			t.Run(test.name, func(t *testing.T) {
-				mismatch := Tuples(test.pattern, test.candidate)
+				mismatch := Compare(test.pattern, test.candidate)
 				require.NotEmpty(t, mismatch)
 			})
 		}
@@ -71,10 +71,10 @@ func TestTuples(t *testing.T) {
 			q.Variable{},
 		}
 
-		mismatch := Tuples(pattern, candidate1)
+		mismatch := Compare(pattern, candidate1)
 		require.Empty(t, mismatch)
 
-		mismatch = Tuples(pattern, candidate2)
+		mismatch = Compare(pattern, candidate2)
 		require.Empty(t, mismatch)
 	})
 
@@ -82,7 +82,7 @@ func TestTuples(t *testing.T) {
 		candidate := q.Tuple{q.String("where am i?")}
 		pattern := q.Tuple{q.Variable{q.IntType, q.TupleType, q.StringType}}
 
-		mismatch := Tuples(pattern, candidate)
+		mismatch := Compare(pattern, candidate)
 		require.Empty(t, mismatch)
 	})
 
@@ -101,7 +101,7 @@ func TestTuples(t *testing.T) {
 			q.Variable{},
 		}
 
-		mismatch := Tuples(pattern, candidate)
+		mismatch := Compare(pattern, candidate)
 		require.NotEmpty(t, mismatch)
 	})
 
@@ -118,7 +118,7 @@ func TestTuples(t *testing.T) {
 			q.Variable{},
 		}
 
-		mismatch := Tuples(pattern, candidate)
+		mismatch := Compare(pattern, candidate)
 		require.NotEmpty(t, mismatch)
 	})
 
@@ -137,7 +137,7 @@ func TestTuples(t *testing.T) {
 			q.MaybeMore{},
 		}
 
-		mismatch := Tuples(pattern, candidate)
+		mismatch := Compare(pattern, candidate)
 		require.Empty(t, mismatch)
 	})
 }

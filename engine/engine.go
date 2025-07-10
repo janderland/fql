@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/binary"
 
+	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
@@ -95,8 +96,12 @@ func (x *Engine) Transact(f func(Engine) (interface{}, error)) (interface{}, err
 // Set preforms a write operation for a single key-value. The given query must
 // belong to [class.Constant].
 func (x *Engine) Set(query keyval.KeyValue) error {
-	if class.Classify(query) != class.Constant {
-		return errors.New("query not constant class")
+	queryClass := class.Classify(query)
+	switch queryClass {
+	case class.Constant, class.VStampKey, class.VStampVal:
+		break
+	default:
+		return errors.Errorf("invalid query class %s", queryClass)
 	}
 
 	path, err := convert.ToStringArray(query.Key.Directory)
@@ -104,7 +109,7 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 		return errors.Wrap(err, "failed to convert directory to string array")
 	}
 
-	valueBytes, err := values.Pack(query.Value, x.order)
+	valueBytes, err := values.Pack(query.Value, x.order, queryClass == class.VStampVal)
 	if err != nil {
 		return errors.Wrap(err, "failed to pack value")
 	}
@@ -122,8 +127,27 @@ func (x *Engine) Set(query keyval.KeyValue) error {
 			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
 		}
 
-		tr.Set(dir.Pack(tup), valueBytes)
-		return nil, nil
+		switch queryClass {
+		case class.VStampKey:
+			keyBytes, err := tup.PackWithVersionstamp(dir.Bytes())
+			if err != nil {
+				return nil, errors.Wrap(err, "failed to pack key")
+			}
+
+			tr.SetWithVStampKey(fdb.Key(keyBytes), valueBytes)
+			return nil, nil
+
+		case class.VStampVal:
+			tr.SetWithVStampValue(dir.Pack(tup), valueBytes)
+			return nil, nil
+
+		case class.Constant:
+			tr.Set(dir.Pack(tup), valueBytes)
+			return nil, nil
+
+		default:
+			return nil, errors.Errorf("invalid query class %s", queryClass)
+		}
 	})
 	return errors.Wrap(err, "transaction failed")
 }

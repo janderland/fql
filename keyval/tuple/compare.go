@@ -1,11 +1,9 @@
-// Package compare validates tuples against a schema.
-package compare
+// Package tuple contains utilities for tuples.
+package tuple
 
-import (
-	q "github.com/janderland/fql/keyval"
-)
+import q "github.com/janderland/fql/keyval"
 
-// Tuples checks if the candidate Tuple conforms to the given schema.
+// Compare checks if the candidate Tuple conforms to the given schema.
 // The schema Tuple may contain Variable or MaybeMore while the candidate
 // must not contain either. The elements of each Tuple are compared for
 // equality. If an element of the schema Tuple is a Variable, then the
@@ -20,7 +18,7 @@ import (
 // ...if the element with value `67` didn't match then the returned array
 // would be `[]int{1,2,0}`. If the tuples aren't the same length then the
 // length of the shorter Tuple is used as the mismatching index.
-func Tuples(schema q.Tuple, candidate q.Tuple) []int {
+func Compare(schema q.Tuple, candidate q.Tuple) []int {
 	// If the schema is empty, the candidate must
 	// be empty as well.
 	if len(schema) == 0 {
