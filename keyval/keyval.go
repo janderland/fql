@@ -37,7 +37,6 @@
 // and are serialized by FQL.
 package keyval
 
-// TODO: Add BigInt to Tuple and Value.
 //go:generate go run ./operation -op-name Query     -param-name query      -types Directory,Key,KeyValue
 //go:generate go run ./operation -op-name Directory -param-name DirElement -types String,Variable
 //go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,MaybeMore,VStamp,VStampFuture
@@ -131,14 +130,6 @@ type (
 	// depends on how the [engine.Engine] is configured.
 	Float float64
 
-	// TODO: Add support for BigInt.
-	/*
-		// BigInt is a "primitive" type implementing a big.Int as either
-		// a TupElement or Value.
-		// TODO: Document how BigInt is serialized.
-		BigInt big.Int
-	*/
-
 	// String is a "primitive" type implementing a string as either
 	// a TupElement or Value. When used as a Value, it's serialized
 	// as a UTF-8 encoded byte string.
@@ -192,12 +183,6 @@ const (
 	// FloatType designates a Variable to allow Float values.
 	FloatType ValueType = "float"
 
-	// TODO: Add support for BigInt.
-	/*
-		// BigIntType designates a Variable to allow BigInt values.
-		BigIntType ValueType = "bigint"
-	*/
-
 	// StringType designates a Variable to allow String values.
 	StringType ValueType = "string"
 
@@ -222,8 +207,6 @@ func AllTypes() []ValueType {
 		UintType,
 		BoolType,
 		FloatType,
-		// TODO: Add support for BigInt.
-		// BigIntType,
 		StringType,
 		BytesType,
 		UUIDType,

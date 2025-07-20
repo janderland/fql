@@ -28,19 +28,6 @@ func (x UUID) Eq(e interface{}) bool {
 	return x == e
 }
 
-// TODO: Add support for BigInt.
-/*
-func (x BigInt) Eq(e interface{}) bool {
-	v, ok := e.(BigInt)
-	if !ok {
-		return false
-	}
-
-	X, V := big.Int(x), big.Int(v)
-	return X.Cmp(&V) == 0
-}
-*/
-
 func (x Bytes) Eq(e interface{}) bool {
 	v, ok := e.(Bytes)
 	if !ok {
