@@ -89,7 +89,6 @@ type (
 	// appear as the last element of the Tuple. A Query containing
 	// a MaybeMore defines a schema which allows all keys prefixed
 	// by the key in the schema.
-	// TODO: Implement as a flag on Tuple.
 	MaybeMore struct{}
 
 	// Clear is a special kind of Value which designates
