@@ -36,13 +36,6 @@ func (x *conversion) ForFloat(in q.Float) {
 	x.out = float64(in)
 }
 
-// TODO: Add support for BigInt.
-/*
-func (x *conversion) ForBigInt(in q.BigInt) {
-	x.out = big.Int(in)
-}
-*/
-
 func (x *conversion) ForString(in q.String) {
 	x.out = string(in)
 }

@@ -44,15 +44,6 @@ func (x *comparison) ForFloat(e q.Float) {
 	}
 }
 
-// TODO: Add support for BigInt.
-/*
-func (x *comparison) ForBigInt(e q.BigInt) {
-	if !e.Eq(x.candidate) {
-		x.out = []int{x.i}
-	}
-}
-*/
-
 func (x *comparison) ForString(e q.String) {
 	if !e.Eq(x.candidate) {
 		x.out = []int{x.i}
@@ -121,15 +112,6 @@ loop:
 				found = true
 				break loop
 			}
-
-			// TODO: Add support for BigInt.
-			/*
-				case q.BigIntType:
-					if _, ok := x.candidate.(q.BigInt); ok {
-						found = true
-						break loop
-					}
-			*/
 
 		case q.StringType:
 			if _, ok := x.candidate.(q.String); ok {
