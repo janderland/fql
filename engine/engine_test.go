@@ -110,6 +110,7 @@ func TestEngine_SetReadSingle(t *testing.T) {
 					results1 = append(results1, msg.KV)
 				}
 				require.Len(t, results1, 1)
+				require.Equal(t, uint16(532), results1[0].Key.Tuple[0].(q.VStamp).UserVersion)
 
 				query.Key.Tuple[0] = q.VStampFuture{UserVersion: 372}
 				err = e.Set(query)
@@ -130,7 +131,6 @@ func TestEngine_SetReadSingle(t *testing.T) {
 		})
 	})
 
-	/* TODO: implement raw value vstamps.
 	t.Run("value", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.VStampFuture{UserVersion: 532}}
@@ -141,9 +141,9 @@ func TestEngine_SetReadSingle(t *testing.T) {
 				kv, err := e.ReadSingle(query, SingleOpts{})
 				require.NoError(t, err)
 				require.NotNil(t, kv)
+				require.Equal(t, uint16(532), kv.Value.(q.VStamp).UserVersion)
 		})
 	})
-	*/
 
 	t.Run("value tuple", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
@@ -155,6 +155,7 @@ func TestEngine_SetReadSingle(t *testing.T) {
 				kv, err := e.ReadSingle(query, SingleOpts{})
 				require.NoError(t, err)
 				require.NotNil(t, kv)
+				require.Equal(t, uint16(532), kv.Value.(q.Tuple)[0].(q.VStamp).UserVersion)
 		})
 	})
 }

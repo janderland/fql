@@ -66,12 +66,28 @@ func (x *serialization) ForBytes(v q.Bytes) {
 	x.packed = v
 }
 
-func (x *serialization) ForNil(_ q.Nil) {}
+func (x *serialization) ForVStamp(e q.VStamp) {
+	// TX version   - 10B
+	// User version - 2B
+	x.packed = make([]byte, 12)
+	copy(x.packed[0:10], e.TxVersion[:])
+	binary.LittleEndian.PutUint16(x.packed[10:12], e.UserVersion)
+}
 
-func (x *serialization) ForVariable(_ q.Variable) {
+func (x *serialization) ForVStampFuture(e q.VStampFuture) {
+	// TX version   - 10B
+	// User version - 2B
+	// TX position  - 4B
+	x.packed = make([]byte, 16)
+	binary.LittleEndian.PutUint16(x.packed[10:12], e.UserVersion)
+}
+
+func (x *serialization) ForNil(q.Nil) {}
+
+func (x *serialization) ForVariable(q.Variable) {
 	x.err = errors.New("cannot serialize a variable")
 }
 
-func (x *serialization) ForClear(_ q.Clear) {
+func (x *serialization) ForClear(q.Clear) {
 	x.err = errors.New("cannot serialize a clear")
 }
