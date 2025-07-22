@@ -69,14 +69,24 @@ func Unpack(val []byte, typ keyval.ValueType, order binary.ByteOrder) (keyval.Va
 
 	case keyval.UUIDType:
 		var uuid keyval.UUID
-		if n := copy(uuid[:], val); n != 16 {
+		if len(val) != 16 {
 			return nil, errors.New("not 16 bytes")
 		}
+		copy(uuid[:], val)
 		return uuid, nil
 
 	case keyval.TupleType:
 		tup, err := tuple.Unpack(val)
 		return convert.FromFDBTuple(tup), errors.Wrap(err, "failed to unpack tuple")
+
+	case keyval.VStampType:
+		var vstamp keyval.VStamp
+		if len(val) != 12 {
+			return nil, errors.New("not 12 bytes")
+		}
+		copy(vstamp.TxVersion[:], val[:10])
+		vstamp.UserVersion = binary.LittleEndian.Uint16(val[10:12])
+		return vstamp, nil
 
 	default:
 		return nil, UnexpectedValueTypeErr{errors.Errorf("unknown ValueType '%v'", typ)}

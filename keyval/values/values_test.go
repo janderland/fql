@@ -25,6 +25,7 @@ func TestPackUnpack(t *testing.T) {
 		{val: q.Bytes{0xFF, 0xAA, 0xBC}, typ: q.BytesType},
 		{val: q.UUID{0xbc, 0xef, 0xd2, 0xec, 0x4d, 0xf5, 0x43, 0xb6, 0x8c, 0x79, 0x81, 0xb7, 0x0b, 0x88, 0x6a, 0xf9}, typ: q.UUIDType},
 		{val: q.Tuple{q.Int(225), q.Float(-55.8), q.String("this is me")}, typ: q.TupleType},
+		{val: q.VStamp{TxVersion: [10]byte{0xab, 0xcd, 0x12, 0x34, 0x56, 0xab, 0xcd, 0x12, 0x34, 0x56}, UserVersion: 273}, typ: q.VStampType},
 	}
 
 	for _, test := range tests {
@@ -38,6 +39,15 @@ func TestPackUnpack(t *testing.T) {
 			require.Equal(t, test.val, out)
 		})
 	}
+}
+
+func TestPackVStampFuture(t *testing.T) {
+	v, err := Pack(q.VStampFuture{UserVersion: 22}, order, true)
+	require.NoError(t, err)
+
+	expected := append(make([]byte, 10), []byte{0x16, 0x00}...)
+	expected = append(expected, make([]byte, 4)...)
+	require.Equal(t, expected, v)
 }
 
 func TestPackUnpackNil(t *testing.T) {

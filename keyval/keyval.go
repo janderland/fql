@@ -40,7 +40,7 @@ package keyval
 //go:generate go run ./operation -op-name Query     -param-name query      -types Directory,Key,KeyValue
 //go:generate go run ./operation -op-name Directory -param-name DirElement -types String,Variable
 //go:generate go run ./operation -op-name Tuple     -param-name TupElement -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,MaybeMore,VStamp,VStampFuture
-//go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear
+//go:generate go run ./operation -op-name Value     -param-name value      -types Tuple,Nil,Int,Uint,Bool,Float,String,UUID,Bytes,Variable,Clear,VStamp,VStampFuture
 
 type (
 	// Query is an interface implemented by the types which can

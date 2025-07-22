@@ -40,6 +40,10 @@ func (x *valAttributes) ForClear(q.Clear) {
 	x.hasClear = true
 }
 
+func (x *valAttributes) ForVStampFuture(e q.VStampFuture) {
+	x.vstampFutures++
+}
+
 func (x *valAttributes) ForNil(q.Nil) {}
 
 func (x *valAttributes) ForInt(q.Int) {}
@@ -55,3 +59,5 @@ func (x *valAttributes) ForString(q.String) {}
 func (x *valAttributes) ForUUID(q.UUID) {}
 
 func (x *valAttributes) ForBytes(q.Bytes) {}
+
+func (x *valAttributes) ForVStamp(q.VStamp) {}
