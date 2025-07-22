@@ -25,10 +25,6 @@ If the '--verify' flag is set then the script builds, lints, and
 tests the codebase. This task interacts with an FDB docker
 container which is automatically started.
 
-If the '--no-hado' flag is set then the 'verify' task above will
-exclude linting the Dockerfile. This provides a workaround on
-Arm Macs where Dockerfile linting is currently unsupported.
-
 If the --docs' flag is set then the documentation HTML will be
 generated under the /docs directory.
 
@@ -149,11 +145,6 @@ while [[ $# -gt 0 ]]; do
       shift 1
       ;;
 
-    --no-hado)
-      NO_HADO="x"
-      shift 1
-      ;;
-
     --latest)
       LATEST="x"
       shift 1
@@ -204,7 +195,7 @@ fi
 
 if [[ -n "$VERIFY_CODEBASE" ]]; then
   BUILD_TASKS+=('./scripts/setup_database.sh')
-  BUILD_TASKS+=("./scripts/verify_codebase.sh ${NO_HADO:+--no-hado}")
+  BUILD_TASKS+=("./scripts/verify_codebase.sh")
 fi
 
 if [[ -n "$GENERATE_DOCS" ]]; then
