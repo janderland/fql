@@ -110,6 +110,7 @@ func TestEngine_SetReadSingle(t *testing.T) {
 					results1 = append(results1, msg.KV)
 				}
 				require.Len(t, results1, 1)
+				require.Equal(t, uint16(532), results1[0].Key.Tuple[0].(q.VStamp).UserVersion)
 
 				query.Key.Tuple[0] = q.VStampFuture{UserVersion: 372}
 				err = e.Set(query)
@@ -140,6 +141,7 @@ func TestEngine_SetReadSingle(t *testing.T) {
 				kv, err := e.ReadSingle(query, SingleOpts{})
 				require.NoError(t, err)
 				require.NotNil(t, kv)
+				require.Equal(t, uint16(532), kv.Value.(q.VStamp).UserVersion)
 		})
 	})
 
@@ -153,6 +155,7 @@ func TestEngine_SetReadSingle(t *testing.T) {
 				kv, err := e.ReadSingle(query, SingleOpts{})
 				require.NoError(t, err)
 				require.NotNil(t, kv)
+				require.Equal(t, uint16(532), kv.Value.(q.Tuple)[0].(q.VStamp).UserVersion)
 		})
 	})
 }
