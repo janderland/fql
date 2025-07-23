@@ -10,12 +10,14 @@ import (
 )
 
 var (
-	tokenKVSep    = token{TokenKindKeyValSep, string(internal.KeyValSep)}
-	tokenDirSep   = token{TokenKindDirSep, string(internal.DirSep)}
-	tokenTupStart = token{TokenKindTupStart, string(internal.TupStart)}
-	tokenTupEnd   = token{TokenKindTupEnd, string(internal.TupEnd)}
-	tokenTupSep   = token{TokenKindTupSep, string(internal.TupSep)}
-	tokenStrMark  = token{TokenKindStrMark, string(internal.StrMark)}
+	tokenKVSep      = token{TokenKindKeyValSep, string(internal.KeyValSep)}
+	tokenDirSep     = token{TokenKindDirSep, string(internal.DirSep)}
+	tokenTupStart   = token{TokenKindTupStart, string(internal.TupStart)}
+	tokenTupEnd     = token{TokenKindTupEnd, string(internal.TupEnd)}
+	tokenTupSep     = token{TokenKindTupSep, string(internal.TupSep)}
+	tokenStrMark    = token{TokenKindStrMark, string(internal.StrMark)}
+	tokenStampStart = token{TokenKindStampStart, string(internal.StampStart)}
+	tokenStampSep   = token{TokenKindStampSep, string(internal.StampSep)}
 )
 
 type token struct {
@@ -43,7 +45,7 @@ func TestScanner(t *testing.T) {
 		},
 		{
 			name:  "tuples",
-			input: "(\"something\"\r, \t22.88e0,- 88  \n)",
+			input: "(\"something\"\r, \t22.88e0,- 88  \n #22:x)",
 			tokens: []token{
 				tokenTupStart,
 				tokenStrMark,
@@ -57,7 +59,11 @@ func TestScanner(t *testing.T) {
 				{TokenKindOther, "-"},
 				{TokenKindWhitespace, " "},
 				{TokenKindOther, "88"},
-				{TokenKindNewline, "  \n"},
+				{TokenKindNewline, "  \n "},
+				tokenStampStart,
+				{TokenKindOther, "22"},
+				tokenStampSep,
+				{TokenKindOther, "x"},
 				tokenTupEnd,
 			},
 		},

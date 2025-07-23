@@ -71,6 +71,12 @@ const (
 	// TokenKindStrMark identifies a token equal to StrMark.
 	TokenKindStrMark
 
+	// TokenKindStampStart identifies a token equal to StampStart.
+	TokenKindStampStart
+
+	// TokenKindStampSep identifies a token equal to StampSep.
+	TokenKindStampSep
+
 	// TokenKindReserved identifies a single-rune token which
 	// isn't currently used by the language but reserved for
 	// later use.
@@ -135,13 +141,15 @@ func singleRuneKind(r rune) TokenKind {
 		return TokenKindVarSep
 	case internal.StrMark:
 		return TokenKindStrMark
+	case internal.StampStart:
+		return TokenKindStampStart
+	case internal.StampSep:
+		return TokenKindStampSep
 
 	// While the following aren't currently used by
 	// the language, the following symbols have been
 	// reserved for future use.
 	case internal.Exclamation:
-		return TokenKindReserved
-	case internal.Hashtag:
 		return TokenKindReserved
 	case internal.Dollar:
 		return TokenKindReserved
@@ -156,8 +164,6 @@ func singleRuneKind(r rune) TokenKind {
 	case internal.Star:
 		return TokenKindReserved
 	case internal.Plus:
-		return TokenKindReserved
-	case internal.Colon:
 		return TokenKindReserved
 	case internal.Semicolon:
 		return TokenKindReserved
@@ -260,7 +266,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 	//
 	//  if x.token.Len() > 0 {
 	//  	x.unread()
-	//      return primaryKind(x.state), nil
+	//    return primaryKind(x.state), nil
 	//  }
 	//
 	// This unread is conditional because it shouldn't occur if the
