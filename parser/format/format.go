@@ -197,22 +197,17 @@ func (x *Format) MaybeMore(_ keyval.MaybeMore) {
 // VStamp formats the given keyval.VStamp
 // and appends it to the internal buffer.
 func (x *Format) VStamp(in keyval.VStamp) {
-	x.Bytes(in.TxVersion[:])
 	x.builder.WriteRune('#')
+	x.Bytes(in.TxVersion[:])
+	x.builder.WriteRune(':')
 	x.Int(keyval.Int(in.UserVersion))
 }
 
 // VStampFuture formats the given keyval.VStampFuture
 // and appends it to the internal buffer.
 func (x *Format) VStampFuture(in keyval.VStampFuture) {
-	vstamp := keyval.VStamp{
-		TxVersion: [10]byte{
-			0xff, 0xff, 0xff, 0xff, 0xff,
-			0xff, 0xff, 0xff, 0xff, 0xff,
-		},
-		UserVersion: in.UserVersion,
-	}
-	x.VStamp(vstamp)
+	x.builder.WriteString("#:")
+	x.Int(keyval.Int(in.UserVersion))
 }
 
 func escapeString(in string) string {
