@@ -265,7 +265,7 @@ func (x *Scanner) Scan() (kind TokenKind, err error) {
 	// unread and the type of the current token is returned:
 	//
 	//  if x.token.Len() > 0 {
-	//  	x.unread()
+	//    x.unread()
 	//    return primaryKind(x.state), nil
 	//  }
 	//
