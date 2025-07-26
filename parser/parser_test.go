@@ -336,18 +336,20 @@ func TestData(t *testing.T) {
 		str  string
 	}{
 		{name: "empty", str: ""},
-		{name: "bad group 1", str: "cefd2ec-4df5-43b6-8c79-81b70b886af9"},
-		{name: "bad group 2", str: "bcefd2ec-df5-43b6-8c79-81b70b886af9"},
-		{name: "bad group 3", str: "bcefd2ec-4df5-3b6-8c79-81b70b886af9"},
-		{name: "bad group 4", str: "bcefd2ec-4df5-43b6-c79-81b70b886af9"},
-		{name: "bad group 5", str: "bcefd2ec-4df5-43b6-8c79-1b70b886af9"},
-		{name: "long", str: "bcefdyec-4df5-43%6-8c79-81b70bg86af9"},
+		{name: "uuid short", str: "8f4998c0-36de-4aa6-ae-6dff29eca148"},
+		{name: "uuid long", str: "8f4998c0-36defa-4aa6-aed4-6dff29eca148"},
+		{name: "vstamp tx short", str: "#00ffaa2345:0000"},
+		{name: "vstamp user short", str: "#00ffaa234500bbcc3300:00"},
+		{name: "vstamp tx long", str: "#00ffaa234500bbcc3300ff:0000"},
+		{name: "vstamp tx long", str: "#00ffaa234500bbcc3300:0000ab"},
 	}
 
 	for _, test := range parseFailures {
-		ast, err := parseData(test.str)
-		require.Error(t, err)
-		require.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := parseData(test.str)
+			require.Error(t, err)
+			require.Nil(t, ast)
+		})
 	}
 }
 

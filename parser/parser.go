@@ -603,13 +603,18 @@ func parseData(token string) (
 	}
 
 	if strings.HasPrefix(token, string(internal.StampStart)) {
-		// TODO: check byte lenth.
 		parts := strings.Split(token[1:], string(internal.StampSep))
 		if len(parts) < 2 {
 			return nil, errors.Errorf("token begins with '%c' but is missing '%c'", internal.StampStart, internal.StampSep)
 		}
 		if len(parts) > 2 {
 			return nil, errors.Errorf("token contains multiple '%c'", internal.StampSep)
+		}
+		if l := len(parts[0]); l != 20 && l != 0 {
+			return nil, errors.Errorf("token begins with '%c' but TX version is the incorrect length", internal.StampStart)
+		}
+		if len(parts[1]) != 4 {
+			return nil, errors.Errorf("token begins with '%c' but user version has incorrect length", internal.StampStart)
 		}
 		var vstamp keyval.VStamp
 		n, err := hex.Decode(vstamp.TxVersion[:], []byte(parts[0]))
@@ -629,9 +634,14 @@ func parseData(token string) (
 	}
 
 	if strings.Count(token, "-") == 4 {
+		parts := strings.Split(token, "-")
+		for i, l := range []int{8, 4, 4, 4, 12} {
+			if len(parts[i]) != l {
+				return nil, errors.Errorf("token contains four '-' but group %d has incorrect length", i+1)
+			}
+		}
 		var uuid keyval.UUID
-		// TODO: check byte length.
-		_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
+		_, err := hex.Decode(uuid[:], []byte(strings.Join(parts, "")))
 		if err != nil {
 			return nil, errors.Wrap(err, "token contains four '-' but cannot be parsed as a UUID")
 		}
