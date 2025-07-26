@@ -14,22 +14,23 @@ const (
 // encountered by the scanner.Scanner, they are usually
 // returned in their own single-rune token string.
 const (
-	KeyValSep = '='
-	DirSep    = '/'
-	TupStart  = '('
-	TupSep    = ','
-	TupEnd    = ')'
-	VarStart  = '<'
-	VarSep    = '|'
-	VarEnd    = '>'
-	StrMark   = '"'
+	KeyValSep  = '='
+	DirSep     = '/'
+	TupStart   = '('
+	TupSep     = ','
+	TupEnd     = ')'
+	VarStart   = '<'
+	VarSep     = '|'
+	VarEnd     = '>'
+	StrMark    = '"'
+	StampStart = '#'
+	StampSep   = ':'
 
 	// While the following aren't currently used by
 	// the language, the following symbols have been
 	// reserved for future use.
 
 	Exclamation = '!'
-	Hashtag     = '#'
 	Dollar      = '$'
 	Percent     = '%'
 	Ampersand   = '&'
@@ -37,7 +38,6 @@ const (
 	CurlyEnd    = '}'
 	Star        = '*'
 	Plus        = '+'
-	Colon       = ':'
 	Semicolon   = ';'
 	Question    = '?'
 	At          = '@'
@@ -59,6 +59,8 @@ func AllSingleRuneTokens() string {
 		VarSep,
 		VarEnd,
 		StrMark,
+		StampStart,
+		StampSep,
 	})
 }
 

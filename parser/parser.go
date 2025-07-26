@@ -2,6 +2,7 @@
 package parser
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -601,9 +602,46 @@ func parseData(token string) (
 		return keyval.Bytes(data), nil
 	}
 
+	if strings.HasPrefix(token, string(internal.StampStart)) {
+		parts := strings.Split(token[1:], string(internal.StampSep))
+		if len(parts) < 2 {
+			return nil, errors.Errorf("token begins with '%c' but is missing '%c'", internal.StampStart, internal.StampSep)
+		}
+		if len(parts) > 2 {
+			return nil, errors.Errorf("token contains multiple '%c'", internal.StampSep)
+		}
+		if l := len(parts[0]); l != 20 && l != 0 {
+			return nil, errors.Errorf("token begins with '%c' but TX version is the incorrect length", internal.StampStart)
+		}
+		if len(parts[1]) != 4 {
+			return nil, errors.Errorf("token begins with '%c' but user version has incorrect length", internal.StampStart)
+		}
+		var vstamp keyval.VStamp
+		n, err := hex.Decode(vstamp.TxVersion[:], []byte(parts[0]))
+		if err != nil {
+			return nil, errors.Wrapf(err, "token begins with '%c' but TX version cannot be parsed", internal.StampStart)
+		}
+		var userVersion [2]byte
+		_, err = hex.Decode(userVersion[:], []byte(parts[1]))
+		if err != nil {
+			return nil, errors.Wrapf(err, "token begins with '%c' but user version cannot be parsed", internal.StampStart)
+		}
+		vstamp.UserVersion = binary.BigEndian.Uint16(userVersion[:])
+		if n == 0 {
+			return keyval.VStampFuture{UserVersion: vstamp.UserVersion}, nil
+		}
+		return vstamp, nil
+	}
+
 	if strings.Count(token, "-") == 4 {
+		parts := strings.Split(token, "-")
+		for i, l := range []int{8, 4, 4, 4, 12} {
+			if len(parts[i]) != l {
+				return nil, errors.Errorf("token contains four '-' but group %d has incorrect length", i+1)
+			}
+		}
 		var uuid keyval.UUID
-		_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
+		_, err := hex.Decode(uuid[:], []byte(strings.Join(parts, "")))
 		if err != nil {
 			return nil, errors.Wrap(err, "token contains four '-' but cannot be parsed as a UUID")
 		}

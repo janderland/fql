@@ -315,6 +315,8 @@ func TestData(t *testing.T) {
 		{name: "int", str: "123", ast: q.Int(123)},
 		{name: "float", str: "-94.2", ast: q.Float(-94.2)},
 		{name: "scientific", str: "3.47e-08", ast: q.Float(3.47e-8)},
+		{name: "vstamp", str: "#fab34cd8ff032b223400:00ff", ast: q.VStamp{TxVersion: [10]byte{0xfa, 0xb3, 0x4c, 0xd8, 0xff, 0x03, 0x2b, 0x22, 0x34, 0x00}, UserVersion: 255}},
+		{name: "vstampfut", str: "#:00fa", ast: q.VStampFuture{UserVersion: 250}},
 	}
 
 	for _, test := range roundTrips {
@@ -334,18 +336,20 @@ func TestData(t *testing.T) {
 		str  string
 	}{
 		{name: "empty", str: ""},
-		{name: "bad group 1", str: "cefd2ec-4df5-43b6-8c79-81b70b886af9"},
-		{name: "bad group 2", str: "bcefd2ec-df5-43b6-8c79-81b70b886af9"},
-		{name: "bad group 3", str: "bcefd2ec-4df5-3b6-8c79-81b70b886af9"},
-		{name: "bad group 4", str: "bcefd2ec-4df5-43b6-c79-81b70b886af9"},
-		{name: "bad group 5", str: "bcefd2ec-4df5-43b6-8c79-1b70b886af9"},
-		{name: "long", str: "bcefdyec-4df5-43%6-8c79-81b70bg86af9"},
+		{name: "uuid short", str: "8f4998c0-36de-4aa6-ae-6dff29eca148"},
+		{name: "uuid long", str: "8f4998c0-36defa-4aa6-aed4-6dff29eca148"},
+		{name: "vstamp tx short", str: "#00ffaa2345:0000"},
+		{name: "vstamp user short", str: "#00ffaa234500bbcc3300:00"},
+		{name: "vstamp tx long", str: "#00ffaa234500bbcc3300ff:0000"},
+		{name: "vstamp tx long", str: "#00ffaa234500bbcc3300:0000ab"},
 	}
 
 	for _, test := range parseFailures {
-		ast, err := parseData(test.str)
-		require.Error(t, err)
-		require.Nil(t, ast)
+		t.Run(test.name, func(t *testing.T) {
+			ast, err := parseData(test.str)
+			require.Error(t, err)
+			require.Nil(t, ast)
+		})
 	}
 }
 

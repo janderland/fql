@@ -19,11 +19,11 @@ tuple = '(' [ nl elements [ ',' ] nl ] ')'
 
 elements = '...' | ( data [ ',' nl elements ] )
 
-data = 'nil' | variable | tuple | bool | int | float | scientific | string | uuid | bytes
+data = 'nil' | variable | tuple | bool | int | float | scientific | string | uuid | bytes | vstamp
 
 variable = '<' [ type ] '>'
 
-type = ( 'tuple' | 'bool' | 'int' | 'float' | 'string' | 'uuid' | 'bytes' ) [ '|' type ]
+type = ( 'tuple' | 'bool' | 'int' | 'float' | 'string' | 'uuid' | 'bytes' | 'vstamp' ) [ '|' type ]
 
 bool = 'true' | 'false'
 
@@ -38,6 +38,8 @@ string = '"' { text | '\"' } '"'
 uuid = ( 8 * hexDigit ) '-' ( 4 * hexDigit ) '-' ( 4 * hexDigit ) '-' ( 4 * hexDigit ) '-' ( 12 * hexDigit )
 
 bytes = '0x' { 2 * hexDigit }
+
+vstamp = '#' [ 20 * hexDigit ] ':' ( 4 * hexDigit )
 
 number = { digit }
 
