@@ -2,6 +2,7 @@
 package parser
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"strconv"
@@ -601,8 +602,35 @@ func parseData(token string) (
 		return keyval.Bytes(data), nil
 	}
 
+	if strings.HasPrefix(token, string(internal.StampStart)) {
+		// TODO: check byte lenth.
+		parts := strings.Split(token[1:], string(internal.StampSep))
+		if len(parts) < 2 {
+			return nil, errors.Errorf("token begins with '%c' but is missing '%c'", internal.StampStart, internal.StampSep)
+		}
+		if len(parts) > 2 {
+			return nil, errors.Errorf("token contains multiple '%c'", internal.StampSep)
+		}
+		var vstamp keyval.VStamp
+		n, err := hex.Decode(vstamp.TxVersion[:], []byte(parts[0]))
+		if err != nil {
+			return nil, errors.Wrapf(err, "token begins with '%c' but TX version cannot be parsed", internal.StampStart)
+		}
+		var userVersion [2]byte
+		_, err = hex.Decode(userVersion[:], []byte(parts[1]))
+		if err != nil {
+			return nil, errors.Wrapf(err, "token begins with '%c' but user version cannot be parsed", internal.StampStart)
+		}
+		vstamp.UserVersion = binary.BigEndian.Uint16(userVersion[:])
+		if n == 0 {
+			return keyval.VStampFuture{UserVersion: vstamp.UserVersion}, nil
+		}
+		return vstamp, nil
+	}
+
 	if strings.Count(token, "-") == 4 {
 		var uuid keyval.UUID
+		// TODO: check byte length.
 		_, err := hex.Decode(uuid[:], []byte(strings.ReplaceAll(token, "-", "")))
 		if err != nil {
 			return nil, errors.Wrap(err, "token contains four '-' but cannot be parsed as a UUID")

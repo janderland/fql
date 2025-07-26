@@ -315,6 +315,8 @@ func TestData(t *testing.T) {
 		{name: "int", str: "123", ast: q.Int(123)},
 		{name: "float", str: "-94.2", ast: q.Float(-94.2)},
 		{name: "scientific", str: "3.47e-08", ast: q.Float(3.47e-8)},
+		{name: "vstamp", str: "#fab34cd8ff032b223400:00ff", ast: q.VStamp{TxVersion: [10]byte{0xfa, 0xb3, 0x4c, 0xd8, 0xff, 0x03, 0x2b, 0x22, 0x34, 0x00}, UserVersion: 255}},
+		{name: "vstampfut", str: "#:00fa", ast: q.VStampFuture{UserVersion: 250}},
 	}
 
 	for _, test := range roundTrips {

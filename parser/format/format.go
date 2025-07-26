@@ -2,6 +2,7 @@
 package format
 
 import (
+	"encoding/binary"
 	"encoding/hex"
 	"strconv"
 	"strings"
@@ -198,20 +199,26 @@ func (x *Format) MaybeMore(_ keyval.MaybeMore) {
 // and appends it to the internal buffer.
 func (x *Format) VStamp(in keyval.VStamp) {
 	x.builder.WriteRune('#')
-	x.Bytes(in.TxVersion[:])
+	x.builder.WriteString(hex.EncodeToString(in.TxVersion[:]))
 	x.builder.WriteRune(':')
-	x.Int(keyval.Int(in.UserVersion))
+	x.builder.WriteString(bigEndianHex(in.UserVersion))
 }
 
 // VStampFuture formats the given keyval.VStampFuture
 // and appends it to the internal buffer.
 func (x *Format) VStampFuture(in keyval.VStampFuture) {
 	x.builder.WriteString("#:")
-	x.Int(keyval.Int(in.UserVersion))
+	x.builder.WriteString(bigEndianHex(in.UserVersion))
 }
 
 func escapeString(in string) string {
 	out := strings.ReplaceAll(in, "\\", "\\\\")
 	out = strings.ReplaceAll(out, "\"", "\\\"")
 	return out
+}
+
+func bigEndianHex(in uint16) string {
+	var out [2]byte
+	binary.BigEndian.PutUint16(out[:], in)
+	return hex.EncodeToString(out[:])
 }
