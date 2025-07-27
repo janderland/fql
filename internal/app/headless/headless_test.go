@@ -125,6 +125,7 @@ func TestHeadless_Watch(t *testing.T) {
 			})
 		})
 	}
+}
 
 func testEnv(t *testing.T, f func(App)) {
 	writer := zerolog.ConsoleWriter{Out: os.Stdout}
