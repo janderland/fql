@@ -103,6 +103,7 @@ var FQL = &cobra.Command{
 			Out:    out,
 
 			Write:      flags.Write,
+			Watch:      flags.Watch,
 			SingleOpts: flags.SingleOpts(),
 			RangeOpts:  flags.RangeOpts(),
 		}
