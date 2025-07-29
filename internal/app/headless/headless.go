@@ -34,7 +34,7 @@ func (x *App) Run(ctx context.Context, queries []string) error {
 		if len(queries) != 1 {
 			return errors.New("watch mode only supports a single query")
 		}
-
+		
 		// Parse the single query for watch mode
 		p := parser.New(scanner.New(strings.NewReader(queries[0])))
 		query, err := p.Parse()
@@ -187,7 +187,7 @@ func (x *App) watchSingle(ctx context.Context, eg engine.Engine, query q.KeyValu
 		if err != nil {
 			return err
 		}
-
+		
 		// Print the current value
 		if kv != nil {
 			x.Format.Reset()
@@ -200,18 +200,7 @@ func (x *App) watchSingle(ctx context.Context, eg engine.Engine, query q.KeyValu
 		// Create a channel to handle the watch result
 		watchDone := make(chan error, 1)
 		go func() {
-			// Monitor for context cancellation and watch completion
-			watchResult := make(chan error, 1)
-			go func() {
-				watchResult <- watch.Get()
-			}()
-
-			select {
-			case <-ctx.Done():
-				watchDone <- ctx.Err()
-			case err := <-watchResult:
-				watchDone <- err
-			}
+			watchDone <- watch.Get()
 		}()
 
 		// Wait for the watch to trigger (indicating a change) or context cancellation
