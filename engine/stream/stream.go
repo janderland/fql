@@ -13,8 +13,8 @@ import (
 	"github.com/janderland/fql/engine/facade"
 	"github.com/janderland/fql/engine/internal"
 	"github.com/janderland/fql/keyval"
-	"github.com/janderland/fql/keyval/tuple"
 	"github.com/janderland/fql/keyval/convert"
+	"github.com/janderland/fql/keyval/tuple"
 )
 
 type (

@@ -133,29 +133,29 @@ func TestEngine_SetReadSingle(t *testing.T) {
 
 	t.Run("value", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
-				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.VStampFuture{UserVersion: 532}}
-				err := e.Set(query)
-				require.NoError(t, err)
+			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.VStampFuture{UserVersion: 532}}
+			err := e.Set(query)
+			require.NoError(t, err)
 
-				query.Value = q.Variable{q.VStampType}
-				kv, err := e.ReadSingle(query, SingleOpts{})
-				require.NoError(t, err)
-				require.NotNil(t, kv)
-				require.Equal(t, uint16(532), kv.Value.(q.VStamp).UserVersion)
+			query.Value = q.Variable{q.VStampType}
+			kv, err := e.ReadSingle(query, SingleOpts{})
+			require.NoError(t, err)
+			require.NotNil(t, kv)
+			require.Equal(t, uint16(532), kv.Value.(q.VStamp).UserVersion)
 		})
 	})
 
 	t.Run("value tuple", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
-				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.Tuple{q.VStampFuture{UserVersion: 532}}}
-				err := e.Set(query)
-				require.NoError(t, err)
+			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.Tuple{q.VStampFuture{UserVersion: 532}}}
+			err := e.Set(query)
+			require.NoError(t, err)
 
-				query.Value = q.Variable{q.TupleType}
-				kv, err := e.ReadSingle(query, SingleOpts{})
-				require.NoError(t, err)
-				require.NotNil(t, kv)
-				require.Equal(t, uint16(532), kv.Value.(q.Tuple)[0].(q.VStamp).UserVersion)
+			query.Value = q.Variable{q.TupleType}
+			kv, err := e.ReadSingle(query, SingleOpts{})
+			require.NoError(t, err)
+			require.NotNil(t, kv)
+			require.Equal(t, uint16(532), kv.Value.(q.Tuple)[0].(q.VStamp).UserVersion)
 		})
 	})
 }

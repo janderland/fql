@@ -17,7 +17,6 @@ Flags:
 	-q, --query stringArray   execute query non-interactively
 	-r, --reverse             query range-reads in reverse order
 	-s, --strict              throw an error if a KV is read which doesn't match the schema
-	    --watch               watch a key for changes (only works with single-read queries)
 	-w, --write               allow write queries
 */
 package main
