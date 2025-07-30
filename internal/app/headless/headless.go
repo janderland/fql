@@ -34,7 +34,7 @@ func (x *App) Run(ctx context.Context, queries []string) error {
 		if len(queries) != 1 {
 			return errors.New("watch mode only supports a single query")
 		}
-		
+
 		// Parse the single query for watch mode
 		p := parser.New(scanner.New(strings.NewReader(queries[0])))
 		query, err := p.Parse()
@@ -42,7 +42,7 @@ func (x *App) Run(ctx context.Context, queries []string) error {
 			return errors.Wrap(err, "failed to parse query")
 		}
 
-		if dir, ok := query.(q.Directory); ok {
+		if _, ok := query.(q.Directory); ok {
 			return errors.New("watch mode does not support directory queries")
 		}
 
@@ -187,7 +187,7 @@ func (x *App) watchSingle(ctx context.Context, eg engine.Engine, query q.KeyValu
 		if err != nil {
 			return err
 		}
-		
+
 		// Print the current value
 		if kv != nil {
 			x.Format.Reset()
