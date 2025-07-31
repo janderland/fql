@@ -3,7 +3,9 @@ package engine
 import (
 	"context"
 	"flag"
+	"fmt"
 	"testing"
+	"time"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -287,6 +289,34 @@ func TestEngine_Watch(t *testing.T) {
 			watch, err := e.Watch(query)
 			require.NoError(t, err)
 			require.NotNil(t, watch)
+
+			// Create a context to control the writer goroutine
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			// Start a goroutine that writes to the key every 100ms
+			go func() {
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				counter := 0
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						counter++
+						writeQuery := q.KeyValue{
+							Key:   query.Key,
+							Value: q.String(fmt.Sprintf("value_%d", counter)),
+						}
+						e.Set(writeQuery)
+					}
+				}
+			}()
+
+			// Wait for the watch to trigger
+			watch.BlockUntilReady()
 		})
 	})
 
