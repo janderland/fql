@@ -3,7 +3,6 @@ package engine
 import (
 	"context"
 	"flag"
-	"fmt"
 	"testing"
 	"time"
 
@@ -283,13 +282,13 @@ func TestEngine_Watch(t *testing.T) {
 					Directory: q.Directory{q.String("users")},
 					Tuple:     q.Tuple{q.String("john")},
 				},
-				Value: q.Variable{q.StringType},
+				Value: q.Variable{q.IntType},
 			}
 
 			// Create initial value to ensure directory exists
 			initialValue := q.KeyValue{
 				Key:   query.Key,
-				Value: q.String("initial_value"),
+				Value: q.Int(0),
 			}
 			err := e.Set(initialValue)
 			require.NoError(t, err)
@@ -316,7 +315,7 @@ func TestEngine_Watch(t *testing.T) {
 						counter++
 						writeQuery := q.KeyValue{
 							Key:   query.Key,
-							Value: q.String(fmt.Sprintf("value_%d", counter)),
+							Value: q.Int(counter),
 						}
 						err := e.Set(writeQuery)
 						require.NoError(t, err)
