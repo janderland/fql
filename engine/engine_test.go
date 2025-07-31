@@ -4,6 +4,7 @@ import (
 	"context"
 	"flag"
 	"testing"
+	"time"
 
 	"github.com/apple/foundationdb/bindings/go/src/fdb"
 	"github.com/apple/foundationdb/bindings/go/src/fdb/directory"
@@ -133,29 +134,29 @@ func TestEngine_SetReadSingle(t *testing.T) {
 
 	t.Run("value", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
-				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.VStampFuture{UserVersion: 532}}
-				err := e.Set(query)
-				require.NoError(t, err)
+			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.VStampFuture{UserVersion: 532}}
+			err := e.Set(query)
+			require.NoError(t, err)
 
-				query.Value = q.Variable{q.VStampType}
-				kv, err := e.ReadSingle(query, SingleOpts{})
-				require.NoError(t, err)
-				require.NotNil(t, kv)
-				require.Equal(t, uint16(532), kv.Value.(q.VStamp).UserVersion)
+			query.Value = q.Variable{q.VStampType}
+			kv, err := e.ReadSingle(query, SingleOpts{})
+			require.NoError(t, err)
+			require.NotNil(t, kv)
+			require.Equal(t, uint16(532), kv.Value.(q.VStamp).UserVersion)
 		})
 	})
 
 	t.Run("value tuple", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
-				query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.Tuple{q.VStampFuture{UserVersion: 532}}}
-				err := e.Set(query)
-				require.NoError(t, err)
+			query := q.KeyValue{Key: q.Key{Directory: q.Directory{q.String("vstamp")}, Tuple: q.Tuple{q.Nil{}}}, Value: q.Tuple{q.VStampFuture{UserVersion: 532}}}
+			err := e.Set(query)
+			require.NoError(t, err)
 
-				query.Value = q.Variable{q.TupleType}
-				kv, err := e.ReadSingle(query, SingleOpts{})
-				require.NoError(t, err)
-				require.NotNil(t, kv)
-				require.Equal(t, uint16(532), kv.Value.(q.Tuple)[0].(q.VStamp).UserVersion)
+			query.Value = q.Variable{q.TupleType}
+			kv, err := e.ReadSingle(query, SingleOpts{})
+			require.NoError(t, err)
+			require.NotNil(t, kv)
+			require.Equal(t, uint16(532), kv.Value.(q.Tuple)[0].(q.VStamp).UserVersion)
 		})
 	})
 }
@@ -269,6 +270,61 @@ func TestEngine_Directories(t *testing.T) {
 				result = append(result, msg.Dir)
 			}
 			require.Equal(t, expected, result)
+		})
+	})
+}
+
+func TestEngine_Watch(t *testing.T) {
+	t.Run("valid single-read query", func(t *testing.T) {
+		testEnv(t, func(e Engine) {
+			query := q.KeyValue{
+				Key: q.Key{
+					Directory: q.Directory{q.String("users")},
+					Tuple:     q.Tuple{q.String("john")},
+				},
+				Value: q.Variable{q.IntType},
+			}
+
+			// Create initial value to ensure directory exists
+			initialValue := q.KeyValue{
+				Key:   query.Key,
+				Value: q.Int(0),
+			}
+			err := e.Set(initialValue)
+			require.NoError(t, err)
+
+			watch, err := e.Watch(query)
+			require.NoError(t, err)
+			require.NotNil(t, watch)
+
+			// Create a context to control the writer goroutine
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			// Start a goroutine that writes to the key every 100ms
+			go func() {
+				ticker := time.NewTicker(100 * time.Millisecond)
+				defer ticker.Stop()
+
+				counter := 0
+				for {
+					select {
+					case <-ctx.Done():
+						return
+					case <-ticker.C:
+						counter++
+						writeQuery := q.KeyValue{
+							Key:   query.Key,
+							Value: q.Int(counter),
+						}
+						err := e.Set(writeQuery)
+						require.NoError(t, err)
+					}
+				}
+			}()
+
+			// Wait for the watch to trigger
+			watch.BlockUntilReady()
 		})
 	})
 }

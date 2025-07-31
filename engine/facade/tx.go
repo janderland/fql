@@ -105,3 +105,7 @@ func (x *nilTransaction) SetWithVStampKey(_ fdb.KeyConvertible, _ []byte) {}
 func (x *nilTransaction) SetWithVStampValue(_ fdb.KeyConvertible, _ []byte) {}
 
 func (x *nilTransaction) Clear(_ fdb.KeyConvertible) {}
+
+func (x *nilTransaction) Watch(_ fdb.KeyConvertible) fdb.FutureNil {
+	return NewNilFutureNil()
+}

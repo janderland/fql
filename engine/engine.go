@@ -305,3 +305,39 @@ func (x *Engine) Directories(ctx context.Context, query keyval.Directory) chan s
 
 	return out
 }
+
+// Watch monitors a single key-value for changes. The given query must belong to [class.ReadSingle].
+// The method creates a watch and returns a FutureNil that will become ready when the key's value changes.
+func (x *Engine) Watch(query keyval.KeyValue) (fdb.FutureNil, error) {
+	if class.Classify(query) != class.ReadSingle {
+		return nil, errors.New("query not single-read class")
+	}
+
+	path, err := convert.ToStringArray(query.Key.Directory)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to convert directory to string array")
+	}
+
+	var watch fdb.FutureNil
+	_, err = x.tr.Transact(func(tr facade.Transaction) (interface{}, error) {
+		x.log.Log().Interface("query", query).Msg("watching")
+
+		dir, err := tr.DirOpen(path)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to open directory")
+		}
+
+		tup, err := convert.ToFDBTuple(query.Key.Tuple)
+		if err != nil {
+			return nil, errors.Wrap(err, "failed to convert to FDB tuple")
+		}
+
+		watch = tr.Watch(dir.Pack(tup))
+		return nil, nil
+	})
+	if err != nil {
+		return nil, errors.Wrap(err, "transaction failed")
+	}
+
+	return watch, nil
+}

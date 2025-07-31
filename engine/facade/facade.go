@@ -68,6 +68,10 @@ type (
 
 		// Clear deletes a key-value.
 		Clear(fdb.KeyConvertible)
+
+		// Watch creates a watch and returns a FutureNil that will become ready when the
+		// watch reports a change to the value of the specified key.
+		Watch(fdb.KeyConvertible) fdb.FutureNil
 	}
 )
 
@@ -200,4 +204,8 @@ func (x *transaction) SetWithVStampValue(key fdb.KeyConvertible, val []byte) {
 
 func (x *transaction) Clear(key fdb.KeyConvertible) {
 	x.tr.Clear(key)
+}
+
+func (x *transaction) Watch(key fdb.KeyConvertible) fdb.FutureNil {
+	return x.tr.Watch(key)
 }

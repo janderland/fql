@@ -20,6 +20,10 @@ type (
 	nilFutureByteSlice struct {
 		fdb.Future
 	}
+
+	nilFutureNil struct {
+		fdb.Future
+	}
 )
 
 var (
@@ -30,6 +34,7 @@ var (
 
 	_ fdb.Future          = &nilFuture{}
 	_ fdb.FutureByteSlice = &nilFutureByteSlice{}
+	_ fdb.FutureNil       = &nilFutureNil{}
 )
 
 // NewNilRange returns a nil implementation of fdb.Range
@@ -68,6 +73,12 @@ func NewNilFutureByteSlice() fdb.FutureByteSlice {
 	return &nilFutureByteSlice{NewNilFuture()}
 }
 
+// NewNilFutureNil returns a nil implementation of fdb.FutureNil
+// where every operation is a no-op.
+func NewNilFutureNil() fdb.FutureNil {
+	return &nilFutureNil{NewNilFuture()}
+}
+
 func (x *nilFuture) BlockUntilReady() {}
 
 func (x *nilFuture) IsReady() bool {
@@ -98,4 +109,11 @@ func (x *nilFutureByteSlice) Get() ([]byte, error) {
 
 func (x *nilFutureByteSlice) MustGet() []byte {
 	return nil
+}
+
+func (x *nilFutureNil) Get() error {
+	return nil
+}
+
+func (x *nilFutureNil) MustGet() {
 }
