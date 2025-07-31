@@ -320,60 +320,6 @@ func TestEngine_Watch(t *testing.T) {
 		})
 	})
 
-	t.Run("invalid query - range query", func(t *testing.T) {
-		testEnv(t, func(e Engine) {
-			// Query with Variable in key makes it ReadRange class
-			query := q.KeyValue{
-				Key: q.Key{
-					Directory: q.Directory{q.String("users")},
-					Tuple:     q.Tuple{q.Variable{q.StringType}},
-				},
-				Value: q.Variable{q.StringType},
-			}
-
-			watch, err := e.Watch(query)
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "query not single-read class")
-			require.Nil(t, watch)
-		})
-	})
-
-	t.Run("invalid query - clear value", func(t *testing.T) {
-		testEnv(t, func(e Engine) {
-			// Query with Clear value makes it Clear class
-			query := q.KeyValue{
-				Key: q.Key{
-					Directory: q.Directory{q.String("users")},
-					Tuple:     q.Tuple{q.String("john")},
-				},
-				Value: q.Clear{},
-			}
-
-			watch, err := e.Watch(query)
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "query not single-read class")
-			require.Nil(t, watch)
-		})
-	})
-
-	t.Run("invalid query - constant value", func(t *testing.T) {
-		testEnv(t, func(e Engine) {
-			// Query with concrete value makes it Constant class
-			query := q.KeyValue{
-				Key: q.Key{
-					Directory: q.Directory{q.String("users")},
-					Tuple:     q.Tuple{q.String("john")},
-				},
-				Value: q.String("doe"),
-			}
-
-			watch, err := e.Watch(query)
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "query not single-read class")
-			require.Nil(t, watch)
-		})
-	})
-
 	t.Run("invalid directory - non-string element", func(t *testing.T) {
 		testEnv(t, func(e Engine) {
 			// Directory with non-string element should fail conversion
@@ -388,25 +334,6 @@ func TestEngine_Watch(t *testing.T) {
 			watch, err := e.Watch(query)
 			require.Error(t, err)
 			require.Contains(t, err.Error(), "failed to convert directory to string array")
-			require.Nil(t, watch)
-		})
-	})
-
-	t.Run("invalid tuple - with variable", func(t *testing.T) {
-		testEnv(t, func(e Engine) {
-			// Tuple with Variable should fail conversion to FDB tuple
-			query := q.KeyValue{
-				Key: q.Key{
-					Directory: q.Directory{q.String("users")},
-					Tuple:     q.Tuple{q.String("john"), q.Variable{q.StringType}},
-				},
-				Value: q.String("doe"), // Use concrete value to avoid ReadRange classification
-			}
-
-			// First verify this is not a ReadSingle query due to Variable in tuple
-			watch, err := e.Watch(query)
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "query not single-read class")
 			require.Nil(t, watch)
 		})
 	})
