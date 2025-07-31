@@ -286,6 +286,14 @@ func TestEngine_Watch(t *testing.T) {
 				Value: q.Variable{q.StringType},
 			}
 
+			// Create initial value to ensure directory exists
+			initialValue := q.KeyValue{
+				Key:   query.Key,
+				Value: q.String("initial_value"),
+			}
+			err := e.Set(initialValue)
+			require.NoError(t, err)
+
 			watch, err := e.Watch(query)
 			require.NoError(t, err)
 			require.NotNil(t, watch)
@@ -310,7 +318,8 @@ func TestEngine_Watch(t *testing.T) {
 							Key:   query.Key,
 							Value: q.String(fmt.Sprintf("value_%d", counter)),
 						}
-						e.Set(writeQuery)
+						err := e.Set(writeQuery)
+						require.NoError(t, err)
 					}
 				}
 			}()
