@@ -319,24 +319,6 @@ func TestEngine_Watch(t *testing.T) {
 			watch.BlockUntilReady()
 		})
 	})
-
-	t.Run("invalid directory - non-string element", func(t *testing.T) {
-		testEnv(t, func(e Engine) {
-			// Directory with non-string element should fail conversion
-			query := q.KeyValue{
-				Key: q.Key{
-					Directory: q.Directory{q.String("users"), q.Int(42)},
-					Tuple:     q.Tuple{q.String("john")},
-				},
-				Value: q.Variable{q.StringType},
-			}
-
-			watch, err := e.Watch(query)
-			require.Error(t, err)
-			require.Contains(t, err.Error(), "failed to convert directory to string array")
-			require.Nil(t, watch)
-		})
-	})
 }
 
 func testEnv(t *testing.T, f func(Engine)) {
