@@ -301,6 +301,44 @@ line. They can be used to describe a tuple's elements.
 )=<int>   % balance in USD
 ```
 
+# Options
+
+Options modify the semantics of data elements, data types,
+and queries. They can instruct FQL to perform additional
+validation, use alternative encodings, or limit query
+duration and result count.
+
+Options are specified as a comma separated list wrapped in
+braces. For instance, to specify that an `int` should be
+encoded as a little-endian unsigned 8-bit integer, the
+following options would be included after the number.
+
+```language-fql
+3548[u8,le]
+```
+
+Similarly, if a variable should only match against
+a big-endian 32-bit float then the following option would be
+included after the `num` type.
+
+```language-fql
+<num[f32,be]>
+```
+
+Query options are specified on the line before the query.
+For instance, to specify that a range-read query should read
+in reverse and only read 5 items, the following options
+would be included before the query.
+
+```language-fql {.query}
+[reverse,limit:5]
+/my/integers(<int>)=nil
+```
+
+Notice that the `limit` option includes an argument after
+the colon. Some options include a single argument to further
+specify the option's behavior.
+
 # Element Encoding
 
 FoundationDB stores the keys and values as simple byte
@@ -426,10 +464,6 @@ you'll see a full list of encoding options.
 
 # Options
 
-Options modify the semantics of data elements, data types,
-and queries. They can instruct FQL to perform additional
-validation, use alternative encodings, or limit query
-duration and result count.
 
 ## Data Elements
 
@@ -447,10 +481,6 @@ duration and result count.
 | `tup`   | tuple layer                        |
 
 </div>
-
-## Data Types
-
-## Queries
 
 Whether encoded using the tuple layer or as a raw value, the
 `int` and `num` types support several different encodings.
@@ -504,42 +534,6 @@ The tables below shows which options are supported for the
 
 </div>
 
-
-# Options
-
-Options provide a way to modify the default behavior of data
-elements, variable types, and queries. Options are specified
-as a comma separated list wrapped in braces.
-
-For instance, to specify that an `int` should be encoded as
-a little-endian unsigned 8-bit integer, the following
-options would be included after the number.
-
-```language-fql
-3548[u8,lil]
-```
-
-Similarly, if a variable should only match against
-a big-endian 32-bit float then the following option would be
-included after the `num` type.
-
-```language-fql
-<num[f32,big]>
-```
-
-Query options are specified on the line before the query.
-For instance, to specify that a range-read query should read
-in reverse and only read 5 items, the following options
-would be included before the query.
-
-```language-fql {.query}
-[reverse,limit:5]
-/my/integers(<int>)=nil
-```
-
-Notice that the `limit` option includes an argument after
-the colon. Some options include a single argument to further
-specify the option's behavior.
 
 # Basic Queries
 
