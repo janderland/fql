@@ -36,18 +36,9 @@
     Schemas</a></li>
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
+    <li><a href="#options" id="toc-options">Options</a></li>
     <li><a href="#element-encoding" id="toc-element-encoding">Element
     Encoding</a></li>
-    <li><a href="#key" id="toc-key">Key</a></li>
-    <li><a href="#value" id="toc-value">Value</a></li>
-    <li><a href="#options" id="toc-options">Options</a>
-    <ul>
-    <li><a href="#data-elements-1" id="toc-data-elements-1">Data
-    Elements</a></li>
-    <li><a href="#data-types" id="toc-data-types">Data Types</a></li>
-    <li><a href="#queries" id="toc-queries">Queries</a></li>
-    </ul></li>
-    <li><a href="#options-1" id="toc-options-1">Options</a></li>
     <li><a href="#basic-queries" id="toc-basic-queries">Basic
     Queries</a>
     <ul>
@@ -62,14 +53,6 @@
     <li><a href="#indirection" id="toc-indirection">Indirection</a></li>
     <li><a href="#aggregation" id="toc-aggregation">Aggregation</a></li>
     </ul></li>
-    <li><a href="#using-fql" id="toc-using-fql">Using FQL</a>
-    <ul>
-    <li><a href="#command-line" id="toc-command-line">Command
-    Line</a></li>
-    <li><a href="#programmatic"
-    id="toc-programmatic">Programmatic</a></li>
-    </ul></li>
-    <li><a href="#roadmap" id="toc-roadmap">Roadmap</a></li>
     </ul>
   <h1 id="overview">Overview</h1>
   <p>FQL is specified as a context-free <a
@@ -271,12 +254,33 @@
   &lt;int&gt;,  % account ID
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
+  <h1 id="options">Options</h1>
+  <p>Options modify the semantics of data elements, data types, and
+  queries. They can instruct FQL to perform additional validation, use
+  alternative encodings, or limit query duration and result count.</p>
+  <p>Options are specified as a comma separated list wrapped in braces.
+  For instance, to specify that an <code>int</code> should be encoded as
+  a little-endian unsigned 8-bit integer, the following options would be
+  included after the number.</p>
+  <pre class="language-fql"><code>3548[u8,le]</code></pre>
+  <p>Similarly, if a variable should only match against a big-endian
+  32-bit float then the following option would be included after the
+  <code>num</code> type.</p>
+  <pre class="language-fql"><code>&lt;num[f32,be]&gt;</code></pre>
+  <p>Query options are specified on the line before the query. For
+  instance, to specify that a range-read query should read in reverse
+  and only read 5 items, the following options would be included before
+  the query.</p>
+  <pre class="language-fql query"><code>[reverse,limit:5]
+/my/integers(&lt;int&gt;)=nil</code></pre>
+  <p>Notice that the <code>limit</code> option includes an argument
+  after the colon. Some options include a single argument to further
+  specify the option’s behavior.</p>
   <h1 id="element-encoding">Element Encoding</h1>
   <p>FoundationDB stores the keys and values as simple byte strings
   leaving the client responsible for encoding the data. FQL determines
   how to encode data elements based on their data type, position within
   the query, and associated options.</p>
-  <h1 id="key">Key</h1>
   <p>Keys are always encoded using the directory and tuple layers. Write
   queries create directories if they do not exist.</p>
   <pre class="language-fql query"><code>/directory/&quot;p@th&quot;(nil,57223,0xa8ff03)=nil</code></pre>
@@ -333,10 +337,10 @@
   }
   return results, nil
 })</code></pre>
-  <h1 id="value">Value</h1>
-  <p>Most data elements in the value position are encoded using the
-  tuple layer. The element is encoded as the single member of a tuple.
-  For instance, the value <code>42</code> is encoded as the tuple
+  <p>Values have more flexible encoding options. There is a default
+  encoding where most data elements are encoded using the tuple layer.
+  The element is encoded as the single member of a tuple. For instance,
+  the value <code>42</code> is encoded as the tuple
   <code>(42)</code>.</p>
   <p>The exceptions to this rule are when values are tuples, which are
   not wrapped with another tuple; and byte strings, which are used as-is
@@ -355,183 +359,30 @@
   tr.Set(key, val)
   return nil, nil
 })</code></pre>
+  <p>When decoding a value which was encoded via the default encoding,
+  FQL can determine the value’s type using the tuple layer.</p>
+  <pre class="language-fql query"><code>/people/age(&quot;jon&quot;,&quot;smith&quot;)=&lt;&gt;</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
+  dir := // create or open the directory...
+  key := // encoding the key...
+
+  val := tr.Get(key)
+  tup, err := UnpackTup(val)
+  if err == nil {
+    return tup, nil
+  }
+
+  // try other decoding methods...
+})</code></pre>
   <p>Using options, values can be encoded in other ways. For instance,
-  the option <code>int16</code> tells FQL to encode an integer using
+  the option <code>i16</code> tells FQL to encode an integer using
   16-bits in network byte order. The byte order can be explicitly
   specified using the options <code>le</code> and <code>be</code> for
-  little and big endian respectively. In the next section, you’ll see a
-  full list of encoding options.</p>
+  little and big endian respectively.</p>
   <pre class="language-fql query"><code>/numbers/big(&quot;37&quot;)=37[i16,be]</code></pre>
-  <h1 id="options">Options</h1>
-  <p>Options modify the semantics of data elements, data types, and
-  queries. They can instruct FQL to perform additional validation, use
-  alternative encodings, or limit query duration and result count.</p>
-  <h2 id="data-elements-1">Data Elements</h2>
-  <div>
-  <table>
-  <thead>
-  <tr>
-  <th style="text-align: left;">Type</th>
-  <th style="text-align: left;">Raw Value Encoding</th>
-  </tr>
-  </thead>
-  <tbody>
-  <tr>
-  <td style="text-align: left;"><code>nil</code></td>
-  <td style="text-align: left;">empty byte array</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>bool</code></td>
-  <td style="text-align: left;">single byte, <code>0x00</code> means
-  false</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>int</code></td>
-  <td style="text-align: left;">64-bit, 1’s compliment, big endian</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>num</code></td>
-  <td style="text-align: left;">64-bit, IEEE 754, big endian</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>str</code></td>
-  <td style="text-align: left;">UTF-8</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>uuid</code></td>
-  <td style="text-align: left;">RFC 4122</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>bytes</code></td>
-  <td style="text-align: left;">as provided</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>tup</code></td>
-  <td style="text-align: left;">tuple layer</td>
-  </tr>
-  </tbody>
-  </table>
-  </div>
-  <h2 id="data-types">Data Types</h2>
-  <h2 id="queries">Queries</h2>
-  <p>Whether encoded using the tuple layer or as a raw value, the
-  <code>int</code> and <code>num</code> types support several different
-  encodings. A non-default encoding may be specified using the <a
-  href="#options">options</a> syntax. Options are specified in a braced
-  list after the element. If the element’s value cannot be represented
-  by specified encoding then the query is invalid.</p>
-  <pre class="language-fql query"><code>/numbers(362342[i16])=32.55[f32]</code></pre>
-  <p>By default, <a href="#holes-&amp;-schemas">variables</a> will
-  decode any encoding for its types. Options may be applied to a
-  variable’s types to limit which encoding will match the schema.</p>
-  <pre class="language-fql query"><code>/numbers(&lt;int[i16,big]&gt;)=&lt;num[f32]&gt;</code></pre>
-  <p>The tables below shows which options are supported for the
-  <code>int</code> and <code>num</code> types.</p>
-  <div>
-  <table>
-  <thead>
-  <tr>
-  <th style="text-align: left;">Int Option</th>
-  <th style="text-align: left;">Description</th>
-  </tr>
-  </thead>
-  <tbody>
-  <tr>
-  <td style="text-align: left;"><code>big</code></td>
-  <td style="text-align: left;">Big endian</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>lil</code></td>
-  <td style="text-align: left;">Little Endian</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>u8</code></td>
-  <td style="text-align: left;">Unsigned 8-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>u16</code></td>
-  <td style="text-align: left;">Unsigned 16-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>u32</code></td>
-  <td style="text-align: left;">Unsigned 32-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>u64</code></td>
-  <td style="text-align: left;">Unsigned 64-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>i8</code></td>
-  <td style="text-align: left;">Signed 8-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>i16</code></td>
-  <td style="text-align: left;">Signed 16-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>i32</code></td>
-  <td style="text-align: left;">Signed 32-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>i64</code></td>
-  <td style="text-align: left;">Signed 64-bit</td>
-  </tr>
-  </tbody>
-  </table>
-  </div>
-  <div>
-  <table>
-  <thead>
-  <tr>
-  <th style="text-align: left;">Num Options</th>
-  <th style="text-align: left;">Description</th>
-  </tr>
-  </thead>
-  <tbody>
-  <tr>
-  <td style="text-align: left;"><code>big</code></td>
-  <td style="text-align: left;">Big endian</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>lil</code></td>
-  <td style="text-align: left;">Little Endian</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>f32</code></td>
-  <td style="text-align: left;">32-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>f64</code></td>
-  <td style="text-align: left;">64-bit</td>
-  </tr>
-  <tr>
-  <td style="text-align: left;"><code>f80</code></td>
-  <td style="text-align: left;">80-bit</td>
-  </tr>
-  </tbody>
-  </table>
-  </div>
-  <h1 id="options-1">Options</h1>
-  <p>Options provide a way to modify the default behavior of data
-  elements, variable types, and queries. Options are specified as a
-  comma separated list wrapped in braces.</p>
-  <p>For instance, to specify that an <code>int</code> should be encoded
-  as a little-endian unsigned 8-bit integer, the following options would
-  be included after the number.</p>
-  <pre class="language-fql"><code>3548[u8,lil]</code></pre>
-  <p>Similarly, if a variable should only match against a big-endian
-  32-bit float then the following option would be included after the
-  <code>num</code> type.</p>
-  <pre class="language-fql"><code>&lt;num[f32,big]&gt;</code></pre>
-  <p>Query options are specified on the line before the query. For
-  instance, to specify that a range-read query should read in reverse
-  and only read 5 items, the following options would be included before
-  the query.</p>
-  <pre class="language-fql query"><code>[reverse,limit:5]
-/my/integers(&lt;int&gt;)=nil</code></pre>
-  <p>Notice that the <code>limit</code> option includes an argument
-  after the colon. Some options include a single argument to further
-  specify the option’s behavior.</p>
+  <p>When decoding these values, options must be specified to instruct
+  FQL how to decode the value. Otherwise, the value is returned as raw
+  bytes.</p>
   <h1 id="basic-queries">Basic Queries</h1>
   <p>FQL queries may mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of
@@ -778,9 +629,6 @@
   <p>Besides basic CRUD operations, FQL is capable of performing
   indirection and aggregation queries.</p>
   <h2 id="indirection">Indirection</h2>
-  <blockquote>
-  <p>🚧 Indirection is still being implemented.</p>
-  </blockquote>
   <p>Indirection queries are similar to SQL joins. They associate
   different groups of key-values via some shared data element.</p>
   <p>In FoundationDB, indexes are implemented using indirection. Suppose
@@ -875,164 +723,6 @@
   </tr>
   </tbody>
   </table>
-  <h1 id="using-fql">Using FQL</h1>
-  <p>The FQL project provides an application for executing queries and
-  exploring the data, similar to <code>psql</code> for Postgres. This
-  libraries powering this application are exposed as a Go API, allowing
-  FQL to be used as a Foundation DB <a
-  href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>;</p>
-  <h2 id="command-line">Command Line</h2>
-  <div class="language-bash">
-  <h3 id="headless">Headless</h3>
-  <p>FQL provides a CLI for performing queries from the command line. To
-  execute a query in “headless” mode (without fullscreen), you can use
-  the <code>-q</code> flag. The query following the <code>-q</code> flag
-  must be wrapped in single quotes to avoid mangling by BASH.</p>
-  <pre class="language-bash"><code>ᐅ fql -q &#39;/my/dir(&quot;hello&quot;,&quot;world&quot;)&#39;
-/my/dir(&quot;hello&quot;,&quot;world&quot;)=nil</code></pre>
-  <p>The <code>-q</code> flag may be provided multiple times. All
-  queries are run within a single transaction.</p>
-  <pre class="language-bash"><code>ᐅ fql -q &#39;/my/dir(&quot;hello&quot;,&lt;var:str&gt;)&#39; -q &#39;/other(22,...)&#39;
-/my/dir(&quot;hello&quot;,&quot;world&quot;)=nil
-/other(22,&quot;1&quot;)=0xa8
-/other(22,&quot;2&quot;)=0xf3</code></pre>
-  <h3 id="fullscreen">Fullscreen</h3>
-  <p>If the CLI is executed without the <code>-q</code> flag, a
-  fullscreen environment is started up. Single queries may be executed
-  in their own transactions and the results are displayed in a
-  scrollable list.</p>
-  <p><img src="img/demo.gif" /></p>
-  <p>Currently, this environment is not very useful, but it lays the
-  groundwork for a fully-featured FQL frontend. The final version of
-  this environment will provide autocompletion, querying of locally
-  cached data, and display customizations.</p>
-  </div>
-  <h2 id="programmatic">Programmatic</h2>
-  <p>FQL exposes it’s AST as an API, allowing Go applications to use FQL
-  as an FDB layer. The <code>keyval</code> package can be used to
-  construct queries in a partially type-safe manner. While many invalid
-  queries are caught by the Go type system, certain queries will only
-  error at runtime.</p>
-  <pre class="language-go"><code>import kv &quot;github.com/janderland/fql/keyval&quot;
-
-var query = kv.KeyValue{
-  Key: kv.Key{
-    Directory: kv.Directory{
-      kv.String(&quot;user&quot;),
-      kv.String(&quot;entry&quot;),
-    },
-    Tuple: kv.Tuple{
-      kv.Int(22573),
-      kv.String(&quot;Goodwin&quot;),
-      kv.String(&quot;Samuels&quot;),
-    },
-  },
-  Value: kv.Nil{},
-}</code></pre>
-  <p>The <code>facade</code> package wraps the FDB client with an
-  indirection layer, allowing FDB to be mocked. Here we initialize the
-  default implementation of the facade. A global root directory is
-  provided at construction time.</p>
-  <pre class="language-go"><code>import (
-  &quot;github.com/apple/foundationdb/bindings/go/src/fdb&quot;
-  &quot;github.com/apple/foundationdb/bindings/go/src/fdb/directory&quot;
-  &quot;github.com/apple/foundationdb/bindings/go/src/tuple&quot;
-
-  &quot;github.com/janderland/fql/engine/facade&quot;
-)
-
-func _() {
-  fdb.MustAPIVersion(620)
-  db := facade.NewTransactor(
-    fdb.MustOpenDefault(), directory.Root()))
-
-  db.Transact(func(tr facade.Transaction) (interface{}, error) {
-    dir, err := tr.DirOpen([]string{&quot;my&quot;, &quot;dir&quot;})
-    if err != nil {
-      return nil, err
-    }
-    return nil, tr.Set(dir.Pack(tuple.Tuple{&quot;hi&quot;, &quot;world&quot;}, nil)
-  })
-}</code></pre>
-  <p>The <code>engine</code> package executes FQL queries. Each of the
-  five types of queries has it’s own method, making the intended
-  operation explicit. If a query is used with the wrong method, an error
-  is returned.</p>
-  <pre class="language-go"><code>import (
-  &quot;github.com/apple/foundationdb/bindings/go/src/fdb&quot;
-  &quot;github.com/apple/foundationdb/bindings/go/src/fdb/directory&quot;
-
-  &quot;github.com/janderland/fql/engine&quot;
-  &quot;github.com/janderland/fql/engine/facade&quot;
-  kv &quot;github.com/janderland/fql/keyval&quot;
-)
-
-func _() {
-  fdb.MustAPIVersion(620)
-  eg := engine.New(
-    facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
-
-  dir := kv.Directory{kv.String(&quot;hello&quot;), kv.String(&quot;there&quot;)}
-  key := kv.Key{dir, kv.Tuple{kv.Float(33.3)}}
-
-  // Write: /hello/there{33.3}=10
-  query := kv.KeyValue{key, kv.Int(10)}
-  if err := eg.Set(query); err != nil {
-    panic(err)
-  }
-
-  keyExists, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
-    // Write: /hello/there{42}=&quot;hello&quot;
-    query := kv.KeyValue{
-      kv.Key{dir, kv.Tuple{kv.Int(42)}},
-      kv.String(&quot;hello&quot;),
-    }
-    if err := eg.Set(query); err != nil {
-      return nil, err
-    }
-
-    // Read: /hello/there{33.3}=&lt;&gt;
-    query = kv.KeyValue{key, kv.Variable{}}
-    result, err := eg.ReadSingle(query, engine.SingleOpts{})
-    if err != nil {
-      return nil, err
-    }
-    return result != nil, nil
-  })
-  if err != nil {
-    panic(err)
-  }
-  
-  if !keyExists.(bool) {
-    panic(&quot;keyExists should be true&quot;)
-  }
-}</code></pre>
-  <h1 id="roadmap">Roadmap</h1>
-  <p>By summer of 2025, I’d like to have the following items
-  completed:</p>
-  <ul>
-  <li><p>Implement all features described in this document.</p></li>
-  <li><p>Design and document the syntax for doing the following
-  features.</p>
-  <ul>
-  <li><p>Separating queries into multiple transactions.</p></li>
-  <li><p>Meta language for aliasing queries or parts of queries. This
-  language would provide type-safe templating with the goal of reducing
-  repetition in a query file.</p></li>
-  </ul></li>
-  </ul>
-  <p>Looking beyond summer 2025, I’d like to focus on the TUI
-  environment:</p>
-  <ul>
-  <li><p>Autocompletion and syntax highlighting.</p></li>
-  <li><p>Query on the results of a previously run query. This would
-  allow the user to cache subspaces of data in local memory and refine
-  their search with subsequent queries.</p></li>
-  <li><p>Mechanisms for controlling the output format. These would
-  control what is done with the key-values. They could be used to print
-  only the first element of the key’s tuple or to store all the
-  resulting key-values in a flat buffer.</p></li>
-  </ul>
   <script>
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {

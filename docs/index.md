@@ -347,8 +347,6 @@ data. FQL determines how to encode data elements based on
 their data type, position within the query, and associated
 options.
 
-# Key
-
 Keys are always encoded using the directory and tuple
 layers. Write queries create directories if they do not
 exist.
@@ -420,12 +418,11 @@ db.Transact(func(tr Transaction) (any, error) {
 })
 ```
 
-# Value
-
-Most data elements in the value position are encoded using
-the tuple layer. The element is encoded as the single member
-of a tuple. For instance, the value `42` is encoded as the
-tuple `(42)`.
+Values have more flexible encoding options. There is
+a default encoding where most data elements are encoded
+using the tuple layer. The element is encoded as the single
+member of a tuple. For instance, the value `42` is encoded
+as the tuple `(42)`.
 
 The exceptions to this rule are when values are tuples,
 which are not wrapped with another tuple; and byte strings,
@@ -451,89 +448,42 @@ db.Transact(func(tr Transaction) (any, error) {
 })
 ```
 
+When decoding a value which was encoded via the default
+encoding, FQL can determine the value's type using the tuple
+layer.
+
+```language-fql {.query} 
+/people/age("jon","smith")=<>
+```
+
+```lang-go {.equiv-go}
+db.Transact(func(tr Transaction) (any, error) {
+  dir := // create or open the directory...
+  key := // encoding the key...
+
+  val := tr.Get(key)
+  tup, err := UnpackTup(val)
+  if err == nil {
+    return tup, nil
+  }
+
+  // try other decoding methods...
+})
+```
+
 Using options, values can be encoded in other ways. For
-instance, the option `int16` tells FQL to encode an integer
+instance, the option `i16` tells FQL to encode an integer
 using 16-bits in network byte order. The byte order can be
 explicitly specified using the options `le` and `be` for
-little and big endian respectively. In the next section,
-you'll see a full list of encoding options.
+little and big endian respectively. 
 
 ```language-fql {.query}
 /numbers/big("37")=37[i16,be]
 ```
 
-# Options
-
-
-## Data Elements
-
-<div>
-
-| Type    | Raw Value Encoding                 |
-|:--------|:-----------------------------------|
-| `nil`   | empty byte array                   |
-| `bool`  | single byte, `0x00` means false    |
-| `int`   | 64-bit, 1's compliment, big endian |
-| `num`   | 64-bit, IEEE 754, big endian       |
-| `str`   | UTF-8                              |
-| `uuid`  | RFC 4122                           |
-| `bytes` | as provided                        |
-| `tup`   | tuple layer                        |
-
-</div>
-
-Whether encoded using the tuple layer or as a raw value, the
-`int` and `num` types support several different encodings.
-A non-default encoding may be specified using the
-[options](#options) syntax. Options are specified in
-a braced list after the element. If the element's value
-cannot be represented by specified encoding then the query
-is invalid.
-
-```language-fql {.query}
-/numbers(362342[i16])=32.55[f32]
-```
-
-By default, [variables](#holes-&-schemas) will decode any
-encoding for its types. Options may be applied to
-a variable's types to limit which encoding will match the
-schema.
-
-```language-fql {.query}
-/numbers(<int[i16,big]>)=<num[f32]>
-```
-
-The tables below shows which options are supported for the
-`int` and `num` types.
-
-<div>
-
-| Int Option | Description     |
-|:-----------|:----------------|
-| `big`      | Big endian      |
-| `lil`      | Little Endian   |
-| `u8`       | Unsigned 8-bit  |
-| `u16`      | Unsigned 16-bit |
-| `u32`      | Unsigned 32-bit |
-| `u64`      | Unsigned 64-bit |
-| `i8`       | Signed 8-bit    |
-| `i16`      | Signed 16-bit   |
-| `i32`      | Signed 32-bit   |
-| `i64`      | Signed 64-bit   |
-
-</div>
-<div>
-
-| Num Options | Description   |
-|:------------|:--------------|
-| `big`       | Big endian    |
-| `lil`       | Little Endian |
-| `f32`       | 32-bit        |
-| `f64`       | 64-bit        |
-| `f80`       | 80-bit        |
-
-</div>
-
+When decoding these values, options must be specified to
+instruct FQL how to decode the value. Otherwise, the value
+is returned as raw bytes.
 
 # Basic Queries
 
@@ -850,8 +800,6 @@ indirection and aggregation queries.
 
 ## Indirection
 
-> 🚧 Indirection is still being implemented.
-
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
 
@@ -969,198 +917,3 @@ You can see all the supported aggregation types below.
 | `sum`       | `int` `num`     | Add numbers      |
 | `count`     | `any`           | Count key-values |
 
-# Using FQL
-
-The FQL project provides an application for executing
-queries and exploring the data, similar to `psql` for
-Postgres. This libraries powering this application are
-exposed as a Go API, allowing FQL to be used as a Foundation
-DB [layer][];
-
-[layer]: https://apple.github.io/foundationdb/layer-concept.html
-
-## Command Line
-
-<div class="language-bash">
-
-### Headless
-
-FQL provides a CLI for performing queries from the command
-line. To execute a query in "headless" mode (without
-fullscreen), you can use the `-q` flag. The query following
-the `-q` flag must be wrapped in single quotes to avoid
-mangling by BASH.
-
-```language-bash
-ᐅ fql -q '/my/dir("hello","world")'
-/my/dir("hello","world")=nil
-```
-
-The `-q` flag may be provided multiple times. All queries
-are run within a single transaction.
-
-```language-bash
-ᐅ fql -q '/my/dir("hello",<var:str>)' -q '/other(22,...)'
-/my/dir("hello","world")=nil
-/other(22,"1")=0xa8
-/other(22,"2")=0xf3
-```
-
-### Fullscreen
-
-If the CLI is executed without the `-q` flag, a fullscreen
-environment is started up. Single queries may be executed in
-their own transactions and the results are displayed in
-a scrollable list.
-
-![](img/demo.gif)
-
-Currently, this environment is not very useful, but it lays
-the groundwork for a fully-featured FQL frontend. The final
-version of this environment will provide autocompletion,
-querying of locally cached data, and display customizations.
-
-</div>
-
-## Programmatic
-
-FQL exposes it's AST as an API, allowing Go applications to
-use FQL as an FDB layer. The `keyval` package can be used to
-construct queries in a partially type-safe manner. While
-many invalid queries are caught by the Go type system,
-certain queries will only error at runtime.
-
-```language-go
-import kv "github.com/janderland/fql/keyval"
-
-var query = kv.KeyValue{
-  Key: kv.Key{
-    Directory: kv.Directory{
-      kv.String("user"),
-      kv.String("entry"),
-    },
-    Tuple: kv.Tuple{
-      kv.Int(22573),
-      kv.String("Goodwin"),
-      kv.String("Samuels"),
-    },
-  },
-  Value: kv.Nil{},
-}
-```
-
-The `facade` package wraps the FDB client with an
-indirection layer, allowing FDB to be mocked. Here we
-initialize the default implementation of the facade.
-A global root directory is provided at construction time.
-
-```language-go
-import (
-  "github.com/apple/foundationdb/bindings/go/src/fdb"
-  "github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-  "github.com/apple/foundationdb/bindings/go/src/tuple"
-
-  "github.com/janderland/fql/engine/facade"
-)
-
-func _() {
-  fdb.MustAPIVersion(620)
-  db := facade.NewTransactor(
-    fdb.MustOpenDefault(), directory.Root()))
-
-  db.Transact(func(tr facade.Transaction) (interface{}, error) {
-    dir, err := tr.DirOpen([]string{"my", "dir"})
-    if err != nil {
-      return nil, err
-    }
-    return nil, tr.Set(dir.Pack(tuple.Tuple{"hi", "world"}, nil)
-  })
-}
-```
-
-The `engine` package executes FQL queries. Each of the five
-types of queries has it's own method, making the intended
-operation explicit. If a query is used with the wrong
-method, an error is returned.
-
-```language-go
-import (
-  "github.com/apple/foundationdb/bindings/go/src/fdb"
-  "github.com/apple/foundationdb/bindings/go/src/fdb/directory"
-
-  "github.com/janderland/fql/engine"
-  "github.com/janderland/fql/engine/facade"
-  kv "github.com/janderland/fql/keyval"
-)
-
-func _() {
-  fdb.MustAPIVersion(620)
-  eg := engine.New(
-    facade.NewTransactor(fdb.MustOpenDefault(), directory.Root()))
-
-  dir := kv.Directory{kv.String("hello"), kv.String("there")}
-  key := kv.Key{dir, kv.Tuple{kv.Float(33.3)}}
-
-  // Write: /hello/there{33.3}=10
-  query := kv.KeyValue{key, kv.Int(10)}
-  if err := eg.Set(query); err != nil {
-    panic(err)
-  }
-
-  keyExists, err := eg.Transact(func(eg engine.Engine) (interface{}, error) {
-    // Write: /hello/there{42}="hello"
-    query := kv.KeyValue{
-      kv.Key{dir, kv.Tuple{kv.Int(42)}},
-      kv.String("hello"),
-    }
-    if err := eg.Set(query); err != nil {
-      return nil, err
-    }
-
-    // Read: /hello/there{33.3}=<>
-    query = kv.KeyValue{key, kv.Variable{}}
-    result, err := eg.ReadSingle(query, engine.SingleOpts{})
-    if err != nil {
-      return nil, err
-    }
-    return result != nil, nil
-  })
-  if err != nil {
-    panic(err)
-  }
-  
-  if !keyExists.(bool) {
-    panic("keyExists should be true")
-  }
-}
-```
-
-# Roadmap
-
-By summer of 2025, I'd like to have the following items
-completed:
-
-- Implement all features described in this document.
-
-- Design and document the syntax for doing the following
-  features.
-
-  - Separating queries into multiple transactions.
-
-  - Meta language for aliasing queries or parts of queries.
-    This language would provide type-safe templating with
-    the goal of reducing repetition in a query file.
-
-Looking beyond summer 2025, I'd like to focus on the TUI
-environment:
-
-- Autocompletion and syntax highlighting.
-
-- Query on the results of a previously run query. This would
-  allow the user to cache subspaces of data in local memory
-  and refine their search with subsequent queries.
-
-- Mechanisms for controlling the output format. These would
-  control what is done with the key-values. They could be
-  used to print only the first element of the key's tuple or
-  to store all the resulting key-values in a flat buffer.
