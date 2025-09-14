@@ -59,43 +59,45 @@
   href="https://github.com/janderland/fql/blob/main/syntax.ebnf">grammar</a>.
   The queries look like key-values encoded using the <a
   href="https://apple.github.io/foundationdb/developer-guide.html#directories">directory</a>
-  &amp; <a
+  and <a
   href="https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples">tuple</a>
   layers. To the left of the <code>=</code> is the key which includes a
-  directory path and tuple. To the right of the <code>=</code> is the
-  value.</p>
+  directory path and tuple. To the right is the value.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
   <p>FQL queries may define a single key-value to be written, as shown
   above, or may define a set of key-values to be read, as shown
   below.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;int&gt;</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
-  <p>The query above has a variable <code>&lt;int&gt;</code> as its
+  <p>The query above has the variable <code>&lt;int&gt;</code> as its
   value. Variables act as placeholders for any of the supported <a
   href="#data-elements">data elements</a>.</p>
-  <p>FQL queries may also perform range reads &amp; filtering by
-  including a variable in the key’s tuple. The query below will return
-  all key-values which conform to the schema defined by the query.</p>
+  <p>FQL queries may also perform <a
+  href="https://apple.github.io/foundationdb/developer-guide.html#range-reads">range
+  reads</a> and filtering by including a variable in the key’s tuple.
+  The query below will return all key-values which conform to the schema
+  defined by the query.</p>
   <pre class="language-fql query"><code>/my/directory(&lt;&gt;,&quot;tuple&quot;)=nil</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;your&quot;,&quot;tuple&quot;)=nil
 /my/directory(42,&quot;tuple&quot;)=nil</code></pre>
-  <p>The variable in the query above lacks a type. This means the schema
-  allows any <a href="#data-elements">data-element</a> at the variable’s
-  position.</p>
+  <p>The variable <code>&lt;&gt;</code> in the query above lacks a type.
+  This means the schema allows any <a href="#data-elements">data
+  element</a> at the variable’s position.</p>
   <p>All key-values with a certain key prefix may be range read by
   ending the key’s tuple with <code>...</code>.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)=&lt;&gt;</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,47.3)=0x8f3a
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,false,0xff9a853c12)=nil</code></pre>
-  <p>A query’s value may be omitted to imply a variable, meaning the
-  following query is semantically identical to the one above.</p>
+  <p>A query’s value may be omitted to imply the variable
+  <code>&lt;&gt;</code>, meaning the following query is semantically
+  identical to the one above.</p>
   <pre class="language-fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,47.3)=0x8f3a
 /my/directory(&quot;my&quot;,&quot;tuple&quot;,false,0xff9a853c12)=nil</code></pre>
-  <p>Including a variable in the directory tells FQL to perform the read
-  on all directory paths matching the schema.</p>
+  <p>Including a variable in the directory path tells FQL to perform the
+  read on all directory paths matching the schema.</p>
   <pre class="language-fql query"><code>/&lt;&gt;/directory(&quot;my&quot;,&quot;tuple&quot;)</code></pre>
   <pre class="language-fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
 /your/directory(&quot;my&quot;,&quot;tuple&quot;)=nil</code></pre>
@@ -723,6 +725,7 @@
   </tr>
   </tbody>
   </table>
+  <!-- vim: set tw=60 :-->
   <script>
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {

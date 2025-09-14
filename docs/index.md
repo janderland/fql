@@ -25,10 +25,10 @@ include-before: |
 # Overview
 
 FQL is specified as a context-free [grammar][]. The queries
-look like key-values encoded using the [directory][]
-& [tuple][] layers. To the left of the `=` is the key which
-includes a directory path and tuple. To the right of the `=`
-is the value.
+look like key-values encoded using the [directory][] and
+[tuple][] layers. To the left of the `=` is the key which
+includes a directory path and tuple. To the right is the
+value.
 
 [grammar]: https://github.com/janderland/fql/blob/main/syntax.ebnf
 [directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
@@ -50,14 +50,16 @@ as shown below.
 /my/directory("my","tuple")=4000
 ```
 
-The query above has a variable `<int>` as its value.
+The query above has the variable `<int>` as its value.
 Variables act as placeholders for any of the supported [data
 elements](#data-elements). 
 
-FQL queries may also perform range reads & filtering by
-including a variable in the key's tuple. The query below
+FQL queries may also perform [range reads][] and filtering
+by including a variable in the key's tuple. The query below
 will return all key-values which conform to the schema
 defined by the query.
+
+[range reads]: https://apple.github.io/foundationdb/developer-guide.html#range-reads
 
 ```language-fql {.query}
 /my/directory(<>,"tuple")=nil
@@ -68,9 +70,9 @@ defined by the query.
 /my/directory(42,"tuple")=nil
 ```
 
-The variable in the query above lacks a type. This means the
-schema allows any [data-element](#data-elements) at the
-variable's position.
+The variable `<>` in the query above lacks a type. This
+means the schema allows any [data element](#data-elements)
+at the variable's position.
 
 All key-values with a certain key prefix may be range read
 by ending the key's tuple with `...`.
@@ -85,9 +87,9 @@ by ending the key's tuple with `...`.
 /my/directory("my","tuple",false,0xff9a853c12)=nil
 ```
 
-A query's value may be omitted to imply a variable, meaning
-the following query is semantically identical to the one
-above.
+A query's value may be omitted to imply the variable `<>`,
+meaning the following query is semantically identical to the
+one above.
 
 ```language-fql {.query}
 /my/directory("my","tuple",...)
@@ -99,8 +101,8 @@ above.
 /my/directory("my","tuple",false,0xff9a853c12)=nil
 ```
 
-Including a variable in the directory tells FQL to perform
-the read on all directory paths matching the schema.
+Including a variable in the directory path tells FQL to
+perform the read on all directory paths matching the schema.
 
 ```language-fql {.query}
 /<>/directory("my","tuple")
@@ -917,3 +919,4 @@ You can see all the supported aggregation types below.
 | `sum`       | `int` `num`     | Add numbers      |
 | `count`     | `any`           | Count key-values |
 
+<!-- vim: set tw=60 :-->
