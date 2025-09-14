@@ -262,11 +262,11 @@
   <h1 id="options">Options</h1>
   <p>Options modify the semantics of data elements, data types, and
   queries. They can instruct FQL to perform additional validation, use
-  alternative encodings, or limit query duration and result count.</p>
+  alternative encodings, or limit query’s result count.</p>
   <p>Options are specified as a comma separated list wrapped in braces.
   For instance, to specify that an <code>int</code> should be encoded as
   a little-endian unsigned 8-bit integer, the following options would be
-  included after the number.</p>
+  included after the element.</p>
   <pre class="language-fql"><code>3548[u8,le]</code></pre>
   <p>Similarly, if a variable should only match against a big-endian
   32-bit float then the following option would be included after the

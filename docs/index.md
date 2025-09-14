@@ -313,13 +313,13 @@ line. They can be used to describe a tuple's elements.
 
 Options modify the semantics of data elements, data types,
 and queries. They can instruct FQL to perform additional
-validation, use alternative encodings, or limit query
-duration and result count.
+validation, use alternative encodings, or limit query's
+result count.
 
 Options are specified as a comma separated list wrapped in
 braces. For instance, to specify that an `int` should be
 encoded as a little-endian unsigned 8-bit integer, the
-following options would be included after the number.
+following options would be included after the element.
 
 ```language-fql
 3548[u8,le]
