@@ -112,7 +112,10 @@
   <p>An FQL query contains instances of data elements. These mirror the
   types of elements found in the <a
   href="https://github.com/apple/foundationdb/blob/main/design/tuple.md">tuple
-  layer</a>.</p>
+  layer</a>. This section will describe how data elements behave in the
+  FQL language, while <a href="#element-encoding">element encoding</a>
+  describes how FQL encodes the elements before writing them to the
+  DB.</p>
   <div>
   <table>
   <thead>
@@ -174,7 +177,7 @@
   <code>nil</code>. The <code>int</code> type may be instantiated as any
   arbitrarily large integer. For example, the integer in the query below
   doesn’t fit in a 64-bit value.</p>
-  <pre><code>/big_num(92233720368547758084)=nil</code></pre>
+  <pre><code>/bigint(92233720368547758084)=nil</code></pre>
   <p>The <code>num</code> type may be instantiated as any real number
   which can be approximated by an <a
   href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">80-bit
@@ -189,8 +192,8 @@
   directory paths. If a directory string only contains alphanumericals,
   underscores, dashes, and periods then the quotes may be excluded.
   Quoted strings may contain double quotes via backslash escapes.</p>
-  <pre class="language-fql query"><code>/quoteless-string_in.dir(&quot;escape \&quot;wow\&quot;&quot;)=false
-/&quot;other ch@r@cters must be &#39;quoted&#39;&quot;(20)=32.3</code></pre>
+  <pre class="language-fql query"><code>/quoteless-string_in.dir(&quot;escape \&quot;wow\&quot;&quot;)=nil
+/&quot;other ch@r@cters must be &#39;quoted&#39;&quot;(nil)=&quot;&quot;</code></pre>
   <p>The <code>uuid</code> and <code>bytes</code> types may be
   instantiated using upper, lower, or mixed case hexidecimal numbers.
   For <code>uuid</code>, the numbers are grouped in the standard 8, 4,
@@ -198,8 +201,7 @@
   hexidecimal digits are prefixed by <code>0x</code>.</p>
   <pre class="language-fql query"><code>/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9</code></pre>
   <p>The <code>tup</code> type may contain any of the data elements,
-  including sub-tuples. Like tuples, a query’s value may contain any of
-  the data elements.</p>
+  including sub-tuples.</p>
   <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
 /tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
   <h1 id="holes-schemas">Holes &amp; Schemas</h1>

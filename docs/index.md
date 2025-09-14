@@ -135,6 +135,10 @@ a directory path.
 
 An FQL query contains instances of data elements. These
 mirror the types of elements found in the [tuple layer][].
+This section will describe how data elements behave in the
+FQL language, while [element encoding](#element-encoding)
+describes how FQL encodes the elements before writing them
+to the DB.
 
 [tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
@@ -159,7 +163,7 @@ large integer. For example, the integer in the query below
 doesn't fit in a 64-bit value.
 
 ```
-/big_num(92233720368547758084)=nil
+/bigint(92233720368547758084)=nil
 ```
 
 The `num` type may be instantiated as any real number which
@@ -183,8 +187,8 @@ then the quotes may be excluded. Quoted strings may contain
 double quotes via backslash escapes.
 
 ```language-fql {.query}
-/quoteless-string_in.dir("escape \"wow\"")=false
-/"other ch@r@cters must be 'quoted'"(20)=32.3
+/quoteless-string_in.dir("escape \"wow\"")=nil
+/"other ch@r@cters must be 'quoted'"(nil)=""
 ```
 
 The `uuid` and `bytes` types may be instantiated using
@@ -198,8 +202,7 @@ are prefixed by `0x`.
 ```
 
 The `tup` type may contain any of the data elements,
-including sub-tuples. Like tuples, a query's value may
-contain any of the data elements.
+including sub-tuples. 
 
 ```language-fql {.query}
 /sub/tuple("japan",("sub",nil))=0xff
