@@ -240,7 +240,7 @@
     ],
   };
 
-  hljs.registerLanguage('fql', (hljs) => ({
+  hljs.registerLanguage('fql', (_hljs) => ({
     classNameAliases: {
       directory: 'built_in',
       tuple: 'built_in',
@@ -263,9 +263,9 @@
       BYTES,
       NUMBER,
       OPTIONS,
-      { // Highlight lone bar for inline text.
+      { // Highlight lone bar & semicolon for inline text.
         scope: 'variable',
-        begin: /\|/,
+        begin: /\||:/,
       },
     ],
   }));

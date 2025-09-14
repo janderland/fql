@@ -211,14 +211,15 @@ including sub-tuples.
 
 # Holes & Schemas
 
-A hole is any of the following syntax constructs: variables,
-references, and the `...` token. Holes are used to define
+Holes are a group of syntax constructs used to define
 a key-value schema by acting as placeholders for one or more
-data elements.
+data elements. There are three kinds of holes: variables,
+references, and the `...` token.
 
-A single [data element](#data-elements) may be represented
-with a variable. Variables are specified as a list of
-element types, separated by `|`, wrapped in angled braces.
+Variables are used to represent a single [data
+element](#data-elements). Variables are specified as a list
+of element types, separated by `|`, wrapped in angled
+braces.
 
 ```language-fql
 <int|str|uuid|bytes>
@@ -230,18 +231,20 @@ may be empty, including no element types, meaning it
 represents all element types.
 
 ```language-fql {.query}
-/data(<int>,<str>,<>)=<>
+/data(<int>,<str|int>,<>)=<>
 ```
 
 ```language-fql {.result}
 /data(0,"jon",0xffab0c)=nil
-/data(20,"roger",22.3)=0xff
+/data(20,3,22.3)=0xff
 /data(21,"",nil)=nil
 ```
 
-Before the type list, a variable may be given a name. This
-name is used to reference the variable in subsequent
-queries, allowing for [index indirection](#indirection).
+References allow two queries to be connected via
+a variable's name, allowing for [index
+indirection](#indirection). Before the type list, a variable
+may include a name. The reference is specified as
+a variable's name prefixed with a `:`.
 
 ```language-fql {.query}
 /index("cars",<varName:int>)

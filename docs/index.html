@@ -205,25 +205,26 @@
   <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
 /tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
   <h1 id="holes-schemas">Holes &amp; Schemas</h1>
-  <p>A hole is any of the following syntax constructs: variables,
-  references, and the <code>...</code> token. Holes are used to define a
-  key-value schema by acting as placeholders for one or more data
-  elements.</p>
-  <p>A single <a href="#data-elements">data element</a> may be
-  represented with a variable. Variables are specified as a list of
-  element types, separated by <code>|</code>, wrapped in angled
+  <p>Holes are a group of syntax constructs used to define a key-value
+  schema by acting as placeholders for one or more data elements. There
+  are three kinds of holes: variables, references, and the
+  <code>...</code> token.</p>
+  <p>Variables are used to represent a single <a
+  href="#data-elements">data element</a>. Variables are specified as a
+  list of element types, separated by <code>|</code>, wrapped in angled
   braces.</p>
   <pre class="language-fql"><code>&lt;int|str|uuid|bytes&gt;</code></pre>
   <p>The variable’s type list describes which kinds of data elements are
   allowed at the variable’s position. A variable may be empty, including
   no element types, meaning it represents all element types.</p>
-  <pre class="language-fql query"><code>/data(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
+  <pre class="language-fql query"><code>/data(&lt;int&gt;,&lt;str|int&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
   <pre class="language-fql result"><code>/data(0,&quot;jon&quot;,0xffab0c)=nil
-/data(20,&quot;roger&quot;,22.3)=0xff
+/data(20,3,22.3)=0xff
 /data(21,&quot;&quot;,nil)=nil</code></pre>
-  <p>Before the type list, a variable may be given a name. This name is
-  used to reference the variable in subsequent queries, allowing for <a
-  href="#indirection">index indirection</a>.</p>
+  <p>References allow two queries to be connected via a variable’s name,
+  allowing for <a href="#indirection">index indirection</a>. Before the
+  type list, a variable may include a name. The reference is specified
+  as a variable’s name prefixed with a <code>:</code>.</p>
   <pre class="language-fql query"><code>/index(&quot;cars&quot;,&lt;varName:int&gt;)
 /data(:varName,...)</code></pre>
   <pre class="language-fql result"><code>/data(33,&quot;mazda&quot;)=nil
