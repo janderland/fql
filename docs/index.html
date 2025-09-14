@@ -214,13 +214,13 @@
   element types, separated by <code>|</code>, wrapped in angled
   braces.</p>
   <pre class="language-fql"><code>&lt;int|str|uuid|bytes&gt;</code></pre>
-  <p>The variable’s type list describes which data elements are allowed
-  at the variable’s position. A variable may be empty, including no
-  element types, meaning it represents all element types.</p>
-  <pre class="language-fql query"><code>/user(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
-  <pre class="language-fql result"><code>/user(0,&quot;jon&quot;,0xffab0c)=nil
-/user(20,&quot;roger&quot;,22.3)=0xff
-/user(21,&quot;&quot;,nil)=nil</code></pre>
+  <p>The variable’s type list describes which kinds of data elements are
+  allowed at the variable’s position. A variable may be empty, including
+  no element types, meaning it represents all element types.</p>
+  <pre class="language-fql query"><code>/data(&lt;int&gt;,&lt;str&gt;,&lt;&gt;)=&lt;&gt;</code></pre>
+  <pre class="language-fql result"><code>/data(0,&quot;jon&quot;,0xffab0c)=nil
+/data(20,&quot;roger&quot;,22.3)=0xff
+/data(21,&quot;&quot;,nil)=nil</code></pre>
   <p>Before the type list, a variable may be given a name. This name is
   used to reference the variable in subsequent queries, allowing for <a
   href="#indirection">index indirection</a>.</p>

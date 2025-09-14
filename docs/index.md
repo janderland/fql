@@ -224,19 +224,19 @@ element types, separated by `|`, wrapped in angled braces.
 <int|str|uuid|bytes>
 ```
 
-The variable's type list describes which data elements are
-allowed at the variable's position. A variable may be empty,
-including no element types, meaning it represents all
-element types.
+The variable's type list describes which kinds of data
+elements are allowed at the variable's position. A variable
+may be empty, including no element types, meaning it
+represents all element types.
 
 ```language-fql {.query}
-/user(<int>,<str>,<>)=<>
+/data(<int>,<str>,<>)=<>
 ```
 
 ```language-fql {.result}
-/user(0,"jon",0xffab0c)=nil
-/user(20,"roger",22.3)=0xff
-/user(21,"",nil)=nil
+/data(0,"jon",0xffab0c)=nil
+/data(20,"roger",22.3)=0xff
+/data(21,"",nil)=nil
 ```
 
 Before the type list, a variable may be given a name. This
