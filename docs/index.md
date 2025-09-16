@@ -311,10 +311,11 @@ line. They can be used to describe a tuple's elements.
 
 # Options
 
-Options modify the semantics of data elements, data types,
-and queries. They can instruct FQL to perform additional
-validation, use alternative encodings, or limit query's
-result count.
+Options modify the semantics of [data
+elements](#data-elements), [variables](#holes-schemas), and
+[queries](#basic-queries). They can instruct FQL to use
+alternative encodings, limit a query's result count, or
+change other behaviors.
 
 Options are specified as a comma separated list wrapped in
 braces. For instance, to specify that an `int` should be
