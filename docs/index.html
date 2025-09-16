@@ -307,15 +307,18 @@
   layers. Write queries create directories if they do not exist.</p>
   <pre class="language-fql query"><code>/directory/&quot;p@th&quot;(nil,57223,0xa8ff03)=nil</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
+  // Open directory; create if doesn&#39;t exist
   dir, err := CreateOrOpenDir(tr, []string{&quot;directory&quot;, &quot;p@th&quot;})
   if err != nil {
     return nil, err
   }
 
-  // Pack the tuple and prepend the dir prefix
+  // Pack the tuple and prepend the directory prefix
   key := dir.Pack(Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}})
 
+  // Write the KV
   tr.Set(key, nil)
+
   return nil, nil
 })</code></pre>
   <p>If a query reads from a directory which doesn’t exist, nothing is
@@ -323,6 +326,7 @@
   allowing FQL to decode keys without a schema.</p>
   <pre class="language-fql query"><code>/directory/&lt;&gt;(...)</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
+  // Open directory; exit if it doesn&#39;t exist
   dir, err := OpenDir(tr, []string{&quot;directory&quot;})
   if err != nil {
     if err == DirNotExists {
@@ -331,7 +335,7 @@
     return nil, err
   }
 
-  // List the sub-directories of dir
+  // List the sub-directories
   subDirs, err := dir.List(tr)
   if err != nil {
     return nil, err
@@ -355,14 +359,12 @@
       val := // Value unpacking will be discussed later...
 
       results = append(results, KeyValue{
-        Key: Key{
-          Directory: dir,
-          Tuple: tup,
-        },
-        Value: val,
+        Key: Key{Dir: dir, Tup: tup},
+        Val: val,
       })
     }
   }
+
   return results, nil
 })</code></pre>
   <p>Values have more flexible encoding options. There is a default
@@ -376,12 +378,15 @@
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
+  // Pack the value as a tuple
   val, err := PackTup(Tuple{42})
   if err != nil {
     return nil, err
   }
 
+  // Write the KV
   tr.Set(key, val)
+
   return nil, nil
 })</code></pre>
   <p>This default encoding allows values to be decoded without knowing
@@ -390,46 +395,59 @@
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
+  // Read the value
   valBytes := tr.MustGet(key)
 
   // Assume the value is a tuple
   valTup, err := UnpackTup(valBytes)
   if err == nil {
-    return tup, nil
+    return KeyValue{
+      Key: Key{...},
+      Val: valTup,
+    }, nil
   }
 
-  // The value isn&#39;t a tuple, so return raw bytes
-  return valBytes, err
+  // If decoding as a tuple fails, return raw bytes
+  return KeyValue{
+    Key: Key{...},
+    Val: valBytes,
+  }, err
 })</code></pre>
   <p>Using options, values can be encoded in other ways. For instance,
-  the option <code>u16</code> tells FQL to encode an unsigned integer
-  using 16-bits. The byte order can be specified using the options
-  <code>le</code> and <code>be</code> for little and big endian
+  the option <code>u16</code> tells FQL to encode an integer as an
+  unsigned 16-bit integer. The byte order can be specified using the
+  options <code>le</code> and <code>be</code> for little and big endian
   respectively.</p>
   <pre class="language-fql query"><code>/numbers/big(&quot;37&quot;)=37[i16,be]</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
-  // Pack the value into 16 bits.
+  // Pack the value into unsigned 16 bits.
   val := make([]byte, 2)
   binary.BigEndian.PutUint64(val, 37)
 
+  // Write the KV
   tr.Set(key, val)
+
   return nil, nil
 })</code></pre>
   <p>If the value was encoded with non-default values, then the encoding
-  must be specified in the variable.</p>
+  must be specified in the variable when read.</p>
   <pre class="language-fql query"><code>/numbers/big(&quot;37&quot;)=&lt;int[i16,be]&gt;</code></pre>
   <pre class="lang-go equiv-go"><code>db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
+  // Read the value
   valBytes := tr.MustGet(key)
 
-  // Unpack bytes as a 16-bit int
+  // Unpack value as a 16-bit unsigned int
   valUnsigned := binary.BigEndian.Uint16(valBytes)
   val := int16(valUnsigned)
 
-  return val, err
+  return KeyValue{
+    Key: Key{...},
+    Val: val,
+  }, nil
 })</code></pre>
   <h2 id="basic-queries">Basic Queries</h2>
   <p>FQL queries may mutate a single key-value, read one or more

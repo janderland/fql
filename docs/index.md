@@ -375,15 +375,18 @@ do not exist.
 
 ```lang-go {.equiv-go}
 db.Transact(func(tr Transaction) (any, error) {
+  // Open directory; create if doesn't exist
   dir, err := CreateOrOpenDir(tr, []string{"directory", "p@th"})
   if err != nil {
     return nil, err
   }
 
-  // Pack the tuple and prepend the dir prefix
+  // Pack the tuple and prepend the directory prefix
   key := dir.Pack(Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}})
 
+  // Write the KV
   tr.Set(key, nil)
+
   return nil, nil
 })
 ```
@@ -398,6 +401,7 @@ element types, allowing FQL to decode keys without a schema.
 
 ```lang-go {.equiv-go}
 db.Transact(func(tr Transaction) (any, error) {
+  // Open directory; exit if it doesn't exist
   dir, err := OpenDir(tr, []string{"directory"})
   if err != nil {
     if err == DirNotExists {
@@ -406,7 +410,7 @@ db.Transact(func(tr Transaction) (any, error) {
     return nil, err
   }
 
-  // List the sub-directories of dir
+  // List the sub-directories
   subDirs, err := dir.List(tr)
   if err != nil {
     return nil, err
@@ -430,14 +434,12 @@ db.Transact(func(tr Transaction) (any, error) {
       val := // Value unpacking will be discussed later...
 
       results = append(results, KeyValue{
-        Key: Key{
-          Directory: dir,
-          Tuple: tup,
-        },
-        Value: val,
+        Key: Key{Dir: dir, Tup: tup},
+        Val: val,
       })
     }
   }
+
   return results, nil
 })
 ```
@@ -459,12 +461,15 @@ strings (which are used as-is for the value).
 db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
+  // Pack the value as a tuple
   val, err := PackTup(Tuple{42})
   if err != nil {
     return nil, err
   }
 
+  // Write the KV
   tr.Set(key, val)
+
   return nil, nil
 })
 ```
@@ -480,23 +485,30 @@ knowing their type.
 db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
+  // Read the value
   valBytes := tr.MustGet(key)
 
   // Assume the value is a tuple
   valTup, err := UnpackTup(valBytes)
   if err == nil {
-    return tup, nil
+    return KeyValue{
+      Key: Key{...},
+      Val: valTup,
+    }, nil
   }
 
-  // The value isn't a tuple, so return raw bytes
-  return valBytes, err
+  // If decoding as a tuple fails, return raw bytes
+  return KeyValue{
+    Key: Key{...},
+    Val: valBytes,
+  }, err
 })
 ```
 
 Using options, values can be encoded in other ways. For
-instance, the option `u16` tells FQL to encode an unsigned
-integer using 16-bits. The byte order can be specified using
-the options `le` and `be` for little and big endian
+instance, the option `u16` tells FQL to encode an integer as
+an unsigned 16-bit integer. The byte order can be specified
+using the options `le` and `be` for little and big endian
 respectively. 
 
 ```language-fql {.query}
@@ -507,17 +519,19 @@ respectively.
 db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
-  // Pack the value into 16 bits.
+  // Pack the value into unsigned 16 bits.
   val := make([]byte, 2)
   binary.BigEndian.PutUint64(val, 37)
 
+  // Write the KV
   tr.Set(key, val)
+
   return nil, nil
 })
 ```
 
 If the value was encoded with non-default values, then the
-encoding must be specified in the variable. 
+encoding must be specified in the variable when read.
 
 ```language-fql {.query}
 /numbers/big("37")=<int[i16,be]>
@@ -527,13 +541,17 @@ encoding must be specified in the variable.
 db.Transact(func(tr Transaction) (any, error) {
   key := // Encode the key...
 
+  // Read the value
   valBytes := tr.MustGet(key)
 
-  // Unpack bytes as a 16-bit int
+  // Unpack value as a 16-bit unsigned int
   valUnsigned := binary.BigEndian.Uint16(valBytes)
   val := int16(valUnsigned)
 
-  return val, err
+  return KeyValue{
+    Key: Key{...},
+    Val: val,
+  }, nil
 })
 ```
 
