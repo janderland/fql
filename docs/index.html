@@ -29,6 +29,10 @@
     data model</a>. Fundamental patterns like range-reads and
     indirection are first class citizens.</p>
     <ul>
+    <li><a href="#introduction"
+    id="toc-introduction">Introduction</a></li>
+    <li><a href="#syntax" id="toc-syntax">Syntax</a>
+    <ul>
     <li><a href="#overview" id="toc-overview">Overview</a></li>
     <li><a href="#data-elements" id="toc-data-elements">Data
     Elements</a></li>
@@ -37,7 +41,10 @@
     <li><a href="#space-comments" id="toc-space-comments">Space &amp;
     Comments</a></li>
     <li><a href="#options" id="toc-options">Options</a></li>
-    <li><a href="#element-encoding" id="toc-element-encoding">Element
+    </ul></li>
+    <li><a href="#semantics" id="toc-semantics">Semantics</a>
+    <ul>
+    <li><a href="#data-encoding" id="toc-data-encoding">Data
     Encoding</a></li>
     <li><a href="#basic-queries" id="toc-basic-queries">Basic
     Queries</a>
@@ -53,8 +60,11 @@
     <li><a href="#indirection" id="toc-indirection">Indirection</a></li>
     <li><a href="#aggregation" id="toc-aggregation">Aggregation</a></li>
     </ul></li>
+    </ul></li>
     </ul>
-  <h1 id="overview">Overview</h1>
+  <h1 id="introduction">Introduction</h1>
+  <h1 id="syntax">Syntax</h1>
+  <h2 id="overview">Overview</h2>
   <p>FQL is specified as a context-free <a
   href="https://github.com/janderland/fql/blob/main/syntax.ebnf">grammar</a>.
   The queries look like key-values encoded using the <a
@@ -108,12 +118,12 @@
   path.</p>
   <pre class="language-fql query"><code>/my/&lt;&gt;</code></pre>
   <pre class="language-fql result"><code>/my/directory</code></pre>
-  <h1 id="data-elements">Data Elements</h1>
+  <h2 id="data-elements">Data Elements</h2>
   <p>An FQL query contains instances of data elements. These mirror the
   types of elements found in the <a
   href="https://github.com/apple/foundationdb/blob/main/design/tuple.md">tuple
   layer</a>. This section will describe how data elements behave in the
-  FQL language, while <a href="#element-encoding">element encoding</a>
+  FQL language, while <a href="#data-encoding">element encoding</a>
   describes how FQL encodes the elements before writing them to the
   DB.</p>
   <div>
@@ -204,7 +214,7 @@
   including sub-tuples.</p>
   <pre class="language-fql query"><code>/sub/tuple(&quot;japan&quot;,(&quot;sub&quot;,nil))=0xff
 /tuple/value(22.3,-8)=(&quot;rain&quot;,&quot;fog&quot;)</code></pre>
-  <h1 id="holes-schemas">Holes &amp; Schemas</h1>
+  <h2 id="holes-schemas">Holes &amp; Schemas</h2>
   <p>Holes are a group of syntax constructs used to define a key-value
   schema by acting as placeholders for one or more data elements. There
   are three kinds of holes: variables, references, and the
@@ -243,7 +253,7 @@
   <pre class="language-fql result"><code>/tuples(0x00)=nil
 /tuples(0x00,&quot;something&quot;)=nil
 /tuples(0x00,42,43,44)=0xabcf</code></pre>
-  <h1 id="space-comments">Space &amp; Comments</h1>
+  <h2 id="space-comments">Space &amp; Comments</h2>
   <p>Whitespace and newlines are allowed within a tuple, between its
   elements.</p>
   <pre class="language-fql query"><code>/account/private(
@@ -259,7 +269,7 @@
   &lt;int&gt;,  % account ID
   &lt;str&gt;,  % account name
 )=&lt;int&gt;   % balance in USD</code></pre>
-  <h1 id="options">Options</h1>
+  <h2 id="options">Options</h2>
   <p>Options modify the semantics of <a href="#data-elements">data
   elements</a>, <a href="#holes-schemas">variables</a>, and <a
   href="#basic-queries">queries</a>. They can instruct FQL to use
@@ -283,7 +293,8 @@
   <p>Notice that the <code>limit</code> option includes an argument
   after the colon. Some options include a single argument to further
   specify the option’s behavior.</p>
-  <h1 id="element-encoding">Element Encoding</h1>
+  <h1 id="semantics">Semantics</h1>
+  <h2 id="data-encoding">Data Encoding</h2>
   <p>FoundationDB stores the keys and values as simple byte strings
   leaving the client responsible for encoding the data. FQL determines
   how to encode <a href="#data-elements">data elements</a> based on
@@ -420,12 +431,12 @@
 
   return val, err
 })</code></pre>
-  <h1 id="basic-queries">Basic Queries</h1>
+  <h2 id="basic-queries">Basic Queries</h2>
   <p>FQL queries may mutate a single key-value, read one or more
   key-values, or list directories. Throughout this section, snippets of
   Go code are included which approximate how the queries interact with
   the FoundationDB API.</p>
-  <h2 id="mutations">Mutations</h2>
+  <h3 id="mutations">Mutations</h3>
   <p>Queries lacking <a href="#holes-schemas">holes</a> perform
   mutations on the database by either writing or clearing a
   key-value.</p>
@@ -465,7 +476,7 @@
   tr.Clear(dir.Pack(tuple.Tuple{&quot;hello&quot;, &quot;world&quot;}))
   return nil, nil
 })</code></pre>
-  <h2 id="reads">Reads</h2>
+  <h3 id="reads">Reads</h3>
   <p>Queries containing <a href="#holes-schemas">holes</a> read one or
   more key-values. If the holes only appears in the value, then a single
   key-value is returned, if one matching the schema exists.</p>
@@ -550,7 +561,7 @@
   }
   return results, nil
 })</code></pre>
-  <h2 id="directories">Directories</h2>
+  <h3 id="directories">Directories</h3>
   <p>The directory layer may be queried in isolation by using a lone
   directory as a query. These queries can only perform reads. If the
   directory path contains no variables, the query will read that single
@@ -581,7 +592,7 @@
     }
   }
   return results, nil</code></pre>
-  <h2 id="filtering">Filtering</h2>
+  <h3 id="filtering">Filtering</h3>
   <p>Read queries define a schema to which key-values may or may-not
   conform. In the Go snippets above, non-conformant key-values were
   being filtered out of the results.</p>
@@ -662,10 +673,10 @@
   }
   return results, nil
 })</code></pre>
-  <h1 id="advanced-queries">Advanced Queries</h1>
+  <h2 id="advanced-queries">Advanced Queries</h2>
   <p>Besides basic CRUD operations, FQL is capable of performing
   indirection and aggregation queries.</p>
-  <h2 id="indirection">Indirection</h2>
+  <h3 id="indirection">Indirection</h3>
   <p>Indirection queries are similar to SQL joins. They associate
   different groups of key-values via some shared data element.</p>
   <p>In FoundationDB, indexes are implemented using indirection. Suppose
@@ -698,7 +709,7 @@
   <pre class="language-fql result"><code>/people(23,&quot;Lenny&quot;,&quot;Johnson&quot;,22,&quot;Mechanic&quot;)=nil
 /people(348,&quot;Roger&quot;,&quot;Johnson&quot;,54,&quot;Engineer&quot;)=nil
 /people(2003,&quot;Larry&quot;,&quot;Johnson&quot;,8,&quot;N/A&quot;)=nil</code></pre>
-  <h2 id="aggregation">Aggregation</h2>
+  <h3 id="aggregation">Aggregation</h3>
   <blockquote>
   <p>🚧 Aggregation is still being implemented.</p>
   </blockquote>

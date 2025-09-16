@@ -22,7 +22,11 @@ include-before: |
   class citizens.
 ...
 
-# Overview
+# Introduction
+
+# Syntax
+
+## Overview
 
 FQL is specified as a context-free [grammar][]. The queries
 look like key-values encoded using the [directory][] and
@@ -131,12 +135,12 @@ a directory path.
 /my/directory
 ```
 
-# Data Elements
+## Data Elements
 
 An FQL query contains instances of data elements. These
 mirror the types of elements found in the [tuple layer][].
 This section will describe how data elements behave in the
-FQL language, while [element encoding](#element-encoding)
+FQL language, while [element encoding](#data-encoding)
 describes how FQL encodes the elements before writing them
 to the DB.
 
@@ -209,7 +213,7 @@ including sub-tuples.
 /tuple/value(22.3,-8)=("rain","fog")
 ```
 
-# Holes & Schemas
+## Holes & Schemas
 
 Holes are a group of syntax constructs used to define
 a key-value schema by acting as placeholders for one or more
@@ -284,7 +288,7 @@ any type. It is only allowed as the last element of a tuple.
 /tuples(0x00,42,43,44)=0xabcf
 ```
 
-# Space & Comments
+## Space & Comments
 
 Whitespace and newlines are allowed within a tuple, between
 its elements.
@@ -309,7 +313,7 @@ line. They can be used to describe a tuple's elements.
 )=<int>   % balance in USD
 ```
 
-# Options
+## Options
 
 Options modify the semantics of [data
 elements](#data-elements), [variables](#holes-schemas), and
@@ -348,7 +352,9 @@ Notice that the `limit` option includes an argument after
 the colon. Some options include a single argument to further
 specify the option's behavior.
 
-# Element Encoding
+# Semantics
+
+## Data Encoding
 
 FoundationDB stores the keys and values as simple byte
 strings leaving the client responsible for encoding the
@@ -531,14 +537,14 @@ db.Transact(func(tr Transaction) (any, error) {
 })
 ```
 
-# Basic Queries
+## Basic Queries
 
 FQL queries may mutate a single key-value, read one or more
 key-values, or list directories. Throughout this section,
 snippets of Go code are included which approximate how the
 queries interact with the FoundationDB API.
 
-## Mutations
+### Mutations
 
 Queries lacking [holes](#holes-schemas) perform mutations on
 the database by either writing or clearing a key-value.
@@ -592,7 +598,7 @@ db.Transact(func(tr fdb.Transaction) (interface{}, error) {
 })
 ```
 
-## Reads
+### Reads
 
 Queries containing [holes](#holes-schemas) read one or more
 key-values. If the holes only appears in the value, then
@@ -700,7 +706,7 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-## Directories
+### Directories
 
 The directory layer may be queried in isolation by using
 a lone directory as a query. These queries can only perform
@@ -739,7 +745,7 @@ query will read that single directory.
   return results, nil
 ```
 
-## Filtering
+### Filtering
 
 Read queries define a schema to which key-values may or
 may-not conform. In the Go snippets above, non-conformant
@@ -839,12 +845,12 @@ db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
 })
 ```
 
-# Advanced Queries
+## Advanced Queries
 
 Besides basic CRUD operations, FQL is capable of performing
 indirection and aggregation queries.
 
-## Indirection
+### Indirection
 
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
@@ -903,7 +909,7 @@ subset from the "people" directory.
 /people(2003,"Larry","Johnson",8,"N/A")=nil
 ```
 
-## Aggregation
+### Aggregation
 
 > 🚧 Aggregation is still being implemented.
 
