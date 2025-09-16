@@ -352,13 +352,16 @@ specify the option's behavior.
 
 FoundationDB stores the keys and values as simple byte
 strings leaving the client responsible for encoding the
-data. FQL determines how to encode data elements based on
-their data type, position within the query, and associated
-options.
+data. FQL determines how to encode [data
+elements](#data-elements) based on their data type, position
+within the query, and associated [options](#options).
 
-Keys are always encoded using the directory and tuple
-layers. Write queries create directories if they do not
-exist.
+Keys are *always* encoded using the [directory][] and
+[tuple][] layers. Write queries create directories if they
+do not exist.
+
+[directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
+[tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```language-fql {.query}
 /directory/"p@th"(nil,57223,0xa8ff03)=nil
@@ -371,15 +374,17 @@ db.Transact(func(tr Transaction) (any, error) {
     return nil, err
   }
 
-  tr.Set(dir.Pack(Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}}), nil)
+  // Pack the tuple and prepend the dir prefix
+  key := dir.Pack(Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}})
+
+  tr.Set(key, nil)
   return nil, nil
 })
 ```
 
-The same layers are used for decoding the key. If a query
-reads from a directory which doesn't exist, nothing is
-returned. The tuple layer encodes metadata about element
-types, allowing FQL to decode keys without a schema.
+If a query reads from a directory which doesn't exist,
+nothing is returned. The tuple layer encodes metadata about
+element types, allowing FQL to decode keys without a schema.
 
 ```language-fql {.query}
 /directory/<>(...)
@@ -395,31 +400,35 @@ db.Transact(func(tr Transaction) (any, error) {
     return nil, err
   }
 
+  // List the sub-directories of dir
   subDirs, err := dir.List(tr)
   if err != nil {
     return nil, err
   }
-  
+
+  // For each sub-directory, grab all the KVs
   var results []KeyValue
-  for _, dir := range subDirs {
-    iter := tr.GetRange(dir).Iterator()
+  for _, subDir := range subDirs {
+    iter := tr.GetRange(subDir).Iterator()
+
     for iter.Advance() {
-      kv, err := iter.Get()
+      kv := iter.MustGet()
+
+      // Remove the directory prefix and unpack the tuple
+      tup, err := dir.Unpack(kv.Key)
       if err != nil {
+        // Return partial results with error
         return results, err
       }
 
-      tup, err := dir.Unpack(kv.Key)
-      if err != nil {
-        return results, err
-      }
+      val := // Value unpacking will be discussed later...
 
       results = append(results, KeyValue{
         Key: Key{
           Directory: dir,
           Tuple: tup,
         },
-        Value: kv.Value,
+        Value: val,
       })
     }
   }
@@ -428,15 +437,13 @@ db.Transact(func(tr Transaction) (any, error) {
 ```
 
 Values have more flexible encoding options. There is
-a default encoding where most data elements are encoded
-using the tuple layer. The element is encoded as the single
-member of a tuple. For instance, the value `42` is encoded
-as the tuple `(42)`.
+a default encoding where data elements are encoded as the
+lone member of a tuple. For instance, the value `42` is
+encoded as the tuple `(42)`.
 
-The exceptions to this rule are when values are tuples,
-which are not wrapped with another tuple; and byte strings,
-which are used as-is for the value. This default encoding
-allows FQL to decode a value without a schema.
+The exceptions to this default encoding are when values are
+tuples (which are not wrapped in another tuple) and byte
+strings (which are used as-is for the value).
 
 ```language-fql {.query} 
 /people/age("jon","smith")=42
@@ -444,8 +451,7 @@ allows FQL to decode a value without a schema.
 
 ```lang-go {.equiv-go}
 db.Transact(func(tr Transaction) (any, error) {
-  dir := // create or open the directory...
-  key := // encoding the key...
+  key := // Encode the key...
 
   val, err := PackTup(Tuple{42})
   if err != nil {
@@ -457,9 +463,8 @@ db.Transact(func(tr Transaction) (any, error) {
 })
 ```
 
-When decoding a value which was encoded via the default
-encoding, FQL can determine the value's type using the tuple
-layer.
+This default encoding allows values to be decoded without
+knowing their type.
 
 ```language-fql {.query} 
 /people/age("jon","smith")=<>
@@ -467,32 +472,64 @@ layer.
 
 ```lang-go {.equiv-go}
 db.Transact(func(tr Transaction) (any, error) {
-  dir := // create or open the directory...
-  key := // encoding the key...
+  key := // Encode the key...
 
-  val := tr.Get(key)
-  tup, err := UnpackTup(val)
+  valBytes := tr.MustGet(key)
+
+  // Assume the value is a tuple
+  valTup, err := UnpackTup(valBytes)
   if err == nil {
     return tup, nil
   }
 
-  // try other decoding methods...
+  // The value isn't a tuple, so return raw bytes
+  return valBytes, err
 })
 ```
 
 Using options, values can be encoded in other ways. For
-instance, the option `i16` tells FQL to encode an integer
-using 16-bits in network byte order. The byte order can be
-explicitly specified using the options `le` and `be` for
-little and big endian respectively. 
+instance, the option `u16` tells FQL to encode an unsigned
+integer using 16-bits. The byte order can be specified using
+the options `le` and `be` for little and big endian
+respectively. 
 
 ```language-fql {.query}
 /numbers/big("37")=37[i16,be]
 ```
 
-When decoding these values, options must be specified to
-instruct FQL how to decode the value. Otherwise, the value
-is returned as raw bytes.
+```lang-go {.equiv-go}
+db.Transact(func(tr Transaction) (any, error) {
+  key := // Encode the key...
+
+  // Pack the value into 16 bits.
+  val := make([]byte, 2)
+  binary.BigEndian.PutUint64(val, 37)
+
+  tr.Set(key, val)
+  return nil, nil
+})
+```
+
+If the value was encoded with non-default values, then the
+encoding must be specified in the variable. 
+
+```language-fql {.query}
+/numbers/big("37")=<int[i16,be]>
+```
+
+```lang-go {.equiv-go}
+db.Transact(func(tr Transaction) (any, error) {
+  key := // Encode the key...
+
+  valBytes := tr.MustGet(key)
+
+  // Unpack bytes as a 16-bit int
+  valUnsigned := binary.BigEndian.Uint16(valBytes)
+  val := int16(valUnsigned)
+
+  return val, err
+})
+```
 
 # Basic Queries
 
