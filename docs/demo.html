@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title></title>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+  <link href="css/code.css" rel="stylesheet" >
+  <link href="css/style.css" rel="stylesheet"/>
+  <script src="js/highlight.js"></script>
+  <script src="js/fql.js"></script>
+  <script src="js/go.js"></script>
+</head>
+<body>
+  <h1></h1>
+    
+  <h1 id="fql">FQL</h1>
+  <h2 id="how-is-fdb-different">How is FDB different?</h2>
+  <ul>
+  <li>Distributed key-value DB with ACID transactions</li>
+  <li>Atomicity, isolation, &amp; durability handled by DB</li>
+  <li>Consistency distributed accross clients</li>
+  <li>Ordered keys make range-reads efficient</li>
+  <li>Lacks a query language</li>
+  </ul>
+  <h2 id="how-is-fql-different">How is FQL different?</h2>
+  <ul>
+  <li>Designed around DB’s semantics</li>
+  <li>Core data structure is a key-value</li>
+  <li>Composable and intuitive</li>
+  </ul>
+  <h2 id="write-query">Write Query</h2>
+  <pre class="language-fql query"><code>/my/dir(&quot;hello&quot;, &quot;world&quot;)=42</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
+  dir, err := directory.CreateOrOpen(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
+  if err != nil {
+    return nil, err
+  }
+
+  val := make([]byte, 8)
+  binary.LittleEndian.PutUint64(val, 42)
+  tr.Set(dir.Pack(tuple.Tuple{&quot;hello&quot;, &quot;world&quot;}), val)
+  return nil, nil
+})</code></pre>
+  <h2 id="read-query">Read Query</h2>
+  <pre class="language-fql query"><code>/my/dir(99.8, 7dfb10d1-2493-4fb5-928e-889fdc6a7136)=&lt;int|str&gt;</code></pre>
+  <pre class="lang-go equiv-go"><code>db.Transact(func(tr fdb.Transaction) (any, error) {
+  dir, err := directory.Open(tr, []string{&quot;my&quot;, &quot;dir&quot;}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  val := tr.MustGet(dir.Pack(tuple.Tuple{99.8,
+    tuple.UUID{
+      0x7d, 0xfb, 0x10, 0xd1,
+      0x24, 0x93, 0x4f, 0xb5,
+      0x92, 0x8e, 0x88, 0x9f,
+      0xdc, 0x6a, 0x71, 0x36}))
+  
+     
+  if len(val) == 8 {
+      return binary.LittleEndian.Uint64(val), nil
+  }
+  return string(val), nil
+})</code></pre>
+  <h2 id="read-with-filtering">Read With Filtering</h2>
+  <pre class="language-fql query"><code>/people(3392, &lt;str|int&gt;, &lt;&gt;)=(&lt;uint&gt;, ...)</code></pre>
+  <pre class="lang-go equiv-go"><code>db.ReadTransact(func(tr fdb.ReadTransaction) (any, error) {
+  dir, err := directory.Open(tr, []string{&quot;people&quot;}, nil)
+  if err != nil {
+    if errors.Is(err, directory.ErrDirNotExists) {
+      return nil, nil
+    }
+    return nil, err
+  }
+
+  rng, err := fdb.PrefixRange(dir.Pack(tuple.Tuple{3392}))
+  if err != nil {
+    return nil, err
+  }
+
+  var results []fdb.KeyValue
+  iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
+  for iter.Advance() {
+    kv := iter.MustGet()
+
+    tup, err := dir.Unpack(kv.Key)
+    if err != nil {
+      return nil, err
+    }
+
+    if len(tup) != 3 {
+      return nil, fmt.Errorf(&quot;invalid kv: %v&quot;, kv)
+    }
+
+    switch tup[0].(type) {
+    default:
+      return nil, fmt.Errorf(&quot;invalid kv: %v&quot;, kv)
+    case string | int64:
+    }
+
+    val, err := tuple.Unpack(kv.Value)
+    if err != nil {
+      return nil, fmt.Errorf(&quot;invalid kv: %v&quot;, kv)
+    }
+    if len(val) == 0 {
+      return nil, fmt.Errorf(&quot;invalid kv: %v&quot;, kv)
+    }
+    if _, isInt := val[0].(uint64); !isInt {
+      return nil, fmt.Errorf(&quot;invalid kv: %v&quot;, kv)
+    }
+
+    results = append(results, kv)
+  }
+  return results, nil
+})</code></pre>
+  <script>
+    hljs.highlightAll();
+    document.querySelectorAll(":not(pre) > code").forEach((e) => {
+      let bash = false;
+      for (let p = e.parentElement; p; p = p.parentElement) {
+        if (p.classList.contains("language-bash")) {
+          bash = true;
+          break;
+        }
+      }
+
+      if (bash) e.classList.add("language-bash");
+      else e.classList.add("language-fql");
+      hljs.highlightElement(e);
+    });
+  </script>
+</body>
+</html>

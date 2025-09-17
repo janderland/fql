@@ -174,7 +174,7 @@ pre.result > ::before {
 }
 
 pre.lang-go > ::before {
-  content: "go";
+  content: "pseudo go";
 }
 
 /* Tables */
