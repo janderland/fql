@@ -4,7 +4,7 @@ FROM debian:12 AS builder
 RUN apt-get update &&\
     apt-get install --no-install-recommends -y \
       build-essential=12.9 \
-      ca-certificates=20230311 \
+      ca-certificates=20* \
       git=1:2.39.* \
       curl=7.88.* &&\
     apt-get clean &&\
