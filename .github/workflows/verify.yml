@@ -36,7 +36,7 @@ jobs:
         PANDOC_URL: ${{ secrets.PANDOC_URL || 'https://github.com/jgm/pandoc/releases/download/3.3/pandoc-3.3-1-amd64.deb' }}
         GO_URL: ${{ secrets.GO_URL || 'https://go.dev/dl/go1.19.1.linux-amd64.tar.gz' }}
       with:
-        files: docker-bake.yaml
+        files: docker-bake.json
         targets: build
         set: |
           *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}
