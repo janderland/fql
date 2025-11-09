@@ -218,7 +218,7 @@ export DOCKER_TAG
 # Run the requested commands.
 
 if [[ -n "$IMAGE_BUILD" ]]; then
-  (set -x; docker compose build build)
+  (set -x; docker buildx bake --load build)
 fi
 
 if [[ -n "$BUILD_COMMAND" ]]; then
@@ -226,7 +226,7 @@ if [[ -n "$BUILD_COMMAND" ]]; then
 fi
 
 if [[ -n "$IMAGE_FQL" ]]; then
-  (set -x; docker compose build fql)
+  (set -x; docker buildx bake --load fql)
 fi
 
 if [[ -n "$RUN_FQL" ]]; then
