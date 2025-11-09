@@ -1,0 +1,36 @@
+[workspace]
+members = [
+    "keyval",
+    "parser",
+    "engine",
+    "cli",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["FQL Contributors"]
+license = "MIT OR Apache-2.0"
+
+[workspace.dependencies]
+# Internal crates
+keyval = { path = "keyval" }
+parser = { path = "parser" }
+engine = { path = "engine" }
+
+# External dependencies
+anyhow = "1.0"
+thiserror = "1.0"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+bytes = "1.5"
+uuid = { version = "1.6", features = ["serde"] }
+async-trait = "0.1"
+futures = "0.3"
+tokio = { version = "1.35", features = ["full"] }
+clap = { version = "4.4", features = ["derive"] }
+ratatui = "0.25"
+crossterm = "0.27"
+tracing = "0.1"
+tracing-subscriber = "0.3"

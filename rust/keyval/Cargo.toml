@@ -1,0 +1,13 @@
+[package]
+name = "keyval"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+serde_bytes = "0.11"
+uuid = { workspace = true }
+thiserror = { workspace = true }
