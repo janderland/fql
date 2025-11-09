@@ -4,6 +4,7 @@ defmodule Fql.KeyVal.Values do
   """
 
   alias Fql.KeyVal
+  alias Fql.KeyVal.Tuple
 
   @type byte_order :: :big | :little
 
@@ -53,12 +54,13 @@ defmodule Fql.KeyVal.Values do
   end
 
   def pack(val, _order, true) when is_list(val) do
-    # Tuple - would need FDB tuple packing
-    {:error, "tuple packing not yet implemented"}
+    # Tuple with potential versionstamp
+    Tuple.pack(val)
   end
 
-  def pack(val, _order, _vstamp) when is_list(val) do
-    {:error, "tuple values require vstamp=true"}
+  def pack(val, _order, false) when is_list(val) do
+    # Regular tuple
+    Tuple.pack(val)
   end
 
   def pack(_val, _order, _vstamp) do
@@ -133,8 +135,7 @@ defmodule Fql.KeyVal.Values do
   end
 
   def unpack(val, :tuple, _order) do
-    # Would need FDB tuple unpacking
-    {:error, "tuple unpacking not yet implemented"}
+    Tuple.unpack(val)
   end
 
   def unpack(val, :vstamp, _order) do

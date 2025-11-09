@@ -261,8 +261,26 @@ defmodule Fql.Parser do
   end
 
   defp parse_string(state) do
-    # Simplified string parsing - would need more complex handling for escapes
-    collect_until(state, :str_mark, "")
+    collect_string_contents(state, "")
+  end
+
+  defp collect_string_contents(state, acc) do
+    case current_token(state) do
+      %{kind: :str_mark} ->
+        # End of string
+        {:ok, acc, advance(state)}
+
+      %{kind: :escape, value: char} ->
+        # Escaped character - add the actual character
+        collect_string_contents(advance(state), acc <> char)
+
+      %{kind: _, value: value} ->
+        # Regular content
+        collect_string_contents(advance(state), acc <> value)
+
+      nil ->
+        {:error, "unterminated string"}
+    end
   end
 
   defp collect_until(state, target_kind, acc) do
