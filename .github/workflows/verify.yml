@@ -25,7 +25,7 @@ jobs:
       uses: docker/setup-buildx-action@v3
 
     - name: Build images with cache
-      uses: docker/bake-action@v4
+      uses: docker/bake-action@v5
       env:
         DOCKER_TAG: ${{ github.sha }}_fdb.${{ matrix.fdb_ver }}
         FDB_LIB_URL: ${{ matrix.fdb_lib_url }}
