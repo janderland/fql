@@ -218,13 +218,7 @@ export DOCKER_TAG
 # Run the requested commands.
 
 if [[ -n "$IMAGE_BUILD" ]]; then
-  # Use Docker Bake if available for better caching support, otherwise fall back to compose
-  if command -v docker &> /dev/null && docker buildx version &> /dev/null && [[ -f docker-bake.hcl ]]; then
-    echo "Using docker buildx bake for improved caching..."
-    (set -x; docker buildx bake --load build)
-  else
-    (set -x; docker compose build build)
-  fi
+  (set -x; docker buildx bake --load build)
 fi
 
 if [[ -n "$BUILD_COMMAND" ]]; then
@@ -232,13 +226,7 @@ if [[ -n "$BUILD_COMMAND" ]]; then
 fi
 
 if [[ -n "$IMAGE_FQL" ]]; then
-  # Use Docker Bake if available for better caching support, otherwise fall back to compose
-  if command -v docker &> /dev/null && docker buildx version &> /dev/null && [[ -f docker-bake.hcl ]]; then
-    echo "Using docker buildx bake for improved caching..."
-    (set -x; docker buildx bake --load fql)
-  else
-    (set -x; docker compose build fql)
-  fi
+  (set -x; docker buildx bake --load fql)
 fi
 
 if [[ -n "$RUN_FQL" ]]; then
