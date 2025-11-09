@@ -85,10 +85,82 @@ fn format_variable(var: &Variable) -> String {
     }
 }
 
-// Add hex dependency placeholder
-mod hex {
-    pub fn encode(_data: &[u8]) -> String {
-        // TODO: Use actual hex encoding crate
-        String::from("...")
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_format_directory() {
+        let dir = vec![
+            DirElement::String("users".to_string()),
+            DirElement::String("profiles".to_string()),
+        ];
+        assert_eq!(format_directory(&dir), "/users/profiles");
+    }
+
+    #[test]
+    fn test_format_directory_with_variable() {
+        let dir = vec![
+            DirElement::String("users".to_string()),
+            DirElement::Variable(Variable::any()),
+        ];
+        assert_eq!(format_directory(&dir), "/users/<>");
+    }
+
+    #[test]
+    fn test_format_tuple() {
+        let tuple = vec![TupElement::Int(42), TupElement::String("hello".to_string())];
+        assert_eq!(format_tuple(&tuple), "(42,\"hello\")");
+    }
+
+    #[test]
+    fn test_format_keyvalue() {
+        let kv = KeyValue {
+            key: Key {
+                directory: vec![DirElement::String("test".to_string())],
+                tuple: vec![TupElement::Int(1)],
+            },
+            value: Value::String("data".to_string()),
+        };
+        assert_eq!(format_keyvalue(&kv), "/test(1)=\"data\"");
+    }
+
+    #[test]
+    fn test_format_query_keyvalue() {
+        let query = Query::KeyValue(KeyValue {
+            key: Key {
+                directory: vec![],
+                tuple: vec![TupElement::Int(42)],
+            },
+            value: Value::Int(100),
+        });
+        assert_eq!(format(&query), "(42)=100");
+    }
+
+    #[test]
+    fn test_format_query_key() {
+        let query = Query::Key(Key {
+            directory: vec![DirElement::String("dir".to_string())],
+            tuple: vec![TupElement::String("key".to_string())],
+        });
+        assert_eq!(format(&query), "/dir(\"key\")");
+    }
+
+    #[test]
+    fn test_format_maybe_more() {
+        let tuple = vec![TupElement::Int(1), TupElement::MaybeMore];
+        assert_eq!(format_tuple(&tuple), "(1,...)");
+    }
+
+    #[test]
+    fn test_format_variable_with_types() {
+        let var = Variable::with_types(vec![ValueType::Int, ValueType::String]);
+        assert_eq!(format_variable(&var), "int|string");
+    }
+
+    #[test]
+    fn test_format_bytes() {
+        let value = Value::Bytes(vec![0xde, 0xad, 0xbe, 0xef]);
+        assert_eq!(format_value(&value), "0xdeadbeef");
     }
 }
