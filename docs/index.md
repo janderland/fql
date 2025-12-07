@@ -491,6 +491,12 @@ db.Transact(func(tr Transaction) (any, error) {
   // Assume the value is a tuple
   valTup, err := UnpackTup(valBytes)
   if err == nil {
+    if len(valTup) == 1 {
+        return KeyValue{
+          Key: Key{...},
+          Val: valTup[0],
+        }, nil
+    }
     return KeyValue{
       Key: Key{...},
       Val: valTup,
