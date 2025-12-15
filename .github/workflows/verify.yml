@@ -12,11 +12,9 @@ jobs:
         include:
           - fdb_ver: 6.2.30
             fdb_lib_url: https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients_6.2.30-1_amd64.deb
-            fdb_docker_image: foundationdb/foundationdb:6.2.30
 
           - fdb_ver: 7.1.61
             fdb_lib_url: https://github.com/apple/foundationdb/releases/download/7.1.61/foundationdb-clients_7.1.61-1_amd64.deb
-            fdb_docker_image: foundationdb/foundationdb:7.1.61
 
     runs-on: ubuntu-latest
     steps:
@@ -26,27 +24,8 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build images with cache
-      uses: docker/bake-action@v5
-      env:
-        DOCKER_TAG: ${{ github.sha }}_fdb.${{ matrix.fdb_ver }}
-        FDB_LIB_URL: ${{ matrix.fdb_lib_url }}
-        GOLANGCI_LINT_VER: ${{ secrets.GOLANGCI_LINT_VER || 'v1.49.0' }}
-        SHELLCHECK_URL: ${{ secrets.SHELLCHECK_URL || 'https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz' }}
-        HADOLINT_URL: ${{ secrets.HADOLINT_URL || 'https://github.com/hadolint/hadolint/releases/download/v2.7.0/hadolint-Linux-x86_64' }}
-        JQ_URL: ${{ secrets.JQ_URL || 'https://github.com/stedolan/jq/releases/download/jq-1.6/jq-linux64' }}
-        PANDOC_URL: ${{ secrets.PANDOC_URL || 'https://github.com/jgm/pandoc/releases/download/3.3/pandoc-3.3-1-amd64.deb' }}
-        GO_URL: ${{ secrets.GO_URL || 'https://go.dev/dl/go1.19.1.linux-amd64.tar.gz' }}
-      with:
-        files: bake.hcl
-        targets: build
-        set: |
-          *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}
-          *.cache-to=type=gha,mode=max,scope=build-${{ matrix.fdb_ver }}
-
-    - name: Verify
-      run: ./build.sh --generate --verify
+    - name: Build and verify
+      run: ./build.sh --image build --generate --verify
       env:
         FDB_VER: ${{ matrix.fdb_ver }}
         FDB_LIB_URL: ${{ matrix.fdb_lib_url }}
-        FDB_DOCKER_IMAGE: ${{ matrix.fdb_docker_image }}
