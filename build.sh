@@ -30,8 +30,7 @@ generated under the /docs directory.
 
 If the '--image fql' flag is set then the script runs 'docker
 build' for the 'fql' docker image. The tag is determined by the
-git tag/hash and the version of the FDB library specified in the
-'.env' file.
+git tag/hash and the version of the FDB library.
 
 If the '--run' flag is provided then all the args after this flag
 are passed to an instance of the 'fql' docker image. Normally
@@ -51,9 +50,8 @@ separating them with commas.
   ./build.sh --image build,fql
 
 When building Docker images, the dependencies of the Dockerfile
-are specified in the '.env' file. When this file is changed,
-you'll need to rebuild the docker images for the changes to take
-effect.
+are specified in 'bake.hcl'. When this file is changed, you'll
+need to rebuild the docker images for the changes to take effect.
 END
 }
 
@@ -96,22 +94,12 @@ function code_version {
 }
 
 
-# fdb_version returns the version of the FDB
-# library specified by the env var FDB_VER.
-# If FDB_VER is not defined then the .env
-# file is read to obtain the version.
+# fdb_version returns the version of the FDB library.
+# Uses FDB_VER env var if set, otherwise defaults to
+# the version specified in bake.hcl.
 
 function fdb_version {
-  if [[ -n "$FDB_VER" ]]; then
-    echo "$FDB_VER"
-    return 0
-  fi
-
-  local regex='FDB_VER=([^'$'\n'']*)'
-  if ! [[ "$(cat .env)" =~ $regex ]]; then
-    fail "Couldn't find FDB version in .env file."
-  fi
-  echo "${BASH_REMATCH[1]}"
+  echo "${FDB_VER:-6.2.30}"
 }
 
 
@@ -214,11 +202,15 @@ DOCKER_TAG="${LATEST:-$(code_version)}_fdb.$(fdb_version)"
 echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
 
+FDB_DOCKER_IMAGE="foundationdb/foundationdb:$(fdb_version)"
+echo "FDB_DOCKER_IMAGE=${FDB_DOCKER_IMAGE}"
+export FDB_DOCKER_IMAGE
+
 
 # Run the requested commands.
 
 if [[ -n "$IMAGE_BUILD" ]]; then
-  (set -x; docker buildx bake --load build)
+  (set -x; docker buildx bake -f bake.hcl --load build)
 fi
 
 if [[ -n "$BUILD_COMMAND" ]]; then
@@ -226,7 +218,7 @@ if [[ -n "$BUILD_COMMAND" ]]; then
 fi
 
 if [[ -n "$IMAGE_FQL" ]]; then
-  (set -x; docker buildx bake --load fql)
+  (set -x; docker buildx bake -f bake.hcl --load fql)
 fi
 
 if [[ -n "$RUN_FQL" ]]; then

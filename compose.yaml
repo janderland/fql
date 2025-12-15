@@ -10,20 +10,6 @@ services:
     image: "docker.io/janderland/fql-build:${DOCKER_TAG}"
     pull_policy: "never"
     platform: "linux/amd64"
-    build:
-      context: "./docker"
-      target: "builder"
-      platforms:
-        - "linux/amd64"
-      args: &build_args
-        FQL_VER: "${DOCKER_TAG}"
-        FDB_LIB_URL: "${FDB_LIB_URL}"
-        GO_URL: "${GO_URL}"
-        GOLANGCI_LINT_VER: "${GOLANGCI_LINT_VER}"
-        SHELLCHECK_URL: "${SHELLCHECK_URL}"
-        HADOLINT_URL: "${HADOLINT_URL}"
-        JQ_URL: "${JQ_URL}"
-        PANDOC_URL: "${PANDOC_URL}"
     depends_on:
       - "fdb"
     working_dir: "/fql"
@@ -37,12 +23,6 @@ services:
     container_name: "fql"
     image: "docker.io/janderland/fql:${DOCKER_TAG}"
     platform: "linux/amd64"
-    build:
-      context: "."
-      dockerfile: "./docker/Dockerfile"
-      platforms:
-        - "linux/amd64"
-      args: *build_args
     depends_on:
       - "fdb"
 

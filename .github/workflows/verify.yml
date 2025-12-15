@@ -13,9 +13,11 @@ jobs:
           - fdb_ver: 6.2.30
             fdb_lib_url: https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients_6.2.30-1_amd64.deb
             fdb_docker_image: foundationdb/foundationdb:6.2.30
+
           - fdb_ver: 7.1.61
             fdb_lib_url: https://github.com/apple/foundationdb/releases/download/7.1.61/foundationdb-clients_7.1.61-1_amd64.deb
             fdb_docker_image: foundationdb/foundationdb:7.1.61
+
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
@@ -36,7 +38,7 @@ jobs:
         PANDOC_URL: ${{ secrets.PANDOC_URL || 'https://github.com/jgm/pandoc/releases/download/3.3/pandoc-3.3-1-amd64.deb' }}
         GO_URL: ${{ secrets.GO_URL || 'https://go.dev/dl/go1.19.1.linux-amd64.tar.gz' }}
       with:
-        files: docker-bake.json
+        files: bake.hcl
         targets: build
         set: |
           *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}

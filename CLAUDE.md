@@ -80,6 +80,7 @@ Query syntax uses directories (`/path/to/dir`), tuples `("elem1", 2, 0xFF)`, and
 
 The build system uses Docker Compose for consistent builds:
 - `build.sh` script provides unified interface
-- `docker-compose.yaml` defines build and FDB containers
+- `bake.hcl` defines Docker build configuration
+- `compose.yaml` defines runtime services (build, fql, fdb containers)
 - Use `--latest` flag for offline development
 - FDB container automatically managed for tests
