@@ -24,8 +24,21 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Build and verify
-      run: ./build.sh --image build --generate --verify
+    - name: Build image
+      uses: docker/bake-action@v5
       env:
+        DOCKER_TAG: ${{ github.sha }}_fdb.${{ matrix.fdb_ver }}
         FDB_VER: ${{ matrix.fdb_ver }}
         FDB_LIB_URL: ${{ matrix.fdb_lib_url }}
+      with:
+        files: bake.hcl
+        targets: build
+        load: true
+        set: |
+          *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}
+          *.cache-to=type=gha,mode=max,scope=build-${{ matrix.fdb_ver }}
+
+    - name: Verify
+      run: ./build.sh --generate --verify
+      env:
+        FDB_VER: ${{ matrix.fdb_ver }}

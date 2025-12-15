@@ -65,8 +65,6 @@ target "build" {
   tags       = ["docker.io/janderland/fql-build:${DOCKER_TAG}"]
   platforms  = ["linux/amd64"]
   args       = build_args()
-  cache-from = ["type=gha,scope=build-${FDB_VER}"]
-  cache-to   = ["type=gha,mode=max,scope=build-${FDB_VER}"]
 }
 
 target "fql" {
@@ -75,6 +73,4 @@ target "fql" {
   tags       = ["docker.io/janderland/fql:${DOCKER_TAG}"]
   platforms  = ["linux/amd64"]
   args       = build_args()
-  cache-from = ["type=gha,scope=fql-${FDB_VER}"]
-  cache-to   = ["type=gha,mode=max,scope=fql-${FDB_VER}"]
 }
