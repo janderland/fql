@@ -1,4 +1,0 @@
-run:
-  skip-dirs-use-default: true
-  skip-dirs:
-    - ^\..* # Skip directories starting with a dot
