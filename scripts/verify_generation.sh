@@ -7,6 +7,7 @@ cd "${0%/*}/.."
 STATUS="$(git status --short)"
 if [[ -n "$STATUS" ]]; then
   echo "ERR! Generated code cannot be verified while there are uncommitted changes."
+  echo "$STATUS"
   exit 1
 fi
 
