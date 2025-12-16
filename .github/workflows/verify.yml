@@ -30,20 +30,7 @@ jobs:
       env:
         FDB_VER: ${{ matrix.fdb_ver }}
 
-    - name: Build and cache
-      uses: docker/bake-action@v5
-      env:
-        DOCKER_TAG: ${{ steps.docker.outputs.tag }}
-        FDB_VER: ${{ matrix.fdb_ver }}
-        FDB_LIB_URL: ${{ matrix.fdb_lib_url }}
-      with:
-        files: bake.hcl
-        targets: build
-        set: |
-          *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}
-          *.cache-to=type=gha,mode=max,scope=build-${{ matrix.fdb_ver }}
-
-    - name: Load image
+    - name: Build image
       uses: docker/bake-action@v5
       env:
         DOCKER_TAG: ${{ steps.docker.outputs.tag }}
@@ -55,6 +42,7 @@ jobs:
         load: true
         set: |
           *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}
+          *.cache-to=type=gha,mode=max,scope=build-${{ matrix.fdb_ver }}
 
     - name: Verify
       run: ./build.sh --generate --verify
