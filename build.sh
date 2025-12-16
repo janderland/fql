@@ -8,11 +8,6 @@ build.sh is a facade for docker compose. It runs a set of
 optional tasks in the order specified below. This is the same
 script used by CI/CD to build, test, and package FQL.
 
-If the '--latest' flag is set, then the script will use 'latest'
-as the tag for the docker images. This allows for offline
-development. Otherwise, the tag changes will every commit and
-docker attmepts a build which will fail.
-
 If the '--image build' flag is set then the script starts off by
 running 'docker build' for the 'fql-build' docker image. The tag
 is determined by the git tag/hash and the FDB version. This image
@@ -30,8 +25,7 @@ generated under the /docs directory.
 
 If the '--image fql' flag is set then the script runs 'docker
 build' for the 'fql' docker image. The tag is determined by the
-git tag/hash and the version of the FDB library specified in the
-'.env' file.
+git tag/hash and the FDB version.
 
 If the '--run' flag is provided then all the args after this flag
 are passed to an instance of the 'fql' docker image. Normally
@@ -51,9 +45,8 @@ separating them with commas.
   ./build.sh --image build,fql
 
 When building Docker images, the dependencies of the Dockerfile
-are specified in the '.env' file. When this file is changed,
-you'll need to rebuild the docker images for the changes to take
-effect.
+are specified in 'bake.hcl'. When this file is changed, you'll
+need to rebuild the docker images for the changes to take effect.
 END
 }
 
@@ -78,40 +71,6 @@ function join_array {
     done
   fi
   echo "$out"
-}
-
-
-# code_version returns the latest tag for the current
-# Git commit. If there are no tags associated with
-# the commit then the short hash is returned.
-
-function code_version {
-  local tag=""
-  if tag="$(git describe --tags)"; then
-    echo "$tag"
-    return 0
-  fi
-
-  git rev-parse --short HEAD
-}
-
-
-# fdb_version returns the version of the FDB
-# library specified by the env var FDB_VER.
-# If FDB_VER is not defined then the .env
-# file is read to obtain the version.
-
-function fdb_version {
-  if [[ -n "$FDB_VER" ]]; then
-    echo "$FDB_VER"
-    return 0
-  fi
-
-  local regex='FDB_VER=([^'$'\n'']*)'
-  if ! [[ "$(cat .env)" =~ $regex ]]; then
-    fail "Couldn't find FDB version in .env file."
-  fi
-  echo "${BASH_REMATCH[1]}"
 }
 
 
@@ -142,11 +101,6 @@ while [[ $# -gt 0 ]]; do
 
     --docs)
       GENERATE_DOCS="x"
-      shift 1
-      ;;
-
-    --latest)
-      LATEST="x"
       shift 1
       ;;
 
@@ -210,15 +164,19 @@ FQL_COMMAND=${FQL_ARGS[*]}
 echo "FQL_COMMAND=${FQL_COMMAND}"
 export FQL_COMMAND
 
-DOCKER_TAG="${LATEST:-$(code_version)}_fdb.$(fdb_version)"
+DOCKER_TAG="$(./scripts/docker_tag.sh)"
 echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
+
+FDB_DOCKER_IMAGE="foundationdb/foundationdb:${FDB_VER:-6.2.30}"
+echo "FDB_DOCKER_IMAGE=${FDB_DOCKER_IMAGE}"
+export FDB_DOCKER_IMAGE
 
 
 # Run the requested commands.
 
 if [[ -n "$IMAGE_BUILD" ]]; then
-  (set -x; docker buildx bake --load build)
+  (set -x; docker buildx bake -f bake.hcl --load build)
 fi
 
 if [[ -n "$BUILD_COMMAND" ]]; then
@@ -226,7 +184,7 @@ if [[ -n "$BUILD_COMMAND" ]]; then
 fi
 
 if [[ -n "$IMAGE_FQL" ]]; then
-  (set -x; docker buildx bake --load fql)
+  (set -x; docker buildx bake -f bake.hcl --load fql)
 fi
 
 if [[ -n "$RUN_FQL" ]]; then
