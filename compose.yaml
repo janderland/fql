@@ -5,6 +5,11 @@ services:
 
   # The build service is responsible for building,
   # linting, and testing the code.
+  #
+  # The CACHE_VOLUME env var controls where the build
+  # cache is stored. Defaults to a named volume "cache"
+  # for local dev. CI sets this to a bind mount path
+  # so the cache can be persisted between runs.
   build:
     container_name: "build"
     image: "docker.io/janderland/fql-build:${DOCKER_TAG}"
@@ -15,7 +20,7 @@ services:
     working_dir: "/fql"
     volumes:
       - ".:/fql"
-      - "cache:/cache"
+      - "${CACHE_VOLUME:-cache}:/cache"
 
   # The fql service allows us to build and test the
   # fql Docker image.

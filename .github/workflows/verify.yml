@@ -44,7 +44,16 @@ jobs:
           *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}
           *.cache-to=type=gha,mode=max,scope=build-${{ matrix.fdb_ver }}
 
+    - name: Restore Go cache
+      uses: actions/cache@v4
+      with:
+        path: .cache
+        key: go-${{ matrix.fdb_ver }}-${{ hashFiles('go.sum') }}
+        restore-keys: |
+          go-${{ matrix.fdb_ver }}-
+
     - name: Verify
       run: ./build.sh --generate --verify
       env:
         FDB_VER: ${{ matrix.fdb_ver }}
+        CACHE_VOLUME: ./.cache
