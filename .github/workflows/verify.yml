@@ -52,6 +52,24 @@ jobs:
         restore-keys: |
           go-${{ matrix.fdb_ver }}-
 
+    - name: Cache FDB image
+      id: cache-fdb
+      uses: actions/cache@v4
+      with:
+        path: ~/.cache/fql/fdb-image.tar
+        key: fdb-image-${{ matrix.fdb_ver }}
+
+    - name: Load FDB image from cache
+      if: steps.cache-fdb.outputs.cache-hit == 'true'
+      run: docker load -i ~/.cache/fql/fdb-image.tar
+
+    - name: Pull and save FDB image
+      if: steps.cache-fdb.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ~/.cache/fql
+        docker pull foundationdb/foundationdb:${{ matrix.fdb_ver }}
+        docker save foundationdb/foundationdb:${{ matrix.fdb_ver }} -o ~/.cache/fql/fdb-image.tar
+
     - name: Verify
       run: ./build.sh --generate --verify
       env:
