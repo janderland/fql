@@ -8,11 +8,6 @@ build.sh is a facade for docker compose. It runs a set of
 optional tasks in the order specified below. This is the same
 script used by CI/CD to build, test, and package FQL.
 
-If the '--latest' flag is set, then the script will use 'latest'
-as the tag for the docker images. This allows for offline
-development. Otherwise, the tag changes will every commit and
-docker attmepts a build which will fail.
-
 If the '--image build' flag is set then the script starts off by
 running 'docker build' for the 'fql-build' docker image. The tag
 is determined by the git tag/hash and the FDB version. This image
@@ -79,21 +74,6 @@ function join_array {
 }
 
 
-# code_version returns the latest tag for the current
-# Git commit. If there are no tags associated with
-# the commit then the short hash is returned.
-
-function code_version {
-  local tag=""
-  if tag="$(git describe --tags)"; then
-    echo "$tag"
-    return 0
-  fi
-
-  git rev-parse --short HEAD
-}
-
-
 # fdb_version returns the version of the FDB library.
 # Uses FDB_VER env var if set, otherwise defaults to
 # the version specified in bake.hcl.
@@ -130,11 +110,6 @@ while [[ $# -gt 0 ]]; do
 
     --docs)
       GENERATE_DOCS="x"
-      shift 1
-      ;;
-
-    --latest)
-      LATEST="x"
       shift 1
       ;;
 
@@ -198,7 +173,7 @@ FQL_COMMAND=${FQL_ARGS[*]}
 echo "FQL_COMMAND=${FQL_COMMAND}"
 export FQL_COMMAND
 
-DOCKER_TAG="${LATEST:-$(code_version)}_fdb.$(fdb_version)"
+DOCKER_TAG="$(./scripts/docker_tag.sh)"
 echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
 
