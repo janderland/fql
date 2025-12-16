@@ -17,7 +17,7 @@ fi
 STATUS="$(git status --short)"
 if [[ -n "$STATUS" ]]; then
   echo "ERR! The following generated files are outdated:"
-  cut -d' ' -f3 <<< "$STATUS"
+  echo "$STATUS"
   echo
   echo "If this is CI/CD, you'll need to execute"
   echo "'go generate ./...' on your local machine"
