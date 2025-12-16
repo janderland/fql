@@ -47,7 +47,7 @@ jobs:
     - name: Restore Go cache
       uses: actions/cache@v4
       with:
-        path: .cache
+        path: ~/.cache/fql
         key: go-${{ matrix.fdb_ver }}-${{ hashFiles('go.sum') }}
         restore-keys: |
           go-${{ matrix.fdb_ver }}-
@@ -56,7 +56,7 @@ jobs:
       run: ./build.sh --generate --verify
       env:
         FDB_VER: ${{ matrix.fdb_ver }}
-        CACHE_VOLUME: ./.cache
+        CACHE_VOLUME: ~/.cache/fql
 
     - name: Fix cache permissions
-      run: sudo chown -R $(id -u):$(id -g) .cache
+      run: sudo chown -R $(id -u):$(id -g) ~/.cache/fql
