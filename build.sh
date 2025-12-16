@@ -25,7 +25,7 @@ generated under the /docs directory.
 
 If the '--image fql' flag is set then the script runs 'docker
 build' for the 'fql' docker image. The tag is determined by the
-git tag/hash and the version of the FDB library.
+git tag/hash and the FDB version.
 
 If the '--run' flag is provided then all the args after this flag
 are passed to an instance of the 'fql' docker image. Normally
@@ -71,15 +71,6 @@ function join_array {
     done
   fi
   echo "$out"
-}
-
-
-# fdb_version returns the version of the FDB library.
-# Uses FDB_VER env var if set, otherwise defaults to
-# the version specified in bake.hcl.
-
-function fdb_version {
-  echo "${FDB_VER:-6.2.30}"
 }
 
 
@@ -177,7 +168,7 @@ DOCKER_TAG="$(./scripts/docker_tag.sh)"
 echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
 
-FDB_DOCKER_IMAGE="foundationdb/foundationdb:$(fdb_version)"
+FDB_DOCKER_IMAGE="foundationdb/foundationdb:${FDB_VER:-6.2.30}"
 echo "FDB_DOCKER_IMAGE=${FDB_DOCKER_IMAGE}"
 export FDB_DOCKER_IMAGE
 
