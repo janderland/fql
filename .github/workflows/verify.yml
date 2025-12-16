@@ -57,3 +57,6 @@ jobs:
       env:
         FDB_VER: ${{ matrix.fdb_ver }}
         CACHE_VOLUME: ./.cache
+
+    - name: Fix cache permissions
+      run: sudo chown -R $(id -u):$(id -g) .cache
