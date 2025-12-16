@@ -44,7 +44,7 @@ jobs:
           *.cache-from=type=gha,scope=build-${{ matrix.fdb_ver }}
           *.cache-to=type=gha,mode=max,scope=build-${{ matrix.fdb_ver }}
 
-    - name: Restore Go cache
+    - name: Restore cache
       uses: actions/cache@v4
       with:
         path: ~/.cache/fql
