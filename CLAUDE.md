@@ -80,8 +80,11 @@ Query syntax uses directories (`/path/to/dir`), tuples `("elem1", 2, 0xFF)`, and
 
 The build system uses fenv for consistent builds:
 - `build.sh` script provides unified interface wrapping `fenv/fenv.sh`
-- `docker/Dockerfile.fenv` extends fenv base image with project-specific build tools
-- `bake.hcl` defines Docker build configuration for final fql image
+- `docker/Dockerfile` is a multi-stage build:
+  - `fenv-builder` stage extends fenv base image with project-specific build tools
+  - `gobuild` stage compiles the FQL binary
+  - Final stage creates minimal runtime image
+- `bake.hcl` defines Docker build configuration
 - `compose.yaml` defines runtime service for running fql image
 - fenv automatically manages FDB container for integration testing
 - Use `--latest` flag for offline development

@@ -153,7 +153,8 @@ FENV_SCRIPT="./fenv/fenv.sh"
 
 # Common fenv flags
 FENV_FLAGS=()
-FENV_FLAGS+=(--docker ./docker/Dockerfile.fenv)
+FENV_FLAGS+=(--docker ./docker/Dockerfile)
+FENV_FLAGS+=(--target fenv-builder)
 
 
 # Run the requested commands.

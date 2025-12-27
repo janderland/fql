@@ -15,6 +15,10 @@ variable "FDB_LIB_URL" {
   default = "https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients_6.2.30-1_amd64.deb"
 }
 
+variable "FENV_DOCKER_TAG" {
+  default = "6.2.30"
+}
+
 variable "GO_URL" {
   default = "https://go.dev/dl/go1.19.1.linux-amd64.tar.gz"
 }
@@ -45,6 +49,7 @@ function "build_args" {
   result = {
     FQL_VER           = DOCKER_TAG
     FDB_LIB_URL       = FDB_LIB_URL
+    FENV_DOCKER_TAG   = FENV_DOCKER_TAG
     GO_URL            = GO_URL
     GOLANGCI_LINT_VER = GOLANGCI_LINT_VER
     SHELLCHECK_URL    = SHELLCHECK_URL
@@ -61,7 +66,7 @@ group "default" {
 target "build" {
   context    = "./docker"
   dockerfile = "Dockerfile"
-  target     = "builder"
+  target     = "fenv-builder"
   tags       = ["docker.io/janderland/fql-build:${DOCKER_TAG}"]
   platforms  = ["linux/amd64"]
   args       = build_args()
