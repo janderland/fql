@@ -9,17 +9,13 @@ jobs:
     strategy:
       matrix:
         fdb_ver: [6.2.30, 7.1.61]
-        include:
-          - fdb_ver: 6.2.30
-            fdb_lib_url: https://github.com/apple/foundationdb/releases/download/6.2.30/foundationdb-clients_6.2.30-1_amd64.deb
-
-          - fdb_ver: 7.1.61
-            fdb_lib_url: https://github.com/apple/foundationdb/releases/download/7.1.61/foundationdb-clients_7.1.61-1_amd64.deb
 
     runs-on: ubuntu-latest
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+      with:
+        submodules: true
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
