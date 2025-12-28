@@ -23,8 +23,7 @@ function code_version {
 }
 
 # fdb_version returns the version of the FDB library.
-# Uses FDB_VER env var if set, otherwise defaults to
-# the version specified in bake.hcl.
+# Uses FDB_VER env var if set, otherwise defaults to 6.2.30.
 
 function fdb_version {
   echo "${FDB_VER:-6.2.30}"

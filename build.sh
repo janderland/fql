@@ -148,13 +148,8 @@ export DOCKER_TAG
 export FENV_FDB_VER="${FDB_VER:-6.2.30}"
 export FENV_PROJECT_NAME="fql"
 
-# fenv.sh script location
-FENV_SCRIPT="./fenv/fenv.sh"
-
-# Common fenv flags
-FENV_FLAGS=()
-FENV_FLAGS+=(--docker ./docker/Dockerfile)
-FENV_FLAGS+=(--target fenv-builder)
+# fenv command with common flags
+FENV_CMD=(./fenv/fenv.sh --docker ./docker/Dockerfile --target builder)
 
 
 # Run the requested commands.
@@ -162,38 +157,41 @@ FENV_FLAGS+=(--target fenv-builder)
 # Build the extended fenv image if requested
 if [[ -n "$IMAGE_BUILD" ]]; then
   echo "Building extended fenv image..."
-  (set -x; "$FENV_SCRIPT" "${FENV_FLAGS[@]}" --build)
+  (set -x; "${FENV_CMD[@]}" --build)
 fi
 
 # Execute build tasks (generate, verify, docs) using fenv
 if [[ -n "$VERIFY_GENERATION" ]]; then
   echo "Verifying code generation..."
-  (set -x; "$FENV_SCRIPT" "${FENV_FLAGS[@]}" --exec ./scripts/verify_generation.sh)
+  (set -x; "${FENV_CMD[@]}" --exec ./scripts/verify_generation.sh)
 fi
 
 if [[ -n "$VERIFY_CODEBASE" ]]; then
-  echo "Setting up database and verifying codebase..."
-  (set -x; "$FENV_SCRIPT" "${FENV_FLAGS[@]}" --exec ./scripts/setup_database.sh --exec ./scripts/verify_codebase.sh)
+  echo "Verifying codebase..."
+  (set -x; "${FENV_CMD[@]}" --exec ./scripts/verify_codebase.sh)
 fi
 
 if [[ -n "$GENERATE_DOCS" ]]; then
   echo "Generating documentation..."
-  (set -x; "$FENV_SCRIPT" "${FENV_FLAGS[@]}" --exec ./scripts/generate_docs.sh)
+  (set -x; "${FENV_CMD[@]}" --exec ./scripts/generate_docs.sh)
 fi
 
 # Build the final fql image if requested
 if [[ -n "$IMAGE_FQL" ]]; then
   echo "Building fql runtime image..."
-  FDB_DOCKER_IMAGE="foundationdb/foundationdb:${FENV_FDB_VER}"
-  export FDB_DOCKER_IMAGE
-  (set -x; docker buildx bake -f bake.hcl --load fql)
+  FDB_LIB_URL="https://github.com/apple/foundationdb/releases/download/${FENV_FDB_VER}/foundationdb-clients_${FENV_FDB_VER}-1_amd64.deb"
+  (set -x; docker build \
+    -f ./docker/Dockerfile \
+    -t "docker.io/janderland/fql:${DOCKER_TAG}" \
+    --build-arg "FQL_VER=${DOCKER_TAG}" \
+    --build-arg "FDB_LIB_URL=${FDB_LIB_URL}" \
+    --build-arg "FENV_DOCKER_TAG=${FENV_FDB_VER}" \
+    .)
 fi
 
 # Run fql interactively if requested
 if [[ -n "$RUN_FQL" ]]; then
   echo "Running fql with args: ${FQL_ARGS[*]}"
-  FDB_DOCKER_IMAGE="foundationdb/foundationdb:${FENV_FDB_VER}"
-  FQL_COMMAND="${FQL_ARGS[*]}"
-  export FDB_DOCKER_IMAGE FQL_COMMAND
+  export FDB_DOCKER_IMAGE="foundationdb/foundationdb:${FENV_FDB_VER}"
   (set -x; docker compose run --rm fql 'docker:docker@{fdb}:4500' "${FQL_ARGS[@]}")
 fi
