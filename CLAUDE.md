@@ -15,7 +15,7 @@ FQL is a query language and alternative client API for FoundationDB written in G
 - **Run FQL interactively**: `./build.sh --run [args]`
 
 ### Docker-based Development
-The build system uses Docker Compose for consistent builds and testing with FoundationDB integration. Always use `./build.sh --verify` instead of running Go commands directly to ensure proper environment setup.
+The build system uses fenv (https://github.com/janderland/fenv), a Docker-based FoundationDB development environment, for consistent builds and testing with FoundationDB integration. Always use `./build.sh --verify` instead of running Go commands directly to ensure proper environment setup.
 
 ## Architecture
 
@@ -78,9 +78,12 @@ Query syntax uses directories (`/path/to/dir`), tuples `("elem1", 2, 0xFF)`, and
 
 ## Docker Environment
 
-The build system uses Docker Compose for consistent builds:
-- `build.sh` script provides unified interface
-- `bake.hcl` defines Docker build configuration
-- `compose.yaml` defines runtime services (build, fql, fdb containers)
-- Use `--latest` flag for offline development
-- FDB container automatically managed for tests
+The build system uses fenv for consistent builds:
+- `build.sh` script provides unified interface wrapping `fenv/fenv.sh`
+- `docker/Dockerfile.builder` extends fenv base image with project-specific build tools (Go, golangci-lint, pandoc)
+- `docker/Dockerfile` is a multi-stage build for the final fql runtime image:
+  - `builder` stage extends fenv base image (same as Dockerfile.builder)
+  - `gobuild` stage compiles the FQL binary
+  - Final stage creates minimal runtime image
+- `compose.yaml` defines runtime service for running fql image
+- fenv automatically manages FDB container for integration testing
