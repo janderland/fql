@@ -43,9 +43,6 @@ Multiple image names can be specified on the '--image' flag by
 separating them with commas.
 
   ./build.sh --image build,fql
-
-This script now uses fenv to provide a consistent build environment
-with FoundationDB integration.
 END
 }
 
@@ -140,13 +137,13 @@ done
 
 # Build variables for fenv and docker commands.
 
-DOCKER_TAG="$(./scripts/docker_tag.sh)"
+# Set fenv environment variables
+export FENV_FDB_VER="${FENV_FDB_VER:-6.2.30}"
+export FENV_PROJECT_NAME="fql"
+
+DOCKER_TAG="$(./fenv/docker_tag.sh)"
 echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
-
-# Set fenv environment variables
-export FENV_FDB_VER="${FDB_VER:-6.2.30}"
-export FENV_PROJECT_NAME="fql"
 
 # fenv command with common flags
 FENV_CMD=(./fenv/fenv.sh --docker ./docker/Dockerfile --target builder)
@@ -179,12 +176,11 @@ fi
 # Build the final fql image if requested
 if [[ -n "$IMAGE_FQL" ]]; then
   echo "Building fql runtime image..."
-  FDB_LIB_URL="https://github.com/apple/foundationdb/releases/download/${FENV_FDB_VER}/foundationdb-clients_${FENV_FDB_VER}-1_amd64.deb"
   (set -x; docker build \
     -f ./docker/Dockerfile \
     -t "docker.io/janderland/fql:${DOCKER_TAG}" \
     --build-arg "FQL_VER=${DOCKER_TAG}" \
-    --build-arg "FDB_LIB_URL=${FDB_LIB_URL}" \
+    --build-arg "FENV_FDB_VER=${FENV_FDB_VER}" \
     --build-arg "FENV_DOCKER_TAG=${FENV_FDB_VER}" \
     .)
 fi

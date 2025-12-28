@@ -3,16 +3,6 @@
 ARG FENV_DOCKER_TAG
 FROM fenv:${FENV_DOCKER_TAG} AS builder
 
-# Install additional system packages needed for build
-RUN apt-get update && \
-    apt-get install --no-install-recommends -y \
-      build-essential=12.9 \
-      ca-certificates=20* \
-      git=1:2.39.* \
-      curl=7.88.* && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-
 # Install Go
 ARG GO_URL="https://go.dev/dl/go1.19.1.linux-amd64.tar.gz"
 RUN curl -fsSL ${GO_URL} | tar -C /usr/local -xz
@@ -25,18 +15,6 @@ ARG GOLANGCI_LINT_URL="https://raw.githubusercontent.com/golangci/golangci-lint/
 ARG GOLANGCI_LINT_VER="v1.49.0"
 RUN curl -fsSL ${GOLANGCI_LINT_URL} | sh -s -- -b "$(go env GOPATH)/bin" ${GOLANGCI_LINT_VER}
 ENV GOLANGCI_LINT_CACHE="/cache/golangci-lint"
-
-# Install shellcheck
-ARG SHELLCHECK_URL="https://github.com/koalaman/shellcheck/releases/download/v0.10.0/shellcheck-v0.10.0.linux.x86_64.tar.xz"
-RUN curl -fsSL ${SHELLCHECK_URL} -o /tmp/shellcheck.tar.xz && \
-    tar -xf /tmp/shellcheck.tar.xz -C /tmp && \
-    mv /tmp/shellcheck-*/shellcheck /usr/local/bin && \
-    rm -rf /tmp/shellcheck*
-
-# Install hadolint
-ARG HADOLINT_URL="https://github.com/hadolint/hadolint/releases/download/v2.7.0/hadolint-Linux-x86_64"
-RUN curl -fsSL ${HADOLINT_URL} -o /usr/local/bin/hadolint && \
-    chmod +x /usr/local/bin/hadolint
 
 # Install pandoc
 ARG PANDOC_URL="https://github.com/jgm/pandoc/releases/download/3.3/pandoc-3.3-1-amd64.deb"
@@ -63,8 +41,8 @@ RUN apt-get update && \
     apt-get clean && \
     rm -rf /var/lib/apt/lists/*
 
-ARG FDB_LIB_URL
-RUN curl -fsSL ${FDB_LIB_URL} -o /fdb.deb && \
+ARG FENV_FDB_VER
+RUN curl -fsSL "https://github.com/apple/foundationdb/releases/download/${FENV_FDB_VER}/foundationdb-clients_${FENV_FDB_VER}-1_amd64.deb" -o /fdb.deb && \
     dpkg -i /fdb.deb && \
     rm /fdb.deb
 

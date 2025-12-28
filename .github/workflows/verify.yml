@@ -24,16 +24,10 @@ jobs:
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
-    - name: Compute Docker tag
-      id: docker
-      run: echo "tag=$(./scripts/docker_tag.sh)" >> $GITHUB_OUTPUT
-      env:
-        FDB_VER: ${{ matrix.fdb_ver }}
-
     - name: Build image
       run: ./build.sh --image build
       env:
-        FDB_VER: ${{ matrix.fdb_ver }}
+        FENV_FDB_VER: ${{ matrix.fdb_ver }}
 
     - name: Restore cache
       uses: actions/cache@v4
@@ -64,7 +58,7 @@ jobs:
     - name: Verify
       run: ./build.sh --generate --verify
       env:
-        FDB_VER: ${{ matrix.fdb_ver }}
+        FENV_FDB_VER: ${{ matrix.fdb_ver }}
         CACHE_VOLUME: ~/.cache/fql
 
     - name: Fix cache permissions
