@@ -25,14 +25,6 @@ jobs:
       env:
         FENV_FDB_VER: ${{ matrix.fdb_ver }}
 
-    - name: Restore cache
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/fql
-        key: go-${{ matrix.fdb_ver }}-${{ hashFiles('go.sum') }}
-        restore-keys: |
-          go-${{ matrix.fdb_ver }}-
-
     - name: Cache FDB image
       id: cache-fdb
       uses: actions/cache@v4
