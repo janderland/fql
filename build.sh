@@ -146,7 +146,7 @@ echo "DOCKER_TAG=${DOCKER_TAG}"
 export DOCKER_TAG
 
 # fenv command with common flags
-FENV_CMD=(./fenv/fenv.sh --docker ./docker/Dockerfile --target builder)
+FENV_CMD=(./fenv/fenv.sh --docker ./docker/Dockerfile.builder)
 
 
 # Run the requested commands.
