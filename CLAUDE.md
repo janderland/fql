@@ -81,9 +81,9 @@ Query syntax uses directories (`/path/to/dir`), tuples `("elem1", 2, 0xFF)`, and
 The build system uses fenv for consistent builds:
 - `build.sh` script provides unified interface wrapping `fenv/fenv.sh`
 - `docker/Dockerfile.builder` extends fenv base image with project-specific build tools (Go, golangci-lint, pandoc)
+  - Built via `./build.sh --image build` which creates `fenv-ext-fql` image
 - `docker/Dockerfile` is a multi-stage build for the final fql runtime image:
-  - `builder` stage extends fenv base image (same as Dockerfile.builder)
-  - `gobuild` stage compiles the FQL binary
-  - Final stage creates minimal runtime image
+  - `gobuild` stage uses the pre-built `fenv-ext-fql` builder image to compile the FQL binary
+  - Final stage creates minimal runtime image with just the binary and FDB client
 - `compose.yaml` defines runtime service for running fql image
 - fenv automatically manages FDB container for integration testing

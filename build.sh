@@ -181,7 +181,7 @@ if [[ -n "$IMAGE_FQL" ]]; then
     -t "docker.io/janderland/fql:${DOCKER_TAG}" \
     --build-arg "FQL_VER=${DOCKER_TAG}" \
     --build-arg "FENV_FDB_VER=${FENV_FDB_VER}" \
-    --build-arg "FENV_DOCKER_TAG=${FENV_FDB_VER}" \
+    --build-arg "FENV_EXT_DOCKER_TAG=${DOCKER_TAG}" \
     .)
 fi
 
