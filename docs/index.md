@@ -366,9 +366,6 @@ Keys are *always* encoded using the [directory][] and
 [tuple][] layers. Write queries create directories if they
 do not exist.
 
-[directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
-[tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
-
 ```language-fql {.query}
 /directory/"p@th"(nil,57223,0xa8ff03)=nil
 ```
@@ -942,7 +939,7 @@ them into a single output key-value.
 
 FoundationDB performs best when key-values are kept small.
 When storing large [blobs][], the blobs are usually split
-into 10 kB chunks and stored as values. The respective keys
+into 10kB chunks and stored as values. The respective keys
 contain the byte offset of the chunks.
 
 [blobs]: https://apple.github.io/foundationdb/blob.html
