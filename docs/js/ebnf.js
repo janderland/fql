@@ -35,7 +35,7 @@
     ],
     beginScope: {
       1: 'title.function',
-      3: 'operator',
+      3: 'built_in',
     },
   };
 
@@ -47,24 +47,24 @@
 
   const REPETITION = {
     // Curly braces for repetition
-    scope: 'punctuation',
+    scope: 'built_in',
     begin: /[{}]/,
   };
 
   const OPTIONAL = {
     // Square brackets for optional
-    scope: 'punctuation',
+    scope: 'built_in',
     begin: /[\[\]]/,
   };
 
   const GROUPING = {
     // Parentheses for grouping
-    scope: 'punctuation',
+    scope: 'built_in',
     begin: /[()]/,
   };
 
   const OPERATORS = {
-    scope: 'operator',
+    scope: 'built_in',
     begin: /[|,;\-]/,
   };
 
