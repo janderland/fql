@@ -23,6 +23,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          # For workflow_run, checkout the commit that triggered the original workflow
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -30,7 +33,7 @@ jobs:
       - name: Build image (from cache)
         uses: docker/bake-action@v5
         env:
-          DOCKER_TAG: ${{ github.sha }}
+          DOCKER_TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
         with:
           files: bake.hcl
           targets: build
@@ -41,6 +44,8 @@ jobs:
 
       - name: Generate docs
         run: ./build.sh --docs
+        env:
+          DOCKER_TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
