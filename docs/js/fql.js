@@ -133,6 +133,7 @@
       'f80',
       'reverse',
       'limit',
+      'strict',
     ].join(' '),
   };
 
@@ -158,6 +159,7 @@
         'f80',
         'reverse',
         'limit',
+        'strict',
       ],
     },
     contains: [
