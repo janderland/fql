@@ -24,45 +24,15 @@ include-before: |
 
 # Introduction
 
-FQL is a query language for [FoundationDB][] designed to
-mirror the database's [core data model][]. FoundationDB is
-an ordered key-value store where both keys and values are
-byte strings. Layers like the [directory][] and [tuple][]
-layers provide structure on top of this primitive.
-
-[FoundationDB]: https://www.foundationdb.org/
-[core data model]: https://apple.github.io/foundationdb/data-modeling.html
-
-FQL queries look like key-values encoded with the directory
-and tuple layers. Fundamental operations like range reads
-and index indirection are first-class citizens.
-
-```language-fql {.query}
-/user("timothy",3,"active")=true
-```
-
-The query above represents a single key-value. The
-directory path is `/user`, the key's tuple is
-`("timothy",3,"active")`, and the value is `true`.
-
-FQL queries can also define schemas using holes. Holes act
-as placeholders for data elements. The query below uses the
-variable `<int>` to read all key-values matching the
-schema.
-
-```language-fql {.query}
-/user("timothy",<int>,"active")=<bool>
-```
-
-```language-fql {.result}
-/user("timothy",3,"active")=true
-/user("timothy",7,"active")=false
-```
-
 This document serves as both a language specification and
-a usage guide. Each section includes relevant portions of
-the [EBNF grammar](#grammar) with Python code showing
-equivalent FoundationDB API calls
+a usage guide for FQL. The [Syntax](#syntax) section
+describes the structure of queries while the
+[Semantics](#semantics) section describes their behavior.
+The complete [EBNF grammar](#grammar) appears at the end.
+
+Throughout the document, relevant grammar rules are shown
+alongside the features they define. Python code snippets
+demonstrate equivalent FoundationDB API calls.
 
 # Syntax
 
