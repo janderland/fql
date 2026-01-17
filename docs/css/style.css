@@ -138,7 +138,7 @@ pre {
   font-size: 0.85rem;
 }
 
-pre.query, pre.lang-go {
+pre.query, pre.grammar, pre.lang-go {
   code {
     padding: 1.5rem 1rem 0.5rem 1rem;
   }
@@ -170,6 +170,10 @@ pre.query > ::before {
 
 pre.result > ::before {
   content: "result";
+}
+
+pre.grammar > ::before {
+  content: "ebnf";
 }
 
 pre.lang-go > ::before {
