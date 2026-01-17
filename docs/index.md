@@ -435,14 +435,14 @@ a variable's types to limit which encodings will match the
 schema.
 
 ```language-fql {.query}
-/numbers(<int[i16,be]>)=<num[f32]>
+/numbers("int")=<int>
 ```
 
 If an element's value cannot be represented by the specified
 encoding then the query is invalid.
 
 ```language-fql {.query}
-/numbers(362342[i16])=32.55[f32]
+/numbers("int")=362342
 ```
 
 ### Element Options
