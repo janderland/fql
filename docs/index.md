@@ -49,7 +49,7 @@ value.
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```language-ebnf {.grammar}
-query = options keyval | options key | options directory
+query = opts keyval | opts key | opts directory
 keyval = key '=' value
 key = directory tuple
 value = 'clear' | data
@@ -508,7 +508,7 @@ alternative encodings, limit a query's result count, or
 change other behaviors.
 
 ```language-ebnf {.grammar}
-options = '[' option { ',' option } ']' nl
+opts = '[' option { ',' option } ']' nl
 option = name [ ':' argument ]
 argument = name | int
 ```
@@ -1087,7 +1087,7 @@ at newline.
 
 ```language-ebnf {.grammar}
 (* Top-level query structure *)
-query = options keyval | options key | options directory
+query = opts keyval | opts key | opts directory
 
 keyval = key '=' value
 key = directory tuple
@@ -1121,7 +1121,7 @@ type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
      | 'str' | 'uuid' | 'bytes' | 'vstamp'
 
 (* Options *)
-options = [ '[' option { ',' option } ']' nl ]
+opts = [ '[' option { ',' option } ']' nl ]
 option = name [ ':' argument ]
 argument = name | int
 
