@@ -178,7 +178,8 @@ data   = 'nil'
        | tuple
        | vstamp
        | hole
-bool   = 'true' | 'false'
+bool   = 'true'
+       | 'false'
 int    = [ '-' ] digits
 num    = int '.' digits
        | ( int | int '.' digits ) 'e' int
