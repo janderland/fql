@@ -189,8 +189,7 @@ The `nil` type may only be instantiated as the element
 `false`.
 
 ```language-ebnf {.grammar}
-bool = 'true'
-     | 'false'
+bool = 'true' | 'false'
 ```
 
 The `int` type may be instantiated as any arbitrarily large
@@ -215,8 +214,7 @@ be used. The type may also be instantiated as the tokens
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```language-ebnf {.grammar}
-num = int '.' digits
-    | ( int | int '.' digits ) 'e' int
+num = int '.' digits | ( int | int '.' digits ) 'e' int
 ```
 
 ```language-fql {.query}
