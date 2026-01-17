@@ -49,7 +49,8 @@ value.
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```language-ebnf {.grammar}
-query = opts keyval | opts key | opts directory
+query = opts keyval | opts key | opts dquery
+dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
 value = 'clear' | data
@@ -939,6 +940,19 @@ def list_dirs(tr):
     return results
 ```
 
+A directory can be removed by appending `=remove` to the
+directory query.
+
+```language-fql {.query}
+/root/old/data=remove
+```
+
+```lang-python {.equiv-py}
+@fdb.transactional
+def remove_dir(tr):
+    fdb.directory.remove_if_exists(tr, ('root', 'old', 'data'))
+```
+
 ### Filtering
 
 Read queries define a schema to which key-values may or
@@ -1087,7 +1101,8 @@ at newline.
 
 ```language-ebnf {.grammar}
 (* Top-level query structure *)
-query = opts keyval | opts key | opts directory
+query = opts keyval | opts key | opts dquery
+dquery = directory [ '=' 'remove' ]
 
 keyval = key '=' value
 key = directory tuple

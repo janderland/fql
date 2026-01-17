@@ -103,6 +103,7 @@
       '-nan',
       'nan',
       'clear',
+      'remove',
       'nil',
       'any',
       'int',
