@@ -21,11 +21,11 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install pandoc
-        run: sudo apt-get update && sudo apt-get install -y pandoc
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
       - name: Generate docs
-        run: ./scripts/generate_docs.sh
+        run: ./build.sh --image build --docs
 
       - name: Setup Pages
         uses: actions/configure-pages@v5
