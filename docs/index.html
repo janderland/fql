@@ -13,6 +13,8 @@
   <script src="js/highlight.js"></script>
   <script src="js/fql.js"></script>
   <script src="js/go.js"></script>
+  <script src="js/ebnf.js"></script>
+  <script src="js/python.js"></script>
 </head>
 <body>
   <h1>FQL</h1>
@@ -72,35 +74,14 @@
     <li><a href="#grammar" id="toc-grammar">Grammar</a></li>
     </ul>
   <h1 id="introduction">Introduction</h1>
-  <p>FQL is a query language for <a
-  href="https://www.foundationdb.org/">FoundationDB</a> designed to
-  mirror the database’s <a
-  href="https://apple.github.io/foundationdb/data-modeling.html">core
-  data model</a>. FoundationDB is an ordered key-value store where both
-  keys and values are byte strings. Layers like the <a
-  href="https://apple.github.io/foundationdb/developer-guide.html#directories">directory</a>
-  and <a
-  href="https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples">tuple</a>
-  layers provide structure on top of this primitive.</p>
-  <p>FQL queries look like key-values encoded with the directory and
-  tuple layers. Fundamental operations like range reads and index
-  indirection are first-class citizens.</p>
-  <pre class="language-fql query"><code>/user(&quot;timothy&quot;,3,&quot;active&quot;)=true</code></pre>
-  <p>The query above represents a single key-value. The directory path
-  is <code>/user</code>, the key’s tuple is
-  <code>("timothy",3,"active")</code>, and the value is
-  <code>true</code>.</p>
-  <p>FQL queries can also define schemas using holes. Holes act as
-  placeholders for data elements. The query below uses the variable
-  <code>&lt;int&gt;</code> to read all key-values matching the
-  schema.</p>
-  <pre class="language-fql query"><code>/user(&quot;timothy&quot;,&lt;int&gt;,&quot;active&quot;)=&lt;bool&gt;</code></pre>
-  <pre class="language-fql result"><code>/user(&quot;timothy&quot;,3,&quot;active&quot;)=true
-/user(&quot;timothy&quot;,7,&quot;active&quot;)=false</code></pre>
   <p>This document serves as both a language specification and a usage
-  guide. Each section includes relevant portions of the <a
-  href="#grammar">EBNF grammar</a> with Python code showing equivalent
-  FoundationDB API calls</p>
+  guide for FQL. The <a href="#syntax">Syntax</a> section describes the
+  structure of queries while the <a href="#semantics">Semantics</a>
+  section describes their behavior. The complete <a href="#grammar">EBNF
+  grammar</a> appears at the end.</p>
+  <p>Throughout the document, relevant grammar rules are shown alongside
+  the features they define. Python code snippets demonstrate equivalent
+  FoundationDB API calls.</p>
   <h1 id="syntax">Syntax</h1>
   <h2 id="overview">Overview</h2>
   <p>FQL is specified as a context-free <a href="#grammar">grammar</a>.
