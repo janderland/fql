@@ -151,11 +151,21 @@ value = &#39;clear&#39; | data</code></pre>
   FQL language, while <a href="#data-encoding">element encoding</a>
   describes how FQL encodes the elements before writing them to the
   DB.</p>
-  <pre class="language-ebnf grammar"><code>data = &#39;nil&#39; | bool | int | num | string | uuid
-     | bytes | tuple | vstamp | hole
-bool = &#39;true&#39; | &#39;false&#39;
+  <pre class="language-ebnf grammar"><code>data = &#39;nil&#39;
+     | bool
+     | int
+     | num
+     | string
+     | uuid
+     | bytes
+     | tuple
+     | vstamp
+     | hole
+bool = &#39;true&#39;
+     | &#39;false&#39;
 int = [ &#39;-&#39; ] digits
-num = int &#39;.&#39; digits | ( int | int &#39;.&#39; digits ) &#39;e&#39; int
+num = int &#39;.&#39; digits
+    | ( int | int &#39;.&#39; digits ) &#39;e&#39; int
 string = &#39;&quot;&#39; { char | &#39;\&quot;&#39; } &#39;&quot;&#39;
 uuid = hex{8} &#39;-&#39; hex{4} &#39;-&#39; hex{4} &#39;-&#39; hex{4} &#39;-&#39; hex{12}
 bytes = &#39;0x&#39; { hex{2} }
