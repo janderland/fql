@@ -168,28 +168,6 @@ to the DB.
 
 [tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
-```language-ebnf {.grammar}
-data = 'nil'
-     | bool
-     | int
-     | num
-     | string
-     | uuid
-     | bytes
-     | tuple
-     | vstamp
-     | hole
-bool = 'true'
-     | 'false'
-int = [ '-' ] digits
-num = int '.' digits
-    | ( int | int '.' digits ) 'e' int
-string = '"' { char | '\"' } '"'
-uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
-bytes = '0x' { hex{2} }
-vstamp = '#' [ hex{20} ] ':' hex{4}
-```
-
 <div>
 
 | Type     | Description      | Examples                               |
@@ -207,9 +185,21 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 </div>
 
 The `nil` type may only be instantiated as the element
-`nil`. The `int` type may be instantiated as any arbitrarily
-large integer. For example, the integer in the query below
-doesn't fit in a 64-bit value.
+`nil`. The `bool` type may be instantiated as `true` or
+`false`.
+
+```language-ebnf {.grammar}
+bool = 'true'
+     | 'false'
+```
+
+The `int` type may be instantiated as any arbitrarily large
+integer. For example, the integer in the query below doesn't
+fit in a 64-bit value.
+
+```language-ebnf {.grammar}
+int = [ '-' ] digits
+```
 
 ```
 /bigint(92233720368547758084)=nil
@@ -220,9 +210,14 @@ can be approximated by an [80-bit floating point][] value,
 in accordance with IEEE 754. The implementation determines
 the exact range of allowed values. Scientific notation may
 be used. The type may also be instantiated as the tokens
-`-inf`, `inf`, `-nan`, or `nan`. 
+`-inf`, `inf`, `-nan`, or `nan`.
 
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
+
+```language-ebnf {.grammar}
+num = int '.' digits
+    | ( int | int '.' digits ) 'e' int
+```
 
 ```language-fql {.query}
 /float(-inf,nan)=1.234e4732
@@ -235,6 +230,10 @@ contains alphanumericals, underscores, dashes, and periods
 then the quotes may be excluded. Quoted strings may contain
 double quotes via backslash escapes.
 
+```language-ebnf {.grammar}
+string = '"' { char | '\"' } '"'
+```
+
 ```language-fql {.query}
 /quoteless-string_in.dir("escape \"wow\"")=nil
 /"other ch@r@cters must be 'quoted'"(nil)=""
@@ -245,6 +244,11 @@ upper, lower, or mixed case hexidecimal numbers. For `uuid`,
 the numbers are grouped in the standard 8, 4, 4, 4, 12
 format. For `bytes`, any even number of hexidecimal digits
 are prefixed by `0x`.
+
+```language-ebnf {.grammar}
+uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
+bytes = '0x' { hex hex }
+```
 
 ```language-fql {.query}
 /hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
@@ -267,6 +271,10 @@ is incomplete and will be filled in by FoundationDB when
 written.
 
 [versionstamp]: https://apple.github.io/foundationdb/api-general.html#versionstamps
+
+```language-ebnf {.grammar}
+vstamp = '#' [ hex{20} ] ':' hex{4}
+```
 
 ```language-fql {.query}
 /events(#:0001)="first event"
