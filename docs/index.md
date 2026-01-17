@@ -193,48 +193,32 @@ bool = 'true' | 'false'
 ```
 
 The `int` type may be instantiated as any arbitrarily large
-integer. For example, the integer in the query below doesn't
-fit in a 64-bit value.
+integer.
 
 ```language-ebnf {.grammar}
 int = [ '-' ] digits
-```
-
-```
-/bigint(92233720368547758084)=nil
+digits = digit { digit }
+digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 ```
 
 The `num` type may be instantiated as any real number which
 can be approximated by an [80-bit floating point][] value,
 in accordance with IEEE 754. The implementation determines
 the exact range of allowed values. Scientific notation may
-be used. The type may also be instantiated as the tokens
-`-inf`, `inf`, `-nan`, or `nan`.
+be used.
 
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```language-ebnf {.grammar}
-num = int '.' digits | ( int | int '.' digits ) 'e' int
-```
-
-```language-fql {.query}
-/float(-inf,nan)=1.234e4732
+num = int '.' digits | ( int | int '.' digits ) 'e' int | '-inf' | 'inf' | '-nan' | 'nan'
 ```
 
 The `str` type may be instantiated as a unicode string
-wrapped in double quotes. It is the only element type
-allowed in directory paths. If a directory string only
-contains alphanumericals, underscores, dashes, and periods
-then the quotes may be excluded. Quoted strings may contain
-double quotes via backslash escapes.
+wrapped in double quotes. Quoted strings may contain double
+quotes and backslashes via backslash escapes.
 
 ```language-ebnf {.grammar}
-string = '"' { char | '\"' } '"'
-```
-
-```language-fql {.query}
-/quoteless-string_in.dir("escape \"wow\"")=nil
-/"other ch@r@cters must be 'quoted'"(nil)=""
+string = '"' { char | '\\"' | '\\\\' } '"'
 ```
 
 The `uuid` and `bytes` types may be instantiated using
@@ -246,18 +230,18 @@ are prefixed by `0x`.
 ```language-ebnf {.grammar}
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
 bytes = '0x' { hex hex }
-```
-
-```language-fql {.query}
-/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
+hex = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 ```
 
 The `tup` type may contain any of the data elements,
-including sub-tuples.
+including nested tuples. Elements are separated by commas
+and wrapped in parentheses. A trailing comma is allowed
+after the last element.
 
-```language-fql {.query}
-/sub/tuple("japan",("sub",nil))=0xff
-/tuple/value(22.3,-8)=("rain","fog")
+```language-ebnf {.grammar}
+tuple = '(' [ nl elements [ ',' ] nl ] ')'
+elements = element [ ',' nl elements ]
+element = data | '...'
 ```
 
 The `vstamp` type represents a FoundationDB [versionstamp][].
@@ -274,53 +258,12 @@ written.
 vstamp = '#' [ hex{20} ] ':' hex{4}
 ```
 
-```language-fql {.query}
-/events(#:0001)="first event"
-/events(#0102030405060708090a:0002)="second event"
-```
-
-## Tuples
-
-Tuples are ordered sequences of data elements. They are
-a fundamental building block in FQL, used to construct keys
-and values.
-
-```language-ebnf {.grammar}
-tuple = '(' [ nl elements [ ',' ] nl ] ')'
-elements = element [ ',' nl elements ]
-element = data | '...'
-```
-
-A tuple is specified as a sequence of elements, separated by
-commas, wrapped in parentheses. The elements may be any
-[data element](#data-elements), including nested tuples.
-
-```language-fql {.query}
-("one",2,0x03,("subtuple"),5825d3f8-de5b-40c6-ac32-47ea8b98f7b4)
-```
-
-A trailing comma is allowed after the last element.
-
-```language-fql {.query}
-(
-  1,
-  2,
-  3,
-)
-```
-
-The `...` token can appear as the last element of a tuple.
-It represents any number of additional elements.
-
-```language-fql {.query}
-(0xFF,"thing",...)
-```
-
 ## Directories
 
 Directories provide a way to organize key-values into
 hierarchical namespaces. The [directory layer][] manages
 these namespaces and assigns short prefixes to keys.
+Strings are the only element type allowed in directories.
 
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
@@ -331,24 +274,13 @@ name = { alphanumeric | '.' | '-' | '_' }
 ```
 
 A directory is specified as a sequence of strings, each
-prefixed by a forward slash.
+prefixed by a forward slash. Strings do not need quotes if
+they only contain alphanumericals, underscores, dashes, or
+periods. To use other symbols, the strings must be quoted.
 
 ```language-fql {.query}
 /my/dir/path_way
-```
-
-Strings do not need quotes if they only contain
-alphanumericals, underscores, dashes, or periods. To use
-other symbols, the strings must be quoted.
-
-```language-fql {.query}
 /my/"dir@--\o/"/path_way
-```
-
-The quote character may be backslash escaped.
-
-```language-fql {.query}
-/my/"\"dir\""/path_way
 ```
 
 The empty variable `<>` may be used in a directory path as
@@ -357,46 +289,6 @@ a placeholder for any directory name.
 ```language-fql {.query}
 /root/<>/items
 ```
-
-## Key-Values
-
-A key-value combines a directory, tuple, and value. The
-key is always the directory plus the tuple. The value
-follows the `=` sign.
-
-```language-ebnf {.grammar}
-keyval = key '=' value
-key = directory tuple
-value = 'clear' | data
-```
-
-```language-fql {.query}
-/my/dir("this",0)=0xabcf03
-```
-
-The value may be any [data element](#data-elements) or
-a [tuple](#tuples).
-
-```language-fql {.query}
-/my/dir(22.3,-8)=("another","tuple")
-```
-
-The value can also be the `clear` token, which is used to
-delete key-values.
-
-```language-fql {.query}
-/some/where("home","town",88.3)=clear
-```
-
-If a query omits the value entirely, an empty variable `<>`
-is implied, making it a read query.
-
-```language-fql
-/my/dir(99.8,0xff)
-/my/dir(99.8,0xff)=<>
-```
-
-The two queries above are equivalent.
 
 ## Holes & Schemas
 
@@ -517,7 +409,7 @@ change other behaviors.
 ```language-ebnf {.grammar}
 opts = '[' option { ',' option } ']' nl
 option = name [ ':' argument ]
-argument = name | int
+argument = name | int | string
 ```
 
 Options are specified as a comma separated list wrapped in
@@ -1144,7 +1036,7 @@ type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
 (* Options *)
 opts = [ '[' option { ',' option } ']' nl ]
 option = name [ ':' argument ]
-argument = name | int
+argument = name | int | string
 
 (* Primitives *)
 digits = digit { digit }
