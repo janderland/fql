@@ -168,24 +168,24 @@ to the DB.
 [tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
 ```language-ebnf {.grammar}
-data   = 'nil'
-       | bool
-       | int
-       | num
-       | string
-       | uuid
-       | bytes
-       | tuple
-       | vstamp
-       | hole
-bool   = 'true'
-       | 'false'
-int    = [ '-' ] digits
-num    = int '.' digits
-       | ( int | int '.' digits ) 'e' int
+data = 'nil'
+     | bool
+     | int
+     | num
+     | string
+     | uuid
+     | bytes
+     | tuple
+     | vstamp
+     | hole
+bool = 'true'
+     | 'false'
+int = [ '-' ] digits
+num = int '.' digits
+    | ( int | int '.' digits ) 'e' int
 string = '"' { char | '\"' } '"'
-uuid   = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
-bytes  = '0x' { hex{2} }
+uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
+bytes = '0x' { hex{2} }
 vstamp = '#' [ hex{20} ] ':' hex{4}
 ```
 
