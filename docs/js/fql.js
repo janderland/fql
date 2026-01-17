@@ -66,6 +66,21 @@
     },
   };
 
+  const VSTAMP = {
+    begin: [
+      /#/,
+      /[A-Fa-f0-9]*/,
+      /:/,
+      /[A-Fa-f0-9]{4}/,
+    ],
+    beginScope: {
+      1: 'accent',
+      2: 'number',
+      3: 'accent',
+      4: 'number',
+    },
+  };
+
   const STRING = {
     scope: 'string',
     begin: /"/,
@@ -98,6 +113,7 @@
       'bytes',
       'uuid',
       'tup',
+      'vstamp',
       'append',
       'sum',
       'count',
@@ -173,6 +189,7 @@
         'bytes',
         'uuid',
         'tup',
+        'vstamp',
         'append',
         'sum',
         'count',
@@ -217,6 +234,7 @@
       MAYBEMORE,
       KEYWORD,
       UUID,
+      VSTAMP,
       BYTES,
       NUMBER,
       OPTIONS,
@@ -234,6 +252,7 @@
       REFERENCE,
       KEYWORD,
       UUID,
+      VSTAMP,
       BYTES,
       NUMBER,
       OPTIONS,
@@ -251,7 +270,7 @@
       options: 'title',
     },
     contains: [
-      COMMENT, 
+      COMMENT,
       DIRECTORY,
       TUPLE,
       VALUE,
@@ -260,6 +279,7 @@
       KEYWORD,
       STRING,
       UUID,
+      VSTAMP,
       BYTES,
       NUMBER,
       OPTIONS,
