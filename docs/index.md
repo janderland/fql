@@ -830,6 +830,11 @@ def read_range(tr):
     return results
 ```
 
+By default, key-values within the range that don't match the
+query's schema are filtered from the results. Enabling the
+`strict` [query option](#query-options) causes the query to
+fail instead when encountering a non-conformant key-value.
+
 ### Directories
 
 The directory layer may be queried in isolation by using
