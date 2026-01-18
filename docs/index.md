@@ -503,7 +503,7 @@ specify the option's behavior.
 |:-------------|:---------|:-----------------------------------|
 | `reverse`    | none     | Read range in reverse order        |
 | `limit`      | int      | Maximum number of results          |
-| `mode`       | name     | Range read mode (small, exact, etc)|
+| `mode`       | name     | want_all, iterator, exact, small, medium, large, serial |
 | `snapshot`   | none     | Use snapshot read                  |
 | `strict`     | none     | Error on non-conformant key-values |
 
