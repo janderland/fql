@@ -34,6 +34,10 @@ Throughout the document, relevant grammar rules are shown
 alongside the features they define. Python code snippets
 demonstrate equivalent FoundationDB API calls.
 
+Grammar rules use extended Backus-Naur form as defined in
+ISO/IEC 14977, with two modifications: concatenation is
+implicit and rules terminate at newline.
+
 # Syntax
 
 ## Overview
@@ -1105,10 +1109,7 @@ of having to concatenate the chunks themselves.
 
 # Grammar
 
-The complete FQL grammar is specified below using extended
-Backus-Naur form as defined in ISO/IEC 14977, with two
-modifications: concatenation is implicit and rules terminate
-at newline.
+The complete FQL grammar is specified below.
 
 ```language-ebnf {.grammar}
 (* Top-level query structure *)
