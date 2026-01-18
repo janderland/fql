@@ -1145,7 +1145,8 @@ hole = variable | reference
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 reference = ':' name
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
-     | 'str' | 'uuid' | 'bytes' | 'vstamp'
+     | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
+agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 
 (* Options *)
 opts = '[' option { ',' option } ']'
