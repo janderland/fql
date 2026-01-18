@@ -503,7 +503,7 @@ specify the option's behavior.
 |:-------------|:---------|:-----------------------------------|
 | `reverse`    | none     | Read range in reverse order        |
 | `limit`      | int      | Maximum number of results          |
-| `mode`       | name     | Range read mode                    |
+| `mode`       | name     | Range read mode (small, exact, etc)|
 | `snapshot`   | none     | Use snapshot read                  |
 | `strict`     | none     | Error on non-conformant key-values |
 
