@@ -1111,7 +1111,8 @@ of having to concatenate the chunks themselves.
 
 FQL defines the query language but leaves certain details
 to the implementation. These include connection configuration,
-transaction boundaries, variable scope, and result formatting.
+write permissions, transaction boundaries, variable scope,
+and result formatting.
 
 ## Connection
 
@@ -1120,6 +1121,12 @@ FoundationDB cluster. This may involve selecting from
 pre-defined cluster files or specifying a custom path.
 An implementation could even simulate an FDB cluster
 locally for testing purposes.
+
+## Writes
+
+An implementation may disallow write queries unless a
+specific configuration option is enabled. This provides
+a safeguard against accidental mutations.
 
 ## Transactions
 
