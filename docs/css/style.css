@@ -138,7 +138,7 @@ pre {
   font-size: 0.85rem;
 }
 
-pre.query, pre.grammar, pre.lang-go {
+pre.query, pre.grammar, pre.lang-go, pre.equiv-py {
   code {
     padding: 1.5rem 1rem 0.5rem 1rem;
   }
@@ -178,6 +178,10 @@ pre.grammar > ::before {
 
 pre.lang-go > ::before {
   content: "pseudo go";
+}
+
+pre.equiv-py > ::before {
+  content: "equivalent python";
 }
 
 /* Tables */
