@@ -49,16 +49,18 @@ value.
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```language-ebnf {.grammar}
-query = opts keyval | opts key | opts dquery
+query = keyval | key | dquery
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
 value = 'clear' | data
 ```
 
+> This grammar is simplified. [Options](#options) are
+> explained later.
+
 A query may be a full key-value, just a key, or just
-a directory. Query [options](#options) may precede the
-query on the previous line.
+a directory.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -407,7 +409,7 @@ alternative encodings, limit a query's result count, or
 change other behaviors.
 
 ```language-ebnf {.grammar}
-opts = '[' option { ',' option } ']' nl
+opts = '[' option { ',' option } ']'
 option = name [ ':' argument ]
 argument = name | int | string
 ```
@@ -999,7 +1001,7 @@ at newline.
 
 ```language-ebnf {.grammar}
 (* Top-level query structure *)
-query = opts keyval | opts key | opts dquery
+query = [ opts nl ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 
 keyval = key '=' value
@@ -1034,7 +1036,7 @@ type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
      | 'str' | 'uuid' | 'bytes' | 'vstamp'
 
 (* Options *)
-opts = [ '[' option { ',' option } ']' nl ]
+opts = '[' option { ',' option } ']'
 option = name [ ':' argument ]
 argument = name | int | string
 
