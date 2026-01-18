@@ -833,9 +833,10 @@ def read_range(tr):
 ### Directories
 
 The directory layer may be queried in isolation by using
-a lone directory as a query. These queries can only perform
-reads. If the directory path contains no variables, the
-query will read that single directory.
+a lone directory as a query. Directory queries are read-only
+except when removing a directory. If the directory path
+contains no variables, the query will read that single
+directory.
 
 ```language-fql {.query}
 /root/<>/items

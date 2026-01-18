@@ -220,7 +220,7 @@
   const DIRECTORY = {
     scope: 'directory',
     begin: /\//,
-    end: /(?=\()/,
+    end: /(?=[\(=\s]|$)/,
     contains: [
       STRING,
       VARIABLE,
