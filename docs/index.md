@@ -1170,6 +1170,14 @@ Alternative formats may be provided for different use cases:
 - Output key-values in a binary format suitable for storage
   on disk or transmission over a network
 
+## Extensions
+
+An implementation may provide custom options and pseudo
+tokens beyond those defined by FQL. For example, a predefined
+reference `:rand` could generate a random integer for each
+query. A custom option `pick:5` could filter results to
+return only every fifth key-value.
+
 # Grammar
 
 The complete FQL grammar is specified below.
