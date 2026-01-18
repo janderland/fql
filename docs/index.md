@@ -38,6 +38,10 @@ Grammar rules use extended Backus-Naur form as defined in
 ISO/IEC 14977, with two modifications: concatenation is
 implicit and rules terminate at newline.
 
+> Not all features described in this document have been
+> implemented yet. Callouts indicate features that are still
+> being worked on.
+
 # Syntax
 
 ## Overview
