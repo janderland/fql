@@ -139,6 +139,8 @@
       'mode',
       'snapshot',
       'strict',
+      'rand',
+      'pick',
     ].join(' '),
   };
 
@@ -167,6 +169,7 @@
         'mode',
         'snapshot',
         'strict',
+        'pick',
       ],
     },
     contains: [
