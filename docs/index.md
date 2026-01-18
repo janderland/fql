@@ -527,7 +527,7 @@ do not exist.
 /directory/"p@th"(nil,57223,0xa8ff03)=nil
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def write_kv(tr):
     # Open directory; create if doesn't exist
@@ -548,7 +548,7 @@ element types, allowing FQL to decode keys without a schema.
 /directory/<>(...)
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def read_kvs(tr):
     # Open directory; exit if it doesn't exist
@@ -585,7 +585,7 @@ strings (which are used as-is for the value).
 /people/age("jon","smith")=42
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def write_age(tr):
     dir = fdb.directory.create_or_open(tr, ('people', 'age'))
@@ -605,7 +605,7 @@ knowing their type.
 /people/age("jon","smith")=<>
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def read_age(tr):
     dir = fdb.directory.open(tr, ('people', 'age'))
@@ -635,7 +635,7 @@ respectively.
 /numbers/big("37")=37[i16,be]
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 import struct
 
 @fdb.transactional
@@ -657,7 +657,7 @@ encoding must be specified in the variable when read.
 /numbers/big("37")=<int[i16,be]>
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 import struct
 
 @fdb.transactional
@@ -697,7 +697,7 @@ their value perform a write operation.
 /my/dir("hello","world")=42
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def set_kv(tr):
     dir = fdb.directory.create_or_open(tr, ('my', 'dir'))
@@ -715,7 +715,7 @@ perform a clear operation.
 /my/dir("hello","world")=clear
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def clear_kv(tr):
     dir = fdb.directory.open(tr, ('my', 'dir'))
@@ -740,7 +740,7 @@ exists.
 /my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 import struct
 import uuid
 
@@ -773,7 +773,7 @@ bytes are returned.
 /some/data(10139)=<>
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def read_raw(tr):
     dir = fdb.directory.open(tr, ('some', 'data'))
@@ -792,7 +792,7 @@ being read.
 /people("coders",...)
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def read_range(tr):
     dir = fdb.directory.open(tr, ('people',))
@@ -822,7 +822,7 @@ query will read that single directory.
 /root/<>/items
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def list_dirs(tr):
     root = fdb.directory.open(tr, ('root',))
@@ -849,7 +849,7 @@ directory query.
 /root/old/data=remove
 ```
 
-```lang-python {.equiv-py}
+```language-python {.equiv-py}
 @fdb.transactional
 def remove_dir(tr):
     fdb.directory.remove_if_exists(tr, ('root', 'old', 'data'))
@@ -889,7 +889,7 @@ key-values which don't match the query's schema. Below you
 can see a Python implementation of how this filtering would
 work.
 
-```lang-python
+```language-python
 @fdb.transactional
 def filter_range(tr):
     dir = fdb.directory.open(tr, ('people',))
