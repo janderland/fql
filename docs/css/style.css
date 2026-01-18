@@ -134,23 +134,13 @@ pre {
   }
 }
 
-.lang-go, .language-go {
-  font-size: 0.85rem;
-}
-
-pre.query, pre.grammar, pre.lang-go, pre.equiv-py {
+pre.query, pre.grammar, pre.equiv-py {
   code {
     padding: 1.5rem 1rem 0.5rem 1rem;
   }
 }
 
-pre.result, pre.lang-go {
-  code {
-    background-color: var(--color0);
-  }
-}
-
-pre.result, pre.equiv-go {
+pre.result {
   z-index: 0;
 
   > ::before {
@@ -161,6 +151,7 @@ pre.result, pre.equiv-go {
   code {
     margin-top: -3rem;
     padding: 2.5rem 1rem 0.5rem 1rem;
+    background-color: var(--color0);
   }
 }
 
@@ -174,10 +165,6 @@ pre.result > ::before {
 
 pre.grammar > ::before {
   content: "ebnf";
-}
-
-pre.lang-go > ::before {
-  content: "pseudo go";
 }
 
 pre.equiv-py > ::before {
