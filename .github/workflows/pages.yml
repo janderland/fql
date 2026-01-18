@@ -1,0 +1,57 @@
+name: Deploy GitHub Pages
+
+on:
+  push:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Compute Docker tag
+        id: docker
+        run: echo "tag=$(./scripts/docker_tag.sh)" >> $GITHUB_OUTPUT
+
+      - name: Build image (from cache)
+        uses: docker/bake-action@v5
+        env:
+          DOCKER_TAG: ${{ steps.docker.outputs.tag }}
+        with:
+          files: bake.hcl
+          targets: build
+          load: true
+          set: |
+            *.cache-from=type=gha,scope=build-6.2.30
+            *.cache-from=type=gha,scope=build-7.1.61
+
+      - name: Generate docs
+        run: ./build.sh --docs
+        env:
+          DOCKER_TAG: ${{ steps.docker.outputs.tag }}
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: docs
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

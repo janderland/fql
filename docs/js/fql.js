@@ -66,6 +66,21 @@
     },
   };
 
+  const VSTAMP = {
+    begin: [
+      /#/,
+      /[A-Fa-f0-9]*/,
+      /:/,
+      /[A-Fa-f0-9]{4}/,
+    ],
+    beginScope: {
+      1: 'accent',
+      2: 'number',
+      3: 'accent',
+      4: 'number',
+    },
+  };
+
   const STRING = {
     scope: 'string',
     begin: /"/,
@@ -88,6 +103,7 @@
       '-nan',
       'nan',
       'clear',
+      'remove',
       'nil',
       'any',
       'int',
@@ -98,8 +114,12 @@
       'bytes',
       'uuid',
       'tup',
+      'vstamp',
       'append',
       'sum',
+      'avg',
+      'min',
+      'max',
       'count',
       'be',
       'le',
@@ -116,6 +136,11 @@
       'f80',
       'reverse',
       'limit',
+      'mode',
+      'snapshot',
+      'strict',
+      'rand',
+      'pick',
     ].join(' '),
   };
 
@@ -141,13 +166,17 @@
         'f80',
         'reverse',
         'limit',
+        'mode',
+        'snapshot',
+        'strict',
+        'pick',
       ],
     },
     contains: [
       {
         begin: [
           /:/,
-          /[^,\]]/
+          /[^,\]]+/
         ],
         beginScope: {
           1: 'option',
@@ -173,8 +202,12 @@
         'bytes',
         'uuid',
         'tup',
+        'vstamp',
         'append',
         'sum',
+        'avg',
+        'min',
+        'max',
         'count',
       ],
     },
@@ -196,7 +229,7 @@
   const DIRECTORY = {
     scope: 'directory',
     begin: /\//,
-    end: /(?=\()/,
+    end: /(?=[\(=\s]|$)/,
     contains: [
       STRING,
       VARIABLE,
@@ -217,6 +250,7 @@
       MAYBEMORE,
       KEYWORD,
       UUID,
+      VSTAMP,
       BYTES,
       NUMBER,
       OPTIONS,
@@ -234,6 +268,7 @@
       REFERENCE,
       KEYWORD,
       UUID,
+      VSTAMP,
       BYTES,
       NUMBER,
       OPTIONS,
@@ -251,7 +286,7 @@
       options: 'title',
     },
     contains: [
-      COMMENT, 
+      COMMENT,
       DIRECTORY,
       TUPLE,
       VALUE,
@@ -260,6 +295,7 @@
       KEYWORD,
       STRING,
       UUID,
+      VSTAMP,
       BYTES,
       NUMBER,
       OPTIONS,

@@ -24,6 +24,24 @@ include-before: |
 
 # Introduction
 
+This document serves as both a language specification and
+a usage guide for FQL. The [Syntax](#syntax) section
+describes the structure of queries while the
+[Semantics](#semantics) section describes their behavior.
+The complete [EBNF grammar](#grammar) appears at the end.
+
+Throughout the document, relevant grammar rules are shown
+alongside the features they define. Python code snippets
+demonstrate equivalent FoundationDB API calls.
+
+Grammar rules use extended Backus-Naur form as defined in
+ISO/IEC 14977, with two modifications: concatenation is
+implicit and rules terminate at newline.
+
+> Not all features described in this document have been
+> implemented yet. Callouts indicate features that are still
+> being worked on.
+
 # Syntax
 
 ## Overview
@@ -34,9 +52,23 @@ look like key-values encoded using the [directory][] and
 includes a directory path and tuple. To the right is the
 value.
 
-[grammar]: https://github.com/janderland/fql/blob/main/syntax.ebnf
+[grammar]: #grammar
 [directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
+
+```language-ebnf {.grammar}
+query = keyval | key | dquery
+dquery = directory [ '=' 'remove' ]
+keyval = key '=' value
+key = directory tuple
+value = 'clear' | data
+```
+
+> This grammar is simplified. [Options](#options) are
+> explained later.
+
+A query may be a full key-value, just a key, or just
+a directory.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -148,51 +180,55 @@ to the DB.
 
 <div>
 
-| Type    | Description    | Examples                               |
-|:--------|:---------------|:---------------------------------------|
-| `nil`   | Empty Type     | `nil`                                  |
-| `bool`  | Boolean        | `true` `false`                         |
-| `int`   | Signed Integer | `-14` `3033`                           |
-| `num`   | Floating Point | `33.4` `-3.2e5`                        |
-| `str`   | Unicode String | `"happy😁"` `"\"quoted\""`             |
-| `uuid`  | UUID           | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
-| `bytes` | Byte String    | `0xa2bff2438312aac032`                 |
-| `tup`   | Tuple          | `("hello",27.4,nil)`                   |
+| Type     | Description      | Examples                               |
+|:---------|:-----------------|:---------------------------------------|
+| `nil`    | Empty Type       | `nil`                                  |
+| `bool`   | Boolean          | `true` `false`                         |
+| `int`    | Signed Integer   | `-14` `3033`                           |
+| `num`    | Floating Point   | `33.4` `-3.2e5`                        |
+| `str`    | Unicode String   | `"happy😁"` `"\"quoted\""`             |
+| `uuid`   | UUID             | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
+| `bytes`  | Byte String      | `0xa2bff2438312aac032`                 |
+| `tup`    | Tuple            | `("hello",27.4,nil)`                   |
+| `vstamp` | Version Stamp    | `#:0000` `#0102030405060708090a:0000`  |
 
 </div>
 
 The `nil` type may only be instantiated as the element
-`nil`. The `int` type may be instantiated as any arbitrarily
-large integer. For example, the integer in the query below
-doesn't fit in a 64-bit value.
+`nil`. The `bool` type may be instantiated as `true` or
+`false`.
 
+```language-ebnf {.grammar}
+bool = 'true' | 'false'
 ```
-/bigint(92233720368547758084)=nil
+
+The `int` type may be instantiated as any arbitrarily large
+integer.
+
+```language-ebnf {.grammar}
+int = [ '-' ] digits
+digits = digit { digit }
+digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
 ```
 
 The `num` type may be instantiated as any real number which
 can be approximated by an [80-bit floating point][] value,
 in accordance with IEEE 754. The implementation determines
 the exact range of allowed values. Scientific notation may
-be used. The type may also be instantiated as the tokens
-`-inf`, `inf`, `-nan`, or `nan`. 
+be used.
 
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
-```language-fql {.query}
-/float(-inf,nan)=1.234e4732
+```language-ebnf {.grammar}
+num = int '.' digits | ( int | int '.' digits ) 'e' int | '-inf' | 'inf' | '-nan' | 'nan'
 ```
 
 The `str` type may be instantiated as a unicode string
-wrapped in double quotes. It is the only element type
-allowed in directory paths. If a directory string only
-contains alphanumericals, underscores, dashes, and periods
-then the quotes may be excluded. Quoted strings may contain
-double quotes via backslash escapes.
+wrapped in double quotes. Quoted strings may contain double
+quotes and backslashes via backslash escapes.
 
-```language-fql {.query}
-/quoteless-string_in.dir("escape \"wow\"")=nil
-/"other ch@r@cters must be 'quoted'"(nil)=""
+```language-ebnf {.grammar}
+string = '"' { char | '\\"' | '\\\\' } '"'
 ```
 
 The `uuid` and `bytes` types may be instantiated using
@@ -201,16 +237,67 @@ the numbers are grouped in the standard 8, 4, 4, 4, 12
 format. For `bytes`, any even number of hexidecimal digits
 are prefixed by `0x`.
 
-```language-fql {.query}
-/hex(fC2Af671-a248-4AD6-ad57-219cd8a9f734)=0x3b42ADED28b9
+```language-ebnf {.grammar}
+uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
+bytes = '0x' { hex hex }
+hex = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 ```
 
 The `tup` type may contain any of the data elements,
-including sub-tuples. 
+including nested tuples. Elements are separated by commas
+and wrapped in parentheses. A trailing comma is allowed
+after the last element.
+
+```language-ebnf {.grammar}
+tuple = '(' [ nl elements [ ',' ] nl ] ')'
+elements = element [ ',' nl elements ]
+element = data | '...'
+```
+
+The `vstamp` type represents a FoundationDB [versionstamp][].
+A versionstamp contains a 10-byte transaction version and
+a 2-byte user version. The transaction version is assigned
+by the database at commit time. A vstamp without the
+transaction version (only the user version after the colon)
+is incomplete and will be filled in by FoundationDB when
+written.
+
+[versionstamp]: https://apple.github.io/foundationdb/api-general.html#versionstamps
+
+```language-ebnf {.grammar}
+vstamp = '#' [ hex{20} ] ':' hex{4}
+```
+
+## Directories
+
+Directories provide a way to organize key-values into
+hierarchical namespaces. The [directory layer][] manages
+these namespaces and assigns short prefixes to keys.
+Strings are the only element type allowed in directories.
+
+[directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
+
+```language-ebnf {.grammar}
+directory = '/' element [ directory ]
+element = '<>' | name | string
+name = { alphanumeric | '.' | '-' | '_' }
+```
+
+A directory is specified as a sequence of strings, each
+prefixed by a forward slash. Strings do not need quotes if
+they only contain alphanumericals, underscores, dashes, or
+periods. To use other symbols, the strings must be quoted.
 
 ```language-fql {.query}
-/sub/tuple("japan",("sub",nil))=0xff
-/tuple/value(22.3,-8)=("rain","fog")
+/my/dir/path_way
+/my/"dir@--\o/"/path_way
+```
+
+The empty variable `<>` may be used in a directory path as
+a placeholder for any directory name.
+
+```language-fql {.query}
+/root/<>/items
 ```
 
 ## Holes & Schemas
@@ -219,6 +306,14 @@ Holes are a group of syntax constructs used to define
 a key-value schema by acting as placeholders for one or more
 data elements. There are three kinds of holes: variables,
 references, and the `...` token.
+
+```language-ebnf {.grammar}
+hole = variable | reference | '...'
+variable = '<' [ name ':' ] [ type { '|' type } ] '>'
+reference = ':' name
+type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
+     | 'str' | 'uuid' | 'bytes' | 'vstamp'
+```
 
 Variables are used to represent a single [data
 element](#data-elements). Variables are specified as a list
@@ -315,14 +410,22 @@ line. They can be used to describe a tuple's elements.
 
 ## Options
 
+> ⚠️ Options are not implemented yet.
+
 Options modify the semantics of [data
 elements](#data-elements), [variables](#holes-schemas), and
-[queries](#basic-queries). They can instruct FQL to use
+[queries](#query-types). They can instruct FQL to use
 alternative encodings, limit a query's result count, or
 change other behaviors.
 
+```language-ebnf {.grammar}
+opts = '[' option { ',' option } ']'
+option = name [ ':' argument ]
+argument = name | int | string
+```
+
 Options are specified as a comma separated list wrapped in
-braces. For instance, to specify that an `int` should be
+brackets. For instance, to specify that an `int` should be
 encoded as a little-endian unsigned 8-bit integer, the
 following options would be included after the element.
 
@@ -331,12 +434,64 @@ following options would be included after the element.
 ```
 
 Similarly, if a variable should only match against
-a big-endian 32-bit float then the following option would be
-included after the `num` type.
+a big-endian 32-bit float then the following options would
+be included after the `num` type.
 
 ```language-fql
 <num[f32,be]>
 ```
+
+By default, [variables](#holes-schemas) will decode any
+encoding for their types. Options may be applied to
+a variable's types to limit which encodings will match the
+schema.
+
+```language-fql {.query}
+/numbers("int")=<int>
+```
+
+If an element's value cannot be represented by the specified
+encoding then the query is invalid.
+
+```language-fql {.query}
+/numbers("int")=362342
+```
+
+### Element Options
+
+The tables below show which options are supported for the
+`int` and `num` types when used as values. These options
+control how the data is serialized to bytes.
+
+<div>
+
+| Int Option | Description     |
+|:-----------|:----------------|
+| `be`       | Big endian      |
+| `le`       | Little endian   |
+| `u8`       | Unsigned 8-bit  |
+| `u16`      | Unsigned 16-bit |
+| `u32`      | Unsigned 32-bit |
+| `u64`      | Unsigned 64-bit |
+| `i8`       | Signed 8-bit    |
+| `i16`      | Signed 16-bit   |
+| `i32`      | Signed 32-bit   |
+| `i64`      | Signed 64-bit   |
+
+</div>
+<div>
+
+| Num Option | Description   |
+|:-----------|:--------------|
+| `be`       | Big endian    |
+| `le`       | Little endian |
+| `f32`      | 32-bit        |
+| `f64`      | 64-bit        |
+| `f80`      | 80-bit        |
+
+</div>
+
+### Query Options
 
 Query options are specified on the line before the query.
 For instance, to specify that a range-read query should read
@@ -351,6 +506,18 @@ would be included before the query.
 Notice that the `limit` option includes an argument after
 the colon. Some options include a single argument to further
 specify the option's behavior.
+
+<div>
+
+| Query Option | Argument | Description                        |
+|:-------------|:---------|:-----------------------------------|
+| `reverse`    | none     | Read range in reverse order        |
+| `limit`      | int      | Maximum number of results          |
+| `mode`       | name     | want_all, iterator, exact, small, medium, large, serial |
+| `snapshot`   | none     | Use snapshot read                  |
+| `strict`     | none     | Error on non-conformant key-values |
+
+</div>
 
 # Semantics
 
@@ -370,22 +537,17 @@ do not exist.
 /directory/"p@th"(nil,57223,0xa8ff03)=nil
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr Transaction) (any, error) {
-  // Open directory; create if doesn't exist
-  dir, err := CreateOrOpenDir(tr, []string{"directory", "p@th"})
-  if err != nil {
-    return nil, err
-  }
+```language-python {.equiv-py}
+@fdb.transactional
+def write_kv(tr):
+    # Open directory; create if doesn't exist
+    dir = fdb.directory.create_or_open(tr, ('directory', 'p@th'))
 
-  // Pack the tuple and prepend the directory prefix
-  key := dir.Pack(Tuple{nil, 57223, []byte{0xa8, 0xff, 0x03}})
+    # Pack the tuple and prepend the directory prefix
+    key = dir.pack((None, 57223, b'\xa8\xff\x03'))
 
-  // Write the KV
-  tr.Set(key, nil)
-
-  return nil, nil
-})
+    # Write the KV
+    tr[key] = b''
 ```
 
 If a query reads from a directory which doesn't exist,
@@ -396,49 +558,28 @@ element types, allowing FQL to decode keys without a schema.
 /directory/<>(...)
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr Transaction) (any, error) {
-  // Open directory; exit if it doesn't exist
-  dir, err := OpenDir(tr, []string{"directory"})
-  if err != nil {
-    if err == DirNotExists {
-      return nil, nil
-    }
-    return nil, err
-  }
+```language-python {.equiv-py}
+@fdb.transactional
+def read_kvs(tr):
+    # Open directory; exit if it doesn't exist
+    dir = fdb.directory.open(tr, ('directory',))
+    if dir is None:
+        return []
 
-  // List the sub-directories
-  subDirs, err := dir.List(tr)
-  if err != nil {
-    return nil, err
-  }
+    # List the sub-directories
+    sub_dirs = dir.list(tr)
 
-  // For each sub-directory, grab all the KVs
-  var results []KeyValue
-  for _, subDir := range subDirs {
-    iter := tr.GetRange(subDir).Iterator()
+    # For each sub-directory, grab all the KVs
+    results = []
+    for sub_name in sub_dirs:
+        sub_dir = dir.open(tr, (sub_name,))
+        for key, val in tr[sub_dir.range()]:
+            # Remove the directory prefix and unpack the tuple
+            tup = sub_dir.unpack(key)
+            # Value unpacking will be discussed later...
+            results.append((sub_dir.get_path(), tup, val))
 
-    for iter.Advance() {
-      kv := iter.MustGet()
-
-      // Remove the directory prefix and unpack the tuple
-      tup, err := dir.Unpack(kv.Key)
-      if err != nil {
-        // Return partial results with error
-        return results, err
-      }
-
-      val := // Value unpacking will be discussed later...
-
-      results = append(results, KeyValue{
-        Key: Key{Dir: dir, Tup: tup},
-        Val: val,
-      })
-    }
-  }
-
-  return results, nil
-})
+    return results
 ```
 
 Values have more flexible encoding options. There is
@@ -450,62 +591,48 @@ The exceptions to this default encoding are when values are
 tuples (which are not wrapped in another tuple) and byte
 strings (which are used as-is for the value).
 
-```language-fql {.query} 
+```language-fql {.query}
 /people/age("jon","smith")=42
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr Transaction) (any, error) {
-  key := // Encode the key...
+```language-python {.equiv-py}
+@fdb.transactional
+def write_age(tr):
+    dir = fdb.directory.create_or_open(tr, ('people', 'age'))
+    key = dir.pack(('jon', 'smith'))
 
-  // Pack the value as a tuple
-  val, err := PackTup(Tuple{42})
-  if err != nil {
-    return nil, err
-  }
+    # Pack the value as a tuple
+    val = fdb.tuple.pack((42,))
 
-  // Write the KV
-  tr.Set(key, val)
-
-  return nil, nil
-})
+    # Write the KV
+    tr[key] = val
 ```
 
 This default encoding allows values to be decoded without
 knowing their type.
 
-```language-fql {.query} 
+```language-fql {.query}
 /people/age("jon","smith")=<>
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr Transaction) (any, error) {
-  key := // Encode the key...
+```language-python {.equiv-py}
+@fdb.transactional
+def read_age(tr):
+    dir = fdb.directory.open(tr, ('people', 'age'))
+    key = dir.pack(('jon', 'smith'))
 
-  // Read the value
-  valBytes := tr.MustGet(key)
+    # Read the value
+    val_bytes = tr[key]
 
-  // Assume the value is a tuple
-  valTup, err := UnpackTup(valBytes)
-  if err == nil {
-    if len(valTup) == 1 {
-        return KeyValue{
-          Key: Key{...},
-          Val: valTup[0],
-        }, nil
-    }
-    return KeyValue{
-      Key: Key{...},
-      Val: valTup,
-    }, nil
-  }
-
-  // If decoding as a tuple fails, return raw bytes
-  return KeyValue{
-    Key: Key{...},
-    Val: valBytes,
-  }, err
-})
+    # Assume the value is a tuple
+    try:
+        val_tup = fdb.tuple.unpack(val_bytes)
+        if len(val_tup) == 1:
+            return val_tup[0]
+        return val_tup
+    except:
+        # If decoding as a tuple fails, return raw bytes
+        return val_bytes
 ```
 
 Using options, values can be encoded in other ways. For
@@ -518,19 +645,19 @@ respectively.
 /numbers/big("37")=37[i16,be]
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr Transaction) (any, error) {
-  key := // Encode the key...
+```language-python {.equiv-py}
+import struct
 
-  // Pack the value into unsigned 16 bits.
-  val := make([]byte, 2)
-  binary.BigEndian.PutUint64(val, 37)
+@fdb.transactional
+def write_int(tr):
+    dir = fdb.directory.create_or_open(tr, ('numbers', 'big'))
+    key = dir.pack(('37',))
 
-  // Write the KV
-  tr.Set(key, val)
+    # Pack the value into signed 16-bit big endian
+    val = struct.pack('>h', 37)
 
-  return nil, nil
-})
+    # Write the KV
+    tr[key] = val
 ```
 
 If the value was encoded with non-default values, then the
@@ -540,30 +667,29 @@ encoding must be specified in the variable when read.
 /numbers/big("37")=<int[i16,be]>
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr Transaction) (any, error) {
-  key := // Encode the key...
+```language-python {.equiv-py}
+import struct
 
-  // Read the value
-  valBytes := tr.MustGet(key)
+@fdb.transactional
+def read_int(tr):
+    dir = fdb.directory.open(tr, ('numbers', 'big'))
+    key = dir.pack(('37',))
 
-  // Unpack value as a 16-bit unsigned int
-  valUnsigned := binary.BigEndian.Uint16(valBytes)
-  val := int16(valUnsigned)
+    # Read the value
+    val_bytes = tr[key]
 
-  return KeyValue{
-    Key: Key{...},
-    Val: val,
-  }, nil
-})
+    # Unpack value as a 16-bit signed int, big endian
+    val = struct.unpack('>h', val_bytes)[0]
+
+    return val
 ```
 
-## Basic Queries
+## Query Types
 
 FQL queries may mutate a single key-value, read one or more
 key-values, or list directories. Throughout this section,
-snippets of Go code are included which approximate how the
-queries interact with the FoundationDB API.
+snippets of Python code are included which approximate how
+the queries interact with the FoundationDB API.
 
 ### Mutations
 
@@ -581,20 +707,15 @@ their value perform a write operation.
 /my/dir("hello","world")=42
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-  dir, err := directory.CreateOrOpen(tr, []string{"my", "dir"}, nil)
-  if err != nil {
-    return nil, err
-  }
+```language-python {.equiv-py}
+@fdb.transactional
+def set_kv(tr):
+    dir = fdb.directory.create_or_open(tr, ('my', 'dir'))
 
-  val := make([]byte, 8)
-  // Endianness is configurable...
-  binary.LittleEndian.PutUint64(val, 42)
+    # Pack value as tuple (default encoding)
+    val = fdb.tuple.pack((42,))
 
-  tr.Set(dir.Pack(tuple.Tuple{"hello", "world"}), val)
-  return nil, nil
-})
+    tr[dir.pack(('hello', 'world'))] = val
 ```
 
 Mutation queries with the `clear` token as their value
@@ -604,19 +725,33 @@ perform a clear operation.
 /my/dir("hello","world")=clear
 ```
 
-```lang-go {.equiv-go}
-db.Transact(func(tr fdb.Transaction) (interface{}, error) {
-  dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
-  if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
-      return nil, nil
-    }
-    return nil, err
-  }
+```language-python {.equiv-py}
+@fdb.transactional
+def clear_kv(tr):
+    dir = fdb.directory.open(tr, ('my', 'dir'))
+    if dir is None:
+        return
 
-  tr.Clear(dir.Pack(tuple.Tuple{"hello", "world"}))
-  return nil, nil
-})
+    del tr[dir.pack(('hello', 'world'))]
+```
+
+Multiple key-values may be cleared by ending the key's tuple
+with `...`. This performs a range clear on all key-values
+matching the prefix.
+
+```language-fql {.query}
+/my/dir("hello",...)=clear
+```
+
+```language-python {.equiv-py}
+@fdb.transactional
+def clear_range(tr):
+    dir = fdb.directory.open(tr, ('my', 'dir'))
+    if dir is None:
+        return
+
+    prefix = dir.pack(('hello',))
+    del tr[prefix:fdb.strinc(prefix)]
 ```
 
 ### Reads
@@ -634,32 +769,26 @@ exists.
 /my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
 ```
 
-```lang-go {.equiv-go}
-db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-  dir, err := directory.Open(tr, []string{"my", "dir"}, nil)
-  if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
-      return nil, nil
-    }
-    return nil, err
-  }
+```language-python {.equiv-py}
+import struct
+import uuid
 
-  // Read the value's raw bytes...
-  val := tr.MustGet(dir.Pack(tuple.Tuple{99.8,
-    tuple.UUID{
-      0x7d, 0xfb, 0x10, 0xd1,
-      0x24, 0x93, 0x4f, 0xb5,
-      0x92, 0x8e, 0x88, 0x9f,
-      0xdc, 0x6a, 0x71, 0x36}))
+@fdb.transactional
+def read_single(tr):
+    dir = fdb.directory.open(tr, ('my', 'dir'))
+    if dir is None:
+        return None
 
-  // Try to decode the value as a uint.
-  if len(val) == 8 {
-      return binary.LittleEndian.Uint64(val), nil
-  }
+    # Read the value's raw bytes
+    key = dir.pack((99.8, uuid.UUID('7dfb10d1-2493-4fb5-928e-889fdc6a7136')))
+    val = tr[key]
 
-  // If the value isn't a uint, assume it's a string.
-  return string(val), nil
-})
+    # Try to decode the value as an int
+    if len(val) == 8:
+        return struct.unpack('<q', val)[0]
+
+    # If the value isn't an int, assume it's a string
+    return val.decode('utf-8')
 ```
 
 FQL attempts to decode the value as each of the types listed
@@ -673,19 +802,15 @@ bytes are returned.
 /some/data(10139)=<>
 ```
 
-```lang-go {.equiv-go}
-db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-  dir, err := directory.Open(tr, []string{"some", "data"}, nil)
-  if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
-      return nil, nil
-    }
-    return nil, err
-  }
+```language-python {.equiv-py}
+@fdb.transactional
+def read_raw(tr):
+    dir = fdb.directory.open(tr, ('some', 'data'))
+    if dir is None:
+        return None
 
-  // No value decoding...
-  return tr.MustGet(dir.Pack(tuple.Tuple{10139})), nil
-})
+    # No value decoding...
+    return tr[dir.pack((10139,))]
 ```
 
 Queries with [variables](#holes-schemas) in their key (and
@@ -696,88 +821,85 @@ being read.
 /people("coders",...)
 ```
 
-```lang-go {.equiv-go}
-db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-  dir, err := directory.Open(tr, []string{"people"}, nil)
-  if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
-      return nil, nil
-    }
-    return nil, err
-  }
+```language-python {.equiv-py}
+@fdb.transactional
+def read_range(tr):
+    dir = fdb.directory.open(tr, ('people',))
+    if dir is None:
+        return []
 
-  rng, err := fdb.PrefixRange(dir.Pack(tuple.Tuple{"coders"}))
-  if err != nil {
-    return nil, err
-  }
+    # Create a range for the prefix
+    prefix = dir.pack(('coders',))
+    range_result = tr[fdb.Range(prefix, fdb.strinc(prefix))]
 
-  var results []fdb.KeyValue
-  iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
-  for iter.Advance() {
-    kv := iter.MustGet()
+    results = []
+    for key, val in range_result:
+        tup = dir.unpack(key)
+        results.append((tup, val))
 
-    tup, err := dir.Unpack(kv.Key)
-    if err != nil {
-      return nil, err
-    }
-
-    results = append(results, kv)
-  }
-  return results, nil
-})
+    return results
 ```
+
+By default, key-values within the range that don't match the
+query's schema are filtered from the results. Enabling the
+`strict` [query option](#query-options) causes the query to
+fail instead when encountering a non-conformant key-value.
 
 ### Directories
 
 The directory layer may be queried in isolation by using
-a lone directory as a query. These queries can only perform
-reads. If the directory path contains no variables, the
-query will read that single directory.
+a lone directory as a query. Directory queries are read-only
+except when removing a directory. If the directory path
+contains no variables, the query will read that single
+directory.
 
 ```language-fql {.query}
 /root/<>/items
 ```
 
-```lang-go {.equiv-go}
- root, err := directory.Open(tr, []string{"root"}, nil)
-  if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
-      return nil, nil
-    }
-    return nil, err
-  }
+```language-python {.equiv-py}
+@fdb.transactional
+def list_dirs(tr):
+    root = fdb.directory.open(tr, ('root',))
+    if root is None:
+        return []
 
-  oneDeep, err := root.List(tr, nil)
-  if err != nil {
-    return nil, err
-  }
+    # List the sub-directories
+    one_deep = root.list(tr)
 
-  var results [][]string
-  for _, dir1 := range oneDeep {
-    twoDeep, err := root.List(tr, []string{dir1, "items"})
-    if err != nil {
-      return nil, err
-    }
+    results = []
+    for dir1 in one_deep:
+        # Check if 'items' exists under each sub-directory
+        items = root.open(tr, (dir1, 'items'))
+        if items is not None:
+            results.append(('root', dir1, 'items'))
 
-    for _, dir2 := range twoDeep {
-      results = append(results, []string{"root", dir1, dir2})
-    }
-  }
-  return results, nil
+    return results
+```
+
+A directory can be removed by appending `=remove` to the
+directory query.
+
+```language-fql {.query}
+/root/old/data=remove
+```
+
+```language-python {.equiv-py}
+@fdb.transactional
+def remove_dir(tr):
+    fdb.directory.remove_if_exists(tr, ('root', 'old', 'data'))
 ```
 
 ### Filtering
 
 Read queries define a schema to which key-values may or
-may-not conform. In the Go snippets above, non-conformant
+may-not conform. In the Python snippets above, non-conformant
 key-values were being filtered out of the results.
 
 Alternatively, FQL can throw an error when encountering
 non-conformant key-values. This may help enforce the
 assumption that all key-values within a directory conform to
-a certain schema.
-
-TODO: Link to FQL options.
+a certain schema. See the `strict` [query option](#query-options).
 
 Because filtering is performed on the client side, range
 reads may stream a lot of data to the client while the
@@ -785,7 +907,7 @@ client filters most of it away. For example, consider the
 following query:
 
 ```language-fql {.query}
-/people(3392,<str|int>,<>)=(<uint>,...)
+/people(3392,<str|int>,<>)=(<int>,...)
 ```
 
 In the key, the location of the first variable or `...`
@@ -799,79 +921,68 @@ particular query, the prefix would be as follows:
 FoundationDB will stream all key-values with this prefix to
 the client. As they are received, the client will filter out
 key-values which don't match the query's schema. Below you
-can see a Go implementation of how this filtering would
+can see a Python implementation of how this filtering would
 work.
 
-```lang-go
-db.ReadTransact(func(tr fdb.ReadTransaction) (interface{}, error) {
-  dir, err := directory.Open(tr, []string{"people"}, nil)
-  if err != nil {
-    if errors.Is(err, directory.ErrDirNotExists) {
-      return nil, nil
-    }
-    return nil, err
-  }
+```language-python
+@fdb.transactional
+def filter_range(tr):
+    dir = fdb.directory.open(tr, ('people',))
+    if dir is None:
+        return []
 
-  rng, err := fdb.PrefixRange(dir.Pack(tuple.Tuple{3392}))
-  if err != nil {
-    return nil, err
-  }
+    prefix = dir.pack((3392,))
+    range_result = tr[fdb.Range(prefix, fdb.strinc(prefix))]
 
-  var results []fdb.KeyValue
-  iter := tr.GetRange(rng, fdb.RangeOptions{}).Iterator()
-  for iter.Advance() {
-    kv := iter.MustGet()
+    results = []
+    for key, val in range_result:
+        tup = dir.unpack(key)
 
-    tup, err := dir.Unpack(kv.Key)
-    if err != nil {
-      return nil, err
-    }
+        # Our query specifies a key-tuple with 3 elements
+        if len(tup) != 3:
+            continue
 
-    // Our query specifies a key-tuple
-    // with 3 elements...
-    if len(tup) != 3 {
-      continue
-    }
+        # The 2nd element must be either a string or an int
+        if not isinstance(tup[1], (str, int)):
+            continue
 
-    // The 2nd element must be either a
-    // string or an int64...
-    switch tup[1].(type) {
-    default:
-      continue
-    case string | int64:
-    }
+        # The query tells us to assume the value is a packed tuple
+        try:
+            val_tup = fdb.tuple.unpack(val)
+        except:
+            continue
 
-    // The query tells us to assume the value
-    // is a packed tuple...
-    val, err := tuple.Unpack(kv.Value)
-    if err != nil {
-      continue
-    }
+        # The value-tuple must have one or more elements
+        if len(val_tup) == 0:
+            continue
 
-    // The value-tuple must have one or more
-    // elements in it...
-    if len(val) == 0 {
-      continue
-    }
+        # The first element of the value-tuple must be an int
+        if not isinstance(val_tup[0], int):
+            continue
 
-    // The first element of the value-tuple must
-    // be a uint64...
-    if _, isInt := val[0].(uint64); !isInt {
-      continue
-    }
+        results.append((tup, val_tup))
 
-    results = append(results, kv)
-  }
-  return results, nil
-})
+    return results
 ```
+
+Filtering can also be combined with clearing. A filter clear
+operation clears only the key-values that match the schema.
+
+```language-fql {.query}
+/people(3392,<str>,<>)=clear
+```
+
+This query clears all key-values under `/people` with prefix
+`(3392)` where the second element is a string.
 
 ## Advanced Queries
 
 Besides basic CRUD operations, FQL is capable of performing
-indirection and aggregation queries.
+indirection queries.
 
 ### Indirection
+
+> ⚠️ Indirection is not implemented yet.
 
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
@@ -932,62 +1043,209 @@ subset from the "people" directory.
 
 ### Aggregation
 
-> 🚧 Aggregation is still being implemented.
+> ⚠️ Aggregation is not implemented yet.
 
-Aggregation queries read multiple key-values and combine
-them into a single output key-value.
+Aggregation queries combine values from multiple key-values
+into a single result. FQL provides pseudo data types which
+perform aggregation, similar to SQL aggregate functions.
 
-FoundationDB performs best when key-values are kept small.
-When storing large [blobs][], the blobs are usually split
-into 10kB chunks and stored as values. The respective keys
-contain the byte offset of the chunks.
+| Pseudo Type | Description                              |
+|:------------|:-----------------------------------------|
+| `count`     | Count the number of matching key-values  |
+| `sum`       | Sum integer values                       |
+| `avg`       | Average of integer values                |
+| `min`       | Minimum value                            |
+| `max`       | Maximum value                            |
+| `append`    | Concatenate bytes in order               |
 
-[blobs]: https://apple.github.io/foundationdb/blob.html
+Aggregation queries always result in a single key-value.
+With non-aggregation queries, variables and the `...` token
+are resolved as actual data elements in the query results.
+For aggregation queries, only aggregation variables are
+resolved.
+
+```language-fql {.query}
+/deltas("group A",<int>)
+```
+
+```language-fql {.result}
+/deltas("group A",20)=nil
+/deltas("group A",-18)=nil
+/deltas("group A",3)=nil
+```
+
+```language-fql {.query}
+/deltas("group A",<sum>)
+```
+
+```language-fql {.result}
+/deltas("group A",5)=nil
+```
+
+The `append` pseudo type is useful when [storing large
+blobs][]. The data is usually split into chunks stored in
+separate key-values. The respective keys contain the byte
+offset of each chunk.
+
+[storing large blobs]: https://apple.github.io/foundationdb/blob.html
 
 ```language-fql {.query}
 /blob(
-  "audio.wav",  % The identifier of the blob.
+  "my file",    % The identifier of the blob.
   <offset:int>, % The byte offset within the blob.
 )=<chunk:bytes> % A chunk of the blob.
 ```
 
 ```language-fql {.result}
-/blob("audio.wav",0)=10000_bytes
-/blob("audio.wav",10000)=10000_bytes
-/blob("audio.wav",20000)=2730_bytes
+/blob("my file",0)=10e3_bytes
+/blob("my file",10000)=10e3_bytes
+/blob("my file",20000)=2.7e3_bytes
 ```
 
-> ❓ In the above results, instead of printing the actual
-> byte strings, only the byte lengths are printed. This is
-> an option provided by the CLI to lower result verbosity.
+> Instead of printing the actual byte strings in these
+> results, only the byte lengths are printed. See
+> [Formatting](#formatting) for more details.
 
-This gets the job done, but it would be nice if the client
-could obtain the entire blob as a single byte string. This
-can be done using aggregation queries.
-
-FQL provides a pseudo type named `append` which instructs
-the query to append all byte strings found at the variable's
-location.
+Using `append`, the client obtains the entire blob instead
+of having to concatenate the chunks themselves.
 
 ```language-fql {.query}
-/blob("audio.wav",...)=<append>
+/blob("my file",...)=<blob:append>
 ```
 
 ```language-fql {.result}
-/blob("my file",...)=22730_bytes
+/blob("my file",...)=22.7e3_bytes
 ```
 
-Aggregation queries always result in a single key-value.
-Non-aggregation queries resolve variables & the `...` token
-into actual data elements in the query results. Aggregation
-queries only resolve aggregation variables.
+# Implementations
 
-You can see all the supported aggregation types below.
+FQL defines the query language but leaves certain details
+to the implementation. These include connection configuration,
+write permissions, transaction boundaries, variable scope,
+and result formatting.
 
-| Pseudo Type | Accepted Inputs | Description      |
-|:------------|:----------------|:-----------------|
-| `append`    | `bytes` `str`   | Append arrays    |
-| `sum`       | `int` `num`     | Add numbers      |
-| `count`     | `any`           | Count key-values |
+## Connection
+
+An implementation determines how users connect to a
+FoundationDB cluster. This may involve selecting from
+pre-defined cluster files or specifying a custom path.
+An implementation could even simulate an FDB cluster
+locally for testing purposes.
+
+## Writes
+
+An implementation may disallow write queries unless a
+specific configuration option is enabled. This provides
+a safeguard against accidental mutations.
+
+## Transactions
+
+An implementation defines how transaction boundaries are
+specified. The Go implementation uses CLI flags to group
+queries into transactions.
+
+```language-bash
+$ fql \
+  -q /users(100)="Alice" \
+  -q /users(101)="Bob" \
+  --tx \
+  -q /users(...)
+```
+
+The `--tx` flag represents a transaction boundary. The
+first two queries execute within the same transaction.
+The third query runs in its own transaction.
+
+## Variables
+
+An implementation defines the scope of named variables.
+Variables may be namespaced to a single transaction,
+available across multiple transactions, or persist for
+an entire session.
+
+## Formatting
+
+An implementation can provide multiple formatting options
+for key-values returned by read queries. The default format
+prints key-values as their equivalent write queries. This
+means copy-pasting the result of a read would write all the
+key-values that were read.
+
+Alternative formats may be provided for different use cases:
+
+- Print byte lengths instead of actual bytes to reduce
+  output verbosity for large values
+- Print placeholders (`<uuid>`, `<vstamp>`) in place of
+  actual values when the specific values are not relevant
+- Output key-values in a binary format suitable for storage
+  on disk or transmission over a network
+
+## Extensions
+
+An implementation may provide custom options and pseudo
+tokens beyond those defined by FQL. For example, a predefined
+reference `:rand` could generate a random integer for each
+query. A custom option `pick:5` could filter results to
+return only every fifth key-value.
+
+# Grammar
+
+The complete FQL grammar is specified below.
+
+```language-ebnf {.grammar}
+(* Top-level query structure *)
+query = [ opts nl ] ( keyval | key | dquery )
+dquery = directory [ '=' 'remove' ]
+
+keyval = key '=' value
+key = directory tuple
+value = 'clear' | data
+
+(* Directories *)
+directory = '/' ( '<>' | name | string ) [ directory ]
+
+(* Tuples *)
+tuple = '(' [ nl elements [ ',' ] nl ] ')'
+elements = element [ ',' nl elements ]
+element = data | '...'
+
+(* Data elements *)
+data = 'nil' | bool | int | num | string | uuid
+     | bytes | tuple | vstamp | hole
+
+bool = 'true' | 'false'
+int = [ '-' ] digits
+num = int '.' digits | ( int | int '.' digits ) 'e' int
+string = '"' { char | '\"' } '"'
+uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
+bytes = '0x' { hex hex }
+vstamp = '#' [ hex{20} ] ':' hex{4}
+
+(* Holes: '...' is a hole but defined in tuple to prevent use as value *)
+hole = variable | reference
+variable = '<' [ name ':' ] [ type { '|' type } ] '>'
+reference = ':' name
+type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
+     | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
+agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
+
+(* Options *)
+opts = '[' option { ',' option } ']'
+option = name [ ':' argument ]
+argument = name | int | string
+
+(* Primitives *)
+digits = digit { digit }
+digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+hex = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+    | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+name = ( letter | '_' ) { letter | digit | '_' | '-' | '.' }
+letter = 'a' | ... | 'z' | 'A' | ... | 'Z'
+char = ? Any printable ASCII character except '"' ?
+
+(* Whitespace *)
+ws = { ' ' | '\t' }
+nl = { ' ' | '\t' | '\n' | '\r' }
+```
 
 <!-- vim: set tw=60 :-->
