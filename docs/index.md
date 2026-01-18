@@ -950,6 +950,16 @@ def filter_range(tr):
     return results
 ```
 
+Filtering can also be combined with clearing. A filter clear
+operation clears only the key-values that match the schema.
+
+```language-fql {.query}
+/people(3392,<str>,<>)=clear
+```
+
+This query clears all key-values under `/people` with prefix
+`(3392)` where the second element is a string.
+
 ## Advanced Queries
 
 Besides basic CRUD operations, FQL is capable of performing
