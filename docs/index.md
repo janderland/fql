@@ -1107,6 +1107,62 @@ of having to concatenate the chunks themselves.
 /blob("my file",...)=22.7e3_bytes
 ```
 
+# Implementations
+
+FQL defines the query language but leaves certain details
+to the implementation. These include connection configuration,
+transaction boundaries, variable scope, and result formatting.
+
+## Connection
+
+An implementation determines how users connect to a
+FoundationDB cluster. This may involve selecting from
+pre-defined cluster files or specifying a custom path.
+An implementation could even simulate an FDB cluster
+locally for testing purposes.
+
+## Transactions
+
+An implementation defines how transaction boundaries are
+specified. The Go implementation uses CLI flags to group
+queries into transactions.
+
+```language-bash
+fql \
+  -q /users(100)="Alice" \
+  -q /users(101)="Bob" \
+  --tx \
+  -q /users(...)
+```
+
+The `--tx` flag represents a transaction boundary. The
+first two queries execute within the same transaction.
+The third query runs in its own transaction.
+
+## Variables
+
+An implementation defines the scope of named variables.
+Variables may be namespaced to a single transaction,
+available across multiple transactions, or persist for
+an entire session.
+
+## Formatting
+
+An implementation can provide multiple formatting options
+for key-values returned by read queries. The default format
+prints key-values as their equivalent write queries. This
+means copy-pasting the result of a read would write all the
+key-values that were read.
+
+Alternative formats may be provided for different use cases:
+
+- Print byte lengths instead of actual bytes to reduce
+  output verbosity for large values
+- Print placeholders (`<uuid>`, `<vstamp>`) in place of
+  actual values when the specific values are not relevant
+- Output key-values in a binary format suitable for storage
+  on disk or transmission over a network
+
 # Grammar
 
 The complete FQL grammar is specified below.
@@ -1166,54 +1222,5 @@ char = ? Any printable ASCII character except '"' ?
 ws = { ' ' | '\t' }
 nl = { ' ' | '\t' | '\n' | '\r' }
 ```
-
-# Implementations
-
-FQL defines the query language but leaves certain details
-to the implementation. These include connection configuration,
-transaction boundaries, and result formatting.
-
-## Connection
-
-An implementation determines how users connect to a
-FoundationDB cluster. This may involve selecting from
-pre-defined cluster files or specifying a custom path.
-An implementation could even simulate an FDB cluster
-locally for testing purposes.
-
-## Transactions
-
-An implementation defines how transaction boundaries are
-specified. The Go implementation uses CLI flags to group
-queries into transactions.
-
-```language-bash
-fql \
-  -q /users(100)="Alice" \
-  -q /users(101)="Bob" \
-  --tx \
-  -q /users(...)
-```
-
-The `--tx` flag represents a transaction boundary. The
-first two queries execute within the same transaction.
-The third query runs in its own transaction.
-
-## Formatting
-
-An implementation can provide multiple formatting options
-for key-values returned by read queries. The default format
-prints key-values as their equivalent write queries. This
-means copy-pasting the result of a read would write all the
-key-values that were read.
-
-Alternative formats may be provided for different use cases:
-
-- Print byte lengths instead of actual bytes to reduce
-  output verbosity for large values
-- Print placeholders (`<uuid>`, `<vstamp>`) in place of
-  actual values when the specific values are not relevant
-- Output key-values in a binary format suitable for storage
-  on disk or transmission over a network
 
 <!-- vim: set tw=60 :-->
