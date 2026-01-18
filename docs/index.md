@@ -1135,7 +1135,7 @@ specified. The Go implementation uses CLI flags to group
 queries into transactions.
 
 ```language-bash
-fql \
+$ fql \
   -q /users(100)="Alice" \
   -q /users(101)="Bob" \
   --tx \
