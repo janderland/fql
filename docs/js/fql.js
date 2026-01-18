@@ -133,6 +133,8 @@
       'f80',
       'reverse',
       'limit',
+      'mode',
+      'snapshot',
       'strict',
     ].join(' '),
   };
@@ -159,6 +161,8 @@
         'f80',
         'reverse',
         'limit',
+        'mode',
+        'snapshot',
         'strict',
       ],
     },
