@@ -725,6 +725,25 @@ def clear_kv(tr):
     del tr[dir.pack(('hello', 'world'))]
 ```
 
+Multiple key-values may be cleared by ending the key's tuple
+with `...`. This performs a range clear on all key-values
+matching the prefix.
+
+```language-fql {.query}
+/my/dir("hello",...)=clear
+```
+
+```language-python {.equiv-py}
+@fdb.transactional
+def clear_range(tr):
+    dir = fdb.directory.open(tr, ('my', 'dir'))
+    if dir is None:
+        return
+
+    prefix = dir.pack(('hello',))
+    del tr[prefix:fdb.strinc(prefix)]
+```
+
 ### Reads
 
 Queries containing [holes](#holes-schemas) read one or more
