@@ -1140,8 +1140,8 @@ uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
 bytes = '0x' { hex hex }
 vstamp = '#' [ hex{20} ] ':' hex{4}
 
-(* Holes *)
-hole = variable | reference | '...'
+(* Holes: '...' is a hole but defined in tuple to prevent use as value *)
+hole = variable | reference
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 reference = ':' name
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
