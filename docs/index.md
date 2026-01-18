@@ -1042,8 +1042,6 @@ perform aggregation, similar to SQL aggregate functions.
 | `avg`       | Average of integer values                |
 | `min`       | Minimum value                            |
 | `max`       | Maximum value                            |
-| `first`     | First value in range                     |
-| `last`      | Last value in range                      |
 | `append`    | Concatenate bytes in order               |
 
 Aggregation queries always result in a single key-value.
