@@ -1029,6 +1029,75 @@ subset from the "people" directory.
 /people(2003,"Larry","Johnson",8,"N/A")=nil
 ```
 
+### Aggregation
+
+Foundation DB performs best when key-values are kept small.
+When [storing large blobs][], the data is usually split into
+10 kB chunks stored in the value. The respective key
+contains the byte offset of the chunk.
+
+[storing large blobs]: https://apple.github.io/foundationdb/blob.html
+
+```language-fql {.query}
+/blob(
+  "my file",    % The identifier of the blob.
+  <offset:int>, % The byte offset within the blob.
+)=<chunk:bytes> % A chunk of the blob.
+```
+
+```language-fql {.result}
+/blob("my file",0)=10e3_bytes
+/blob("my file",10000)=10e3_bytes
+/blob("my file",20000)=2.7e3_bytes
+```
+
+> Instead of printing the actual byte strings in these
+> results, only the byte lengths are printed. This is an
+> option provided by the CLI to lower result verbosity.
+
+This gets the job done, but it would be nice if the client
+could obtain the entire blob instead of having to append the
+chunks themselves. This can be done using aggregation
+queries.
+
+FQL provides a pseudo data type named `append` which performs
+the aggregation.
+
+```language-fql {.query}
+/blob("my file",...)=<blob:append>
+```
+
+```language-fql {.result}
+/blob("my file",...)=22.7e3_bytes
+```
+
+Aggregation queries always result in a single key-value.
+With non-aggregation queries, variables and the `...` token
+are resolved as actual data elements in the query results.
+For aggregation queries, only aggregation variables are
+resolved.
+
+A similar pseudo data type for summing integers is provided
+as well.
+
+```language-fql {.query}
+/deltas("group A",<int>)
+```
+
+```language-fql {.result}
+/deltas("group A",20)=nil
+/deltas("group A",-18)=nil
+/deltas("group A",3)=nil
+```
+
+```language-fql {.query}
+/deltas("group A",<sum>)
+```
+
+```language-fql {.result}
+/deltas("group A",5)=<>
+```
+
 # Grammar
 
 The complete FQL grammar is specified below using extended
