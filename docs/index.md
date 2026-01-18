@@ -410,6 +410,8 @@ line. They can be used to describe a tuple's elements.
 
 ## Options
 
+> ⚠️ Options are not implemented yet.
+
 Options modify the semantics of [data
 elements](#data-elements), [variables](#holes-schemas), and
 [queries](#query-types). They can instruct FQL to use
@@ -980,6 +982,8 @@ indirection queries.
 
 ### Indirection
 
+> ⚠️ Indirection is not implemented yet.
+
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
 
@@ -1038,6 +1042,8 @@ subset from the "people" directory.
 ```
 
 ### Aggregation
+
+> ⚠️ Aggregation is not implemented yet.
 
 Aggregation queries combine values from multiple key-values
 into a single result. FQL provides pseudo data types which
