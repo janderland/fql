@@ -314,6 +314,12 @@ a placeholder for any directory name.
 /root/<>/items
 ```
 
+```language-fql {.result}
+/root/good/items
+/root/bad/items
+/root/weird/items
+```
+
 ## Holes & Schemas
 
 Holes are a group of syntax constructs used to define
