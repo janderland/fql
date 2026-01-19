@@ -28,31 +28,34 @@ This document serves as both a language specification and
 a usage guide for FQL. The [Syntax](#syntax) section
 describes the structure of queries while the
 [Semantics](#semantics) section describes their behavior.
-The complete [EBNF grammar](#grammar) appears at the end.
+The [Implementations](#implementations) section highlights
+features which are not included in FQL but may be defined by
+a particular implementation. The complete [EBNF
+grammar](#grammar) appears at the end.
 
 Throughout the document, relevant grammar rules are shown
-alongside the features they define. Python code snippets
-demonstrate equivalent FoundationDB API calls.
+alongside the features they define. Python code snippets are
+also included demonstrating equivalent FoundationDB API
+calls.
 
 Grammar rules use extended Backus-Naur form as defined in
-ISO/IEC 14977, with two modifications: concatenation is
-implicit and rules terminate at newline.
+ISO/IEC 14977, with a modification: concatenation and rule
+termination are implicit.
 
-> Not all features described in this document have been
-> implemented yet. Callouts indicate features that are still
-> being worked on.
+> ❗ Not all features described in this document have been
+> implemented yet. Callouts like this one will mark features
+> that are still being worked on.
 
 # Syntax
 
 ## Overview
 
-FQL is specified as a context-free [grammar][]. The queries
-look like key-values encoded using the [directory][] and
-[tuple][] layers. To the left of the `=` is the key which
-includes a directory path and tuple. To the right is the
-value.
+FQL is specified as a context-free [grammar](#grammar). The
+queries look like key-values encoded using the [directory][]
+and [tuple][] layers. To the left of the `=` is the key
+which includes a directory path and tuple. To the right is
+the value.
 
-[grammar]: #grammar
 [directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
