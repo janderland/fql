@@ -67,11 +67,12 @@ key = directory tuple
 value = 'clear' | data
 ```
 
-> This grammar is simplified. [Options](#options) are
-> explained later.
+> The grammar above is slightly simplified.
+> [Options](#options) should be included in the `query`
+> rule, but will be saved till later for simplicity.
 
 A query may be a full key-value, just a key, or just
-a directory.
+a directory query.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -94,8 +95,8 @@ Variables act as placeholders for any of the supported [data
 elements](#data-elements). 
 
 FQL queries may also perform [range reads][] and filtering
-by including a variable in the key's tuple. The query below
-will return all key-values which conform to the schema
+by including on or more variables in the key. The query
+below will return all key-values which conform to the schema
 defined by the query.
 
 [range reads]: https://apple.github.io/foundationdb/developer-guide.html#range-reads
@@ -114,7 +115,7 @@ means the schema allows any [data element](#data-elements)
 at the variable's position.
 
 All key-values with a certain key prefix may be range read
-by ending the key's tuple with `...`.
+by ending the tuple with `...`.
 
 ```language-fql {.query}
 /my/directory("my","tuple",...)=<>
@@ -168,6 +169,15 @@ a directory path.
 
 ```language-fql {.result}
 /my/directory
+```
+
+Directories are not explicitly created. During a write
+query, the directory is created if it doesn't exist.
+Directories may be removed by suffixing the directory path
+with `=remove`.
+
+```language-fql {.query} 
+/my/dir=remove
 ```
 
 ## Data Elements
