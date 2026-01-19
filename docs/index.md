@@ -228,7 +228,8 @@ The `num` type may be instantiated as any real number which
 can be approximated by an [80-bit floating point][] value,
 in accordance with IEEE 754. The implementation determines
 the exact range of allowed values. Scientific notation may
-be used.
+be used. As expressed in the above specification, the type
+may be instantiated as `-inf`, `inf`, `-nan` or `nan`.
 
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
@@ -259,12 +260,12 @@ hex = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 
 The `tup` type may contain any of the data elements,
 including nested tuples. Elements are separated by commas
 and wrapped in parentheses. A trailing comma is allowed
-after the last element.
+after the last element. The last element may be the `...`
+token (see [holes](#holes-&-schemas)).
 
 ```language-ebnf {.grammar}
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
-elements = element [ ',' nl elements ]
-element = data | '...'
+elements = data [ ',' nl elements ] | '...'
 ```
 
 The `vstamp` type represents a FoundationDB [versionstamp][].
@@ -1219,8 +1220,7 @@ directory = '/' ( '<>' | name | string ) [ directory ]
 
 (* Tuples *)
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
-elements = element [ ',' nl elements ]
-element = data | '...'
+elements = data [ ',' nl elements ] | '...'
 
 (* Data elements *)
 data = 'nil' | bool | int | num | string | uuid
@@ -1234,7 +1234,7 @@ uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
 bytes = '0x' { hex hex }
 vstamp = '#' [ hex{20} ] ':' hex{4}
 
-(* Holes: '...' is a hole but defined in tuple to prevent use as value *)
+(* Holes: '...' is semantically a hole but defined in tuple to restrict it's usage *)
 hole = variable | reference
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 reference = ':' name
