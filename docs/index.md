@@ -327,12 +327,15 @@ a key-value schema by acting as placeholders for one or more
 data elements. There are three kinds of holes: variables,
 references, and the `...` token.
 
+> While the `...` token is semantically a hole, it is
+> defined as part of the tuple's rule to restrict it's
+> placement.
+
 ```language-ebnf {.grammar}
-hole = variable | reference | '...'
+hole = variable | reference
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 reference = ':' name
-type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
-     | 'str' | 'uuid' | 'bytes' | 'vstamp'
+type = 'any' | 'tuple' | 'bool' | 'int' | 'num' | 'str' | 'uuid' | 'bytes' | 'vstamp'
 ```
 
 Variables are used to represent a single [data
@@ -346,8 +349,8 @@ braces.
 
 The variable's type list describes which kinds of data
 elements are allowed at the variable's position. A variable
-may be empty, including no element types, meaning it
-represents all element types.
+may be empty, including no element types, meaning it allows
+any element type.
 
 ```language-fql {.query}
 /data(<int>,<str|int>,<>)=<>
@@ -366,7 +369,7 @@ may include a name. The reference is specified as
 a variable's name prefixed with a `:`.
 
 ```language-fql {.query}
-/index("cars",<varName:int>)
+/index("car IDs",<varName:int>)
 /data(:varName,...)
 ```
 
