@@ -420,7 +420,7 @@ its elements.
 ```
 
 Comments start with a `%` and continue until the end of the
-line. They can be used to describe a tuple's elements.
+line. They can be used to document a tuple's elements.
 
 ```language-fql
 % private account balances
@@ -442,7 +442,7 @@ alternative encodings, limit a query's result count, or
 change other behaviors.
 
 ```language-ebnf {.grammar}
-opts = '[' option { ',' option } ']'
+options = '[' option { ',' option } ']'
 option = name [ ':' argument ]
 argument = name | int | string
 ```
@@ -457,34 +457,18 @@ following options would be included after the element.
 ```
 
 Similarly, if a variable should only match against
-a big-endian 32-bit float then the following options would
+a big-endian 32-bit floats then the following options would
 be included after the `num` type.
 
 ```language-fql
 <num[f32,be]>
 ```
 
-By default, [variables](#holes-schemas) will decode any
-encoding for their types. Options may be applied to
-a variable's types to limit which encodings will match the
-schema.
-
-```language-fql {.query}
-/numbers("int")=<int>
-```
-
-If an element's value cannot be represented by the specified
-encoding then the query is invalid.
-
-```language-fql {.query}
-/numbers("int")=362342
-```
-
 ### Element Options
 
 The tables below show which options are supported for the
 `int` and `num` types when used as values. These options
-control how the data is serialized to bytes.
+control how the data is serialized and unserialized.
 
 <div>
 
@@ -526,19 +510,19 @@ would be included before the query.
 /my/integers(<int>)=nil
 ```
 
-Notice that the `limit` option includes an argument after
-the colon. Some options include a single argument to further
+Notice that the `limit` option includes a number after the
+colon. Some options include a single argument to further
 specify the option's behavior.
 
 <div>
 
 | Query Option | Argument | Description                        |
 |:-------------|:---------|:-----------------------------------|
-| `reverse`    | none     | Read range in reverse order        |
+| `reverse`    | none     | Range read in reverse order        |
 | `limit`      | int      | Maximum number of results          |
-| `mode`       | name     | want_all, iterator, exact, small, medium, large, serial |
+| `mode`       | name     | Range read mode: want_all, iterator, exact, small, medium, large, serial |
 | `snapshot`   | none     | Use snapshot read                  |
-| `strict`     | none     | Error on non-conformant key-values |
+| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
 
 </div>
 
