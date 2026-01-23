@@ -824,12 +824,7 @@ def filter_range(tr):
 
 ## Advanced Queries
 
-Besides basic CRUD operations, FQL is capable of performing
-indirection queries.
-
 ### Indirection
-
-> ⚠️ Indirection is not implemented yet.
 
 Indirection queries are similar to SQL joins. They associate
 different groups of key-values via some shared data element.
@@ -854,7 +849,7 @@ efficient, we can store an index for last names in
 a separate directory.
 
 ```language-fql {.query}
-/index/last_name(
+/people/last_name(
   <str>, % Last Name
   <int>, % ID
 )=nil
@@ -864,13 +859,13 @@ If we query the index, we can get the IDs of the records
 containing the last name "Johnson".
 
 ```language-fql {.query}
-/index/last_name("Johnson",<int>)
+/people/last_name("Johnson",<int>)
 ```
 
 ```language-fql {.result}
-/index/last_name("Johnson",23)=nil
-/index/last_name("Johnson",348)=nil
-/index/last_name("Johnson",2003)=nil
+/people/last_name("Johnson",23)=nil
+/people/last_name("Johnson",348)=nil
+/people/last_name("Johnson",2003)=nil
 ```
 
 FQL can forward the observed values of named variables from
@@ -878,7 +873,7 @@ one query to the next. We can use this to obtain our desired
 subset from the "people" directory.
 
 ```language-fql {.query}
-/index/last_name("Johnson",<id:int>)
+/people/last_name("Johnson",<id:int>)
 /people(:id,...)
 ```
 
@@ -887,6 +882,10 @@ subset from the "people" directory.
 /people(348,"Roger","Johnson",54,"Engineer")=nil
 /people(2003,"Larry","Johnson",8,"N/A")=nil
 ```
+
+Notice that the results of the first query are not returned.
+Instead, they are used to build a collection of single-KV
+read queries whose results are the ones returned.
 
 ### Aggregation
 
