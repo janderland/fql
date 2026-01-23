@@ -889,26 +889,29 @@ read queries whose results are the ones returned.
 
 ### Aggregation
 
-> ⚠️ Aggregation is not implemented yet.
-
 Aggregation queries combine values from multiple key-values
 into a single result. FQL provides pseudo data types which
-perform aggregation, similar to SQL aggregate functions.
+perform aggregation, similar to SQL's aggregate functions.
+
+<div>
 
 | Pseudo Type | Description                              |
 |:------------|:-----------------------------------------|
 | `count`     | Count the number of matching key-values  |
-| `sum`       | Sum integer values                       |
-| `avg`       | Average of integer values                |
-| `min`       | Minimum value                            |
-| `max`       | Maximum value                            |
-| `append`    | Concatenate bytes in order               |
+| `sum`       | Sum numeric values                       |
+| `avg`       | Average numeric values                   |
+| `min`       | Minimum numeric value                    |
+| `max`       | Maximum numeric value                    |
+| `append`    | Concatenate bytes                        |
 
-Aggregation queries always result in a single key-value.
-With non-aggregation queries, variables and the `...` token
-are resolved as actual data elements in the query results.
-For aggregation queries, only aggregation variables are
-resolved.
+</div>
+
+Aggregation queries always result in a single key-value. All
+of the data elements fed into the aggregation must be of the
+same type. With non-aggregation queries,
+[holes](#holes-&-schemas) are resolved to actual data
+elements in the query results. For aggregation queries, only
+aggregation variables are resolved.
 
 ```language-fql {.query}
 /deltas("group A",<int>)
@@ -943,14 +946,14 @@ offset of each chunk.
 ```
 
 ```language-fql {.result}
-/blob("my file",0)=10e3_bytes
-/blob("my file",10000)=10e3_bytes
-/blob("my file",20000)=2.7e3_bytes
+/blob("my file",0)=10kb
+/blob("my file",10000)=10kb
+/blob("my file",20000)=2.7kb
 ```
 
 > Instead of printing the actual byte strings in these
 > results, only the byte lengths are printed. See
-> [Formatting](#formatting) for more details.
+> [Formatting](#formatting) for more details on
 
 Using `append`, the client obtains the entire blob instead
 of having to concatenate the chunks themselves.
@@ -960,29 +963,31 @@ of having to concatenate the chunks themselves.
 ```
 
 ```language-fql {.result}
-/blob("my file",...)=22.7e3_bytes
+/blob("my file",...)=22.7kb
 ```
 
 # Implementations
 
-FQL defines the query language but leaves certain details
-to the implementation. These include connection configuration,
-write permissions, transaction boundaries, variable scope,
-and result formatting.
+FQL defines the query language but leaves many details to
+the implementation. This sections outlines some of those
+details and how an implementation may choose to provide
+them.
 
 ## Connection
 
 An implementation determines how users connect to a
 FoundationDB cluster. This may involve selecting from
-pre-defined cluster files or specifying a custom path.
+predefined cluster files or specifying a custom path.
 An implementation could even simulate an FDB cluster
 locally for testing purposes.
 
-## Writes
+## Permissions
 
 An implementation may disallow write queries unless a
 specific configuration option is enabled. This provides
-a safeguard against accidental mutations.
+a safeguard against accidental mutations. Implements could
+also limit access to certain directories or any other
+behavior for any reason.
 
 ## Transactions
 
@@ -1002,37 +1007,57 @@ The `--tx` flag represents a transaction boundary. The
 first two queries execute within the same transaction.
 The third query runs in its own transaction.
 
-## Variables
+## Variables & References
 
 An implementation defines the scope of named variables.
 Variables may be namespaced to a single transaction,
 available across multiple transactions, or persist for
 an entire session.
 
+Named variables could also be used to output specific values
+to other parts of the application. For instance, variables
+with the name `stdout` may write their values to the STDOUT
+stream of the process.
+
+```language-fql {.query}
+/mq("topic",<stdout:str>)
+```
+
+```language-bash {.result}
+topicA
+topicB
+topicC
+```
+
+Similarly, references could be used to inject values into
+a query from another part of the process.
+
+```language-fql {.query}
+% Write the string contents of STDIN into the DB.
+/mq("msg","topicB",:stdin)
+```
+
+## Extensions
+
+An implementation may provide custom options and types
+beyond those defined by FQL. For example, the pseudo type
+`json` could act as a restricted form of `str` which only
+matches valid JSON. A custom option `every:5` could filter
+results to return only every fifth key-value.
+
 ## Formatting
 
 An implementation can provide multiple formatting options
 for key-values returned by read queries. The default format
-prints key-values as their equivalent write queries. This
-means copy-pasting the result of a read would write all the
-key-values that were read.
-
+prints key-values as their equivalent write queries.
 Alternative formats may be provided for different use cases:
 
 - Print byte lengths instead of actual bytes to reduce
-  output verbosity for large values
+  output verbosity for large values.
 - Print placeholders (`<uuid>`, `<vstamp>`) in place of
-  actual values when the specific values are not relevant
+  actual values when the details are not relevant.
 - Output key-values in a binary format suitable for storage
-  on disk or transmission over a network
-
-## Extensions
-
-An implementation may provide custom options and pseudo
-tokens beyond those defined by FQL. For example, a predefined
-reference `:rand` could generate a random integer for each
-query. A custom option `pick:5` could filter results to
-return only every fifth key-value.
+  on disk or transmission over a network.
 
 # Grammar
 
