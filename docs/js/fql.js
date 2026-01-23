@@ -141,6 +141,7 @@
       'strict',
       'rand',
       'pick',
+      'kb',
     ].join(' '),
   };
 
