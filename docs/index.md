@@ -43,8 +43,10 @@ ISO/IEC 14977, with a modification: concatenation and rule
 termination are implicit.
 
 > ❗ Not all features described in this document have been
-> implemented yet. Callouts like this one will mark features
-> that are still being worked on.
+> implemented yet. See the project's [issues][] for
+> a roadmap of implemantation plans.
+
+[issues]: https://github.com/janderland/fql/issues
 
 # Syntax
 
