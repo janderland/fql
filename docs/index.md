@@ -669,6 +669,8 @@ def write_int(tr):
 
 If the value was encoded with non-default values, then the
 encoding must be specified in the variable when read.
+Otherwise, the default decoding will fail and it will be
+returned as raw bytes.
 
 ```language-fql {.query}
 /numbers/big("37")=<int[i16,be]>
@@ -693,164 +695,47 @@ def read_int(tr):
 
 ## Query Types
 
-FQL queries may mutate a single key-value, read one or more
-key-values, or list directories. Throughout this section,
-snippets of Python code are included which approximate how
-the queries interact with the FoundationDB API.
+FQL queries may write a single key-value, read/clear one or
+more key-values, or list/remove directories. Although all
+queries resemble key-values, their tokens imply one of the
+above operations.
 
-### Mutations
+### Reads & Writes
 
-Queries lacking [holes](#holes-schemas) perform mutations on
-the database by either writing or clearing a key-value.
+Queries lacking [holes](#holes-schemas) perform writes on
+the database. You can think of these queries as declaring
+the existence of a particular key-value. Most query results
+can be fed back into FQL as write queries. The exception to
+this rule are [aggregate queries](#aggregation) and results
+created by non-default [formatting](#formatting).
 
 > ❗ Queries lacking a value altogether imply an empty
 > [variable](#holes-schemas) as the value and should not be
-> confused with mutation queries.
-
-Mutation queries with a [data element](#data-elements) as
-their value perform a write operation.
-
-```language-fql {.query}
-/my/dir("hello","world")=42
-```
-
-```language-python {.equiv-py}
-@fdb.transactional
-def set_kv(tr):
-    dir = fdb.directory.create_or_open(tr, ('my', 'dir'))
-
-    # Pack value as tuple (default encoding)
-    val = fdb.tuple.pack((42,))
-
-    tr[dir.pack(('hello', 'world'))] = val
-```
-
-Mutation queries with the `clear` token as their value
-perform a clear operation.
-
-```language-fql {.query}
-/my/dir("hello","world")=clear
-```
-
-```language-python {.equiv-py}
-@fdb.transactional
-def clear_kv(tr):
-    dir = fdb.directory.open(tr, ('my', 'dir'))
-    if dir is None:
-        return
-
-    del tr[dir.pack(('hello', 'world'))]
-```
-
-Multiple key-values may be cleared by ending the key's tuple
-with `...`. This performs a range clear on all key-values
-matching the prefix.
-
-```language-fql {.query}
-/my/dir("hello",...)=clear
-```
-
-```language-python {.equiv-py}
-@fdb.transactional
-def clear_range(tr):
-    dir = fdb.directory.open(tr, ('my', 'dir'))
-    if dir is None:
-        return
-
-    prefix = dir.pack(('hello',))
-    del tr[prefix:fdb.strinc(prefix)]
-```
-
-### Reads
+> confused with write queries.
 
 Queries containing [holes](#holes-schemas) read one or more
-key-values. If the holes only appears in the value, then
+key-values. If the holes only appear in the value, then
 a single key-value is returned, if one matching the schema
 exists.
-
-> ❗ Queries lacking a value altogether imply an empty
-> [variable](#holes-schemas) as the value which makes them
-> read queries.
-
-```language-fql {.query}
-/my/dir(99.8,7dfb10d1-2493-4fb5-928e-889fdc6a7136)=<int|str>
-```
-
-```language-python {.equiv-py}
-import struct
-import uuid
-
-@fdb.transactional
-def read_single(tr):
-    dir = fdb.directory.open(tr, ('my', 'dir'))
-    if dir is None:
-        return None
-
-    # Read the value's raw bytes
-    key = dir.pack((99.8, uuid.UUID('7dfb10d1-2493-4fb5-928e-889fdc6a7136')))
-    val = tr[key]
-
-    # Try to decode the value as an int
-    if len(val) == 8:
-        return struct.unpack('<q', val)[0]
-
-    # If the value isn't an int, assume it's a string
-    return val.decode('utf-8')
-```
 
 FQL attempts to decode the value as each of the types listed
 in the variable, stopping at first success. If the value
 cannot be decoded, the key-value does not match the schema.
 
-If the value is specified as an empty variable, then the raw
-bytes are returned.
-
-```language-fql {.query}
-/some/data(10139)=<>
-```
-
-```language-python {.equiv-py}
-@fdb.transactional
-def read_raw(tr):
-    dir = fdb.directory.open(tr, ('some', 'data'))
-    if dir is None:
-        return None
-
-    # No value decoding...
-    return tr[dir.pack((10139,))]
-```
-
 Queries with [variables](#holes-schemas) in their key (and
 optionally in their value) result in a range of key-values
 being read.
 
-```language-fql {.query}
-/people("coders",...)
-```
+Whether reading single or many, when a key-value is
+encountered which doesn't match the query's schema it is
+filtered out of the results. Including the `strict` [query
+option](#query-options) causes the query to fail when
+encountering a non-conformant key-value.
 
-```language-python {.equiv-py}
-@fdb.transactional
-def read_range(tr):
-    dir = fdb.directory.open(tr, ('people',))
-    if dir is None:
-        return []
-
-    # Create a range for the prefix
-    prefix = dir.pack(('coders',))
-    range_result = tr[fdb.Range(prefix, fdb.strinc(prefix))]
-
-    results = []
-    for key, val in range_result:
-        tup = dir.unpack(key)
-        results.append((tup, val))
-
-    return results
-```
-
-By default, key-values within the range that don't match the
-query's schema are filtered from the results. Enabling the
-`strict` [query option](#query-options) causes the query to
-fail instead when encountering a non-conformant key-value.
+If a query has the token `clear` as it's value, it clears
+all the key matching the query's schema. Keys not matching
+the schema are ignored unless the `strict` option is
+present, resulting in the query failing.
 
 ### Directories
 
@@ -860,42 +745,9 @@ except when removing a directory. If the directory path
 contains no variables, the query will read that single
 directory.
 
-```language-fql {.query}
-/root/<>/items
-```
-
-```language-python {.equiv-py}
-@fdb.transactional
-def list_dirs(tr):
-    root = fdb.directory.open(tr, ('root',))
-    if root is None:
-        return []
-
-    # List the sub-directories
-    one_deep = root.list(tr)
-
-    results = []
-    for dir1 in one_deep:
-        # Check if 'items' exists under each sub-directory
-        items = root.open(tr, (dir1, 'items'))
-        if items is not None:
-            results.append(('root', dir1, 'items'))
-
-    return results
-```
-
 A directory can be removed by appending `=remove` to the
-directory query.
-
-```language-fql {.query}
-/root/old/data=remove
-```
-
-```language-python {.equiv-py}
-@fdb.transactional
-def remove_dir(tr):
-    fdb.directory.remove_if_exists(tr, ('root', 'old', 'data'))
-```
+directory query. If multiple directories match the schema,
+they will all be removed.
 
 ### Filtering
 
