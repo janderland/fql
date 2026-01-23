@@ -327,6 +327,8 @@ a key-value schema by acting as placeholders for one or more
 data elements. There are three kinds of holes: variables,
 references, and the `...` token.
 
+TODO: references are not holes.
+
 > While the `...` token is semantically a hole, it is
 > defined as part of the tuple's rule to restrict it's
 > placement.
@@ -751,27 +753,20 @@ they will all be removed.
 
 ### Filtering
 
-Read queries define a schema to which key-values may or
-may-not conform. In the Python snippets above, non-conformant
-key-values were being filtered out of the results.
-
-Alternatively, FQL can throw an error when encountering
-non-conformant key-values. This may help enforce the
-assumption that all key-values within a directory conform to
-a certain schema. See the `strict` [query option](#query-options).
-
-Because filtering is performed on the client side, range
-reads may stream a lot of data to the client while the
-client filters most of it away. For example, consider the
-following query:
+As stated above, read queries define a schema to which
+key-values may or may-not conform. Because filtering is
+performed on the client side, range reads may stream a lot
+of data to the client while filtering most of it away. For
+example, consider the following query:
 
 ```language-fql {.query}
 /people(3392,<str|int>,<>)=(<int>,...)
 ```
 
-In the key, the location of the first variable or `...`
-token determines the range read prefix used by FQL. For this
-particular query, the prefix would be as follows:
+In the key, the location of the first
+[hole](#holes-&-schemas) determines the range read prefix
+used by FQL. For this particular query, the prefix would be
+as follows:
 
 ```language-fql {.query}
 /people(3392)
@@ -779,9 +774,12 @@ particular query, the prefix would be as follows:
 
 FoundationDB will stream all key-values with this prefix to
 the client. As they are received, the client will filter out
-key-values which don't match the query's schema. Below you
-can see a Python implementation of how this filtering would
-work.
+key-values which don't match the query's schema. This may be
+most of the data. Ideally, filter queries are only used on
+small amounts of data to limit wasted bandwidth.
+
+Below you can see a Python implementation of how this
+filtering would work.
 
 ```language-python
 @fdb.transactional
@@ -823,16 +821,6 @@ def filter_range(tr):
 
     return results
 ```
-
-Filtering can also be combined with clearing. A filter clear
-operation clears only the key-values that match the schema.
-
-```language-fql {.query}
-/people(3392,<str>,<>)=clear
-```
-
-This query clears all key-values under `/people` with prefix
-`(3392)` where the second element is a string.
 
 ## Advanced Queries
 
