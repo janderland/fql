@@ -5,7 +5,7 @@ set -euo pipefail
 cd "${0%/*}/.."
 
 pandoc \
-  --no-highlight --toc \
+  --syntax-highlighting=none --toc \
   --template ./docs/index.tmpl \
   --output ./docs/index.html \
   ./docs/index.md

@@ -28,6 +28,27 @@
     },
   };
 
+  const BLEN = {
+    begin: [
+      /-?/,
+      /\d+/,
+      /\.?/,
+      /\d*/,
+      /e?/,
+      /\d*/,
+      /kb/,
+    ],
+    beginScope: {
+      1: 'accent',
+      2: 'number',
+      3: 'accent',
+      4: 'number',
+      5: 'accent',
+      6: 'number',
+      7: 'accent',
+    },
+  };
+
   const BYTES = {
     begin: [
       /0/,
@@ -252,6 +273,7 @@
       UUID,
       VSTAMP,
       BYTES,
+      BLEN,
       NUMBER,
       OPTIONS,
     ],
@@ -270,6 +292,7 @@
       UUID,
       VSTAMP,
       BYTES,
+      BLEN,
       NUMBER,
       OPTIONS,
     ],
@@ -297,6 +320,7 @@
       UUID,
       VSTAMP,
       BYTES,
+      BLEN,
       NUMBER,
       OPTIONS,
       { // Highlight lone bar & semicolon for inline text.
