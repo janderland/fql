@@ -16,7 +16,20 @@
   <script src="js/python.js"></script>
 </head>
 <body>
-  <h1>$title$</h1>
+  <div class="header-container">
+    <h1>$title$</h1>
+    <div class="header-icons">
+      <a href="https://github.com/janderland/fql" target="_blank" title="View on GitHub">
+        <img class="icon" src="img/github.svg" alt="GitHub" />
+      </a>
+      <a href="https://www.foundationdb.org/" target="_blank" title="FoundationDB">
+        <img class="icon fdb" src="img/fdb.svg" alt="FoundationDB" />
+      </a>
+      <a href="https://jander.land/" target="_blank" title="jander.land">
+        <img class="icon janderland" src="img/jander.svg" alt="jander.land" />
+      </a>
+    </div>
+  </div>
   $for(include-before)$
   $include-before$
   $endfor$
