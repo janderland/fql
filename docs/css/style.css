@@ -51,9 +51,48 @@ p {
 
 /* Headers */
 
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.header-icons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.header-icons a {
+  display: flex;
+  align-items: center;
+  transition: opacity 0.2s;
+}
+
+.header-icons a:hover {
+  opacity: 0.7;
+}
+
+.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: var(--color5);
+}
+
+.icon.fdb {
+  fill: none;
+  width: auto;
+}
+
+.icon.janderland {
+  fill: none;
+}
+
 h1 {
   font-size: 2.5rem;
   line-height: 1.25;
+  margin: 0;
 }
 
 h2 {
