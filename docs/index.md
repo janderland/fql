@@ -42,7 +42,7 @@ Grammar rules use extended Backus-Naur form as defined in
 ISO/IEC 14977, with a modification: concatenation and rule
 termination are implicit.
 
-> ❗ Not all features described in this document have been
+> Not all features described in this document have been
 > implemented yet. See the project's [issues][] for
 > a roadmap of implemantation plans.
 
@@ -263,7 +263,7 @@ The `tup` type may contain any of the data elements,
 including nested tuples. Elements are separated by commas
 and wrapped in parentheses. A trailing comma is allowed
 after the last element. The last element may be the `...`
-token (see [holes](#holes-&-schemas)).
+token (see [holes](#holes-references)).
 
 ```language-ebnf {.grammar}
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
@@ -322,23 +322,14 @@ a placeholder for any directory name.
 /root/weird/items
 ```
 
-## Holes & Schemas
+## Holes & References
 
 Holes are a group of syntax constructs used to define
 a key-value schema by acting as placeholders for one or more
-data elements. There are three kinds of holes: variables,
-references, and the `...` token.
-
-TODO: references are not holes.
-
-> While the `...` token is semantically a hole, it is
-> defined as part of the tuple's rule to restrict it's
-> placement.
+data elements. Holes include: variables and the `...` token.
 
 ```language-ebnf {.grammar}
-hole = variable | reference
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-reference = ':' name
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num' | 'str' | 'uuid' | 'bytes' | 'vstamp'
 ```
 
@@ -366,6 +357,19 @@ any element type.
 /data(21,"",nil)=nil
 ```
 
+The `...` token represents any number of data elements of
+any type. It is only allowed as the last element of a tuple.
+
+```language-fql {.query}
+/tuples(0x00,...)
+```
+
+```language-fql {.result}
+/tuples(0x00)=nil
+/tuples(0x00,"something")=nil
+/tuples(0x00,42,43,44)=0xabcf
+```
+
 References allow two queries to be connected via
 a variable's name, allowing for [index
 indirection](#indirection). Before the type list, a variable
@@ -373,8 +377,8 @@ may include a name. The reference is specified as
 a variable's name prefixed with a `:`.
 
 ```language-fql {.query}
-/index("car IDs",<varName:int>)
-/data(:varName,...)
+/index("car makes",<makeID:int>)
+/data(:makeID,...)
 ```
 
 ```language-fql {.result}
@@ -387,7 +391,7 @@ Named variables must include at least one type. To allow
 named variables to match any element type, use the `any`
 type.
 
-```language-fql
+```language-fql {.query}
 /stuff(<thing:any>)
 ```
 
@@ -395,19 +399,6 @@ type.
 /stuff("cat")
 /stuff(42)
 /stuff(0x5fae)
-```
-
-The `...` token represents any number of data elements of
-any type. It is only allowed as the last element of a tuple.
-
-```language-fql
-/tuples(0x00,...)
-```
-
-```language-fql {.result}
-/tuples(0x00)=nil
-/tuples(0x00,"something")=nil
-/tuples(0x00,42,43,44)=0xabcf
 ```
 
 ## Space & Comments
@@ -437,10 +428,8 @@ line. They can be used to document a tuple's elements.
 
 ## Options
 
-> ⚠️ Options are not implemented yet.
-
 Options modify the semantics of [data
-elements](#data-elements), [variables](#holes-schemas), and
+elements](#data-elements), [variables](#holes-references), and
 [queries](#query-types). They can instruct FQL to use
 alternative encodings, limit a query's result count, or
 change other behaviors.
@@ -706,18 +695,18 @@ above operations.
 
 ### Reads & Writes
 
-Queries lacking [holes](#holes-schemas) perform writes on
+Queries lacking [holes](#holes-references) perform writes on
 the database. You can think of these queries as declaring
 the existence of a particular key-value. Most query results
 can be fed back into FQL as write queries. The exception to
 this rule are [aggregate queries](#aggregation) and results
 created by non-default [formatting](#formatting).
 
-> ❗ Queries lacking a value altogether imply an empty
-> [variable](#holes-schemas) as the value and should not be
+> Queries lacking a value altogether imply an empty
+> [variable](#holes-references) as the value and should not be
 > confused with write queries.
 
-Queries containing [holes](#holes-schemas) read one or more
+Queries containing [holes](#holes-references) read one or more
 key-values. If the holes only appear in the value, then
 a single key-value is returned, if one matching the schema
 exists.
@@ -726,7 +715,7 @@ FQL attempts to decode the value as each of the types listed
 in the variable, stopping at first success. If the value
 cannot be decoded, the key-value does not match the schema.
 
-Queries with [variables](#holes-schemas) in their key (and
+Queries with [variables](#holes-references) in their key (and
 optionally in their value) result in a range of key-values
 being read.
 
@@ -766,7 +755,7 @@ example, consider the following query:
 ```
 
 In the key, the location of the first
-[hole](#holes-&-schemas) determines the range read prefix
+[hole](#holes-references) determines the range read prefix
 used by FQL. For this particular query, the prefix would be
 as follows:
 
@@ -911,7 +900,7 @@ perform aggregation, similar to SQL's aggregate functions.
 Aggregation queries always result in a single key-value. All
 of the data elements fed into the aggregation must be of the
 same type. With non-aggregation queries,
-[holes](#holes-&-schemas) are resolved to actual data
+[holes](#holes-references) are resolved to actual data
 elements in the query results. For aggregation queries, only
 aggregation variables are resolved.
 
@@ -954,8 +943,9 @@ offset of each chunk.
 ```
 
 > Instead of printing the actual byte strings in these
-> results, only the byte lengths are printed. See
-> [Formatting](#formatting) for more details on
+> results, only the byte lengths are printed. This is not
+> a standard feature of FQL. See [Formatting](#formatting)
+> for more details on this may be implemented.
 
 Using `append`, the client obtains the entire blob instead
 of having to concatenate the chunks themselves.
@@ -1067,7 +1057,7 @@ The complete FQL grammar is specified below.
 
 ```language-ebnf {.grammar}
 (* Top-level query structure *)
-query = [ opts nl ] ( keyval | key | dquery )
+query = [ opts '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 
 keyval = key '=' value
@@ -1079,22 +1069,21 @@ directory = '/' ( '<>' | name | string ) [ directory ]
 
 (* Tuples *)
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
-elements = data [ ',' nl elements ] | '...'
+elements = '...' | data [ ',' nl elements ]
 
 (* Data elements *)
 data = 'nil' | bool | int | num | string | uuid
-     | bytes | tuple | vstamp | hole
+     | bytes | tuple | vstamp | variable | reference
 
 bool = 'true' | 'false'
 int = [ '-' ] digits
 num = int '.' digits | ( int | int '.' digits ) 'e' int
-string = '"' { char | '\"' } '"'
+string = '"' { char | '\"' | '\\' } '"'
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
-bytes = '0x' { hex hex }
+bytes = '0x' { hex{2} }
 vstamp = '#' [ hex{20} ] ':' hex{4}
 
-(* Holes: '...' is semantically a hole but defined in tuple to restrict it's usage *)
-hole = variable | reference
+(* Variables and References *)
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 reference = ':' name
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
@@ -1108,12 +1097,14 @@ argument = name | int | string
 
 (* Primitives *)
 digits = digit { digit }
-digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
-hex = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
+digit = '0' | '1' | '2' | '3' | '4'
+      | '5' | '6' | '7' | '8' | '9'
+hex = digit
+    | 'a' | 'b' | 'c' | 'd' | 'e' | 'f'
     | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 name = ( letter | '_' ) { letter | digit | '_' | '-' | '.' }
 letter = 'a' | ... | 'z' | 'A' | ... | 'Z'
-char = ? Any printable ASCII character except '"' ?
+char = ? Any printable UTF-8 character except '"' and '\' ?
 
 (* Whitespace *)
 ws = { ' ' | '\t' }
