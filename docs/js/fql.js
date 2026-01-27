@@ -17,26 +17,7 @@
       /\d*/,
       /e?/,
       /\d*/,
-    ],
-    beginScope: {
-      1: 'accent',
-      2: 'number',
-      3: 'accent',
-      4: 'number',
-      5: 'accent',
-      6: 'number',
-    },
-  };
-
-  const BLEN = {
-    begin: [
-      /-?/,
-      /\d+/,
-      /\.?/,
-      /\d*/,
-      /e?/,
-      /\d*/,
-      /kb/,
+      /(kb|mb|gb)?/, // allow a byte-unit to appear after numbers.
     ],
     beginScope: {
       1: 'accent',
@@ -143,7 +124,6 @@
       'max',
       'count',
       'be',
-      'le',
       'i8',
       'i16',
       'i32',
@@ -155,9 +135,19 @@
       'f32',
       'f64',
       'f80',
+      'bigendian',
+      'width',
+      'unsigned',
       'reverse',
       'limit',
       'mode',
+      'want_all',
+      'iterator',
+      'exact',
+      'small',
+      'medium',
+      'large',
+      'serial',
       'snapshot',
       'strict',
       'rand',
@@ -173,7 +163,6 @@
       $$pattern: /[^,:]+/,
       keyword: [
         'be',
-        'le',
         'i8',
         'i16',
         'i32',
@@ -185,6 +174,9 @@
         'f32',
         'f64',
         'f80',
+        'endian',
+        'width',
+        'unsigned',
         'reverse',
         'limit',
         'mode',
@@ -205,6 +197,14 @@
         },
       },
     ],
+  };
+
+  const INLINEOPT = {
+    scope: 'options',
+    begin: /(?=\b(?:width|unsigned)\b)/,
+    end: /(?=\s|$)/,
+    keywords: OPTIONS.keywords,
+    contains: OPTIONS.contains,
   };
 
   const VARIABLE = {
@@ -273,7 +273,6 @@
       UUID,
       VSTAMP,
       BYTES,
-      BLEN,
       NUMBER,
       OPTIONS,
     ],
@@ -292,7 +291,6 @@
       UUID,
       VSTAMP,
       BYTES,
-      BLEN,
       NUMBER,
       OPTIONS,
     ],
@@ -315,12 +313,12 @@
       VALUE,
       VARIABLE,
       MAYBEMORE,
+      INLINEOPT,
       KEYWORD,
       STRING,
       UUID,
       VSTAMP,
       BYTES,
-      BLEN,
       NUMBER,
       OPTIONS,
       { // Highlight lone bar & semicolon for inline text.

@@ -446,52 +446,65 @@ encoded as a little-endian unsigned 8-bit integer, the
 following options would be included after the element.
 
 ```language-fql
-3548[u8,le]
+3548[u8]
 ```
 
 Similarly, if a variable should only match against
-a big-endian 32-bit floats then the following options would
-be included after the `num` type.
+big-endian 32-bit floats then the following options would be
+included after the `num` type.
 
 ```language-fql
 <num[f32,be]>
 ```
 
-### Element Options
+### Value Encoding
 
-The tables below show which options are supported for the
-`int` and `num` types when used as values. These options
-control how the data is serialized and unserialized.
+The table below shows options for the `int` and `num` types.
+These options control how data is [encoded](#data-encoding)
+as a value.
 
 <div>
 
-| Int Option | Description     |
-|:-----------|:----------------|
-| `be`       | Big endian      |
-| `le`       | Little endian   |
-| `u8`       | Unsigned 8-bit  |
-| `u16`      | Unsigned 16-bit |
-| `u32`      | Unsigned 32-bit |
-| `u64`      | Unsigned 64-bit |
-| `i8`       | Signed 8-bit    |
-| `i16`      | Signed 16-bit   |
-| `i32`      | Signed 32-bit   |
-| `i64`      | Signed 64-bit   |
+| Value Option | Argument | Description                            |
+|:-------------|:---------|:---------------------------------------|
+| `width`      | `int`    | Bit width: `8`, `16`, `32`, `64`, `80` |
+| `bigendian`  | none     | Use big endian encoding                |
+| `unsigned`   | none     | Use unsigned encoding                  |
 
 </div>
+
+Options are one of the more verbose parts of FQL. To avoid
+obscuring the structure of a query, `int` and `num` options
+are given shorter aliases.
+
 <div>
 
-| Num Option | Description   |
-|:-----------|:--------------|
-| `be`       | Big endian    |
-| `le`       | Little endian |
-| `f32`      | 32-bit        |
-| `f64`      | 64-bit        |
-| `f80`      | 80-bit        |
+| Int Alias Option   | Actual Option       |
+|:-------------------|:--------------------|
+| `be`               | `bigendian`         |
+| `i8`               | `width:8`           |
+| `i16`              | `width:16`          |
+| `i32`              | `width:32`          |
+| `i64`              | `width:64`          |
+| `u8`               | `unsigned,width:8`  |
+| `u16`              | `unsigned,width:16` |
+| `u32`              | `unsigned,width:32` |
+| `u64`              | `unsigned,width:64` |
 
 </div>
 
-### Query Options
+<div>
+
+| Num Alias Option   | Actual Option       |
+|:-------------------|:--------------------|
+| `be`               | `bigendian`         |
+| `f32`              | `width:32`          |
+| `f64`              | `width:64`          |
+| `f80`              | `width:80`          |
+
+</div>
+
+### Queries
 
 Query options are specified on the line before the query.
 For instance, to specify that a range-read query should read
@@ -509,12 +522,12 @@ specify the option's behavior.
 
 <div>
 
-| Query Option | Argument | Description                        |
-|:-------------|:---------|:-----------------------------------|
-| `reverse`    | none     | Range read in reverse order        |
-| `limit`      | int      | Maximum number of results          |
-| `mode`       | name     | Range read mode: want_all, iterator, exact, small, medium, large, serial |
-| `snapshot`   | none     | Use snapshot read                  |
+| Query Option | Argument | Description                              |
+|:-------------|:---------|:-----------------------------------------|
+| `reverse`    | none     | Range read in reverse order              |
+| `limit`      | `int`    | Maximum number of results                |
+| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
+| `snapshot`   | none     | Use snapshot read                        |
 | `strict`     | none     | Error when a read key-values doesn't conform to the schema |
 
 </div>
