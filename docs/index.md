@@ -62,19 +62,17 @@ the value.
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```language-ebnf {.grammar}
-query = keyval | key | dquery
+query = [ opts '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
 value = 'clear' | data
 ```
 
-> The grammar above is slightly simplified.
-> [Options](#options) should be included in the `query`
-> rule, but will be saved till later for simplicity.
-
-A query may be a full key-value, just a key, or just
-a directory query.
+For now, the `opts`{.hljs-variable} prefixing the query can
+be ignored. [Options](#options) will be described later in
+the document. A query may be a full key-value, just a key,
+or a directory query.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
