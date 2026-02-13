@@ -173,13 +173,13 @@ pre {
   }
 }
 
-pre.query, pre.grammar, pre.equiv-py {
+pre.query, pre.grammar {
   code {
     padding: 1.5rem 1rem 0.5rem 1rem;
   }
 }
 
-pre.result {
+pre.result, pre.equiv-py {
   z-index: 0;
 
   > ::before {
