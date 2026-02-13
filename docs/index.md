@@ -42,7 +42,7 @@ Grammar rules use extended Backus-Naur form as defined in
 ISO/IEC 14977, with a modification: concatenation and rule
 termination are implicit.
 
-> Not all features described in this document have been
+> ❗Not all features described in this document have been
 > implemented yet. See the project's [issues][] for
 > a roadmap of implemantation plans.
 
@@ -62,19 +62,17 @@ the value.
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```language-ebnf {.grammar}
-query = keyval | key | dquery
+query = [ opts '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
 value = 'clear' | data
 ```
 
-> The grammar above is slightly simplified.
-> [Options](#options) should be included in the `query`
-> rule, but will be saved till later for simplicity.
-
-A query may be a full key-value, just a key, or just
-a directory query.
+For now, the `opts`{.hljs-variable} prefixing the query can
+be ignored. [Options](#options) will be described later in
+the document. A query may be a full key-value, just a key,
+or a directory query.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -376,6 +374,10 @@ indirection](#indirection). Before the type list, a variable
 may include a name. The reference is specified as
 a variable's name prefixed with a `:`.
 
+```language-ebnf {.grammar}
+reference = ':' name [ '!' type ]
+```
+
 ```language-fql {.query}
 /index("car makes",<makeID:int>)
 /data(:makeID,...)
@@ -400,6 +402,50 @@ type.
 /stuff(42)
 /stuff(0x5fae)
 ```
+
+References may include a type cast by appending `!` followed
+by a type name. This converts the referenced value to the
+specified type.
+
+```language-fql
+:value!str
+```
+
+The example above typecasts the value of `:value` to type
+`str`. Type casting is useful when a variable's type differs
+from how it needs to be used in a subsequent query.
+
+```language-fql {.query}
+/ids(<id:int>)
+/data(:id!str,...)
+```
+
+In the example above, the `<id:int>` variable is defined as
+an `int` but is cast to `str` when used as a reference.
+
+<div>
+
+| From     | To        | Description                                    |
+|:---------|:----------|:-----------------------------------------------|
+| `int`    | `num`     | Convert integer to floating point              |
+| `int`    | `str`     | Convert integer to string representation       |
+| `num`    | `int`     | Truncate floating point to integer             |
+| `num`    | `str`     | Convert number to string representation        |
+| `bool`   | `str`     | Convert boolean to "true" or "false" string    |
+| `str`    | `int`     | Parse string as integer                        |
+| `str`    | `num`     | Parse string as floating point                 |
+| `str`    | `bool`    | Parse string as boolean                        |
+| `str`    | `bytes`   | Encode string as UTF-8 bytes                   |
+| `bytes`  | `str`     | Decode UTF-8 bytes as string                   |
+| `bytes`  | `uuid`    | Convert 16-byte string to UUID                 |
+| `uuid`   | `bytes`   | Convert UUID to 16-byte string                 |
+| `bytes`  | `vstamp`  | Convert 12-byte string to versionstamp         |
+| `vstamp` | `bytes`   | Convert versionstamp to 12-byte string         |
+
+</div>
+
+Type casts that fail at runtime (e.g., parsing a non-numeric
+string as `int`) will cause the query to error.
 
 ## Space & Comments
 
@@ -715,9 +761,9 @@ can be fed back into FQL as write queries. The exception to
 this rule are [aggregate queries](#aggregation) and results
 created by non-default [formatting](#formatting).
 
-> Queries lacking a value altogether imply an empty
-> [variable](#holes-references) as the value and should not be
-> confused with write queries.
+> ❗Queries lacking a value altogether imply an empty
+> [variable](#holes-references) as the value and should not
+> be confused with write queries.
 
 Queries containing [holes](#holes-references) read one or more
 key-values. If the holes only appear in the value, then
@@ -955,7 +1001,7 @@ offset of each chunk.
 /blob("my file",20000)=2.7kb
 ```
 
-> Instead of printing the actual byte strings in these
+> ❗Instead of printing the actual byte strings in these
 > results, only the byte lengths are printed. This is not
 > a standard feature of FQL. See [Formatting](#formatting)
 > for more details on this may be implemented.
@@ -1098,7 +1144,7 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 
 (* Variables and References *)
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-reference = ':' name
+reference = ':' name [ '!' type ]
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
      | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'

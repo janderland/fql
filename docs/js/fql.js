@@ -207,10 +207,22 @@
     contains: OPTIONS.contains,
   };
 
+  const VAR_NAME = {
+    begin: [
+      /[\w\.]+/,
+      /:/,
+    ],
+    beginScope: {
+      1: 'number',
+      2: 'variable',
+    },
+  };
+
   const VARIABLE = {
-    scope: 'variable',
     begin: /</,
+    beginScope: 'variable',
     end: />/,
+    endScope: 'variable',
     keywords: {
       $$pattern: /[^:|]+/,
       keyword: [
@@ -233,13 +245,36 @@
       ],
     },
     contains: [
+      VAR_NAME,
       OPTIONS,
+      {
+        scope: 'variable',
+        begin: /\|/,
+      },
     ],
   };
 
+  const REF_TYPE = {
+    begin: [
+      /!/,
+      /\w+/,
+    ],
+    beginScope: {
+      1: 'reference',
+      2: 'keyword',
+    },
+  };
+
   const REFERENCE = {
-    scope: 'reference',
-    begin: /:[\w\.]+/,
+    begin: [
+      /:/,
+      /[\w\.]+/,
+    ],
+    beginScope: {
+      1: 'reference',
+      2: 'number',
+    },
+    contains: [REF_TYPE],
   };
 
   const MAYBEMORE = {
@@ -312,6 +347,7 @@
       TUPLE,
       VALUE,
       VARIABLE,
+      REFERENCE,
       MAYBEMORE,
       INLINEOPT,
       KEYWORD,
@@ -321,9 +357,9 @@
       BYTES,
       NUMBER,
       OPTIONS,
-      { // Highlight lone bar & semicolon for inline text.
+      { // Highlight lone bar for inline text.
         scope: 'variable',
-        begin: /\||:/,
+        begin: /\|/,
       },
     ],
   }));
