@@ -939,9 +939,80 @@ read queries whose results are the ones returned.
 
 ### Aggregation
 
-Aggregation queries combine values from multiple key-values
-into a single result. FQL provides pseudo data types which
-perform aggregation, similar to SQL's aggregate functions.
+Aggregation queries combine multiple key-values into
+a single key-value. FQL provides pseudo data types for
+performing aggregation, similar to SQL's [aggregate
+functions].
+
+[aggregate functions]: https://en.wikipedia.org/wiki/Aggregate_function
+
+Suppose we are storing value deltas. If we range-read the
+keyspace we end up with a list of integer values.
+
+```language-fql {.query}
+/deltas("group A",<int>)
+```
+
+```language-fql {.result}
+/deltas("group A",20)=nil
+/deltas("group A",-18)=nil
+/deltas("group A",3)=nil
+```
+
+Instead, we can use the pseudo type `sum` in our variable to
+automatically sum up the deltas into the actual value.
+
+```language-fql {.query}
+/deltas("group A",<sum>)
+```
+
+```language-fql {.result}
+/deltas("group A",5)=nil
+```
+
+Aggregation queries are also useful when [reading large
+blobs][]. The data is usually split into chunks stored in
+separate key-values. The respective keys contain the byte
+offset of each chunk.
+
+[reading large blobs]: https://apple.github.io/foundationdb/blob.html
+
+```language-fql {.query}
+/blob(
+  "my_file.bin",    % The identifier of the blob.
+  <offset:int>, % The byte offset within the blob.
+)=<chunk:bytes> % A chunk of the blob.
+```
+
+```language-fql {.result}
+/blob("my_file.bin",0)=10kb
+/blob("my_file.bin",10000)=10kb
+/blob("my_file.bin",20000)=2.7kb
+```
+
+> ❗Instead of printing the actual byte strings in these
+> results, only the byte lengths are printed. This is
+> a possible feature of an FQL implementation. See
+> [Formatting](#formatting) for more details.
+
+Using `append`, the client obtains the entire blob instead
+of having to concatenate the chunks themselves.
+
+```language-fql {.query}
+/blob("my_file.bin",...)=<blob:append>
+```
+
+```language-fql {.result}
+/blob("my_file.bin",...)=22.7kb
+```
+
+With non-aggregation queries, [holes](#holes-references) are
+resolved to actual data elements in the results. For
+aggregation queries, only aggregation variables are
+resolved, leaving the `...` token in the resulting
+key-value.
+
+The table below lists the available aggregation types.
 
 <div>
 
@@ -955,67 +1026,6 @@ perform aggregation, similar to SQL's aggregate functions.
 | `append`    | Concatenate bytes                        |
 
 </div>
-
-Aggregation queries always result in a single key-value. All
-of the data elements fed into the aggregation must be of the
-same type. With non-aggregation queries,
-[holes](#holes-references) are resolved to actual data
-elements in the query results. For aggregation queries, only
-aggregation variables are resolved.
-
-```language-fql {.query}
-/deltas("group A",<int>)
-```
-
-```language-fql {.result}
-/deltas("group A",20)=nil
-/deltas("group A",-18)=nil
-/deltas("group A",3)=nil
-```
-
-```language-fql {.query}
-/deltas("group A",<sum>)
-```
-
-```language-fql {.result}
-/deltas("group A",5)=nil
-```
-
-The `append` pseudo type is useful when [storing large
-blobs][]. The data is usually split into chunks stored in
-separate key-values. The respective keys contain the byte
-offset of each chunk.
-
-[storing large blobs]: https://apple.github.io/foundationdb/blob.html
-
-```language-fql {.query}
-/blob(
-  "my file",    % The identifier of the blob.
-  <offset:int>, % The byte offset within the blob.
-)=<chunk:bytes> % A chunk of the blob.
-```
-
-```language-fql {.result}
-/blob("my file",0)=10kb
-/blob("my file",10000)=10kb
-/blob("my file",20000)=2.7kb
-```
-
-> ❗Instead of printing the actual byte strings in these
-> results, only the byte lengths are printed. This is not
-> a standard feature of FQL. See [Formatting](#formatting)
-> for more details on this may be implemented.
-
-Using `append`, the client obtains the entire blob instead
-of having to concatenate the chunks themselves.
-
-```language-fql {.query}
-/blob("my file",...)=<blob:append>
-```
-
-```language-fql {.result}
-/blob("my file",...)=22.7kb
-```
 
 # Implementations
 
