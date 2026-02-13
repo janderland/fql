@@ -376,6 +376,10 @@ indirection](#indirection). Before the type list, a variable
 may include a name. The reference is specified as
 a variable's name prefixed with a `:`.
 
+```language-ebnf {.grammar}
+reference = ':' name [ '!' type ]
+```
+
 ```language-fql {.query}
 /index("car makes",<makeID:int>)
 /data(:makeID,...)
@@ -400,6 +404,50 @@ type.
 /stuff(42)
 /stuff(0x5fae)
 ```
+
+References may include a type cast by appending `!` followed
+by a type name. This converts the referenced value to the
+specified type.
+
+```language-fql
+:value!str
+```
+
+The example above typecasts the value of `:value` to type
+`str`. Type casting is useful when a variable's type differs
+from how it needs to be used in a subsequent query.
+
+```language-fql {.query}
+/ids(<id:int>)
+/data(:id!str,...)
+```
+
+In the example above, the `<id:int>` variable is defined as
+an `int` but is cast to `str` when used as a reference.
+
+<div>
+
+| From     | To        | Description                                    |
+|:---------|:----------|:-----------------------------------------------|
+| `int`    | `num`     | Convert integer to floating point              |
+| `int`    | `str`     | Convert integer to string representation       |
+| `num`    | `int`     | Truncate floating point to integer             |
+| `num`    | `str`     | Convert number to string representation        |
+| `bool`   | `str`     | Convert boolean to "true" or "false" string    |
+| `str`    | `int`     | Parse string as integer                        |
+| `str`    | `num`     | Parse string as floating point                 |
+| `str`    | `bool`    | Parse string as boolean                        |
+| `str`    | `bytes`   | Encode string as UTF-8 bytes                   |
+| `bytes`  | `str`     | Decode UTF-8 bytes as string                   |
+| `bytes`  | `uuid`    | Convert 16-byte string to UUID                 |
+| `uuid`   | `bytes`   | Convert UUID to 16-byte string                 |
+| `bytes`  | `vstamp`  | Convert 12-byte string to versionstamp         |
+| `vstamp` | `bytes`   | Convert versionstamp to 12-byte string         |
+
+</div>
+
+Type casts that fail at runtime (e.g., parsing a non-numeric
+string as `int`) will cause the query to error.
 
 ## Space & Comments
 
@@ -1098,7 +1146,7 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 
 (* Variables and References *)
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-reference = ':' name
+reference = ':' name [ '!' type ]
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
      | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
