@@ -42,7 +42,7 @@ Grammar rules use extended Backus-Naur form as defined in
 ISO/IEC 14977, with a modification: concatenation and rule
 termination are implicit.
 
-> Not all features described in this document have been
+> ❗Not all features described in this document have been
 > implemented yet. See the project's [issues][] for
 > a roadmap of implemantation plans.
 
@@ -761,9 +761,9 @@ can be fed back into FQL as write queries. The exception to
 this rule are [aggregate queries](#aggregation) and results
 created by non-default [formatting](#formatting).
 
-> Queries lacking a value altogether imply an empty
-> [variable](#holes-references) as the value and should not be
-> confused with write queries.
+> ❗Queries lacking a value altogether imply an empty
+> [variable](#holes-references) as the value and should not
+> be confused with write queries.
 
 Queries containing [holes](#holes-references) read one or more
 key-values. If the holes only appear in the value, then
@@ -1001,7 +1001,7 @@ offset of each chunk.
 /blob("my file",20000)=2.7kb
 ```
 
-> Instead of printing the actual byte strings in these
+> ❗Instead of printing the actual byte strings in these
 > results, only the byte lengths are printed. This is not
 > a standard feature of FQL. See [Formatting](#formatting)
 > for more details on this may be implemented.
