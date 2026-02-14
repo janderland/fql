@@ -1016,16 +1016,33 @@ The table below lists the available aggregation types.
 
 <div>
 
-| Pseudo Type | Description                              |
-|:------------|:-----------------------------------------|
-| `count`     | Count the number of matching key-values  |
-| `sum`       | Sum numeric values                       |
-| `avg`       | Average numeric values                   |
-| `min`       | Minimum numeric value                    |
-| `max`       | Maximum numeric value                    |
-| `append`    | Concatenate bytes                        |
+| Pseudo Type | Input            | Output           | Description                              |
+|:------------|:-----------------|:-----------------|:-----------------------------------------|
+| `count`     | `any`            | `int`            | Count the number of matching key-values  |
+| `sum`       | `int`<br>`num`   | `int`<br>`num`   | Sum numeric values                       |
+| `min`       | `int`<br>`num`   | `int`<br>`num`   | Minimum numeric value                    |
+| `max`       | `int`<br>`num`   | `int`<br>`num`   | Maximum numeric value                    |
+| `avg`       | `int`<br>`num`   | `num`            | Average numeric values                   |
+| `append`    | `bytes`<br>`str` | `bytes`<br>`str` | Concatenate bytes/strings                |
 
 </div>
+
+The `sum`, `min`, and `max` types output an `int` if all
+their inputs are `int`. Otherwise, they output a `num`.
+Similarly, `append` outputs a `str` if all inputs are `str`.
+Otherwise, it outputs a `bytes`.
+
+`append` may be given the [option](#Options) `sep` which
+defines a `str` or `bytes` separator placed between each of
+the appended values.
+
+```language-fql {.query}
+% Append the lines of text for a blog post.
+/blog/post(
+  253245,      % post ID
+  <offset:int> % line offset
+)=<body:append[sep:"\n"]>
+```
 
 # Implementations
 

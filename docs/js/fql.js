@@ -160,7 +160,7 @@
     begin: /\[/,
     end: /]/,
     keywords: {
-      $$pattern: /[^,:]+/,
+      $$pattern: /[^,:"]+/,
       keyword: [
         'be',
         'i8',
@@ -183,13 +183,15 @@
         'snapshot',
         'strict',
         'pick',
+        'sep',
       ],
     },
     contains: [
+      STRING,
       {
         begin: [
           /:/,
-          /[^,\]]+/
+          /[^,\]"]+/,
         ],
         beginScope: {
           1: 'option',
