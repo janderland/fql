@@ -443,22 +443,22 @@ an `int` but is cast to `str` when used as a reference.
 
 <div>
 
-| From     | To        | Description                                    |
-|:---------|:----------|:-----------------------------------------------|
-| `int`    | `num`     | Convert integer to floating point              |
-| `int`    | `str`     | Convert integer to string representation       |
-| `num`    | `int`     | Truncate floating point to integer             |
-| `num`    | `str`     | Convert number to string representation        |
-| `bool`   | `str`     | Convert boolean to "true" or "false" string    |
-| `str`    | `int`     | Parse string as integer                        |
-| `str`    | `num`     | Parse string as floating point                 |
-| `str`    | `bool`    | Parse string as boolean                        |
-| `str`    | `bytes`   | Encode string as UTF-8 bytes                   |
-| `bytes`  | `str`     | Decode UTF-8 bytes as string                   |
-| `bytes`  | `uuid`    | Convert 16-byte string to UUID                 |
-| `uuid`   | `bytes`   | Convert UUID to 16-byte string                 |
-| `bytes`  | `vstamp`  | Convert 12-byte string to versionstamp         |
-| `vstamp` | `bytes`   | Convert versionstamp to 12-byte string         |
+| Cast            | Description                                    |
+|:----------------|:-----------------------------------------------|
+| `int` ➜ `num`   | Convert integer to floating point              |
+| `int` ➜ `str`   | Convert integer to string representation       |
+| `num` ➜ `int`   | Truncate floating point to integer             |
+| `num` ➜ `str`   | Convert number to string representation        |
+| `bool` ➜ `str`  | Convert boolean to "true" or "false" string    |
+| `str` ➜ `int`   | Parse string as integer                        |
+| `str` ➜ `num`   | Parse string as floating point                 |
+| `str` ➜ `bool`  | Parse string as boolean                        |
+| `str` ➜ `bytes` | Encode string as UTF-8 bytes                   |
+| `bytes` ➜ `str` | Decode UTF-8 bytes as string                   |
+| `bytes` ➜ `uuid`| Convert 16-byte string to UUID                 |
+| `uuid` ➜ `bytes`| Convert UUID to 16-byte string                 |
+| `bytes` ➜ `vstamp` | Convert 12-byte string to versionstamp      |
+| `vstamp` ➜ `bytes` | Convert versionstamp to 12-byte string      |
 
 </div>
 
