@@ -286,8 +286,8 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 
 Names are a syntactic construct used throughout FQL. The are
 not a [data element](#data-elements) because they are
-*usually* not serialized and written to the database. They
-are used in many contexts including
+[*usually*](#directories) not serialized and written to the
+database. They are used in many contexts including
 [directories](#directories), [options](#options), and
 [variables](#holes-references).
 
