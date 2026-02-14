@@ -282,11 +282,28 @@ written.
 vstamp = '#' [ hex{20} ] ':' hex{4}
 ```
 
+## Names
+
+Names are a syntactic construct used throughout FQL. The are
+not a [data element](#data-elements) because they are
+*usually* not serialized and written to the database. They
+are used in many contexts including
+[directories](#directories), [options](#options), and
+[variables](#holes-references).
+
+```language-ebnf {.grammar}
+name = ( letter | '_' ) { letter | digit | '_' | '-' | '.' }
+```
+
+A name must start with a letter or underscore, followed by
+any combination of letters, digits, underscores, dashes, or
+periods.
+
 ## Directories
 
 Directories provide a way to organize key-values into
 hierarchical namespaces. The [directory layer][] manages
-these namespaces and assigns short prefixes to keys.
+these namespaces and maps each path to a short key prefix.
 Strings are the only element type allowed in directories.
 
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
@@ -294,13 +311,12 @@ Strings are the only element type allowed in directories.
 ```language-ebnf {.grammar}
 directory = '/' element [ directory ]
 element = '<>' | name | string
-name = { alphanumeric | '.' | '-' | '_' }
 ```
 
 A directory is specified as a sequence of strings, each
-prefixed by a forward slash. Strings do not need quotes if
-they only contain alphanumericals, underscores, dashes, or
-periods. To use other symbols, the strings must be quoted.
+prefixed by a forward slash. If the string only uses
+characters allowed in a [name](#names), the quotes may be
+excluded.
 
 ```language-fql {.query}
 /my/dir/path_way
@@ -324,7 +340,8 @@ a placeholder for any directory name.
 
 Holes are a group of syntax constructs used to define
 a key-value schema by acting as placeholders for one or more
-data elements. Holes include: variables and the `...` token.
+data elements. There are two kinds of holes: variables and
+the `...` token.
 
 ```language-ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
@@ -332,9 +349,10 @@ type = 'any' | 'tuple' | 'bool' | 'int' | 'num' | 'str' | 'uuid' | 'bytes' | 'vs
 ```
 
 Variables are used to represent a single [data
-element](#data-elements). Variables are specified as a list
-of element types, separated by `|`, wrapped in angled
-braces.
+element](#data-elements). Variables may optionally include a
+[name](#names) before the type list. Variables are specified
+as a list of element types, separated by `|`, wrapped in
+angled braces.
 
 ```language-fql
 <int|str|uuid|bytes>
@@ -371,7 +389,7 @@ any type. It is only allowed as the last element of a tuple.
 References allow two queries to be connected via
 a variable's name, allowing for [index
 indirection](#indirection). Before the type list, a variable
-may include a name. The reference is specified as
+may include a [name](#names). The reference is specified as
 a variable's name prefixed with a `:`.
 
 ```language-ebnf {.grammar}
@@ -390,7 +408,7 @@ reference = ':' name [ '!' type ]
 ```
 
 Named variables must include at least one type. To allow
-named variables to match any element type, use the `any`
+named variables to match all element type, use the `any`
 type.
 
 ```language-fql {.query}
@@ -408,10 +426,10 @@ by a type name. This converts the referenced value to the
 specified type.
 
 ```language-fql
-:value!str
+:myVar!str
 ```
 
-The example above typecasts the value of `:value` to type
+The example above typecasts the value of `:myVar` to type
 `str`. Type casting is useful when a variable's type differs
 from how it needs to be used in a subsequent query.
 
@@ -478,7 +496,7 @@ Options modify the semantics of [data
 elements](#data-elements), [variables](#holes-references), and
 [queries](#query-types). They can instruct FQL to use
 alternative encodings, limit a query's result count, or
-change other behaviors.
+change other behaviors. 
 
 ```language-ebnf {.grammar}
 options = '[' option { ',' option } ']'
