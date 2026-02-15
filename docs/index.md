@@ -468,7 +468,7 @@ string as `int`) will cause the query to error.
 ## Space & Comments
 
 Whitespace and newlines are allowed within a tuple, between
-its elements.
+its elements. Trailing commas are also permitted.
 
 ```language-fql {.query}
 /account/private(
