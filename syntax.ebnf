@@ -19,7 +19,7 @@ tuple = '(' [ nl elements [ ',' ] nl ] ')'
 
 elements = '...' | ( data [ ',' nl elements ] )
 
-data = 'nil' | variable | tuple | bool | int | float | scientific | string | uuid | bytes | vstamp
+data = 'nil' | variable | tuple | bool | int | float | string | uuid | bytes | vstamp
 
 variable = '<' [ type ] '>'
 
@@ -29,9 +29,7 @@ bool = 'true' | 'false'
 
 int = [ '-' ] number
 
-float = int '.' number
-
-scientific = ( int | float ) 'e' int
+float = int '.' number [ 'e' int ]
 
 string = '"' { text | '\"' } '"'
 
