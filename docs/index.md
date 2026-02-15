@@ -468,7 +468,7 @@ string as `int`) will cause the query to error.
 ## Space & Comments
 
 Whitespace and newlines are allowed within a tuple, between
-its elements.
+its elements. Trailing commas are also permitted.
 
 ```language-fql {.query}
 /account/private(
@@ -763,6 +763,32 @@ def read_int(tr):
     return val
 ```
 
+Within a tuple, `nil`, empty bytes, and empty nested tuples
+are encoded with their types preserved and will be decoded
+appropriately. As a value, all three are encoded as an empty
+byte string. A typeless variable will decode said value as
+`nil`.
+
+The top-level tuple of a key is encoded as an empty byte
+string when it contains no elements, allowing queries to
+write KVs where the key is simply the directory prefix.
+
+```language-fql {.query}
+/directory()="value"
+```
+
+```language-python {.equiv-py}
+@fdb.transactional
+def write_at_prefix(tr):
+    dir = fdb.directory.create_or_open(tr, ('directory',))
+
+    # Pack empty tuple = empty bytes
+    key = dir.pack(())
+
+    # Write the KV
+    tr[key] = b''
+```
+
 ## Query Types
 
 FQL queries may write a single key-value, read/clear one or
@@ -1034,21 +1060,21 @@ The table below lists the available aggregation types.
 
 <div>
 
-| Pseudo Type | Input            | Output           | Description                              |
-|:------------|:-----------------|:-----------------|:-----------------------------------------|
-| `count`     | `any`            | `int`            | Count the number of matching key-values  |
-| `sum`       | `int`<br>`num`   | `int`<br>`num`   | Sum numeric values                       |
-| `min`       | `int`<br>`num`   | `int`<br>`num`   | Minimum numeric value                    |
-| `max`       | `int`<br>`num`   | `int`<br>`num`   | Maximum numeric value                    |
-| `avg`       | `int`<br>`num`   | `num`            | Average numeric values                   |
-| `append`    | `bytes`<br>`str` | `bytes`<br>`str` | Concatenate bytes/strings                |
+| Aggregate | I/O                            | Description                     |
+|:----------|:-------------------------------|:--------------------------------|
+| `count`   | `any` ➜ `int`                  | Count the number of results     |
+| `sum`     | `int`,`num` ➜ `int`,`num`      | Sum numeric values              |
+| `min`     | `int`,`num` ➜ `int`,`num`      | Minimum numeric value           |
+| `max`     | `int`,`num` ➜ `int`,`num`      | Maximum numeric value           |
+| `avg`     | `int`,`num` ➜ `num`            | Average numeric values          |
+| `append`  | `bytes`,`str` ➜ `bytes`,`str`  | Concatenate bytes/strings       |
 
 </div>
 
-The `sum`, `min`, and `max` types output an `int` if all
-their inputs are `int`. Otherwise, they output a `num`.
-Similarly, `append` outputs a `str` if all inputs are `str`.
-Otherwise, it outputs a `bytes`.
+`sum`, `min`, and `max` output `int` if all inputs are
+`int`. Otherwise, they output `num`. Similarly, `append`
+outputs `str` if all inputs are `str`. Otherwise, it outputs
+`bytes`.
 
 `append` may be given the [option](#Options) `sep` which
 defines a `str` or `bytes` separator placed between each of

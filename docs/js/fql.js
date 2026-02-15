@@ -91,7 +91,7 @@
   };
 
   const DSTRING = {
-    scope: 'section',
+    scope: 'dstring',
     begin: /[\w\.\-]/,
   };
 
@@ -203,8 +203,8 @@
   };
 
   const INLINEOPT = {
-    scope: 'options',
-    begin: /(?=\b(?:width|unsigned)\b)/,
+    scope: 'accent',
+    begin: /(?=\b(width|unsigned)\b)/,
     end: /(?=\s|$)/,
     keywords: OPTIONS.keywords,
     contains: OPTIONS.contains,
@@ -257,7 +257,7 @@
     ],
   };
 
-  const REF_TYPE = {
+  const TYPE_CAST = {
     begin: [
       /!/,
       /\w+/,
@@ -277,7 +277,7 @@
       1: 'reference',
       2: 'number',
     },
-    contains: [REF_TYPE],
+    contains: [TYPE_CAST],
   };
 
   const MAYBEMORE = {
@@ -339,10 +339,13 @@
       directory: 'built_in',
       tuple: 'built_in',
       value: 'built_in',
+
       reference: 'variable',
-      escape: 'subst',
-      accent: 'title',
+      dstring: 'section',
+
       options: 'title',
+      accent: 'title',
+      escape: 'subst',
     },
     contains: [
       COMMENT,
