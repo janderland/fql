@@ -763,6 +763,32 @@ def read_int(tr):
     return val
 ```
 
+Within a tuple, `nil`, empty bytes, and empty nested tuples
+are encoded with their types preserved and will be decoded
+appropriately. As a value, all three are encoded as an empty
+byte string. A typeless variable will decode said value as
+`nil`.
+
+The top-level tuple of a key is encoded as an empty byte
+string when it contains no elements, allowing queries to
+write KVs where the key is simply the directory prefix.
+
+```language-fql {.query}
+/directory()="value"
+```
+
+```language-python {.equiv-py}
+@fdb.transactional
+def write_at_prefix(tr):
+    dir = fdb.directory.create_or_open(tr, ('directory',))
+
+    # Pack empty tuple = empty bytes
+    key = dir.pack(())
+
+    # Write the KV
+    tr[key] = b''
+```
+
 ## Query Types
 
 FQL queries may write a single key-value, read/clear one or
