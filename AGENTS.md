@@ -76,6 +76,11 @@ Query syntax uses directories (`/path/to/dir`), tuples `("elem1", 2, 0xFF)`, and
 - Verify generation: `./build.sh --generate`
 - Regenerate: `go generate ./...`
 
+## Documentation
+
+- Source file: `docs/index.md`
+- When modifying `docs/index.md`, run `./scripts/generate_docs.sh` to regenerate the HTML output
+
 ## Docker Environment
 
 The build system uses Docker Compose for consistent builds:
