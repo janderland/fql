@@ -1,26 +1,55 @@
 ---
 title: FQL
-
-# We include this intro via the 'include-before'
-# metadata field so it's placed before the TOC.
-include-before: |
-  ```language-fql {.query}
-  /user/index/surname("Johnson",<userID:int>)
-  /user(:userID,...)
-  ```
-  ```language-fql {.result}
-  /user(9323,"Timothy","Johnson",37)=nil
-  /user(24335,"Andrew","Johnson",42)=nil
-  /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
-  ```
-  FQL is an [open source](https://github.com/janderland/fql)
-  query language for
-  [FoundationDB](https://www.foundationdb.org/). It's query
-  semantics mirror FoundationDB's [core data
-  model](https://apple.github.io/foundationdb/data-modeling.html).
-  Fundamental patterns like range-reads and indirection are first
-  class citizens.
 ...
+
+```language-fql {.query}
+/user/index/surname("Johnson",<userID:int>)
+/user(:userID,...)
+```
+```language-fql {.result}
+/user(9323,"Timothy","Johnson",37)=nil
+/user(24335,"Andrew","Johnson",42)=nil
+/user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
+```
+
+FQL is an [open source](https://github.com/janderland/fql)
+query language for
+[FoundationDB](https://www.foundationdb.org/). It's query
+semantics mirror FoundationDB's [core data
+model](https://apple.github.io/foundationdb/data-modeling.html).
+Fundamental patterns like range-reads and indirection are
+first class citizens.
+
+<!--toc:start-->
+- [Introduction](#introduction)
+- [Syntax](#syntax)
+  - [Overview](#overview)
+  - [Data Elements](#data-elements)
+  - [Names](#names)
+  - [Directories](#directories)
+  - [Holes & References](#holes-references)
+  - [Space & Comments](#space-comments)
+  - [Options](#options)
+    - [Value Encoding](#value-encoding)
+    - [Queries](#queries)
+- [Semantics](#semantics)
+  - [Data Encoding](#data-encoding)
+  - [Query Types](#query-types)
+    - [Reads & Writes](#reads-writes)
+    - [Directories](#directories-1)
+    - [Filtering](#filtering)
+  - [Advanced Queries](#advanced-queries)
+    - [Indirection](#indirection)
+    - [Aggregation](#aggregation)
+- [Implementations](#implementations)
+  - [Connection](#connection)
+  - [Permissions](#permissions)
+  - [Transactions](#transactions)
+  - [Variables & References](#variables-references)
+  - [Extensions](#extensions)
+  - [Formatting](#formatting)
+- [Grammar](#grammar)
+<!--toc:end-->
 
 # Introduction
 
