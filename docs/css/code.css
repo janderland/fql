@@ -38,9 +38,13 @@ base0F  #d27b53  Deprecated, Opening/Closing Embedded Language Tags, e.g. <?php 
 
 /* purposely do not highlight these things */
 .hljs-formula,
-.hljs-params,
 .hljs-property {
   
+}
+
+/* FQL variable & reference names */
+.hljs-params {
+  color: #d3d0c8;
 }
 /* base03 - #747369 -  Comments, Invisibles, Line Highlighting */
 .hljs-comment {
@@ -205,11 +209,11 @@ base0F  #d27b53  Deprecated, Opening/Closing Embedded Language Tags, e.g. <?php 
 [data-theme="light"] .hljs-title,
 [data-theme="light"] .hljs-class .hljs-title,
 [data-theme="light"] .hljs-title.class_ {
-  color: #eab700;
+  color: #a3685a;
 }
 
 [data-theme="light"] .hljs-strong {
-  color: #eab700;
+  color: #a3685a;
 }
 
 /* base0B - Strings, Inherited Class, Markup Code, Diff Inserted */
@@ -255,4 +259,9 @@ base0F  #d27b53  Deprecated, Opening/Closing Embedded Language Tags, e.g. <?php 
 [data-theme="light"] .hljs-meta .hljs-keyword,
 [data-theme="light"] .hljs-meta .hljs-string {
   color: #a3685a;
+}
+
+/* FQL variable & reference names */
+[data-theme="light"] .hljs-params {
+  color: #4d4d4c;
 }
