@@ -550,55 +550,6 @@ included after the `num` type.
 <num[f32,be]>
 ```
 
-### Value Encoding
-
-The table below shows options for the `int` and `num` types.
-These options control how data is [encoded](#data-encoding)
-as a value.
-
-<div>
-
-| Value Option | Argument | Description                            |
-|:-------------|:---------|:---------------------------------------|
-| `width`      | `int`    | Bit width: `8`, `16`, `32`, `64`, `80` |
-| `bigendian`  | none     | Use big endian encoding                |
-| `unsigned`   | none     | Use unsigned encoding                  |
-
-</div>
-
-Options are one of the more verbose parts of FQL. To avoid
-obscuring the structure of a query, `int` and `num` options
-are given shorter aliases.
-
-<div>
-
-| Int Alias Option   | Actual Option       |
-|:-------------------|:--------------------|
-| `be`               | `bigendian`         |
-| `i8`               | `width:8`           |
-| `i16`              | `width:16`          |
-| `i32`              | `width:32`          |
-| `i64`              | `width:64`          |
-| `u8`               | `unsigned,width:8`  |
-| `u16`              | `unsigned,width:16` |
-| `u32`              | `unsigned,width:32` |
-| `u64`              | `unsigned,width:64` |
-
-</div>
-
-<div>
-
-| Num Alias Option   | Actual Option       |
-|:-------------------|:--------------------|
-| `be`               | `bigendian`         |
-| `f32`              | `width:32`          |
-| `f64`              | `width:64`          |
-| `f80`              | `width:80`          |
-
-</div>
-
-### Queries
-
 Query options are specified on the line before the query.
 For instance, to specify that a range-read query should read
 in reverse and only read 5 items, the following options
@@ -613,18 +564,6 @@ Notice that the `limit` option includes a number after the
 colon. Some options include a single argument to further
 specify the option's behavior.
 
-<div>
-
-| Query Option | Argument | Description                              |
-|:-------------|:---------|:-----------------------------------------|
-| `reverse`    | none     | Range read in reverse order              |
-| `limit`      | `int`    | Maximum number of results                |
-| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
-| `snapshot`   | none     | Use snapshot read                        |
-| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
-
-</div>
-
 # Semantics
 
 ## Data Encoding
@@ -634,6 +573,8 @@ strings leaving the client responsible for encoding the
 data. FQL determines how to encode [data
 elements](#data-elements) based on their data type, position
 within the query, and associated [options](#options).
+
+### Keys
 
 Keys are *always* encoded using the [directory][] and
 [tuple][] layers. Write queries create directories if they
@@ -688,10 +629,12 @@ def read_kvs(tr):
     return results
 ```
 
-Values have more flexible encoding options. There is
-a default encoding where data elements are encoded as the
-lone member of a tuple. For instance, the value `42` is
-encoded as the tuple `(42)`.
+### Values
+
+Values have more encoding flexibility. There is a default
+encoding where data elements are encoded as the lone member
+of a tuple. For instance, the value `42` is encoded as the
+tuple `(42)`.
 
 The exceptions to this default encoding are when values are
 tuples (which are not wrapped in another tuple) and byte
@@ -741,56 +684,55 @@ def read_age(tr):
         return val_bytes
 ```
 
-Using options, values can be encoded in other ways. For
-instance, the option `u16` tells FQL to encode an integer as
-an unsigned 16-bit integer. The byte order can be specified
-using the options `le` and `be` for little and big endian
-respectively. 
+The table below shows [options](#options) which change how
+`int` and `num` types are encoded as values.
 
-```language-fql {.query}
-/numbers/big("37")=37[i16,be]
-```
+<div>
 
-```language-python {.equiv-py}
-import struct
+| Value Option | Argument | Description                            |
+|:-------------|:---------|:---------------------------------------|
+| `width`      | `int`    | Bit width: `8`, `16`, `32`, `64`, `80` |
+| `bigendian`  | none     | Use big endian encoding                |
+| `unsigned`   | none     | Use unsigned encoding                  |
 
-@fdb.transactional
-def write_int(tr):
-    dir = fdb.directory.create_or_open(tr, ('numbers', 'big'))
-    key = dir.pack(('37',))
+</div>
 
-    # Pack the value into signed 16-bit big endian
-    val = struct.pack('>h', 37)
+`int` may use the widths 8, 16, 32, and 64, while `num` may
+use 32, 64, and 80. FQL provides `be` as an alias for
+`bigendian`. Additionally, FQL provides provides pseudo
+types to decrease the verbosity of the encoding options.
 
-    # Write the KV
-    tr[key] = val
-```
+<div>
 
-If the value was encoded with non-default values, then the
+| Int Type | Actual Type & Options    |
+|:---------|:-------------------------|
+| `i8`     | `int[width:8]`           |
+| `i16`    | `int[width:16]`          |
+| `i32`    | `int[width:32]`          |
+| `i64`    | `int[width:64]`          |
+| `u8`     | `int[unsigned,width:8]`  |
+| `u16`    | `int[unsigned,width:16]` |
+| `u32`    | `int[unsigned,width:32]` |
+| `u64`    | `int[unsigned,width:64]` |
+
+</div>
+
+<div>
+
+| Num Type | Actual Type & Options |
+|:---------|:----------------------|
+| `f32`    | `num[width:32]`       |
+| `f64`    | `num[width:64]`       |
+| `f80`    | `num[width:80]`       |
+
+</div>
+
+If the value was encoded with non-default options, then the
 encoding must be specified in the variable when read.
 Otherwise, the default decoding will fail and it will be
 returned as raw bytes.
 
-```language-fql {.query}
-/numbers/big("37")=<int[i16,be]>
-```
-
-```language-python {.equiv-py}
-import struct
-
-@fdb.transactional
-def read_int(tr):
-    dir = fdb.directory.open(tr, ('numbers', 'big'))
-    key = dir.pack(('37',))
-
-    # Read the value
-    val_bytes = tr[key]
-
-    # Unpack value as a 16-bit signed int, big endian
-    val = struct.unpack('>h', val_bytes)[0]
-
-    return val
-```
+### Empty Values
 
 Within a tuple, `nil`, empty bytes, and empty nested tuples
 are encoded with their types preserved and will be decoded
@@ -801,22 +743,6 @@ byte string. A typeless variable will decode said value as
 The top-level tuple of a key is encoded as an empty byte
 string when it contains no elements, allowing queries to
 write KVs where the key is simply the directory prefix.
-
-```language-fql {.query}
-/directory()="value"
-```
-
-```language-python {.equiv-py}
-@fdb.transactional
-def write_at_prefix(tr):
-    dir = fdb.directory.create_or_open(tr, ('directory',))
-
-    # Pack empty tuple = empty bytes
-    key = dir.pack(())
-
-    # Write the KV
-    tr[key] = b''
-```
 
 ## Query Types
 
@@ -873,6 +799,29 @@ directory.
 A directory can be removed by appending `=remove` to the
 directory query. If multiple directories match the schema,
 they will all be removed.
+
+### Options
+
+As hinted at above, queries have several options which
+modify their default behavior.
+
+<div>
+
+| Query Option | Argument | Description                              |
+|:-------------|:---------|:-----------------------------------------|
+| `reverse`    | none     | Range read in reverse order              |
+| `limit`      | `int`    | Maximum number of results                |
+| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
+| `snapshot`   | none     | Use snapshot read                        |
+| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
+
+</div>
+
+Range-read queries support all the options listed above.
+Single-read queries support `snapshot` and `strict`. Clear
+queries support `strict`. With the `strict` option, the
+clear operation is a no-op if FQL encounters a key in the
+given directory which doesn't match the schema.
 
 ### Filtering
 
