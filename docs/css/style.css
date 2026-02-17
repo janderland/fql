@@ -157,6 +157,10 @@ p {
   background: var(--color2);
 }
 
+[data-theme="light"] .theme-toggle:hover {
+  background: var(--color0);
+}
+
 .theme-toggle svg {
   width: 1rem;
   height: 1rem;
