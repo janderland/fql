@@ -62,7 +62,7 @@
 body {
   font-family: "Roboto", sans-serif;
   background-color: var(--colorX);
-  color: var(--color5);
+  color: var(--color7);
 
   line-height: 1.75;
   max-width: 40rem;
@@ -102,7 +102,7 @@ p {
 .icon {
   width: 1.5rem;
   height: 1.5rem;
-  fill: var(--color5);
+  fill: var(--color7);
 }
 
 .icon.fdb {
@@ -110,12 +110,33 @@ p {
   width: auto;
 }
 
-.icon.janderland {
+.icon.janderland-dark,
+.icon.janderland-light {
   fill: none;
 }
 
-.icon.github {
-  color: var(--color5);
+.icon.janderland-light {
+  display: none;
+}
+
+[data-theme="light"] .icon.janderland-dark {
+  display: none;
+}
+
+[data-theme="light"] .icon.janderland-light {
+  display: inline;
+}
+
+.icon.github-light {
+  display: none;
+}
+
+[data-theme="light"] .icon.github-dark {
+  display: none;
+}
+
+[data-theme="light"] .icon.github-light {
+  display: inline;
 }
 
 /* Theme Toggle */
@@ -185,6 +206,14 @@ a:visited {
 
 a:hover {
   color: var(--colorA);
+}
+
+[data-theme="light"] a:visited {
+  color: var(--colorF);
+}
+
+[data-theme="light"] a:hover {
+  color: var(--color9);
 }
 
 /* Images */
