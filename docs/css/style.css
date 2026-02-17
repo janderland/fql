@@ -6,22 +6,22 @@
    * http://chriskempson.com/projects/base16/
    */
 
-  --color0: rgb(45, 45, 45);
-  --color1: rgb(57, 57, 57);
-  --color2: rgb(81, 81, 81);
-  --color3: rgb(116, 115, 105);
-  --color4: rgb(160, 159, 147);
-  --color5: rgb(211, 208, 200);
-  --color6: rgb(232, 230, 223);
-  --color7: rgb(242, 240, 236);
-  --color8: rgb(242, 119, 122);
-  --color9: rgb(249, 145, 87);
-  --colorA: rgb(255, 204, 102);
-  --colorB: rgb(153, 204, 153);
-  --colorC: rgb(102, 204, 204);
-  --colorD: rgb(102, 153, 204);
-  --colorE: rgb(204, 153, 204);
-  --colorF: rgb(210, 123, 83);
+  --color0: #2d2d2d;
+  --color1: #393939;
+  --color2: #515151;
+  --color3: #747369;
+  --color4: #a09f93;
+  --color5: #d3d0c8;
+  --color6: #e8e6df;
+  --color7: #f2f0ec;
+  --color8: #f2777a;
+  --color9: #f99157;
+  --colorA: #ffcc66;
+  --colorB: #99cc99;
+  --colorC: #66cccc;
+  --colorD: #6699cc;
+  --colorE: #cc99cc;
+  --colorF: #d27b53;
 
   /*
    * colorX is an addition to the
@@ -29,7 +29,32 @@
    * used as a darkest color, freeing
    * up color0 to be used elsewhere.
    */
-  --colorX: rgb(20, 20, 20);
+  --colorX: #141414;
+}
+
+/* 
+ * base16 "tomorrow" color scheme (light mode)
+ * http://chriskempson.com/projects/base16/
+ */
+
+[data-theme="light"] {
+  --color0: #f5f5f5;
+  --color1: #ffffff;
+  --color2: #d6d6d6;
+  --color3: #8e908c;
+  --color4: #969896;
+  --color5: #4d4d4c;
+  --color6: #282a2e;
+  --color7: #1d1f21;
+  --color8: #c82829;
+  --color9: #f5871f;
+  --colorA: #eab700;
+  --colorB: #718c00;
+  --colorC: #3e999f;
+  --colorD: #4271ae;
+  --colorE: #8959a8;
+  --colorF: #a3685a;
+  --colorX: #e0e0e0;
 }
 
 /* General */
@@ -37,7 +62,7 @@
 body {
   font-family: "Roboto", sans-serif;
   background-color: var(--colorX);
-  color: var(--color5);
+  color: var(--color7);
 
   line-height: 1.75;
   max-width: 40rem;
@@ -77,7 +102,7 @@ p {
 .icon {
   width: 1.5rem;
   height: 1.5rem;
-  fill: var(--color5);
+  fill: var(--color7);
 }
 
 .icon.fdb {
@@ -85,8 +110,80 @@ p {
   width: auto;
 }
 
-.icon.janderland {
+.icon.janderland-dark,
+.icon.janderland-light {
   fill: none;
+}
+
+.icon.janderland-light {
+  display: none;
+}
+
+[data-theme="light"] .icon.janderland-dark {
+  display: none;
+}
+
+[data-theme="light"] .icon.janderland-light {
+  display: inline;
+}
+
+.icon.github-light {
+  display: none;
+}
+
+[data-theme="light"] .icon.github-dark {
+  display: none;
+}
+
+[data-theme="light"] .icon.github-light {
+  display: inline;
+}
+
+/* Theme Toggle */
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--color1);
+  border: none;
+  border-radius: 1rem;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.theme-toggle:hover {
+  background: var(--color2);
+}
+
+[data-theme="light"] .theme-toggle:hover {
+  background: var(--color0);
+}
+
+.theme-toggle svg {
+  width: 1rem;
+  height: 1rem;
+  transition: opacity 0.2s;
+}
+
+.theme-toggle .sun-icon {
+  color: var(--colorA);
+}
+
+.theme-toggle .moon-icon {
+  color: var(--colorD);
+}
+
+/* Dim the inactive icon */
+[data-theme="dark"] .theme-toggle .sun-icon,
+[data-theme="light"] .theme-toggle .moon-icon {
+  opacity: 0.4;
+}
+
+[data-theme="dark"] .theme-toggle .moon-icon,
+[data-theme="light"] .theme-toggle .sun-icon {
+  opacity: 1;
 }
 
 h1 {
@@ -113,6 +210,14 @@ a:visited {
 
 a:hover {
   color: var(--colorA);
+}
+
+[data-theme="light"] a:visited {
+  color: var(--colorF);
+}
+
+[data-theme="light"] a:hover {
+  color: var(--color9);
 }
 
 /* Images */

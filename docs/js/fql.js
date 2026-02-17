@@ -216,7 +216,7 @@
       /:/,
     ],
     beginScope: {
-      1: 'number',
+      1: 'params',
       2: 'variable',
     },
   };
@@ -275,7 +275,7 @@
     ],
     beginScope: {
       1: 'reference',
-      2: 'number',
+      2: 'params',
     },
     contains: [TYPE_CAST],
   };

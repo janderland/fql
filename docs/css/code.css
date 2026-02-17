@@ -38,9 +38,13 @@ base0F  #d27b53  Deprecated, Opening/Closing Embedded Language Tags, e.g. <?php 
 
 /* purposely do not highlight these things */
 .hljs-formula,
-.hljs-params,
 .hljs-property {
   
+}
+
+/* FQL variable & reference names */
+.hljs-params {
+  color: #d3d0c8;
 }
 /* base03 - #747369 -  Comments, Invisibles, Line Highlighting */
 .hljs-comment {
@@ -140,4 +144,124 @@ base0F  #d27b53  Deprecated, Opening/Closing Embedded Language Tags, e.g. <?php 
 .hljs-meta .hljs-keyword,
 .hljs-meta-keyword {
   font-weight: bold
+}
+
+/*
+ * Light mode - base16 "tomorrow" color scheme
+ * http://chriskempson.com/projects/base16/
+ *
+ * base00  #ffffff  Default Background
+ * base01  #e0e0e0  Lighter Background
+ * base02  #d6d6d6  Selection Background
+ * base03  #8e908c  Comments, Invisibles, Line Highlighting
+ * base04  #969896  Dark Foreground
+ * base05  #4d4d4c  Default Foreground, Caret, Delimiters, Operators
+ * base06  #282a2e  Light Foreground
+ * base07  #1d1f21  Light Background
+ * base08  #c82829  Variables, XML Tags, Markup Link Text, Markup Lists, Diff Deleted
+ * base09  #f5871f  Integers, Boolean, Constants, XML Attributes, Markup Link Url
+ * base0A  #eab700  Classes, Markup Bold, Search Text Background
+ * base0B  #718c00  Strings, Inherited Class, Markup Code, Diff Inserted
+ * base0C  #3e999f  Support, Regular Expressions, Escape Characters, Markup Quotes
+ * base0D  #4271ae  Functions, Methods, Attribute IDs, Headings
+ * base0E  #8959a8  Keywords, Storage, Selector, Markup Italic, Diff Changed
+ * base0F  #a3685a  Deprecated, Opening/Closing Embedded Language Tags
+ */
+
+/* base03 - #8e908c - Comments, Invisibles, Line Highlighting */
+[data-theme="light"] .hljs-comment {
+  color: #8e908c;
+}
+
+/* base04 - #969896 - Dark Foreground (Used for status bars) */
+[data-theme="light"] .hljs-tag {
+  color: #969896;
+}
+
+/* base05 - #4d4d4c - Default Foreground, Caret, Delimiters, Operators */
+[data-theme="light"] .hljs-subst,
+[data-theme="light"] .hljs-punctuation,
+[data-theme="light"] .hljs-operator {
+  color: #4d4d4c;
+}
+
+/* base08 - Variables, XML Tags, Markup Link Text, Markup Lists, Diff Deleted */
+[data-theme="light"] .hljs-bullet,
+[data-theme="light"] .hljs-variable,
+[data-theme="light"] .hljs-template-variable,
+[data-theme="light"] .hljs-selector-tag,
+[data-theme="light"] .hljs-name,
+[data-theme="light"] .hljs-deletion {
+  color: #c82829;
+}
+
+/* base09 - Integers, Boolean, Constants, XML Attributes, Markup Link Url */
+[data-theme="light"] .hljs-symbol,
+[data-theme="light"] .hljs-number,
+[data-theme="light"] .hljs-link,
+[data-theme="light"] .hljs-attr,
+[data-theme="light"] .hljs-variable.constant_,
+[data-theme="light"] .hljs-literal {
+  color: #f5871f;
+}
+
+/* base0A - Classes, Markup Bold, Search Text Background */
+[data-theme="light"] .hljs-title,
+[data-theme="light"] .hljs-class .hljs-title,
+[data-theme="light"] .hljs-title.class_ {
+  color: #a3685a;
+}
+
+[data-theme="light"] .hljs-strong {
+  color: #a3685a;
+}
+
+/* base0B - Strings, Inherited Class, Markup Code, Diff Inserted */
+[data-theme="light"] .hljs-code,
+[data-theme="light"] .hljs-addition,
+[data-theme="light"] .hljs-title.class_.inherited__,
+[data-theme="light"] .hljs-string {
+  color: #718c00;
+}
+
+/* base0C - Support, Regular Expressions, Escape Characters, Markup Quotes */
+[data-theme="light"] .hljs-built_in,
+[data-theme="light"] .hljs-doctag,
+[data-theme="light"] .hljs-quote,
+[data-theme="light"] .hljs-keyword.hljs-atrule,
+[data-theme="light"] .hljs-regexp {
+  color: #3e999f;
+}
+
+/* base0D - Functions, Methods, Attribute IDs, Headings */
+[data-theme="light"] .hljs-function .hljs-title,
+[data-theme="light"] .hljs-attribute,
+[data-theme="light"] .ruby .hljs-property,
+[data-theme="light"] .hljs-title.function_,
+[data-theme="light"] .hljs-section {
+  color: #4271ae;
+}
+
+/* base0E - Keywords, Storage, Selector, Markup Italic, Diff Changed */
+[data-theme="light"] .hljs-type,
+[data-theme="light"] .hljs-template-tag,
+[data-theme="light"] .diff .hljs-meta,
+[data-theme="light"] .hljs-keyword {
+  color: #8959a8;
+}
+
+[data-theme="light"] .hljs-emphasis {
+  color: #8959a8;
+}
+
+/* base0F - Deprecated, Opening/Closing Embedded Language Tags */
+[data-theme="light"] .hljs-meta,
+[data-theme="light"] .hljs-meta .hljs-keyword,
+[data-theme="light"] .hljs-meta .hljs-string {
+  color: #a3685a;
+}
+
+/* FQL variable & reference names */
+[data-theme="light"] .hljs-params {
+  color: #4d4d4c;
 }

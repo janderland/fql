@@ -14,20 +14,42 @@
   <script src="js/fql.js"></script>
   <script src="js/ebnf.js"></script>
   <script src="js/python.js"></script>
+  <script>
+    // Theme initialization - runs immediately to prevent flash
+    (function() {
+      function getPreferredTheme() {
+        const stored = localStorage.getItem('theme');
+        if (stored) return stored;
+        return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', getPreferredTheme());
+    })();
+  </script>
 </head>
 <body>
   <div class="header-container">
     <h1>$title$</h1>
     <div class="header-icons">
       <a href="https://github.com/janderland/fql" target="_blank" title="View on GitHub">
-        <img class="icon" src="img/github.svg" alt="GitHub" />
+        <img class="icon github-dark" src="img/github-dark.svg" alt="GitHub" />
+        <img class="icon github-light" src="img/github-light.svg" alt="GitHub" />
       </a>
       <a href="https://www.foundationdb.org/" target="_blank" title="FoundationDB">
         <img class="icon fdb" src="img/fdb.svg" alt="FoundationDB" />
       </a>
       <a href="https://jander.land/" target="_blank" title="jander.land">
-        <img class="icon janderland" src="img/jander.svg" alt="jander.land" />
+        <img class="icon janderland-dark" src="img/jander-dark.svg" alt="jander.land" />
+        <img class="icon janderland-light" src="img/jander-light.svg" alt="jander.land" />
       </a>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
     </div>
   </div>
   $for(include-before)$
@@ -50,6 +72,29 @@
       else e.classList.add("language-fql");
       hljs.highlightElement(e);
     });
+
+    // Theme toggle
+    (function() {
+      const toggle = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+
+      function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+      }
+
+      toggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'light' ? 'dark' : 'light');
+      });
+
+      // Listen for system preference changes (only if no stored preference)
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('theme')) {
+          setTheme(e.matches ? 'light' : 'dark');
+        }
+      });
+    })();
   </script>
 </body>
 </html>
