@@ -65,15 +65,14 @@ a particular implementation. The complete [EBNF
 grammar](#grammar) appears at the end.
 
 Throughout the document, relevant grammar rules are shown
-alongside the features they define. Python code snippets are
-also included demonstrating equivalent FoundationDB API
-calls.
+alongside their related features. Python code snippets are
+also included demonstrating equivalent client API calls.
 
 Grammar rules use extended Backus-Naur form as defined in
 ISO/IEC 14977, with a modification: concatenation and rule
 termination are implicit.
 
-> ❗Not all features described in this document have been
+> ❗ Not all features described in this document have been
 > implemented yet. See the project's [issues][] for
 > a roadmap of implemantation plans.
 
@@ -762,7 +761,7 @@ can be fed back into FQL as write queries. The exception to
 this rule are [aggregate queries](#aggregation) and results
 created by non-default [formatting](#formatting).
 
-> ❗Queries lacking a value altogether imply an empty
+> ❗ Queries lacking a value altogether imply an empty
 > [variable](#holes-references) as the value and should not
 > be confused with write queries.
 
@@ -1014,7 +1013,7 @@ offset of each chunk.
 /blob("my_file.bin",20000)=2.7kb
 ```
 
-> ❗Instead of printing the actual byte strings in these
+> ❗ Instead of printing the actual byte strings in these
 > results, only the byte lengths are printed. This is
 > a possible feature of an FQL implementation. See
 > [Formatting](#formatting) for more details.
