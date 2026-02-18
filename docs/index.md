@@ -101,8 +101,10 @@ value = 'clear' | data
 
 For now, the `opts`{.hljs-variable} prefixing the query can
 be ignored. [Options](#options) will be described later in
-the document. A query may be a full key-value, just a key,
-or a directory query.
+the document.
+
+A query may be a full key-value, just a key, or a directory
+query.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -125,9 +127,9 @@ Variables act as placeholders for any of the supported [data
 elements](#data-elements). 
 
 FQL queries may also perform [range reads][] and filtering
-by including on or more variables in the key. The query
+by including one or more variables in the key. The query
 below will return all key-values which conform to the schema
-defined by the query.
+it defines.
 
 [range reads]: https://apple.github.io/foundationdb/developer-guide.html#range-reads
 
@@ -140,9 +142,9 @@ defined by the query.
 /my/directory(42,"tuple")=nil
 ```
 
-The variable `<>` in the query above lacks a type. This
-means the schema allows any [data element](#data-elements)
-at the variable's position.
+Unlike the first variable we saw, the variable `<>` in the
+query above lacks a type. This means the schema allows any
+[data element](#data-elements) at the variable's position.
 
 All key-values with a certain key prefix may be range read
 by ending the tuple with `...`.
@@ -203,8 +205,8 @@ a directory path.
 
 Directories are not explicitly created. During a write
 query, the directory is created if it doesn't exist.
-Directories may be removed by suffixing the directory path
-with `=remove`.
+Directories may be explicitly removed by suffixing the
+directory path with `=remove`.
 
 ```language-fql {.query} 
 /my/dir=remove
