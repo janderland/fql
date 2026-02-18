@@ -216,10 +216,9 @@ directory path with `=remove`.
 
 An FQL query contains instances of data elements. These
 mirror the types of elements found in the [tuple layer][].
-This section will describe how data elements behave in the
-FQL language, while [element encoding](#data-encoding)
-describes how FQL encodes the elements before writing them
-to the DB.
+This section describes how data elements behave in FQL,
+while [element encoding](#data-encoding) describes how FQL
+encodes the elements before writing them to the DB.
 
 [tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
@@ -232,28 +231,36 @@ to the DB.
 | `int`    | Signed Integer   | `-14` `3033`                           |
 | `num`    | Floating Point   | `33.4` `-3.2e5`                        |
 | `str`    | Unicode String   | `"happy😁"` `"\"quoted\""`             |
-| `uuid`   | UUID             | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `bytes`  | Byte String      | `0xa2bff2438312aac032`                 |
-| `tup`    | Tuple            | `("hello",27.4,nil)`                   |
+| `uuid`   | UUID             | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `vstamp` | Version Stamp    | `#:0000` `#0102030405060708090a:0000`  |
+| `tup`    | Tuple            | `("hello",27.4,nil)`                   |
 
 </div>
 
 The `nil` type may only be instantiated as the element
-`nil`. The `bool` type may be instantiated as `true` or
-`false`.
+`nil`.
 
 ```language-ebnf {.grammar}
 bool = 'true' | 'false'
+```
+
+The `bool` type may be instantiated as `true` or
+`false`.
+
+```language-ebnf {.grammar}
+int = [ '-' ] digits
+digits = digit { digit }
+digit = '0' | ... | '9'
 ```
 
 The `int` type may be instantiated as any arbitrarily large
 integer.
 
 ```language-ebnf {.grammar}
-int = [ '-' ] digits
-digits = digit { digit }
-digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+num = int '.' digits
+    | ( int | int '.' digits ) 'e' int 
+    | '-inf' | 'inf' | '-nan' | 'nan'
 ```
 
 The `num` type may be instantiated as any real number which
@@ -266,7 +273,8 @@ may be instantiated as `-inf`, `inf`, `-nan` or `nan`.
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```language-ebnf {.grammar}
-num = int '.' digits | ( int | int '.' digits ) 'e' int | '-inf' | 'inf' | '-nan' | 'nan'
+string = '"' { char | '\\"' | '\\\\' } '"'
+char = ? Any printable UTF-8 character except '"' and '\' ?
 ```
 
 The `str` type may be instantiated as a unicode string
@@ -274,7 +282,9 @@ wrapped in double quotes. Quoted strings may contain double
 quotes and backslashes via backslash escapes.
 
 ```language-ebnf {.grammar}
-string = '"' { char | '\\"' | '\\\\' } '"'
+uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
+bytes = '0x' { hex hex } 
+hex = digit | 'a' | ... | 'f' | 'A' | ... | 'F' 
 ```
 
 The `uuid` and `bytes` types may be instantiated using
@@ -284,9 +294,23 @@ format. For `bytes`, any even number of hexidecimal digits
 are prefixed by `0x`.
 
 ```language-ebnf {.grammar}
-uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
-bytes = '0x' { hex hex }
-hex = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+vstamp = '#' [ hex{20} ] ':' hex{4}
+```
+
+The `vstamp` type represents a FoundationDB [versionstamp][]
+containing a 10-byte transaction version followed by
+a 2-byte user version. These byte strings may be
+instantiated using upper, lower, or mixed case hexidecimal
+digits. The transaction version may be empty, only
+containing the user version. In this case it acts as
+a placeholder where FDB will write the actual transaction
+version upon commit.
+
+[versionstamp]: https://apple.github.io/foundationdb/data-modeling.html?highlight=versionstamp#versionstamps
+
+```language-ebnf {.grammar}
+tuple = '(' [ nl elements [ ',' ] nl ] ')'
+elements = data [ ',' nl elements ] | '...'
 ```
 
 The `tup` type may contain any of the data elements,
@@ -294,25 +318,6 @@ including nested tuples. Elements are separated by commas
 and wrapped in parentheses. A trailing comma is allowed
 after the last element. The last element may be the `...`
 token (see [holes](#holes-references)).
-
-```language-ebnf {.grammar}
-tuple = '(' [ nl elements [ ',' ] nl ] ')'
-elements = data [ ',' nl elements ] | '...'
-```
-
-The `vstamp` type represents a FoundationDB [versionstamp][].
-A versionstamp contains a 10-byte transaction version and
-a 2-byte user version. The transaction version is assigned
-by the database at commit time. A vstamp without the
-transaction version (only the user version after the colon)
-is incomplete and will be filled in by FoundationDB when
-written.
-
-[versionstamp]: https://apple.github.io/foundationdb/api-general.html#versionstamps
-
-```language-ebnf {.grammar}
-vstamp = '#' [ hex{20} ] ':' hex{4}
-```
 
 ## Names
 
