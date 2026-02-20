@@ -6,6 +6,7 @@ title: FQL
 /user/index/surname("Johnson",<userID:int>)
 /user(:userID,...)
 ```
+
 ```language-fql {.result}
 /user(9323,"Timothy","Johnson",37)=nil
 /user(24335,"Andrew","Johnson",42)=nil
@@ -405,7 +406,9 @@ at once.
 /app/actions/index
 ```
 
-## Holes & References
+## Schemas
+
+### Holes
 
 Holes are a group of syntax constructs used to define
 a key-value schema by acting as placeholders for one or more
@@ -458,25 +461,27 @@ any type. It is only allowed as the last element of a tuple.
 /app/queue("topic",58,"done")
 ```
 
-References allow two queries to be connected via
-a variable's name, allowing for [index
-indirection](#indirection). Before the type list, a variable
-may include a [name](#names). The reference is specified as
-a variable's name prefixed with a `:`.
+### References
+
+Before the type list, a variable may include
+a [name](#names). References can use this name to pass the
+variable's values into a subsequent query, allowing for
+[index indirection](#indirection). The reference is
+specified as a variable's name prefixed with a `:`.
 
 ```language-ebnf {.grammar}
 reference = ':' name [ '!' type ]
 ```
 
 ```language-fql {.query}
-/index("car makes",<makeID:int>)
-/data(:makeID,...)
+/user/index/surname("Johnson",<userID:int>)
+/user(:userID,...)
 ```
 
 ```language-fql {.result}
-/data(33,"mazda")=nil
-/data(320,"ford")=nil
-/data(411,"chevy")=nil
+/user(9323,"Timothy","Johnson",37,"United States")=nil
+/user(24335,"Andrew","Johnson",42,"United States")=nil
+/user(33423,"Ryan","Johnson",32,"England")=nil
 ```
 
 Named variables must include at least one type. To allow
@@ -484,58 +489,16 @@ named variables to match all element type, use the `any`
 type.
 
 ```language-fql {.query}
-/stuff(<thing:any>)
+/store/hash(<bytes>,<thing:any>)
 ```
 
 ```language-fql {.result}
-/stuff("cat")
-/stuff(42)
-/stuff(0x5fae)
+/store/hash(0x6dc88b,"somewhere we have")=nil
+/store/hash(0x8b593b,523.8e90)=nil
+/store/hash(0x9ccf9d,"I have yet to find")=nil
+/store/hash(0xcd53e8,ca03676e-1c59-4dd4-a7ea-36c90714c2b7)=nil
+/store/hash(0xda3924,0x96f70a30)=nil
 ```
-
-References may include a type cast by appending `!` followed
-by a type name. This converts the referenced value to the
-specified type.
-
-```language-fql
-:myVar!str
-```
-
-The example above typecasts the value of `:myVar` to type
-`str`. Type casting is useful when a variable's type differs
-from how it needs to be used in a subsequent query.
-
-```language-fql {.query}
-/ids(<id:int>)
-/data(:id!str,...)
-```
-
-In the example above, the `<id:int>` variable is defined as
-an `int` but is cast to `str` when used as a reference.
-
-<div>
-
-| Cast            | Description                                    |
-|:----------------|:-----------------------------------------------|
-| `int` ➜ `num`   | Convert integer to floating point              |
-| `int` ➜ `str`   | Convert integer to string representation       |
-| `num` ➜ `int`   | Truncate floating point to integer             |
-| `num` ➜ `str`   | Convert number to string representation        |
-| `bool` ➜ `str`  | Convert boolean to "true" or "false" string    |
-| `str` ➜ `int`   | Parse string as integer                        |
-| `str` ➜ `num`   | Parse string as floating point                 |
-| `str` ➜ `bool`  | Parse string as boolean                        |
-| `str` ➜ `bytes` | Encode string as UTF-8 bytes                   |
-| `bytes` ➜ `str` | Decode UTF-8 bytes as string                   |
-| `bytes` ➜ `uuid`| Convert 16-byte string to UUID                 |
-| `uuid` ➜ `bytes`| Convert UUID to 16-byte string                 |
-| `bytes` ➜ `vstamp` | Convert 12-byte string to versionstamp      |
-| `vstamp` ➜ `bytes` | Convert versionstamp to 12-byte string      |
-
-</div>
-
-Type casts that fail at runtime (e.g., parsing a non-numeric
-string as `int`) will cause the query to error.
 
 ## Space & Comments
 
