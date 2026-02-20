@@ -503,7 +503,7 @@ type.
 ## Space & Comments
 
 Whitespace and newlines are allowed within a tuple, between
-its elements. Trailing commas are also permitted.
+its elements.
 
 ```language-fql {.query}
 /account/private(
