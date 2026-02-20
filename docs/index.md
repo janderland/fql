@@ -55,6 +55,23 @@ first class citizens.
 
 # Introduction
 
+FoundationDB provides the *foundations* of a fully-featured
+ACID, distributed, key-value database. It implements
+solutions for the hard problems related to distributed data
+sharding and replication. Highly concurrent workflows are
+enabled via many small, lock-free transactions. Key-values
+are stored in sorted order and large batches of adjacent
+key-values can be efficiently streamed to clients.
+
+Traditionally, client access is facilitated by a low-ish
+level C library with various language bindings. FQL can be
+viewed as a [layer][] atop this library, providing
+a higher-level client API and query language. FQL provides
+a generic way of describing and querying FoundationDB data,
+facilitating schema documentation and system debugging.
+
+[layer]: https://apple.github.io/foundationdb/layer-concept.html
+
 This document serves as both a language specification and
 a usage guide for FQL. The [Syntax](#syntax) section
 describes the structure of queries while the
@@ -64,14 +81,6 @@ features which are not included in FQL but may be defined by
 a particular implementation. The complete [EBNF
 grammar](#grammar) appears at the end.
 
-Throughout the document, relevant grammar rules are shown
-alongside their related features. Python code snippets are
-also included demonstrating equivalent client API calls.
-
-Grammar rules use extended Backus-Naur form as defined in
-ISO/IEC 14977, with a modification: concatenation and rule
-termination are implicit.
-
 > ❗ Not all features described in this document have been
 > implemented yet. See the project's [issues][] for
 > a roadmap of implemantation plans.
@@ -79,6 +88,12 @@ termination are implicit.
 [issues]: https://github.com/janderland/fql/issues
 
 # Syntax
+ 
+Throughout this section, relevant grammar rules are shown
+alongside their related features. These rules are written in
+extended Backus-Naur form as defined in ISO/IEC 14977, with
+a modification: concatenation and rule termination are
+implicit.
 
 ## Overview
 
@@ -103,8 +118,9 @@ For now, the `opts`{.hljs-variable} prefixing the query can
 be ignored. [Options](#options) will be described later in
 the document.
 
-A query may be a full key-value, just a key, or a directory
-query.
+A query may be a full key-value, just a key, or just
+a directory path. The contents of the query implies whether
+it's reading or writing data.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -147,7 +163,9 @@ query above lacks a type. This means the schema allows any
 [data element](#data-elements) at the variable's position.
 
 All key-values with a certain key prefix may be range read
-by ending the tuple with `...`.
+by ending the key's tuple with `...`. Due to sorting,
+key-values with a common prefix are stored adjacently and
+are efficiently streamed to the client.
 
 ```language-fql {.query}
 /my/directory("my","tuple",...)=<>
@@ -205,11 +223,12 @@ a directory path.
 
 Directories are not explicitly created. During a write
 query, the directory is created if it doesn't exist.
-Directories may be explicitly removed by suffixing the
-directory path with `=remove`.
+Directories, along with all their contained key-values, may
+be explicitly removed by suffixing the directory path with
+`=remove`.
 
 ```language-fql {.query} 
-/my/dir=remove
+/my/directory=remove
 ```
 
 ## Data Elements
@@ -340,8 +359,10 @@ periods.
 
 Directories provide a way to organize key-values into
 hierarchical namespaces. The [directory layer][] manages
-these namespaces and maps each path to a short key prefix.
-Strings are the only element type allowed in directories.
+these namespaces and maps each directory path to a short key
+prefix. Key-values with the same directory will be
+adjacently stored, grouping them much like a table groups
+rows.
 
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
@@ -351,26 +372,26 @@ element = '<>' | name | string
 ```
 
 A directory is specified as a sequence of strings, each
-prefixed by a forward slash. If the string only uses
+prefixed by a forward slash. If the string only contains
 characters allowed in a [name](#names), the quotes may be
 excluded.
 
 ```language-fql {.query}
-/my/dir/path_way
-/my/"dir@--\o/"/path_way
+/my/directory/path_way
+/another/"d!r3ct0ry"/"\"path\""
 ```
 
 The empty variable `<>` may be used in a directory path as
-a placeholder for any directory name.
+a placeholder, allowing multiple directories to be queried.
 
 ```language-fql {.query}
-/root/<>/items
+/app/<>/index
 ```
 
 ```language-fql {.result}
-/root/good/items
-/root/bad/items
-/root/weird/items
+/app/users/index
+/app/roles/index
+/app/actions/index
 ```
 
 ## Holes & References
@@ -1080,6 +1101,8 @@ FQL defines the query language but leaves many details to
 the implementation. This sections outlines some of those
 details and how an implementation may choose to provide
 them.
+
+TODO: talk about FQL as a client API.
 
 ## Connection
 
