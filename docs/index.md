@@ -351,7 +351,7 @@ token (see [holes](#holes-references)).
 
 ## Names
 
-Names are a syntactic construct used throughout FQL. The are
+Names are a syntax construct used throughout FQL. The are
 not a [data element](#data-elements) because they are
 [*usually*](#directories) not serialized and written to the
 database. They are used in many contexts including
@@ -372,8 +372,7 @@ Directories provide a way to organize key-values into
 hierarchical namespaces. The [directory layer][] manages
 these namespaces and maps each directory path to a short key
 prefix. Key-values with the same directory will be
-adjacently stored, grouping them much like a table groups
-rows.
+adjacently stored.
 
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
@@ -393,7 +392,8 @@ excluded.
 ```
 
 The empty variable `<>` may be used in a directory path as
-a placeholder, allowing multiple directories to be queried.
+a placeholder, allowing multiple directories to be queried
+at once.
 
 ```language-fql {.query}
 /app/<>/index
@@ -428,31 +428,34 @@ angled braces.
 ```
 
 The variable's type list describes which kinds of data
-elements are allowed at the variable's position. A variable
-may be empty, including no element types, meaning it allows
-any element type.
+elements are allowed at the variable's position.
+A variable's type list may be empty, including no element
+types, meaning it allows any element type.
 
 ```language-fql {.query}
-/data(<int>,<str|int>,<>)=<>
+/tree/node(<int>,<int|nil>,<int|nil>)=<>
 ```
 
 ```language-fql {.result}
-/data(0,"jon",0xffab0c)=nil
-/data(20,3,22.3)=0xff
-/data(21,"",nil)=nil
+/tree/node(5,12,14)=nil
+/tree/node(12,nil,nil)="payload"
+/tree/node(14,nil,15)=0xa3127b
+/tree/node(15,nil,nil)=(42,96,nil)
 ```
 
 The `...` token represents any number of data elements of
 any type. It is only allowed as the last element of a tuple.
 
 ```language-fql {.query}
-/tuples(0x00,...)
+/app/queue("topic",...)
 ```
 
 ```language-fql {.result}
-/tuples(0x00)=nil
-/tuples(0x00,"something")=nil
-/tuples(0x00,42,43,44)=0xabcf
+/app/queue("topic",54,"event A")
+/app/queue("topic",55,"event Y")
+/app/queue("topic",56,"event Y")
+/app/queue("topic",57,"event C")
+/app/queue("topic",58,"done")
 ```
 
 References allow two queries to be connected via
