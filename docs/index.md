@@ -99,9 +99,18 @@ implicit.
 
 FQL is specified as a context-free [grammar](#grammar). The
 queries look like key-values encoded using the [directory][]
-and [tuple][] layers. To the left of the `=` is the key
-which includes a directory path and tuple. To the right is
-the value.
+and [tuple][] layers.
+
+Directories are used to group sets of key-values. Often,
+though not necessarily, the key-values of a particular
+directory will follow the same schema. In this sense, they
+are analogous to SQL tables.
+
+Tuples provide a way to encode primitive data types into
+byte strings while preserving type information and natural
+ordering. For instance, after being serialized and sorted,
+the tuple `(22,"abc",false)` will appear before the tuple
+`(23,"bcd",true)`.
 
 [directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
@@ -111,12 +120,13 @@ query = [ opts '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
-value = 'clear' | data
+value = 'clear' | data 
 ```
 
-For now, the `opts`{.hljs-variable} prefixing the query can
-be ignored. [Options](#options) will be described later in
-the document.
+To the left of the `=` is the key which includes a directory
+path and tuple. To the right is the value. For now, the
+`opts`{.hljs-variable} prefixing the query can be ignored.
+[Options](#options) will be described later in the document.
 
 A query may be a full key-value, just a key, or just
 a directory path. The contents of the query implies whether
@@ -191,6 +201,14 @@ one above.
 /my/directory("my","tuple",false,0xff9a853c12)=nil
 ```
 
+Key-values may be cleared by using the special `clear` token
+as the value. If the schema matches multiple keys they will
+all be cleared by the query.
+
+```language-fql {.query}
+/my/directory("my",...)=clear 
+```
+
 Including a variable in the directory path tells FQL to
 perform the read on all directory paths matching the schema.
 
@@ -201,13 +219,6 @@ perform the read on all directory paths matching the schema.
 ```language-fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /your/directory("my","tuple")=nil
-```
-
-Key-values may be cleared by using the special `clear` token
-as the value.
-
-```language-fql {.query}
-/my/directory("my","tuple")=clear
 ```
 
 The directory layer may be queried by only including
