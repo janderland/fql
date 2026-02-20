@@ -308,8 +308,8 @@ char = ? Any printable UTF-8 character except '"' and '\' ?
 ```
 
 The `str` type may be instantiated as a unicode string
-wrapped in double quotes. Quoted strings may contain double
-quotes and backslashes via backslash escapes.
+wrapped in double quotes. Strings may contain double quotes
+and backslashes via backslash escapes.
 
 ```language-ebnf {.grammar}
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
@@ -331,10 +331,10 @@ The `vstamp` type represents a FoundationDB [versionstamp][]
 containing a 10-byte transaction version followed by
 a 2-byte user version. These byte strings may be
 instantiated using upper, lower, or mixed case hexidecimal
-digits. The transaction version may be empty, only
-containing the user version. In this case it acts as
-a placeholder where FDB will write the actual transaction
-version upon commit.
+digits. The transaction version may be empty, meaning the
+`vstamp` only contains the user version. In this case it
+acts as a placeholder where FoundationDB will write the
+actual transaction version upon commit.
 
 [versionstamp]: https://apple.github.io/foundationdb/data-modeling.html?highlight=versionstamp#versionstamps
 
