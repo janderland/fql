@@ -239,6 +239,7 @@
         'uuid',
         'tup',
         'vstamp',
+        'nil',
         'append',
         'sum',
         'avg',
@@ -366,6 +367,10 @@
       { // Highlight lone bar for inline text.
         scope: 'variable',
         begin: /\|/,
+      },
+      { // Highlight lone colon for inline text.
+        scope: 'variable',
+        begin: /:/,
       },
     ],
   }));
