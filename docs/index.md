@@ -28,7 +28,9 @@ first class citizens.
   - [Data Elements](#data-elements)
   - [Names](#names)
   - [Directories](#directories)
-  - [Holes & References](#holes-references)
+  - [Schemas](#schemas)
+    - [Holes](#holes)
+    - [References](#references)
   - [Space & Comments](#space-comments)
   - [Options](#options)
 - [Semantics](#semantics)
@@ -417,7 +419,8 @@ the `...` token.
 
 ```language-ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-type = 'any' | 'tuple' | 'bool' | 'int' | 'num' | 'str' | 'uuid' | 'bytes' | 'vstamp'
+type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
+     | 'str' | 'uuid' | 'bytes' | 'vstamp'
 ```
 
 Variables are used to represent a single [data
