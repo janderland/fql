@@ -551,18 +551,18 @@ following options would be included after the element.
 3548[u8]
 ```
 
-Similarly, if a variable should only match against
-big-endian 32-bit floats then the following options would be
-included after the `num` type.
+If a variable should only match against big-endian 32-bit
+floats then the following options would be included after
+the `num` type.
 
 ```language-fql
 <num[f32,be]>
 ```
 
-Query options are specified on the line before the query.
-For instance, to specify that a range-read query should read
-in reverse and only read 5 items, the following options
-would be included before the query.
+Query options are specified on the line before the query. To
+specify that a range-read query should read in reverse and
+only read 5 items, the following options would be included
+before the query.
 
 ```language-fql {.query}
 [reverse,limit:5]
@@ -571,7 +571,11 @@ would be included before the query.
 
 Notice that the `limit` option includes a number after the
 colon. Some options include a single argument to further
-specify the option's behavior.
+specify the option's behavior. The argument may be an
+integer, a [name](#name), or a string.
+
+Details about the various options will be included in the
+sections explaining the semantics which they modify.
 
 # Semantics
 
