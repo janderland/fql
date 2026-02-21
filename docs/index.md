@@ -579,6 +579,13 @@ sections explaining the semantics which they modify.
 
 # Semantics
 
+Throughout this section, snippets of Python code are
+included alongside certain features. These snippets showcase
+equivalent client API calls to help explain how FQL behaves.
+These snippets are simplified, and don't include
+optimizations found in the actual implementation like
+concurrency or caching.
+
 ## Data Encoding
 
 FoundationDB stores the keys and values as simple byte
@@ -594,17 +601,17 @@ Keys are *always* encoded using the [directory][] and
 do not exist.
 
 ```language-fql {.query}
-/directory/"p@th"(nil,57223,0xa8ff03)=nil
+/app/users(57223,"Peter","Carson",56)=nil
 ```
 
 ```language-python {.equiv-py}
 @fdb.transactional
-def write_kv(tr):
+def write_user(tr):
     # Open directory; create if doesn't exist
-    dir = fdb.directory.create_or_open(tr, ('directory', 'p@th'))
+    dir = fdb.directory.create_or_open(tr, ('app', 'users'))
 
     # Pack the tuple and prepend the directory prefix
-    key = dir.pack((None, 57223, b'\xa8\xff\x03'))
+    key = dir.pack((57223, "Peter", "Carson", 56))
 
     # Write the KV
     tr[key] = b''
@@ -615,14 +622,14 @@ nothing is returned. The tuple layer encodes metadata about
 element types, allowing FQL to decode keys without a schema.
 
 ```language-fql {.query}
-/directory/<>(...)
+/app/<>(...)
 ```
 
 ```language-python {.equiv-py}
 @fdb.transactional
-def read_kvs(tr):
+def read_users(tr):
     # Open directory; exit if it doesn't exist
-    dir = fdb.directory.open(tr, ('directory',))
+    dir = fdb.directory.open(tr, ('app',))
     if dir is None:
         return []
 
@@ -636,8 +643,10 @@ def read_kvs(tr):
         for key, val in tr[sub_dir.range()]:
             # Remove the directory prefix and unpack the tuple
             tup = sub_dir.unpack(key)
+
             # Value unpacking will be discussed later...
-            results.append((sub_dir.get_path(), tup, val))
+            results.append(
+                (sub_dir.get_path(), tup, fql_unpack(val)))
 
     return results
 ```
