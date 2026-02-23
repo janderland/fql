@@ -37,11 +37,12 @@ first class citizens.
   - [Data Encoding](#data-encoding)
     - [Keys](#keys)
     - [Values](#values)
-    - [Empty Values](#empty-values)
+    - [Empty](#empty)
+    - [Options](#options-1)
   - [Query Types](#query-types)
     - [Reads & Writes](#reads-writes)
     - [Directories](#directories-1)
-    - [Options](#options-1)
+    - [Options](#options-2)
     - [Filtering](#filtering)
   - [Advanced Queries](#advanced-queries)
     - [Indirection](#indirection)
@@ -629,26 +630,29 @@ element types, allowing FQL to decode keys without a schema.
 @fdb.transactional
 def read_users(tr):
     # Open directory; exit if it doesn't exist
-    dir = fdb.directory.open(tr, ('app',))
-    if dir is None:
+    app_dir = fdb.directory.open(tr, ('app',))
+    if app_dir is None:
         return []
 
     # List the sub-directories
-    sub_dirs = dir.list(tr)
+    sub_dirs = app_dir.list(tr)
 
-    # For each sub-directory, grab all the KVs
+    # For each sub-directory, grab all the key-values
     results = []
     for sub_name in sub_dirs:
-        sub_dir = dir.open(tr, (sub_name,))
+        sub_dir = app_dir.open(tr, (sub_name,))
         for key, val in tr[sub_dir.range()]:
+            # Get the full path of the directory
+            dir = sub_dir.get_path()
+
             # Remove the directory prefix and unpack the tuple
             tup = sub_dir.unpack(key)
 
-            # Return the 3 components of a key-value:
-            # directory, tuple, value
-            # Value unpacking will be discussed later...
-            results.append(
-              (sub_dir.get_path(), tup, fql_unpack(val)))
+            # Unpack the value
+            val = # ...
+
+            # Return the key-value
+            results.append((dir, tup, val))
 
     return results
 ```
@@ -656,12 +660,8 @@ def read_users(tr):
 ### Values
 
 When used as a value, [data elements](#data-elements) are
-encoded as the lone member of a tuple. For instance, the
-value `42` is encoded as the tuple `(42)`. Tuples and byte
-strings are treated differently. Tuples are encoded using
-the tuple layer, but they are not wrapped in a tuple like
-the other data elements. Byte strings are written as-is into
-the value.
+encoded as the lone member of a tuple. This approach
+preserves type information for flexible decoding.
 
 ```language-fql {.query}
 /people/age("jon","smith")=42
@@ -670,18 +670,15 @@ the value.
 ```language-python {.equiv-py}
 @fdb.transactional
 def write_age(tr):
-    dir = fdb.directory.create_or_open(tr, ('people', 'age'))
-    key = dir.pack(('jon', 'smith'))
+    # Encoding the key
+    key = # ...
 
     # Pack the value as a tuple
     val = fdb.tuple.pack((42,))
 
-    # Write the KV
+    # Write the key-value
     tr[key] = val
 ```
-
-This default encoding allows values to be decoded without
-knowing their type.
 
 ```language-fql {.query}
 /people/age("jon","smith")=<>
@@ -690,34 +687,78 @@ knowing their type.
 ```language-python {.equiv-py}
 @fdb.transactional
 def read_age(tr):
-    dir = fdb.directory.open(tr, ('people', 'age'))
-    key = dir.pack(('jon', 'smith'))
+    # Encode the key
+    key = # ...
 
-    # Read the value
+    # Read the value's bytes
     val_bytes = tr[key]
 
-    # Assume the value is a tuple
     try:
+        # Assume the value is a tuple
         val_tup = fdb.tuple.unpack(val_bytes)
+
         if len(val_tup) == 1:
+            # Unwrap single elements
             return val_tup[0]
-        return val_tup
+        else:
+            # Return as a tuple
+            return val_tup
     except:
-        # If decoding as a tuple fails, return raw bytes
+        # Fallback to raw bytes
         return val_bytes
+```
+
+As the Python snippet above implies, tuples and byte strings
+are treated differently. As a value, tuples are encoded
+using the tuple layer, but they are not wrapped in a tuple
+like the other data elements. Byte strings are written
+as-is.
+
+This means that `42` and `(42)` have the same value
+encoding. The way the value is returned depends on how it's
+queried.
+
+```language-fql {.query}
+% write the key-value once
+/app/location("east bay")=87234
+
+% query without a tuple
+/app/location("east bay")=<>
+
+% query with a tuple
+/app/location("east bay")=(<>)
+```
+
+```language-fql {.result}
+/app/location("east bay")=87234
+/app/location("east bay")=(87234)
 ```
 
 ### Empty
 
 Within a tuple, `nil`, empty bytes, and empty nested tuples
-are encoded with their types preserved and will be decoded
-appropriately. As a value, all three are encoded as an empty
-byte string. A typeless variable will decode said values as
-`nil`.
+are encoded with their types preserved by the [tuple
+layer][]. As a value, all three are encoded as an empty byte
+string. A typeless variable will decode an empty byte string
+as `nil`.
 
-The top-level tuple of a key is encoded as an empty byte
-string when it contains no elements, allowing queries to
-write KVs where the key is simply the directory prefix.
+```language-fql {.query}
+/globals/selection("object")=0x
+/globals/selection("item")=nil
+/globals/selection("text")=()
+
+/globals/selection(...)=<>
+```
+
+```language-fql {.result}
+/globals/selection("object")=nil
+/globals/selection("item")=nil
+/globals/selection("text")=nil
+```
+
+Likewise, the tuple of a key is encoded as an empty byte string
+when it contains no elements, allowing queries to write
+a key that is simply the directory prefix.
 
 ```language-fql {.query}    
 /globals/next-id()=37534
@@ -726,16 +767,25 @@ write KVs where the key is simply the directory prefix.
 ```python {.equiv-python}
 @fdb.transactional
 def set_next_id(tr):
+    # Open directory; create if doesn't exist
     dir = fdb.directory.open(tr, ('globals', 'next-id'))
 
     # Use directory prefix as the key
-    tr[dir.key()] = fdb.tuple.pack((37534,))
+    key = dir.key()
+
+    # Encode the value
+    val = # ...
+
+    # Write key-value
+    tr[key] = val
 ```
 
 ### Options
 
-The table below shows [options](#options) which change how
-`int` and `num` types are encoded as values.
+Options allow for encoding [data elements](#data-elements)
+in different ways than the default outlined above. The table
+below shows [options](#options) which change how the `int`
+and `num` types are encoded as values.
 
 <div>
 
@@ -748,39 +798,92 @@ The table below shows [options](#options) which change how
 </div>
 
 `int` may use the widths 8, 16, 32, and 64, while `num` may
-use 32, 64, and 80. FQL provides `be` as an alias for
-`bigendian`. Additionally, FQL provides provides pseudo
-types to decrease the verbosity of the encoding options.
+use 32, 64, and 80. When the width option is present, values
+use little endian encoding, as long as the `bigendian`
+option isn't also present.
+
+```language-fql {.query}
+/globals/next-id()=37534[width:64,bigendian]
+```
+
+```python {.equiv-python}
+@fdb.transactional
+def set_next_id(tr):
+    # Encode the key
+    key = # ...
+
+    # Encode the value as a big-endian, 64-bit, signed int
+    val = struct.pack('>q', 37534)
+
+    # Write the key-value
+    tr[key] = val
+```
+
+FQL provides aliases for the `int` and `num` options to
+decrease their verbosity. For instance,
+`[width:64,bigendian]` can be written as `[i64,be]`.
+
+When writing values with non-default encoding, type metadata
+will be lost. Read queries will need the appropriate options
+specified. Otherwise, the value will not match the schema.
+
+```language-fql {.query}
+% write
+/globals/next-id()=37534[i64,be]
+
+% read
+/globals/next-id()=<int[i64,be]>
+```
+
+```language-fql {.result}
+/globals/next-id()=37534[i64,be]
+```
+
+The tables below list the available aliases for for `int`
+and `num` options.
 
 <div>
 
-| Int Type | Actual Type & Options    |
-|:---------|:-------------------------|
-| `i8`     | `int[width:8]`           |
-| `i16`    | `int[width:16]`          |
-| `i32`    | `int[width:32]`          |
-| `i64`    | `int[width:64]`          |
-| `u8`     | `int[unsigned,width:8]`  |
-| `u16`    | `int[unsigned,width:16]` |
-| `u32`    | `int[unsigned,width:32]` |
-| `u64`    | `int[unsigned,width:64]` |
+| Int Alias | Actual Options      |
+|:----------|:--------------------|
+| `be`      | `bigendian`         |
+| `i8`      | `width:8`           |
+| `i16`     | `width:16`          |
+| `i32`     | `width:32`          |
+| `i64`     | `width:64`          |
+| `u8`      | `unsigned,width:8`  |
+| `u16`     | `unsigned,width:16` |
+| `u32`     | `unsigned,width:32` |
+| `u64`     | `unsigned,width:64` |
 
 </div>
 
 <div>
 
-| Num Type | Actual Type & Options |
-|:---------|:----------------------|
-| `f32`    | `num[width:32]`       |
-| `f64`    | `num[width:64]`       |
-| `f80`    | `num[width:80]`       |
+| Num Alias | Actual Options |
+|:----------|:---------------|
+| `be`      | `bigendian`    |
+| `f32`     | `width:32`     |
+| `f64`     | `width:64`     |
+| `f80`     | `width:80`     |
 
 </div>
 
-If the value was encoded with non-default options, then the
-encoding must be specified in the variable when read.
-Otherwise, the default decoding will fail and it will be
-returned as raw bytes.
+The `str`, `uuid`, and `vstamp` types include the option
+`raw` which causes their bytes to be written as-is without
+being wrapped in a tuple. 
+
+```language-fql {.query}
+% write raw UUID
+/tag_code("food")=77542869-5708-4af9-821e-d65354fb1a12[raw]
+
+% read as bytes
+/tag_code("food")=<bytes>
+```
+
+```language-fql {.result}
+/tag_code("food")=0x7754286957084af9821ed65354fb1a12
+```
 
 ## Query Types
 
