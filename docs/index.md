@@ -644,23 +644,24 @@ def read_users(tr):
             # Remove the directory prefix and unpack the tuple
             tup = sub_dir.unpack(key)
 
+            # Return the 3 components of a key-value:
+            # directory, tuple, value
             # Value unpacking will be discussed later...
             results.append(
-                (sub_dir.get_path(), tup, fql_unpack(val)))
+              (sub_dir.get_path(), tup, fql_unpack(val)))
 
     return results
 ```
 
 ### Values
 
-Values have more encoding flexibility. There is a default
-encoding where data elements are encoded as the lone member
-of a tuple. For instance, the value `42` is encoded as the
-tuple `(42)`.
-
-The exceptions to this default encoding are when values are
-tuples (which are not wrapped in another tuple) and byte
-strings (which are used as-is for the value).
+When used as a value, [data elements](#data-elements) are
+encoded as the lone member of a tuple. For instance, the
+value `42` is encoded as the tuple `(42)`. Tuples and byte
+strings are treated differently. Tuples are encoded using
+the tuple layer, but they are not wrapped in a tuple like
+the other data elements. Byte strings are written as-is into
+the value.
 
 ```language-fql {.query}
 /people/age("jon","smith")=42
@@ -705,6 +706,33 @@ def read_age(tr):
         # If decoding as a tuple fails, return raw bytes
         return val_bytes
 ```
+
+### Empty
+
+Within a tuple, `nil`, empty bytes, and empty nested tuples
+are encoded with their types preserved and will be decoded
+appropriately. As a value, all three are encoded as an empty
+byte string. A typeless variable will decode said values as
+`nil`.
+
+The top-level tuple of a key is encoded as an empty byte
+string when it contains no elements, allowing queries to
+write KVs where the key is simply the directory prefix.
+
+```language-fql {.query}    
+/globals/next-id()=37534
+```
+
+```python {.equiv-python}
+@fdb.transactional
+def set_next_id(tr):
+    dir = fdb.directory.open(tr, ('globals', 'next-id'))
+
+    # Use directory prefix as the key
+    tr[dir.key()] = fdb.tuple.pack((37534,))
+```
+
+### Options
 
 The table below shows [options](#options) which change how
 `int` and `num` types are encoded as values.
@@ -753,18 +781,6 @@ If the value was encoded with non-default options, then the
 encoding must be specified in the variable when read.
 Otherwise, the default decoding will fail and it will be
 returned as raw bytes.
-
-### Empty Values
-
-Within a tuple, `nil`, empty bytes, and empty nested tuples
-are encoded with their types preserved and will be decoded
-appropriately. As a value, all three are encoded as an empty
-byte string. A typeless variable will decode said value as
-`nil`.
-
-The top-level tuple of a key is encoded as an empty byte
-string when it contains no elements, allowing queries to
-write KVs where the key is simply the directory prefix.
 
 ## Query Types
 
