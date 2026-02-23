@@ -296,6 +296,7 @@
     contains: [
       STRING,
       VARIABLE,
+      MAYBEMORE,
       DSTRING,
     ],
   };

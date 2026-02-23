@@ -225,6 +225,19 @@ perform the read on all directory paths matching the schema.
 /your/directory("my","tuple")=nil
 ```
 
+The directory path may end with the `...` token to perform
+the read on all descendant directories.
+
+```language-fql {.query}
+/your/...(...)
+```
+
+```language-fql {.result}
+/your/directory("my","tuple")=nil
+/your/keyspace("the","tuple")=547
+/your/keyspace/subspace("tuple")="value"
+```
+
 The directory layer may be queried by only including
 a directory path.
 
