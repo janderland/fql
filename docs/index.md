@@ -581,25 +581,41 @@ sections explaining the semantics which they modify.
 # Semantics
 
 Throughout this section, snippets of Python code are
-included alongside certain features. These snippets showcase
-equivalent client API calls to help explain how FQL behaves.
-These snippets are simplified, and don't include
-optimizations found in the actual implementation like
-concurrency or caching.
+included showcasing equivalent client API calls to help
+describe how FQL behaves. These snippets are simplified and
+don't include optimizations found in the actual
+implementation like concurrency, batching, or caching.
 
 ## Data Encoding
 
-FoundationDB stores the keys and values as simple byte
-strings leaving the client responsible for encoding the
-data. FQL determines how to encode [data
-elements](#data-elements) based on their data type, position
-within the query, and associated [options](#options).
+FoundationDB stores keys and values as simple byte strings
+leaving the client responsible for encoding the data. FQL
+determines how to encode [data elements](#data-elements)
+based on their data type, position within the query, and
+associated [options](#options).
+
+At first glance, the encoding rules may seem a bit complex.
+The design attempts to balance several goals:
+
+- **Provide intuitive and useful behavior as a [layer][].**
+  FQL will be used as an alternative client API, and as
+  such, establishes flexible best practices for data
+  encoding.
+
+- **Easily interface with other layers.** FQL will be used
+  for debugging other layers and should be able to express
+  schemas for popular design patterns.
+
+- **Utilize the tuple layer everywhere.** FoundationDB
+  provides a great encoding scheme for primitive data types
+  via the [tuple layer][]. FQL establishes the tuple layer
+  as the default encoding for values as well.
 
 ### Keys
 
 Keys are *always* encoded using the [directory][] and
-[tuple][] layers. Write queries create directories if they
-do not exist.
+[tuple][] layers. All keys must include a directory prefix.
+Write queries create directories if they do not exist.
 
 ```language-fql {.query}
 /app/users(57223,"Peter","Carson",56)=nil
@@ -614,8 +630,11 @@ def write_user(tr):
     # Pack the tuple and prepend the directory prefix
     key = dir.pack((57223, "Peter", "Carson", 56))
 
+    # Encode the value
+    val = # ...
+
     # Write the KV
-    tr[key] = b''
+    tr[key] = val
 ```
 
 If a query reads from a directory which doesn't exist,
@@ -623,36 +642,41 @@ nothing is returned. The tuple layer encodes metadata about
 element types, allowing FQL to decode keys without a schema.
 
 ```language-fql {.query}
-/app/<>(...)
+/app/...(...)
 ```
 
 ```language-python {.equiv-py}
 @fdb.transactional
-def read_users(tr):
+def read_all(tr):
     # Open directory; exit if it doesn't exist
-    app_dir = fdb.directory.open(tr, ('app',))
-    if app_dir is None:
+    dir = fdb.directory.open(tr, ('app',))
+    if dir is None:
         return []
 
-    # List the sub-directories
-    sub_dirs = app_dir.list(tr)
+    # Recursively read all directories
+    return do_read_users(tr, dir)
 
-    # For each sub-directory, grab all the key-values
+
+def do_read_all(tr, dir):
+    # Grab all the key-values
     results = []
-    for sub_name in sub_dirs:
-        sub_dir = app_dir.open(tr, (sub_name,))
-        for key, val in tr[sub_dir.range()]:
-            # Get the full path of the directory
-            dir = sub_dir.get_path()
+    for key, val in tr[dir.range()]:
+        # Get the full path of the directory
+        path = dir.get_path()
 
-            # Remove the directory prefix and unpack the tuple
-            tup = sub_dir.unpack(key)
+        # Remove the directory prefix and unpack the tuple
+        tup = dir.unpack(key)
 
-            # Unpack the value
-            val = # ...
+        # Unpack the value
+        val = # ...
 
-            # Return the key-value
-            results.append((dir, tup, val))
+        # Collect the key-values
+        results.append((path, tup, val))
+
+    # Recurse into child directories
+    for child_name in dir.list(tr):
+        child_dir = dir.open(tr, (child_name,))
+        results += do_read_all(tr, child_dir)
 
     return results
 ```
@@ -722,10 +746,10 @@ queried.
 % write the key-value once
 /app/location("east bay")=87234
 
-% query without a tuple
+% read without a tuple
 /app/location("east bay")=<>
 
-% query with a tuple
+% read with a tuple
 /app/location("east bay")=(<>)
 ```
 
@@ -736,7 +760,7 @@ queried.
 
 ### Empty
 
-Within a tuple, `nil`, empty bytes, and empty nested tuples
+Within a tuple, `nil`, empty bytes `0x`, and empty nested tuples `()`
 are encoded with their types preserved by the [tuple
 layer][]. As a value, all three are encoded as an empty byte
 string. A typeless variable will decode an empty byte string
@@ -764,7 +788,7 @@ a key that is simply the directory prefix.
 /globals/next-id()=37534
 ```
 
-```python {.equiv-python}
+```language-python {.equiv-py}
 @fdb.transactional
 def set_next_id(tr):
     # Open directory; create if doesn't exist
@@ -789,16 +813,16 @@ and `num` types are encoded as values.
 
 <div>
 
-| Value Option | Argument | Description                            |
-|:-------------|:---------|:---------------------------------------|
-| `width`      | `int`    | Bit width: `8`, `16`, `32`, `64`, `80` |
-| `bigendian`  | none     | Use big endian encoding                |
-| `unsigned`   | none     | Use unsigned encoding                  |
+| Option      | Argument | Description                            |
+|:------------|:---------|:---------------------------------------|
+| `width`     | `int`    | Bit width: `8`, `16`, `32`, `64`, `80` |
+| `bigendian` | none     | Use big endian encoding                |
+| `unsigned`  | none     | Use unsigned encoding                  |
 
 </div>
 
-`int` may use the widths 8, 16, 32, and 64, while `num` may
-use 32, 64, and 80. When the width option is present, values
+`int` may use the widths `8`, `16`, `32`, and `64`, while `num` may
+use `32`, `64`, and `80`. When the width option is present, values
 use little endian encoding, as long as the `bigendian`
 option isn't also present.
 
@@ -806,7 +830,7 @@ option isn't also present.
 /globals/next-id()=37534[width:64,bigendian]
 ```
 
-```python {.equiv-python}
+```language-python {.equiv-py}
 @fdb.transactional
 def set_next_id(tr):
     # Encode the key
