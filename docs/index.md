@@ -103,7 +103,7 @@ implicit.
 ## Overview
 
 FQL is specified as a context-free [grammar](#grammar). The
-queries look like key-values encoded using the [directory][]
+queries resemble key-values encoded using the [directory][]
 and [tuple][] layers.
 
 Directories are used to group sets of key-values. Often,
