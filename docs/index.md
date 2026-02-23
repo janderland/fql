@@ -14,12 +14,12 @@ title: FQL
 ```
 
 FQL is an [open source](https://github.com/janderland/fql)
-query language for
-[FoundationDB](https://www.foundationdb.org/). It's query
+query language and alternative client API for
+[FoundationDB](https://www.foundationdb.org/). It's
 semantics mirror FoundationDB's [core data
-model](https://apple.github.io/foundationdb/data-modeling.html).
-Fundamental patterns like range-reads and indirection are
-first class citizens.
+model](https://apple.github.io/foundationdb/data-modeling.html)
+while improving API ergonomics. Fundamental patterns like
+range-reads and indirection are first class citizens.
 
 <!--toc:start-->
 - [Introduction](#introduction)
@@ -39,11 +39,12 @@ first class citizens.
     - [Values](#values)
     - [Empty](#empty)
     - [Options](#options-1)
-  - [Query Types](#query-types)
-    - [Reads & Writes](#reads-writes)
+  - [Types of Queries](#types-of-queries)
+    - [Writes](#writes)
+    - [Reads](#reads)
     - [Directories](#directories-1)
-    - [Options](#options-2)
     - [Filtering](#filtering)
+    - [Options](#options-2)
   - [Advanced Queries](#advanced-queries)
     - [Indirection](#indirection)
     - [Aggregation](#aggregation)
@@ -68,11 +69,11 @@ are stored in sorted order and large batches of adjacent
 key-values can be efficiently streamed to clients.
 
 Traditionally, client access is facilitated by a low-ish
-level C library with various language bindings. FQL can be
-viewed as a [layer][] atop this library, providing
-a higher-level client API and query language. FQL provides
-a generic way of describing and querying FoundationDB data,
-facilitating schema documentation and system debugging.
+level C library and various language bindings. FQL is
+a [layer][] atop this library, providing query language and
+a higher-level client API. FQL provides a generic way of
+describing and querying FoundationDB data, facilitating
+schema documentation, client implementation, and debugging.
 
 [layer]: https://apple.github.io/foundationdb/layer-concept.html
 
@@ -80,9 +81,9 @@ This document serves as both a language specification and
 a usage guide for FQL. The [Syntax](#syntax) section
 describes the structure of queries while the
 [Semantics](#semantics) section describes their behavior.
-The [Implementations](#implementations) section highlights
-features which are not included in FQL but may be defined by
-a particular implementation. The complete [EBNF
+The [Implementations](#implementations) section describes
+the Go reference implementation and highlights details not
+dictated by the specification. The complete [EBNF
 grammar](#grammar) appears at the end.
 
 > ❗ Not all features described in this document have been
@@ -95,7 +96,7 @@ grammar](#grammar) appears at the end.
  
 Throughout this section, relevant grammar rules are shown
 alongside their related features. These rules are written in
-extended Backus-Naur form as defined in ISO/IEC 14977, with
+extended Backus-Naur form as defined in ISO/IEC 14977 with
 a modification: concatenation and rule termination are
 implicit.
 
@@ -922,30 +923,69 @@ being wrapped in a tuple.
 /tag_code("food")=0x7754286957084af9821ed65354fb1a12
 ```
 
-## Query Types
+## Types of Queries
 
 FQL queries may write a single key-value, read/clear one or
 more key-values, or list/remove directories. Although all
-queries resemble key-values, their tokens imply one of the
-above operations.
+queries resemble key-values, their tokens imply which of the
+above operations is executed.
 
-### Reads & Writes
+### Writes
 
 Queries lacking [holes](#holes-references) perform writes on
 the database. You can think of these queries as declaring
-the existence of a particular key-value. Most query results
-can be fed back into FQL as write queries. The exception to
-this rule are [aggregate queries](#aggregation) and results
-created by non-default [formatting](#formatting).
+the existence of a particular key-value. If the key's
+directory does not exist, it is created during a write
+operation.
 
 > ❗ Queries lacking a value altogether imply an empty
 > [variable](#holes-references) as the value and should not
 > be confused with write queries.
 
+In a write query, `vstamp` values lacking a transaction
+version have unique behavior. Upon commit, the transaction's
+10-byte version is written to the first 10-bytes of the
+`vstamp`. 
+
+```language-fql {.query}
+/app/queue(#:ff00)="jason"
+/app/heartbeat("jason")=#:0000
+
+% commit transaction
+
+/app/queue(<index:vstamp>)
+/app/heartbeat(...)=<heartbeat:vstamp>
+```
+
+```language-fql {.result}
+/app/queue(#8e9ddaa52e44733526e2:ff00)="jason"
+/app/heartbeat("jason")=#8e9ddaa52e44733526e3:0000
+```
+
+The above code block showcases several details about
+`vstamps`:
+
+- The transaction version component of the `vstamp` is
+  written at commit time, so you must start a new
+  transaction before reading it. If you attempt to read an
+  empty `vstamp` before it's written, the query will fail.
+
+- The user version component of the `vstamp` is not
+  overwritten. Only the transaction version is.
+
+- The final two bytes of the transaction version component
+  (right before the user version) are incremented within
+  a transaction.
+
+### Reads
+
 Queries containing [holes](#holes-references) read one or more
 key-values. If the holes only appear in the value, then
 a single key-value is returned, if one matching the schema
-exists.
+exists. Most query results can be fed back into FQL as write
+queries. The exception to this rule are [aggregate
+queries](#aggregation) and results created by non-default
+[formatting](#formatting).
 
 FQL attempts to decode the value as each of the types listed
 in the variable, stopping at first success. If the value
@@ -977,29 +1017,6 @@ directory.
 A directory can be removed by appending `=remove` to the
 directory query. If multiple directories match the schema,
 they will all be removed.
-
-### Options
-
-As hinted at above, queries have several options which
-modify their default behavior.
-
-<div>
-
-| Query Option | Argument | Description                              |
-|:-------------|:---------|:-----------------------------------------|
-| `reverse`    | none     | Range read in reverse order              |
-| `limit`      | `int`    | Maximum number of results                |
-| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
-| `snapshot`   | none     | Use snapshot read                        |
-| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
-
-</div>
-
-Range-read queries support all the options listed above.
-Single-read queries support `snapshot` and `strict`. Clear
-queries support `strict`. With the `strict` option, the
-clear operation is a no-op if FQL encounters a key in the
-given directory which doesn't match the schema.
 
 ### Filtering
 
@@ -1071,6 +1088,29 @@ def filter_range(tr):
 
     return results
 ```
+
+### Options
+
+As hinted at above, queries have several options which
+modify their default behavior.
+
+<div>
+
+| Query Option | Argument | Description                              |
+|:-------------|:---------|:-----------------------------------------|
+| `reverse`    | none     | Range read in reverse order              |
+| `limit`      | `int`    | Maximum number of results                |
+| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
+| `snapshot`   | none     | Use snapshot read                        |
+| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
+
+</div>
+
+Range-read queries support all the options listed above.
+Single-read queries support `snapshot` and `strict`. Clear
+queries support `strict`. With the `strict` option, the
+clear operation is a no-op if FQL encounters a key in the
+given directory which doesn't match the schema.
 
 ## Advanced Queries
 
