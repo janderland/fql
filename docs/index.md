@@ -41,6 +41,7 @@ range-reads and indirection are first class citizens.
     - [Options](#options-1)
   - [Types of Queries](#types-of-queries)
     - [Writes](#writes)
+    - [Versionstamps](#versionstamps)
     - [Reads](#reads)
     - [Directories](#directories-1)
     - [Filtering](#filtering)
@@ -942,14 +943,22 @@ operation.
 > [variable](#holes-references) as the value and should not
 > be confused with write queries.
 
-In a write query, `vstamp` values lacking a transaction
-version have unique behavior. Upon commit, the transaction's
+### Versionstamps
+
+As stated in the [data elements](#data-elements) section,
+a `vstamp` is composed of two components: the transaction
+version prefixed by `#`{.hljs-title} and the user version
+prefixed by `:`{.hljs-title}.
+
+A `vstamp` lacking a transaction version is called an
+"incomplete" `vstamp`. In a write query, an incomplete
+`vstamp` has unique behavior. Upon commit, the transaction's
 10-byte version is written to the first 10-bytes of the
 `vstamp`. 
 
 ```language-fql {.query}
 /app/queue(#:ff00)="jason"
-/app/heartbeat("jason")=#:0000
+/app/heartbeat("jason")=#:00cd
 
 % commit transaction
 
@@ -959,23 +968,32 @@ version have unique behavior. Upon commit, the transaction's
 
 ```language-fql {.result}
 /app/queue(#8e9ddaa52e44733526e2:ff00)="jason"
-/app/heartbeat("jason")=#8e9ddaa52e44733526e3:0000
+/app/heartbeat("jason")=#8e9ddaa52e44733526e3:00cd
 ```
 
-The above code block showcases several details about
-`vstamps`:
+The example above showcases several details about writing an
+incomplete `vstamp`:
 
 - The transaction version component of the `vstamp` is
   written at commit time, so you must start a new
   transaction before reading it. If you attempt to read an
-  empty `vstamp` before it's written, the query will fail.
+  empty `vstamp` before the transaction is committed, the
+  query will fail.
 
 - The user version component of the `vstamp` is not
   overwritten. Only the transaction version is.
 
 - The final two bytes of the transaction version component
   (right before the user version) are incremented within
-  a transaction.
+  a transaction. In this particular example, the `/queue`
+  key's transaction version ends with `26e2` while the
+  `/heartbeat` transaction version ends with `26e3`. This
+  ensures that multiple versionstamps written by the same
+  transaction are unique.
+
+`vstamp` elements are monotonically increasing and unique
+for the lifetime of a particular database. They may be used
+as unique identifiers or non-contiguous indexes.
 
 ### Reads
 

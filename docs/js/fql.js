@@ -368,14 +368,6 @@
       BYTES,
       NUMBER,
       OPTIONS,
-      { // Highlight lone bar for inline text.
-        scope: 'variable',
-        begin: /\|/,
-      },
-      { // Highlight lone colon for inline text.
-        scope: 'variable',
-        begin: /:/,
-      },
     ],
   }));
 })();
