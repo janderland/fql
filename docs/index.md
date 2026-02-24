@@ -489,7 +489,7 @@ variable's values into a subsequent query, allowing for
 specified as a variable's name prefixed with a `:`.
 
 ```language-ebnf {.grammar}
-reference = ':' name [ '!' type ]
+reference = ':' name
 ```
 
 ```language-fql {.query}
