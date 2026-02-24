@@ -595,6 +595,23 @@ sections explaining the semantics which they modify.
 
 # Semantics
 
+FQL semantics are designed with the following goals in mind:
+
+- **Provide useful behavior as a standalone [layer][].** FQL
+  will be used as an alternative client API. It should unify
+  the core API with the directory and tuple layers while
+  providing improved ergonomics.
+
+- **Provide defaults for value encoding.** FoundationDB
+  suggests a default encoding scheme for keys but not for
+  values. FQL establishes conventions for value encoding
+  using the [tuple layer][] and unifies keys and values
+  under a single type system.
+
+- **Interface with other layers.** FQL will be used to
+  explore and debug other layers and should be able to
+  express schemas for common FoundationDB design patterns.
+
 Throughout this section, snippets of Python code are
 included showcasing equivalent client API calls to help
 describe how FQL behaves. These snippets are simplified and
@@ -608,23 +625,6 @@ leaving the client responsible for encoding the data. FQL
 determines how to encode [data elements](#data-elements)
 based on their data type, position within the query, and
 associated [options](#options).
-
-At first glance, the encoding rules may seem a bit complex.
-The design attempts to balance several goals:
-
-- **Provide intuitive and useful behavior as a [layer][].**
-  FQL will be used as an alternative client API, and as
-  such, establishes flexible best practices for data
-  encoding.
-
-- **Easily interface with other layers.** FQL will be used
-  for debugging other layers and should be able to express
-  schemas for popular design patterns.
-
-- **Utilize the tuple layer everywhere.** FoundationDB
-  provides a great encoding scheme for primitive data types
-  via the [tuple layer][]. FQL establishes the tuple layer
-  as the default encoding for values as well.
 
 ### Keys
 
