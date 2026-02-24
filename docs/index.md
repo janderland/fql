@@ -442,8 +442,8 @@ type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
 Variables are used to represent a single [data
 element](#data-elements). Variables may optionally include a
 [name](#names) before the type list. Variables are specified
-as a list of element types, separated by `|`, wrapped in
-angled braces.
+as a list of element types, separated by
+`|`{.hljs-variable}, wrapped in angled braces.
 
 ```language-fql
 <int|str|uuid|bytes>
@@ -486,7 +486,8 @@ Before the type list, a variable may include
 a [name](#names). References can use this name to pass the
 variable's values into a subsequent query, allowing for
 [index indirection](#indirection). The reference is
-specified as a variable's name prefixed with a `:`.
+specified as a variable's name prefixed with
+a `:`{.hljs-variable}.
 
 ```language-ebnf {.grammar}
 reference = ':' name
