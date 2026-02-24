@@ -59,7 +59,9 @@ range-reads and indirection are first class citizens.
 - [Grammar](#grammar)
 <!--toc:end-->
 
-# Introduction
+# Introduction 
+
+---
 
 FoundationDB provides the *foundations* of a fully-featured
 ACID, distributed, key-value database. It implements
@@ -94,6 +96,8 @@ grammar](#grammar) appears at the end.
 [issues]: https://github.com/janderland/fql/issues
 
 # Syntax
+
+---
  
 Throughout this section, relevant grammar rules are shown
 alongside their related features. These rules are written in
@@ -594,7 +598,9 @@ integer, a [name](#name), or a string.
 Details about the various options will be included in the
 sections explaining the semantics which they modify.
 
-# Semantics
+# Semantics 
+
+---
 
 FQL semantics are designed with the following goals in mind:
 
