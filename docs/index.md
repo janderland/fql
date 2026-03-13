@@ -964,11 +964,13 @@ A `vstamp` lacking a transaction version is called an
 `vstamp`. 
 
 ```language-fql {.query}
+@write
 /app/queue(#:ff00)="jason"
 /app/heartbeat("jason")=#:00cd
 
-% commit transaction
+@commit
 
+@read
 /app/queue(<index:vstamp>)
 /app/heartbeat(...)=<heartbeat:vstamp>
 ```
