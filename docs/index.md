@@ -945,9 +945,10 @@ being wrapped in a tuple.
 ## Types of Queries
 
 FQL queries may write a single key-value, read/clear one or
-more key-values, or list/remove directories. Although all
-queries resemble key-values, their tokens imply which of the
-above operations is executed.
+more key-values, or list/remove directories. As stated
+earlier, all queries resemble key-values, and the tokens
+within said key-values imply which of the above operations
+is executed.
 
 ### Writes
 
