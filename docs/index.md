@@ -73,8 +73,8 @@ key-values can be efficiently streamed to clients.
 
 Traditionally, client access is facilitated by a low-ish
 level C library and various language bindings. FQL is
-a [layer][] atop this library, providing query language and
-a higher-level client API. FQL provides a generic way of
+a [layer][] atop this library, providing a query language
+and a higher-level client API. FQL provides a generic way of
 describing and querying FoundationDB data, facilitating
 schema documentation, client implementation, and debugging.
 
@@ -196,6 +196,8 @@ are efficiently streamed to the client.
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
 ```
+
+TODO: Mention `...` in directory paths.
 
 A query's value may be omitted to imply the variable `<>`,
 meaning the following query is semantically identical to the
@@ -598,6 +600,10 @@ integer, a [name](#name), or a string.
 Details about the various options will be included in the
 sections explaining the semantics which they modify.
 
+## Meta Statements
+
+TODO: @commit
+
 # Semantics 
 
 ---
@@ -608,6 +614,8 @@ FQL semantics are designed with the following goals in mind:
   will be used as an alternative client API. It should unify
   the core API with the directory and tuple layers while
   providing improved ergonomics.
+
+TODO: Mention that QL and API semantics must be the same.
 
 - **Provide defaults for value encoding.** FoundationDB
   suggests a default encoding scheme for keys but not for
@@ -863,7 +871,10 @@ def set_next_id(tr):
 
     # Write the key-value
     tr[key] = val
-```
+``` 
+
+TODO: The following explanation should appear appear right
+before the alias tables.
 
 FQL provides aliases for the `int` and `num` options to
 decrease their verbosity. For instance,
@@ -949,60 +960,6 @@ operation.
 > ❗ Queries lacking a value altogether imply an empty
 > [variable](#holes-references) as the value and should not
 > be confused with write queries.
-
-### Versionstamps
-
-As stated in the [data elements](#data-elements) section,
-a `vstamp` is composed of two components: the transaction
-version prefixed by `#`{.hljs-title} and the user version
-prefixed by `:`{.hljs-title}.
-
-A `vstamp` lacking a transaction version is called an
-"incomplete" `vstamp`. In a write query, an incomplete
-`vstamp` has unique behavior. Upon commit, the transaction's
-10-byte version is written to the first 10-bytes of the
-`vstamp`. 
-
-```language-fql {.query}
-@write
-/app/queue(#:ff00)="jason"
-/app/heartbeat("jason")=#:00cd
-
-@commit
-
-@read
-/app/queue(<index:vstamp>)
-/app/heartbeat(...)=<heartbeat:vstamp>
-```
-
-```language-fql {.result}
-/app/queue(#8e9ddaa52e44733526e2:ff00)="jason"
-/app/heartbeat("jason")=#8e9ddaa52e44733526e3:00cd
-```
-
-The example above showcases several details about writing an
-incomplete `vstamp`:
-
-- The transaction version component of the `vstamp` is
-  written at commit time, so you must start a new
-  transaction before reading it. If you attempt to read an
-  empty `vstamp` before the transaction is committed, the
-  query will fail.
-
-- The user version component of the `vstamp` is not
-  overwritten. Only the transaction version is.
-
-- The final two bytes of the transaction version component
-  (right before the user version) are incremented within
-  a transaction. In this particular example, the `/queue`
-  key's transaction version ends with `26e2` while the
-  `/heartbeat` transaction version ends with `26e3`. This
-  ensures that multiple versionstamps written by the same
-  transaction are unique.
-
-`vstamp` elements are monotonically increasing and unique
-for the lifetime of a particular database. They may be used
-as unique identifiers or non-contiguous indexes.
 
 ### Reads
 
@@ -1140,6 +1097,60 @@ clear operation is a no-op if FQL encounters a key in the
 given directory which doesn't match the schema.
 
 ## Advanced Queries
+
+### Versionstamps
+
+As stated in the [data elements](#data-elements) section,
+a `vstamp` is composed of two components: the transaction
+version prefixed by `#`{.hljs-title} and the user version
+prefixed by `:`{.hljs-title}.
+
+A `vstamp` lacking a transaction version is called an
+"incomplete" `vstamp`. In a write query, an incomplete
+`vstamp` has unique behavior. Upon commit, the transaction's
+10-byte version is written to the first 10-bytes of the
+`vstamp`. 
+
+```language-fql {.query}
+@write
+/app/queue(#:ff00)="jason"
+/app/heartbeat("jason")=#:00cd
+
+@commit
+
+@read
+/app/queue(<index:vstamp>)
+/app/heartbeat(...)=<heartbeat:vstamp>
+```
+
+```language-fql {.result}
+/app/queue(#8e9ddaa52e44733526e2:ff00)="jason"
+/app/heartbeat("jason")=#8e9ddaa52e44733526e3:00cd
+```
+
+The example above showcases several details about writing an
+incomplete `vstamp`:
+
+- The transaction version component of the `vstamp` is
+  written at commit time, so you must start a new
+  transaction before reading it. If you attempt to read an
+  empty `vstamp` before the transaction is committed, the
+  query will fail.
+
+- The user version component of the `vstamp` is not
+  overwritten. Only the transaction version is.
+
+- The final two bytes of the transaction version component
+  (right before the user version) are incremented within
+  a transaction. In this particular example, the `/queue`
+  key's transaction version ends with `26e2` while the
+  `/heartbeat` transaction version ends with `26e3`. This
+  ensures that multiple versionstamps written by the same
+  transaction are unique.
+
+`vstamp` elements are monotonically increasing and unique
+for the lifetime of a particular database. They may be used
+as unique identifiers or non-contiguous indexes.
 
 ### Indirection
 
