@@ -137,6 +137,7 @@
       'f64',
       'f80',
       'bigendian',
+      'raw',
       'width',
       'unsigned',
       'reverse',
@@ -175,6 +176,8 @@
         'f32',
         'f64',
         'f80',
+        'bigendian',
+        'raw',
         'endian',
         'width',
         'unsigned',
@@ -239,6 +242,7 @@
         'uuid',
         'tup',
         'vstamp',
+        'nil',
         'append',
         'sum',
         'avg',
@@ -292,6 +296,7 @@
     contains: [
       STRING,
       VARIABLE,
+      MAYBEMORE,
       DSTRING,
     ],
   };
@@ -363,10 +368,6 @@
       BYTES,
       NUMBER,
       OPTIONS,
-      { // Highlight lone bar for inline text.
-        scope: 'variable',
-        begin: /\|/,
-      },
     ],
   }));
 })();

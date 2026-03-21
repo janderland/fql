@@ -74,7 +74,7 @@ p {
   margin: 1rem 0;
 }
 
-/* Headers */
+/* Header */
 
 .header-container {
   display: flex;
@@ -175,7 +175,6 @@ p {
   color: var(--colorD);
 }
 
-/* Dim the inactive icon */
 [data-theme="dark"] .theme-toggle .sun-icon,
 [data-theme="light"] .theme-toggle .moon-icon {
   opacity: 0.4;
@@ -184,6 +183,16 @@ p {
 [data-theme="dark"] .theme-toggle .moon-icon,
 [data-theme="light"] .theme-toggle .sun-icon {
   opacity: 1;
+}
+
+/* Titles */
+
+h1, h2, h3 {
+  font-family: "Merriweather", serif;
+}
+
+body > h1 {
+  margin-top: 3rem;
 }
 
 h1 {
@@ -205,7 +214,7 @@ a:link {
 }
 
 a:visited {
-  color: var(--color9);
+  color: var(--colorF);
 }
 
 a:hover {

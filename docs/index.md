@@ -6,6 +6,7 @@ title: FQL
 /user/index/surname("Johnson",<userID:int>)
 /user(:userID,...)
 ```
+
 ```language-fql {.result}
 /user(9323,"Timothy","Johnson",37)=nil
 /user(24335,"Andrew","Johnson",42)=nil
@@ -13,12 +14,12 @@ title: FQL
 ```
 
 FQL is an [open source](https://github.com/janderland/fql)
-query language for
-[FoundationDB](https://www.foundationdb.org/). It's query
+query language and alternative client API for
+[FoundationDB](https://www.foundationdb.org/). It's
 semantics mirror FoundationDB's [core data
-model](https://apple.github.io/foundationdb/data-modeling.html).
-Fundamental patterns like range-reads and indirection are
-first class citizens.
+model](https://apple.github.io/foundationdb/data-modeling.html)
+while improving API ergonomics. Fundamental patterns like
+range-reads and indirection are first class citizens.
 
 <!--toc:start-->
 - [Introduction](#introduction)
@@ -27,19 +28,24 @@ first class citizens.
   - [Data Elements](#data-elements)
   - [Names](#names)
   - [Directories](#directories)
-  - [Holes & References](#holes-references)
+  - [Schemas](#schemas)
+    - [Holes](#holes)
+    - [References](#references)
   - [Space & Comments](#space-comments)
   - [Options](#options)
 - [Semantics](#semantics)
   - [Data Encoding](#data-encoding)
     - [Keys](#keys)
     - [Values](#values)
-    - [Empty Values](#empty-values)
-  - [Query Types](#query-types)
-    - [Reads & Writes](#reads-writes)
-    - [Directories](#directories-1)
+    - [Empty](#empty)
     - [Options](#options-1)
+  - [Types of Queries](#types-of-queries)
+    - [Writes](#writes)
+    - [Versionstamps](#versionstamps)
+    - [Reads](#reads)
+    - [Directories](#directories-1)
     - [Filtering](#filtering)
+    - [Options](#options-2)
   - [Advanced Queries](#advanced-queries)
     - [Indirection](#indirection)
     - [Aggregation](#aggregation)
@@ -53,27 +59,37 @@ first class citizens.
 - [Grammar](#grammar)
 <!--toc:end-->
 
-# Introduction
+# Introduction 
+
+---
+
+FoundationDB provides the *foundations* of a fully-featured
+ACID, distributed, key-value database. It implements
+solutions for the hard problems related to distributed data
+sharding and replication. Highly concurrent workflows are
+enabled via many small, lock-free transactions. Key-values
+are stored in sorted order and large batches of adjacent
+key-values can be efficiently streamed to clients.
+
+Traditionally, client access is facilitated by a low-ish
+level C library and various language bindings. FQL is
+a [layer][] atop this library, providing a query language
+and a higher-level client API. FQL provides a generic way of
+describing and querying FoundationDB data, facilitating
+schema documentation, client implementation, and debugging.
+
+[layer]: https://apple.github.io/foundationdb/layer-concept.html
 
 This document serves as both a language specification and
 a usage guide for FQL. The [Syntax](#syntax) section
 describes the structure of queries while the
 [Semantics](#semantics) section describes their behavior.
-The [Implementations](#implementations) section highlights
-features which are not included in FQL but may be defined by
-a particular implementation. The complete [EBNF
+The [Implementations](#implementations) section describes
+the Go reference implementation and highlights details not
+dictated by the specification. The complete [EBNF
 grammar](#grammar) appears at the end.
 
-Throughout the document, relevant grammar rules are shown
-alongside the features they define. Python code snippets are
-also included demonstrating equivalent FoundationDB API
-calls.
-
-Grammar rules use extended Backus-Naur form as defined in
-ISO/IEC 14977, with a modification: concatenation and rule
-termination are implicit.
-
-> ❗Not all features described in this document have been
+> ❗ Not all features described in this document have been
 > implemented yet. See the project's [issues][] for
 > a roadmap of implemantation plans.
 
@@ -81,13 +97,30 @@ termination are implicit.
 
 # Syntax
 
+---
+ 
+Throughout this section, relevant grammar rules are shown
+alongside their related features. These rules are written in
+extended Backus-Naur form as defined in ISO/IEC 14977 with
+a modification: concatenation and rule termination are
+implicit.
+
 ## Overview
 
 FQL is specified as a context-free [grammar](#grammar). The
-queries look like key-values encoded using the [directory][]
-and [tuple][] layers. To the left of the `=` is the key
-which includes a directory path and tuple. To the right is
-the value.
+queries resemble key-values encoded using the [directory][]
+and [tuple][] layers.
+
+Directories are used to group sets of key-values. Often,
+though not necessarily, the key-values of a particular
+directory will follow the same schema. In this sense, they
+are analogous to SQL tables.
+
+Tuples provide a way to encode primitive data types into
+byte strings while preserving type information and natural
+ordering. For instance, after being serialized and sorted,
+the tuple `(22,"abc",false)` will appear before the tuple
+`(23,"bcd",true)`.
 
 [directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
@@ -97,13 +130,17 @@ query = [ opts '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
-value = 'clear' | data
+value = 'clear' | data 
 ```
 
-For now, the `opts`{.hljs-variable} prefixing the query can
-be ignored. [Options](#options) will be described later in
-the document. A query may be a full key-value, just a key,
-or a directory query.
+To the left of the `=` is the key which includes a directory
+path and tuple. To the right is the value. For now, the
+`opts`{.hljs-variable} prefixing the query can be ignored.
+[Options](#options) will be described later in the document.
+
+A query may be a full key-value, just a key, or just
+a directory path. The contents of the query implies whether
+it's reading or writing data.
 
 ```language-fql {.query}
 /my/directory("my","tuple")=4000
@@ -126,9 +163,9 @@ Variables act as placeholders for any of the supported [data
 elements](#data-elements). 
 
 FQL queries may also perform [range reads][] and filtering
-by including on or more variables in the key. The query
+by including one or more variables in the key. The query
 below will return all key-values which conform to the schema
-defined by the query.
+it defines.
 
 [range reads]: https://apple.github.io/foundationdb/developer-guide.html#range-reads
 
@@ -141,12 +178,14 @@ defined by the query.
 /my/directory(42,"tuple")=nil
 ```
 
-The variable `<>` in the query above lacks a type. This
-means the schema allows any [data element](#data-elements)
-at the variable's position.
+Unlike the first variable we saw, the variable `<>` in the
+query above lacks a type. This means the schema allows any
+[data element](#data-elements) at the variable's position.
 
 All key-values with a certain key prefix may be range read
-by ending the tuple with `...`.
+by ending the key's tuple with `...`. Due to sorting,
+key-values with a common prefix are stored adjacently and
+are efficiently streamed to the client.
 
 ```language-fql {.query}
 /my/directory("my","tuple",...)=<>
@@ -157,6 +196,8 @@ by ending the tuple with `...`.
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
 ```
+
+TODO: Mention `...` in directory paths.
 
 A query's value may be omitted to imply the variable `<>`,
 meaning the following query is semantically identical to the
@@ -172,6 +213,14 @@ one above.
 /my/directory("my","tuple",false,0xff9a853c12)=nil
 ```
 
+Key-values may be cleared by using the special `clear` token
+as the value. If the schema matches multiple keys they will
+all be cleared by the query.
+
+```language-fql {.query}
+/my/directory("my",...)=clear 
+```
+
 Including a variable in the directory path tells FQL to
 perform the read on all directory paths matching the schema.
 
@@ -184,11 +233,17 @@ perform the read on all directory paths matching the schema.
 /your/directory("my","tuple")=nil
 ```
 
-Key-values may be cleared by using the special `clear` token
-as the value.
+The directory path may end with the `...` token to perform
+the read on all descendant directories.
 
 ```language-fql {.query}
-/my/directory("my","tuple")=clear
+/your/...(...)
+```
+
+```language-fql {.result}
+/your/directory("my","tuple")=nil
+/your/keyspace("the","tuple")=547
+/your/keyspace/subspace("tuple")="value"
 ```
 
 The directory layer may be queried by only including
@@ -204,21 +259,21 @@ a directory path.
 
 Directories are not explicitly created. During a write
 query, the directory is created if it doesn't exist.
-Directories may be removed by suffixing the directory path
-with `=remove`.
+Directories, along with all their contained key-values, may
+be explicitly removed by suffixing the directory path with
+`=remove`.
 
 ```language-fql {.query} 
-/my/dir=remove
+/my/directory=remove
 ```
 
 ## Data Elements
 
 An FQL query contains instances of data elements. These
 mirror the types of elements found in the [tuple layer][].
-This section will describe how data elements behave in the
-FQL language, while [element encoding](#data-encoding)
-describes how FQL encodes the elements before writing them
-to the DB.
+This section describes how data elements behave in FQL,
+while [element encoding](#data-encoding) describes how FQL
+encodes the elements before writing them to the DB.
 
 [tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
@@ -231,28 +286,36 @@ to the DB.
 | `int`    | Signed Integer   | `-14` `3033`                           |
 | `num`    | Floating Point   | `33.4` `-3.2e5`                        |
 | `str`    | Unicode String   | `"happy😁"` `"\"quoted\""`             |
-| `uuid`   | UUID             | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `bytes`  | Byte String      | `0xa2bff2438312aac032`                 |
-| `tup`    | Tuple            | `("hello",27.4,nil)`                   |
+| `uuid`   | UUID             | `5a5ebefd-2193-47e2-8def-f464fc698e31` |
 | `vstamp` | Version Stamp    | `#:0000` `#0102030405060708090a:0000`  |
+| `tup`    | Tuple            | `("hello",27.4,nil)`                   |
 
 </div>
 
 The `nil` type may only be instantiated as the element
-`nil`. The `bool` type may be instantiated as `true` or
-`false`.
+`nil`.
 
 ```language-ebnf {.grammar}
 bool = 'true' | 'false'
+```
+
+The `bool` type may be instantiated as `true` or
+`false`.
+
+```language-ebnf {.grammar}
+int = [ '-' ] digits
+digits = digit { digit }
+digit = '0' | ... | '9'
 ```
 
 The `int` type may be instantiated as any arbitrarily large
 integer.
 
 ```language-ebnf {.grammar}
-int = [ '-' ] digits
-digits = digit { digit }
-digit = '0' | '1' | '2' | '3' | '4' | '5' | '6' | '7' | '8' | '9'
+num = int '.' digits
+    | ( int | int '.' digits ) 'e' int 
+    | '-inf' | 'inf' | '-nan' | 'nan'
 ```
 
 The `num` type may be instantiated as any real number which
@@ -265,15 +328,18 @@ may be instantiated as `-inf`, `inf`, `-nan` or `nan`.
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```language-ebnf {.grammar}
-num = int '.' digits | ( int | int '.' digits ) 'e' int | '-inf' | 'inf' | '-nan' | 'nan'
+string = '"' { char | '\\"' | '\\\\' } '"'
+char = ? Any printable UTF-8 character except '"' and '\' ?
 ```
 
 The `str` type may be instantiated as a unicode string
-wrapped in double quotes. Quoted strings may contain double
-quotes and backslashes via backslash escapes.
+wrapped in double quotes. Strings may contain double quotes
+and backslashes via backslash escapes.
 
 ```language-ebnf {.grammar}
-string = '"' { char | '\\"' | '\\\\' } '"'
+uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
+bytes = '0x' { hex hex } 
+hex = digit | 'a' | ... | 'f' | 'A' | ... | 'F' 
 ```
 
 The `uuid` and `bytes` types may be instantiated using
@@ -283,9 +349,23 @@ format. For `bytes`, any even number of hexidecimal digits
 are prefixed by `0x`.
 
 ```language-ebnf {.grammar}
-uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
-bytes = '0x' { hex hex }
-hex = digit | 'a' | 'b' | 'c' | 'd' | 'e' | 'f' | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
+vstamp = '#' [ hex{20} ] ':' hex{4}
+```
+
+The `vstamp` type represents a FoundationDB [versionstamp][]
+containing a 10-byte transaction version followed by
+a 2-byte user version. These byte strings may be
+instantiated using upper, lower, or mixed case hexidecimal
+digits. The transaction version may be empty, meaning the
+`vstamp` only contains the user version. In this case it
+acts as a placeholder where FoundationDB will write the
+actual transaction version upon commit.
+
+[versionstamp]: https://apple.github.io/foundationdb/data-modeling.html?highlight=versionstamp#versionstamps
+
+```language-ebnf {.grammar}
+tuple = '(' [ nl elements [ ',' ] nl ] ')'
+elements = data [ ',' nl elements ] | '...'
 ```
 
 The `tup` type may contain any of the data elements,
@@ -294,28 +374,9 @@ and wrapped in parentheses. A trailing comma is allowed
 after the last element. The last element may be the `...`
 token (see [holes](#holes-references)).
 
-```language-ebnf {.grammar}
-tuple = '(' [ nl elements [ ',' ] nl ] ')'
-elements = data [ ',' nl elements ] | '...'
-```
-
-The `vstamp` type represents a FoundationDB [versionstamp][].
-A versionstamp contains a 10-byte transaction version and
-a 2-byte user version. The transaction version is assigned
-by the database at commit time. A vstamp without the
-transaction version (only the user version after the colon)
-is incomplete and will be filled in by FoundationDB when
-written.
-
-[versionstamp]: https://apple.github.io/foundationdb/api-general.html#versionstamps
-
-```language-ebnf {.grammar}
-vstamp = '#' [ hex{20} ] ':' hex{4}
-```
-
 ## Names
 
-Names are a syntactic construct used throughout FQL. The are
+Names are a syntax construct used throughout FQL. The are
 not a [data element](#data-elements) because they are
 [*usually*](#directories) not serialized and written to the
 database. They are used in many contexts including
@@ -334,8 +395,9 @@ periods.
 
 Directories provide a way to organize key-values into
 hierarchical namespaces. The [directory layer][] manages
-these namespaces and maps each path to a short key prefix.
-Strings are the only element type allowed in directories.
+these namespaces and maps each directory path to a short key
+prefix. Key-values with the same directory will be
+adjacently stored.
 
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
@@ -345,29 +407,32 @@ element = '<>' | name | string
 ```
 
 A directory is specified as a sequence of strings, each
-prefixed by a forward slash. If the string only uses
+prefixed by a forward slash. If the string only contains
 characters allowed in a [name](#names), the quotes may be
 excluded.
 
 ```language-fql {.query}
-/my/dir/path_way
-/my/"dir@--\o/"/path_way
+/my/directory/path_way
+/another/"d!r3ct0ry"/"\"path\""
 ```
 
 The empty variable `<>` may be used in a directory path as
-a placeholder for any directory name.
+a placeholder, allowing multiple directories to be queried
+at once.
 
 ```language-fql {.query}
-/root/<>/items
+/app/<>/index
 ```
 
 ```language-fql {.result}
-/root/good/items
-/root/bad/items
-/root/weird/items
+/app/users/index
+/app/roles/index
+/app/actions/index
 ```
 
-## Holes & References
+## Schemas
+
+### Holes
 
 Holes are a group of syntax constructs used to define
 a key-value schema by acting as placeholders for one or more
@@ -376,66 +441,73 @@ the `...` token.
 
 ```language-ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-type = 'any' | 'tuple' | 'bool' | 'int' | 'num' | 'str' | 'uuid' | 'bytes' | 'vstamp'
+type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
+     | 'str' | 'uuid' | 'bytes' | 'vstamp'
 ```
 
 Variables are used to represent a single [data
 element](#data-elements). Variables may optionally include a
 [name](#names) before the type list. Variables are specified
-as a list of element types, separated by `|`, wrapped in
-angled braces.
+as a list of element types, separated by
+`|`{.hljs-variable}, wrapped in angled braces.
 
 ```language-fql
 <int|str|uuid|bytes>
 ```
 
 The variable's type list describes which kinds of data
-elements are allowed at the variable's position. A variable
-may be empty, including no element types, meaning it allows
-any element type.
+elements are allowed at the variable's position.
+A variable's type list may be empty, including no element
+types, meaning it allows any element type.
 
 ```language-fql {.query}
-/data(<int>,<str|int>,<>)=<>
+/tree/node(<int>,<int|nil>,<int|nil>)=<>
 ```
 
 ```language-fql {.result}
-/data(0,"jon",0xffab0c)=nil
-/data(20,3,22.3)=0xff
-/data(21,"",nil)=nil
+/tree/node(5,12,14)=nil
+/tree/node(12,nil,nil)="payload"
+/tree/node(14,nil,15)=0xa3127b
+/tree/node(15,nil,nil)=(42,96,nil)
 ```
 
 The `...` token represents any number of data elements of
 any type. It is only allowed as the last element of a tuple.
 
 ```language-fql {.query}
-/tuples(0x00,...)
+/app/queue("topic",...)
 ```
 
 ```language-fql {.result}
-/tuples(0x00)=nil
-/tuples(0x00,"something")=nil
-/tuples(0x00,42,43,44)=0xabcf
+/app/queue("topic",54,"event A")
+/app/queue("topic",55,"event Y")
+/app/queue("topic",56,"event Y")
+/app/queue("topic",57,"event C")
+/app/queue("topic",58,"done")
 ```
 
-References allow two queries to be connected via
-a variable's name, allowing for [index
-indirection](#indirection). Before the type list, a variable
-may include a [name](#names). The reference is specified as
-a variable's name prefixed with a `:`.
+### References
+
+Before the type list, a variable may include
+a [name](#names). References can use this name to pass the
+variable's values into a subsequent query, allowing for
+[index indirection](#indirection). The reference is
+specified as a variable's name prefixed with
+a `:`{.hljs-variable}.
 
 ```language-ebnf {.grammar}
-reference = ':' name [ '!' type ]
+reference = ':' name
 ```
 
 ```language-fql {.query}
-/index("car makes",<makeID:int>)
-/data(:makeID,...)
+/user/index/surname("Johnson",<userID:int>)
+/user(:userID,...)
 ```
 
 ```language-fql {.result}
-/data(33,"mazda")=nil
-/data(320,"ford")=nil
-/data(411,"chevy")=nil
+/user(9323,"Timothy","Johnson",37,"United States")=nil
+/user(24335,"Andrew","Johnson",42,"United States")=nil
+/user(33423,"Ryan","Johnson",32,"England")=nil
 ```
 
 Named variables must include at least one type. To allow
@@ -443,63 +515,21 @@ named variables to match all element type, use the `any`
 type.
 
 ```language-fql {.query}
-/stuff(<thing:any>)
+/store/hash(<bytes>,<thing:any>)
 ```
 
 ```language-fql {.result}
-/stuff("cat")
-/stuff(42)
-/stuff(0x5fae)
+/store/hash(0x6dc88b,"somewhere we have")=nil
+/store/hash(0x8b593b,523.8e90)=nil
+/store/hash(0x9ccf9d,"I have yet to find")=nil
+/store/hash(0xcd53e8,ca03676e-1c59-4dd4-a7ea-36c90714c2b7)=nil
+/store/hash(0xda3924,0x96f70a30)=nil
 ```
-
-References may include a type cast by appending `!` followed
-by a type name. This converts the referenced value to the
-specified type.
-
-```language-fql
-:myVar!str
-```
-
-The example above typecasts the value of `:myVar` to type
-`str`. Type casting is useful when a variable's type differs
-from how it needs to be used in a subsequent query.
-
-```language-fql {.query}
-/ids(<id:int>)
-/data(:id!str,...)
-```
-
-In the example above, the `<id:int>` variable is defined as
-an `int` but is cast to `str` when used as a reference.
-
-<div>
-
-| Cast            | Description                                    |
-|:----------------|:-----------------------------------------------|
-| `int` ➜ `num`   | Convert integer to floating point              |
-| `int` ➜ `str`   | Convert integer to string representation       |
-| `num` ➜ `int`   | Truncate floating point to integer             |
-| `num` ➜ `str`   | Convert number to string representation        |
-| `bool` ➜ `str`  | Convert boolean to "true" or "false" string    |
-| `str` ➜ `int`   | Parse string as integer                        |
-| `str` ➜ `num`   | Parse string as floating point                 |
-| `str` ➜ `bool`  | Parse string as boolean                        |
-| `str` ➜ `bytes` | Encode string as UTF-8 bytes                   |
-| `bytes` ➜ `str` | Decode UTF-8 bytes as string                   |
-| `bytes` ➜ `uuid`| Convert 16-byte string to UUID                 |
-| `uuid` ➜ `bytes`| Convert UUID to 16-byte string                 |
-| `bytes` ➜ `vstamp` | Convert 12-byte string to versionstamp      |
-| `vstamp` ➜ `bytes` | Convert versionstamp to 12-byte string      |
-
-</div>
-
-Type casts that fail at runtime (e.g., parsing a non-numeric
-string as `int`) will cause the query to error.
 
 ## Space & Comments
 
 Whitespace and newlines are allowed within a tuple, between
-its elements. Trailing commas are also permitted.
+its elements.
 
 ```language-fql {.query}
 /account/private(
@@ -544,18 +574,18 @@ following options would be included after the element.
 3548[u8]
 ```
 
-Similarly, if a variable should only match against
-big-endian 32-bit floats then the following options would be
-included after the `num` type.
+If a variable should only match against big-endian 32-bit
+floats then the following options would be included after
+the `num` type.
 
 ```language-fql
 <num[f32,be]>
 ```
 
-Query options are specified on the line before the query.
-For instance, to specify that a range-read query should read
-in reverse and only read 5 items, the following options
-would be included before the query.
+Query options are specified on the line before the query. To
+specify that a range-read query should read in reverse and
+only read 5 items, the following options would be included
+before the query.
 
 ```language-fql {.query}
 [reverse,limit:5]
@@ -564,39 +594,77 @@ would be included before the query.
 
 Notice that the `limit` option includes a number after the
 colon. Some options include a single argument to further
-specify the option's behavior.
+specify the option's behavior. The argument may be an
+integer, a [name](#name), or a string.
 
-# Semantics
+Details about the various options will be included in the
+sections explaining the semantics which they modify.
+
+## Meta Statements
+
+TODO: @commit
+
+# Semantics 
+
+---
+
+FQL semantics are designed with the following goals in mind:
+
+- **Provide useful behavior as a standalone [layer][].** FQL
+  will be used as an alternative client API. It should unify
+  the core API with the directory and tuple layers while
+  providing improved ergonomics.
+
+TODO: Mention that QL and API semantics must be the same.
+
+- **Provide defaults for value encoding.** FoundationDB
+  suggests a default encoding scheme for keys but not for
+  values. FQL establishes conventions for value encoding
+  using the [tuple layer][] and unifies keys and values
+  under a single type system.
+
+- **Interface with other layers.** FQL will be used to
+  explore and debug other layers and should be able to
+  express schemas for common FoundationDB design patterns.
+
+Throughout this section, snippets of Python code are
+included showcasing equivalent client API calls to help
+describe how FQL behaves. These snippets are simplified and
+don't include optimizations found in the actual
+implementation like concurrency, batching, or caching.
 
 ## Data Encoding
 
-FoundationDB stores the keys and values as simple byte
-strings leaving the client responsible for encoding the
-data. FQL determines how to encode [data
-elements](#data-elements) based on their data type, position
-within the query, and associated [options](#options).
+FoundationDB stores keys and values as simple byte strings
+leaving the client responsible for encoding the data. FQL
+determines how to encode [data elements](#data-elements)
+based on their data type, position within the query, and
+associated [options](#options).
 
 ### Keys
 
 Keys are *always* encoded using the [directory][] and
-[tuple][] layers. Write queries create directories if they
-do not exist.
+[tuple][] layers. All keys must include a directory prefix.
+Write queries create directories if they do not exist.
 
 ```language-fql {.query}
-/directory/"p@th"(nil,57223,0xa8ff03)=nil
+/app/users(57223,"Peter","Carson",56)=nil
 ```
 
 ```language-python {.equiv-py}
 @fdb.transactional
-def write_kv(tr):
+def write_user(tr):
     # Open directory; create if doesn't exist
-    dir = fdb.directory.create_or_open(tr, ('directory', 'p@th'))
+    dir = fdb.directory.create_or_open(tr, ('app', 'users'))
 
     # Pack the tuple and prepend the directory prefix
-    key = dir.pack((None, 57223, b'\xa8\xff\x03'))
+    key = dir.pack((57223, "Peter", "Carson", 56))
+
+    # Encode the value
+    val = # ...
 
     # Write the KV
-    tr[key] = b''
+    tr[key] = val
 ```
 
 If a query reads from a directory which doesn't exist,
@@ -604,43 +672,50 @@ nothing is returned. The tuple layer encodes metadata about
 element types, allowing FQL to decode keys without a schema.
 
 ```language-fql {.query}
-/directory/<>(...)
+/app/...(...)
 ```
 
 ```language-python {.equiv-py}
 @fdb.transactional
-def read_kvs(tr):
+def read_all(tr):
     # Open directory; exit if it doesn't exist
-    dir = fdb.directory.open(tr, ('directory',))
+    dir = fdb.directory.open(tr, ('app',))
     if dir is None:
         return []
 
-    # List the sub-directories
-    sub_dirs = dir.list(tr)
+    # Recursively read all directories
+    return do_read_users(tr, dir)
 
-    # For each sub-directory, grab all the KVs
+
+def do_read_all(tr, dir):
+    # Grab all the key-values
     results = []
-    for sub_name in sub_dirs:
-        sub_dir = dir.open(tr, (sub_name,))
-        for key, val in tr[sub_dir.range()]:
-            # Remove the directory prefix and unpack the tuple
-            tup = sub_dir.unpack(key)
-            # Value unpacking will be discussed later...
-            results.append((sub_dir.get_path(), tup, val))
+    for key, val in tr[dir.range()]:
+        # Get the full path of the directory
+        path = dir.get_path()
+
+        # Remove the directory prefix and unpack the tuple
+        tup = dir.unpack(key)
+
+        # Unpack the value
+        val = # ...
+
+        # Collect the key-values
+        results.append((path, tup, val))
+
+    # Recurse into child directories
+    for child_name in dir.list(tr):
+        child_dir = dir.open(tr, (child_name,))
+        results += do_read_all(tr, child_dir)
 
     return results
 ```
 
 ### Values
 
-Values have more encoding flexibility. There is a default
-encoding where data elements are encoded as the lone member
-of a tuple. For instance, the value `42` is encoded as the
-tuple `(42)`.
-
-The exceptions to this default encoding are when values are
-tuples (which are not wrapped in another tuple) and byte
-strings (which are used as-is for the value).
+When used as a value, [data elements](#data-elements) are
+encoded as the lone member of a tuple. This approach
+preserves type information for flexible decoding.
 
 ```language-fql {.query}
 /people/age("jon","smith")=42
@@ -649,18 +724,15 @@ strings (which are used as-is for the value).
 ```language-python {.equiv-py}
 @fdb.transactional
 def write_age(tr):
-    dir = fdb.directory.create_or_open(tr, ('people', 'age'))
-    key = dir.pack(('jon', 'smith'))
+    # Encoding the key
+    key = # ...
 
     # Pack the value as a tuple
     val = fdb.tuple.pack((42,))
 
-    # Write the KV
+    # Write the key-value
     tr[key] = val
 ```
-
-This default encoding allows values to be decoded without
-knowing their type.
 
 ```language-fql {.query}
 /people/age("jon","smith")=<>
@@ -669,107 +741,236 @@ knowing their type.
 ```language-python {.equiv-py}
 @fdb.transactional
 def read_age(tr):
-    dir = fdb.directory.open(tr, ('people', 'age'))
-    key = dir.pack(('jon', 'smith'))
+    # Encode the key
+    key = # ...
 
-    # Read the value
+    # Read the value's bytes
     val_bytes = tr[key]
 
-    # Assume the value is a tuple
     try:
+        # Assume the value is a tuple
         val_tup = fdb.tuple.unpack(val_bytes)
+
         if len(val_tup) == 1:
+            # Unwrap single elements
             return val_tup[0]
-        return val_tup
+        else:
+            # Return as a tuple
+            return val_tup
     except:
-        # If decoding as a tuple fails, return raw bytes
+        # Fallback to raw bytes
         return val_bytes
 ```
 
-The table below shows [options](#options) which change how
-`int` and `num` types are encoded as values.
+As the Python snippet above implies, tuples and byte strings
+are treated differently. As a value, tuples are encoded
+using the tuple layer, but they are not wrapped in a tuple
+like the other data elements. Byte strings are written
+as-is.
+
+This means that `42` and `(42)` have the same value
+encoding. The way the value is returned depends on how it's
+queried.
+
+```language-fql {.query}
+% write the key-value once
+/app/location("east bay")=87234
+
+% read without a tuple
+/app/location("east bay")=<>
+
+% read with a tuple
+/app/location("east bay")=(<>)
+```
+
+```language-fql {.result}
+/app/location("east bay")=87234
+/app/location("east bay")=(87234)
+```
+
+### Empty
+
+Within a tuple, `nil`, empty bytes `0x`, and empty nested tuples `()`
+are encoded with their types preserved by the [tuple
+layer][]. As a value, all three are encoded as an empty byte
+string. A typeless variable will decode an empty byte string
+as `nil`.
+
+```language-fql {.query}
+/globals/selection("object")=0x
+/globals/selection("item")=nil
+/globals/selection("text")=()
+
+/globals/selection(...)=<>
+```
+
+```language-fql {.result}
+/globals/selection("object")=nil
+/globals/selection("item")=nil
+/globals/selection("text")=nil
+```
+
+Likewise, the tuple of a key is encoded as an empty byte string
+when it contains no elements, allowing queries to write
+a key that is simply the directory prefix.
+
+```language-fql {.query}    
+/globals/next-id()=37534
+```
+
+```language-python {.equiv-py}
+@fdb.transactional
+def set_next_id(tr):
+    # Open directory; create if doesn't exist
+    dir = fdb.directory.open(tr, ('globals', 'next-id'))
+
+    # Use directory prefix as the key
+    key = dir.key()
+
+    # Encode the value
+    val = # ...
+
+    # Write key-value
+    tr[key] = val
+```
+
+### Options
+
+Options allow for encoding [data elements](#data-elements)
+in different ways than the default outlined above. The table
+below shows [options](#options) which change how the `int`
+and `num` types are encoded as values.
 
 <div>
 
-| Value Option | Argument | Description                            |
-|:-------------|:---------|:---------------------------------------|
-| `width`      | `int`    | Bit width: `8`, `16`, `32`, `64`, `80` |
-| `bigendian`  | none     | Use big endian encoding                |
-| `unsigned`   | none     | Use unsigned encoding                  |
+| Option      | Argument | Description                            |
+|:------------|:---------|:---------------------------------------|
+| `width`     | `int`    | Bit width: `8`, `16`, `32`, `64`, `80` |
+| `bigendian` | none     | Use big endian encoding                |
+| `unsigned`  | none     | Use unsigned encoding                  |
 
 </div>
 
-`int` may use the widths 8, 16, 32, and 64, while `num` may
-use 32, 64, and 80. FQL provides `be` as an alias for
-`bigendian`. Additionally, FQL provides provides pseudo
-types to decrease the verbosity of the encoding options.
+`int` may use the widths `8`, `16`, `32`, and `64`, while `num` may
+use `32`, `64`, and `80`. When the width option is present, values
+use little endian encoding, as long as the `bigendian`
+option isn't also present.
+
+```language-fql {.query}
+/globals/next-id()=37534[width:64,bigendian]
+```
+
+```language-python {.equiv-py}
+@fdb.transactional
+def set_next_id(tr):
+    # Encode the key
+    key = # ...
+
+    # Encode the value as a big-endian, 64-bit, signed int
+    val = struct.pack('>q', 37534)
+
+    # Write the key-value
+    tr[key] = val
+``` 
+
+TODO: The following explanation should appear appear right
+before the alias tables.
+
+FQL provides aliases for the `int` and `num` options to
+decrease their verbosity. For instance,
+`[width:64,bigendian]` can be written as `[i64,be]`.
+
+When writing values with non-default encoding, type metadata
+will be lost. Read queries will need the appropriate options
+specified. Otherwise, the value will not match the schema.
+
+```language-fql {.query}
+% write
+/globals/next-id()=37534[i64,be]
+
+% read
+/globals/next-id()=<int[i64,be]>
+```
+
+```language-fql {.result}
+/globals/next-id()=37534[i64,be]
+```
+
+The tables below list the available aliases for for `int`
+and `num` options.
 
 <div>
 
-| Int Type | Actual Type & Options    |
-|:---------|:-------------------------|
-| `i8`     | `int[width:8]`           |
-| `i16`    | `int[width:16]`          |
-| `i32`    | `int[width:32]`          |
-| `i64`    | `int[width:64]`          |
-| `u8`     | `int[unsigned,width:8]`  |
-| `u16`    | `int[unsigned,width:16]` |
-| `u32`    | `int[unsigned,width:32]` |
-| `u64`    | `int[unsigned,width:64]` |
+| Int Alias | Actual Options      |
+|:----------|:--------------------|
+| `be`      | `bigendian`         |
+| `i8`      | `width:8`           |
+| `i16`     | `width:16`          |
+| `i32`     | `width:32`          |
+| `i64`     | `width:64`          |
+| `u8`      | `unsigned,width:8`  |
+| `u16`     | `unsigned,width:16` |
+| `u32`     | `unsigned,width:32` |
+| `u64`     | `unsigned,width:64` |
 
 </div>
 
 <div>
 
-| Num Type | Actual Type & Options |
-|:---------|:----------------------|
-| `f32`    | `num[width:32]`       |
-| `f64`    | `num[width:64]`       |
-| `f80`    | `num[width:80]`       |
+| Num Alias | Actual Options |
+|:----------|:---------------|
+| `be`      | `bigendian`    |
+| `f32`     | `width:32`     |
+| `f64`     | `width:64`     |
+| `f80`     | `width:80`     |
 
 </div>
 
-If the value was encoded with non-default options, then the
-encoding must be specified in the variable when read.
-Otherwise, the default decoding will fail and it will be
-returned as raw bytes.
+The `str`, `uuid`, and `vstamp` types include the option
+`raw` which causes their bytes to be written as-is without
+being wrapped in a tuple. 
 
-### Empty Values
+```language-fql {.query}
+% write raw UUID
+/tag_code("food")=77542869-5708-4af9-821e-d65354fb1a12[raw]
 
-Within a tuple, `nil`, empty bytes, and empty nested tuples
-are encoded with their types preserved and will be decoded
-appropriately. As a value, all three are encoded as an empty
-byte string. A typeless variable will decode said value as
-`nil`.
+% read as bytes
+/tag_code("food")=<bytes>
+```
 
-The top-level tuple of a key is encoded as an empty byte
-string when it contains no elements, allowing queries to
-write KVs where the key is simply the directory prefix.
+```language-fql {.result}
+/tag_code("food")=0x7754286957084af9821ed65354fb1a12
+```
 
-## Query Types
+## Types of Queries
 
 FQL queries may write a single key-value, read/clear one or
-more key-values, or list/remove directories. Although all
-queries resemble key-values, their tokens imply one of the
-above operations.
+more key-values, or list/remove directories. As stated
+earlier, all queries resemble key-values, and the tokens
+within said key-values imply which of the above operations
+is executed.
 
-### Reads & Writes
+### Writes
 
 Queries lacking [holes](#holes-references) perform writes on
 the database. You can think of these queries as declaring
-the existence of a particular key-value. Most query results
-can be fed back into FQL as write queries. The exception to
-this rule are [aggregate queries](#aggregation) and results
-created by non-default [formatting](#formatting).
+the existence of a particular key-value. If the key's
+directory does not exist, it is created during a write
+operation.
 
-> ❗Queries lacking a value altogether imply an empty
+> ❗ Queries lacking a value altogether imply an empty
 > [variable](#holes-references) as the value and should not
 > be confused with write queries.
+
+### Reads
 
 Queries containing [holes](#holes-references) read one or more
 key-values. If the holes only appear in the value, then
 a single key-value is returned, if one matching the schema
-exists.
+exists. Most query results can be fed back into FQL as write
+queries. The exception to this rule are [aggregate
+queries](#aggregation) and results created by non-default
+[formatting](#formatting).
 
 FQL attempts to decode the value as each of the types listed
 in the variable, stopping at first success. If the value
@@ -801,29 +1002,6 @@ directory.
 A directory can be removed by appending `=remove` to the
 directory query. If multiple directories match the schema,
 they will all be removed.
-
-### Options
-
-As hinted at above, queries have several options which
-modify their default behavior.
-
-<div>
-
-| Query Option | Argument | Description                              |
-|:-------------|:---------|:-----------------------------------------|
-| `reverse`    | none     | Range read in reverse order              |
-| `limit`      | `int`    | Maximum number of results                |
-| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
-| `snapshot`   | none     | Use snapshot read                        |
-| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
-
-</div>
-
-Range-read queries support all the options listed above.
-Single-read queries support `snapshot` and `strict`. Clear
-queries support `strict`. With the `strict` option, the
-clear operation is a no-op if FQL encounters a key in the
-given directory which doesn't match the schema.
 
 ### Filtering
 
@@ -896,7 +1074,84 @@ def filter_range(tr):
     return results
 ```
 
+### Options
+
+As hinted at above, queries have several options which
+modify their default behavior.
+
+<div>
+
+| Query Option | Argument | Description                              |
+|:-------------|:---------|:-----------------------------------------|
+| `reverse`    | none     | Range read in reverse order              |
+| `limit`      | `int`    | Maximum number of results                |
+| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
+| `snapshot`   | none     | Use snapshot read                        |
+| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
+
+</div>
+
+Range-read queries support all the options listed above.
+Single-read queries support `snapshot` and `strict`. Clear
+queries support `strict`. With the `strict` option, the
+clear operation is a no-op if FQL encounters a key in the
+given directory which doesn't match the schema.
+
 ## Advanced Queries
+
+### Versionstamps
+
+As stated in the [data elements](#data-elements) section,
+a `vstamp` is composed of two components: the transaction
+version prefixed by `#`{.hljs-title} and the user version
+prefixed by `:`{.hljs-title}.
+
+A `vstamp` lacking a transaction version is called an
+"incomplete" `vstamp`. In a write query, an incomplete
+`vstamp` has unique behavior. Upon commit, the transaction's
+10-byte version is written to the first 10-bytes of the
+`vstamp`. 
+
+```language-fql {.query}
+@write
+/app/queue(#:ff00)="jason"
+/app/heartbeat("jason")=#:00cd
+
+@commit
+
+@read
+/app/queue(<index:vstamp>)
+/app/heartbeat(...)=<heartbeat:vstamp>
+```
+
+```language-fql {.result}
+/app/queue(#8e9ddaa52e44733526e2:ff00)="jason"
+/app/heartbeat("jason")=#8e9ddaa52e44733526e3:00cd
+```
+
+The example above showcases several details about writing an
+incomplete `vstamp`:
+
+- The transaction version component of the `vstamp` is
+  written at commit time, so you must start a new
+  transaction before reading it. If you attempt to read an
+  empty `vstamp` before the transaction is committed, the
+  query will fail.
+
+- The user version component of the `vstamp` is not
+  overwritten. Only the transaction version is.
+
+- The final two bytes of the transaction version component
+  (right before the user version) are incremented within
+  a transaction. In this particular example, the `/queue`
+  key's transaction version ends with `26e2` while the
+  `/heartbeat` transaction version ends with `26e3`. This
+  ensures that multiple versionstamps written by the same
+  transaction are unique.
+
+`vstamp` elements are monotonically increasing and unique
+for the lifetime of a particular database. They may be used
+as unique identifiers or non-contiguous indexes.
 
 ### Indirection
 
@@ -1014,7 +1269,7 @@ offset of each chunk.
 /blob("my_file.bin",20000)=2.7kb
 ```
 
-> ❗Instead of printing the actual byte strings in these
+> ❗ Instead of printing the actual byte strings in these
 > results, only the byte lengths are printed. This is
 > a possible feature of an FQL implementation. See
 > [Formatting](#formatting) for more details.
@@ -1074,6 +1329,8 @@ FQL defines the query language but leaves many details to
 the implementation. This sections outlines some of those
 details and how an implementation may choose to provide
 them.
+
+TODO: talk about FQL as a client API.
 
 ## Connection
 
