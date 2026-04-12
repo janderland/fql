@@ -1,13 +1,13 @@
 ---
 title: FQL
-...
+---
 
-```language-fql {.query}
+```fql {.query}
 /user/index/surname("Johnson",<userID:int>)
 /user(:userID,...)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /user(9323,"Timothy","Johnson",37)=nil
 /user(24335,"Andrew","Johnson",42)=nil
 /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
@@ -125,7 +125,7 @@ the tuple `(22,"abc",false)` will appear before the tuple
 [directory]: https://apple.github.io/foundationdb/developer-guide.html#directories
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 query = [ opts '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
@@ -142,7 +142,7 @@ A query may be a full key-value, just a key, or just
 a directory path. The contents of the query implies whether
 it's reading or writing data.
 
-```language-fql {.query}
+```fql {.query}
 /my/directory("my","tuple")=4000
 ```
 
@@ -150,11 +150,11 @@ FQL queries may define a single key-value to be written, as
 shown above, or may define a set of key-values to be read,
 as shown below.
 
-```language-fql {.query}
+```fql {.query}
 /my/directory("my","tuple")=<int>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /my/directory("my","tuple")=4000
 ```
 
@@ -169,11 +169,11 @@ it defines.
 
 [range reads]: https://apple.github.io/foundationdb/developer-guide.html#range-reads
 
-```language-fql {.query}
+```fql {.query}
 /my/directory(<>,"tuple")=nil
 ```
 
-```language-fql {.result}
+```fql {.result}
 /my/directory("your","tuple")=nil
 /my/directory(42,"tuple")=nil
 ```
@@ -187,11 +187,11 @@ by ending the key's tuple with `...`. Due to sorting,
 key-values with a common prefix are stored adjacently and
 are efficiently streamed to the client.
 
-```language-fql {.query}
+```fql {.query}
 /my/directory("my","tuple",...)=<>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
@@ -203,11 +203,11 @@ A query's value may be omitted to imply the variable `<>`,
 meaning the following query is semantically identical to the
 one above.
 
-```language-fql {.query}
+```fql {.query}
 /my/directory("my","tuple",...)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /my/directory("my","tuple",47.3)=0x8f3a
 /my/directory("my","tuple",false,0xff9a853c12)=nil
@@ -217,18 +217,18 @@ Key-values may be cleared by using the special `clear` token
 as the value. If the schema matches multiple keys they will
 all be cleared by the query.
 
-```language-fql {.query}
+```fql {.query}
 /my/directory("my",...)=clear 
 ```
 
 Including a variable in the directory path tells FQL to
 perform the read on all directory paths matching the schema.
 
-```language-fql {.query}
+```fql {.query}
 /<>/directory("my","tuple")
 ```
 
-```language-fql {.result}
+```fql {.result}
 /my/directory("my","tuple")=0x0fa0
 /your/directory("my","tuple")=nil
 ```
@@ -236,11 +236,11 @@ perform the read on all directory paths matching the schema.
 The directory path may end with the `...` token to perform
 the read on all descendant directories.
 
-```language-fql {.query}
+```fql {.query}
 /your/...(...)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /your/directory("my","tuple")=nil
 /your/keyspace("the","tuple")=547
 /your/keyspace/subspace("tuple")="value"
@@ -249,11 +249,11 @@ the read on all descendant directories.
 The directory layer may be queried by only including
 a directory path.
 
-```language-fql {.query}
+```fql {.query}
 /my/<>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /my/directory
 ```
 
@@ -263,7 +263,7 @@ Directories, along with all their contained key-values, may
 be explicitly removed by suffixing the directory path with
 `=remove`.
 
-```language-fql {.query} 
+```fql {.query} 
 /my/directory=remove
 ```
 
@@ -296,14 +296,14 @@ encodes the elements before writing them to the DB.
 The `nil` type may only be instantiated as the element
 `nil`.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 bool = 'true' | 'false'
 ```
 
 The `bool` type may be instantiated as `true` or
 `false`.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 int = [ '-' ] digits
 digits = digit { digit }
 digit = '0' | ... | '9'
@@ -312,7 +312,7 @@ digit = '0' | ... | '9'
 The `int` type may be instantiated as any arbitrarily large
 integer.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 num = int '.' digits
     | ( int | int '.' digits ) 'e' int 
     | '-inf' | 'inf' | '-nan' | 'nan'
@@ -327,7 +327,7 @@ may be instantiated as `-inf`, `inf`, `-nan` or `nan`.
 
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 string = '"' { char | '\\"' | '\\\\' } '"'
 char = ? Any printable UTF-8 character except '"' and '\' ?
 ```
@@ -336,7 +336,7 @@ The `str` type may be instantiated as a unicode string
 wrapped in double quotes. Strings may contain double quotes
 and backslashes via backslash escapes.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
 bytes = '0x' { hex hex } 
 hex = digit | 'a' | ... | 'f' | 'A' | ... | 'F' 
@@ -348,7 +348,7 @@ the numbers are grouped in the standard 8, 4, 4, 4, 12
 format. For `bytes`, any even number of hexidecimal digits
 are prefixed by `0x`.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 vstamp = '#' [ hex{20} ] ':' hex{4}
 ```
 
@@ -363,7 +363,7 @@ actual transaction version upon commit.
 
 [versionstamp]: https://apple.github.io/foundationdb/data-modeling.html?highlight=versionstamp#versionstamps
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
 elements = data [ ',' nl elements ] | '...'
 ```
@@ -383,7 +383,7 @@ database. They are used in many contexts including
 [directories](#directories), [options](#options), and
 [variables](#holes-references).
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 name = ( letter | '_' ) { letter | digit | '_' | '-' | '.' }
 ```
 
@@ -401,7 +401,7 @@ adjacently stored.
 
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 directory = '/' element [ directory ]
 element = '<>' | name | string
 ```
@@ -411,7 +411,7 @@ prefixed by a forward slash. If the string only contains
 characters allowed in a [name](#names), the quotes may be
 excluded.
 
-```language-fql {.query}
+```fql {.query}
 /my/directory/path_way
 /another/"d!r3ct0ry"/"\"path\""
 ```
@@ -420,11 +420,11 @@ The empty variable `<>` may be used in a directory path as
 a placeholder, allowing multiple directories to be queried
 at once.
 
-```language-fql {.query}
+```fql {.query}
 /app/<>/index
 ```
 
-```language-fql {.result}
+```fql {.result}
 /app/users/index
 /app/roles/index
 /app/actions/index
@@ -439,7 +439,7 @@ a key-value schema by acting as placeholders for one or more
 data elements. There are two kinds of holes: variables and
 the `...` token.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
      | 'str' | 'uuid' | 'bytes' | 'vstamp'
@@ -451,7 +451,7 @@ element](#data-elements). Variables may optionally include a
 as a list of element types, separated by
 `|`{.hljs-variable}, wrapped in angled braces.
 
-```language-fql
+```fql
 <int|str|uuid|bytes>
 ```
 
@@ -460,11 +460,11 @@ elements are allowed at the variable's position.
 A variable's type list may be empty, including no element
 types, meaning it allows any element type.
 
-```language-fql {.query}
+```fql {.query}
 /tree/node(<int>,<int|nil>,<int|nil>)=<>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /tree/node(5,12,14)=nil
 /tree/node(12,nil,nil)="payload"
 /tree/node(14,nil,15)=0xa3127b
@@ -474,11 +474,11 @@ types, meaning it allows any element type.
 The `...` token represents any number of data elements of
 any type. It is only allowed as the last element of a tuple.
 
-```language-fql {.query}
+```fql {.query}
 /app/queue("topic",...)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /app/queue("topic",54,"event A")
 /app/queue("topic",55,"event Y")
 /app/queue("topic",56,"event Y")
@@ -495,16 +495,16 @@ variable's values into a subsequent query, allowing for
 specified as a variable's name prefixed with
 a `:`{.hljs-variable}.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 reference = ':' name
 ```
 
-```language-fql {.query}
+```fql {.query}
 /user/index/surname("Johnson",<userID:int>)
 /user(:userID,...)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /user(9323,"Timothy","Johnson",37,"United States")=nil
 /user(24335,"Andrew","Johnson",42,"United States")=nil
 /user(33423,"Ryan","Johnson",32,"England")=nil
@@ -514,11 +514,11 @@ Named variables must include at least one type. To allow
 named variables to match all element type, use the `any`
 type.
 
-```language-fql {.query}
+```fql {.query}
 /store/hash(<bytes>,<thing:any>)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /store/hash(0x6dc88b,"somewhere we have")=nil
 /store/hash(0x8b593b,523.8e90)=nil
 /store/hash(0x9ccf9d,"I have yet to find")=nil
@@ -531,7 +531,7 @@ type.
 Whitespace and newlines are allowed within a tuple, between
 its elements.
 
-```language-fql {.query}
+```fql {.query}
 /account/private(
   <int>,
   <int>,
@@ -542,7 +542,7 @@ its elements.
 Comments start with a `%` and continue until the end of the
 line. They can be used to document a tuple's elements.
 
-```language-fql
+```fql
 % private account balances
 /account/private(
   <int>,  % group ID
@@ -559,7 +559,7 @@ elements](#data-elements), [variables](#holes-references), and
 alternative encodings, limit a query's result count, or
 change other behaviors. 
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 options = '[' option { ',' option } ']'
 option = name [ ':' argument ]
 argument = name | int | string
@@ -570,7 +570,7 @@ brackets. For instance, to specify that an `int` should be
 encoded as a little-endian unsigned 8-bit integer, the
 following options would be included after the element.
 
-```language-fql
+```fql
 3548[u8]
 ```
 
@@ -578,7 +578,7 @@ If a variable should only match against big-endian 32-bit
 floats then the following options would be included after
 the `num` type.
 
-```language-fql
+```fql
 <num[f32,be]>
 ```
 
@@ -587,7 +587,7 @@ specify that a range-read query should read in reverse and
 only read 5 items, the following options would be included
 before the query.
 
-```language-fql {.query}
+```fql {.query}
 [reverse,limit:5]
 /my/integers(<int>)=nil
 ```
@@ -647,11 +647,11 @@ Keys are *always* encoded using the [directory][] and
 [tuple][] layers. All keys must include a directory prefix.
 Write queries create directories if they do not exist.
 
-```language-fql {.query}
+```fql {.query}
 /app/users(57223,"Peter","Carson",56)=nil
 ```
 
-```language-python {.equiv-py}
+```python {.equiv-py}
 @fdb.transactional
 def write_user(tr):
     # Open directory; create if doesn't exist
@@ -671,11 +671,11 @@ If a query reads from a directory which doesn't exist,
 nothing is returned. The tuple layer encodes metadata about
 element types, allowing FQL to decode keys without a schema.
 
-```language-fql {.query}
+```fql {.query}
 /app/...(...)
 ```
 
-```language-python {.equiv-py}
+```python {.equiv-py}
 @fdb.transactional
 def read_all(tr):
     # Open directory; exit if it doesn't exist
@@ -717,11 +717,11 @@ When used as a value, [data elements](#data-elements) are
 encoded as the lone member of a tuple. This approach
 preserves type information for flexible decoding.
 
-```language-fql {.query}
+```fql {.query}
 /people/age("jon","smith")=42
 ```
 
-```language-python {.equiv-py}
+```python {.equiv-py}
 @fdb.transactional
 def write_age(tr):
     # Encoding the key
@@ -734,11 +734,11 @@ def write_age(tr):
     tr[key] = val
 ```
 
-```language-fql {.query}
+```fql {.query}
 /people/age("jon","smith")=<>
 ```
 
-```language-python {.equiv-py}
+```python {.equiv-py}
 @fdb.transactional
 def read_age(tr):
     # Encode the key
@@ -772,7 +772,7 @@ This means that `42` and `(42)` have the same value
 encoding. The way the value is returned depends on how it's
 queried.
 
-```language-fql {.query}
+```fql {.query}
 % write the key-value once
 /app/location("east bay")=87234
 
@@ -783,7 +783,7 @@ queried.
 /app/location("east bay")=(<>)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /app/location("east bay")=87234
 /app/location("east bay")=(87234)
 ```
@@ -796,7 +796,7 @@ layer][]. As a value, all three are encoded as an empty byte
 string. A typeless variable will decode an empty byte string
 as `nil`.
 
-```language-fql {.query}
+```fql {.query}
 /globals/selection("object")=0x
 /globals/selection("item")=nil
 /globals/selection("text")=()
@@ -804,7 +804,7 @@ as `nil`.
 /globals/selection(...)=<>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /globals/selection("object")=nil
 /globals/selection("item")=nil
 /globals/selection("text")=nil
@@ -814,11 +814,11 @@ Likewise, the tuple of a key is encoded as an empty byte string
 when it contains no elements, allowing queries to write
 a key that is simply the directory prefix.
 
-```language-fql {.query}    
+```fql {.query}    
 /globals/next-id()=37534
 ```
 
-```language-python {.equiv-py}
+```python {.equiv-py}
 @fdb.transactional
 def set_next_id(tr):
     # Open directory; create if doesn't exist
@@ -856,11 +856,11 @@ use `32`, `64`, and `80`. When the width option is present, values
 use little endian encoding, as long as the `bigendian`
 option isn't also present.
 
-```language-fql {.query}
+```fql {.query}
 /globals/next-id()=37534[width:64,bigendian]
 ```
 
-```language-python {.equiv-py}
+```python {.equiv-py}
 @fdb.transactional
 def set_next_id(tr):
     # Encode the key
@@ -884,7 +884,7 @@ When writing values with non-default encoding, type metadata
 will be lost. Read queries will need the appropriate options
 specified. Otherwise, the value will not match the schema.
 
-```language-fql {.query}
+```fql {.query}
 % write
 /globals/next-id()=37534[i64,be]
 
@@ -892,7 +892,7 @@ specified. Otherwise, the value will not match the schema.
 /globals/next-id()=<int[i64,be]>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /globals/next-id()=37534[i64,be]
 ```
 
@@ -930,7 +930,7 @@ The `str`, `uuid`, and `vstamp` types include the option
 `raw` which causes their bytes to be written as-is without
 being wrapped in a tuple. 
 
-```language-fql {.query}
+```fql {.query}
 % write raw UUID
 /tag_code("food")=77542869-5708-4af9-821e-d65354fb1a12[raw]
 
@@ -938,7 +938,7 @@ being wrapped in a tuple.
 /tag_code("food")=<bytes>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /tag_code("food")=0x7754286957084af9821ed65354fb1a12
 ```
 
@@ -1011,7 +1011,7 @@ performed on the client side, range reads may stream a lot
 of data to the client while filtering most of it away. For
 example, consider the following query:
 
-```language-fql {.query}
+```fql {.query}
 /people(3392,<str|int>,<>)=(<int>,...)
 ```
 
@@ -1020,7 +1020,7 @@ In the key, the location of the first
 used by FQL. For this particular query, the prefix would be
 as follows:
 
-```language-fql {.query}
+```fql {.query}
 /people(3392)
 ```
 
@@ -1033,7 +1033,7 @@ small amounts of data to limit wasted bandwidth.
 Below you can see a Python implementation of how this
 filtering would work.
 
-```language-python
+```python
 @fdb.transactional
 def filter_range(tr):
     dir = fdb.directory.open(tr, ('people',))
@@ -1112,7 +1112,7 @@ A `vstamp` lacking a transaction version is called an
 10-byte version is written to the first 10-bytes of the
 `vstamp`. 
 
-```language-fql {.query}
+```fql {.query}
 @write
 /app/queue(#:ff00)="jason"
 /app/heartbeat("jason")=#:00cd
@@ -1124,7 +1124,7 @@ A `vstamp` lacking a transaction version is called an
 /app/heartbeat(...)=<heartbeat:vstamp>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /app/queue(#8e9ddaa52e44733526e2:ff00)="jason"
 /app/heartbeat("jason")=#8e9ddaa52e44733526e3:00cd
 ```
@@ -1162,7 +1162,7 @@ In FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
 each person.
 
-```language-fql {.query}
+```fql {.query}
 /people(
   <int>, % ID
   <str>, % First Name
@@ -1177,7 +1177,7 @@ entire "people" directory. To make this kind of search more
 efficient, we can store an index for last names in
 a separate directory.
 
-```language-fql {.query}
+```fql {.query}
 /people/last_name(
   <str>, % Last Name
   <int>, % ID
@@ -1187,11 +1187,11 @@ a separate directory.
 If we query the index, we can get the IDs of the records
 containing the last name "Johnson".
 
-```language-fql {.query}
+```fql {.query}
 /people/last_name("Johnson",<int>)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /people/last_name("Johnson",23)=nil
 /people/last_name("Johnson",348)=nil
 /people/last_name("Johnson",2003)=nil
@@ -1201,12 +1201,12 @@ FQL can forward the observed values of named variables from
 one query to the next. We can use this to obtain our desired
 subset from the "people" directory.
 
-```language-fql {.query}
+```fql {.query}
 /people/last_name("Johnson",<id:int>)
 /people(:id,...)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /people(23,"Lenny","Johnson",22,"Mechanic")=nil
 /people(348,"Roger","Johnson",54,"Engineer")=nil
 /people(2003,"Larry","Johnson",8,"N/A")=nil
@@ -1228,11 +1228,11 @@ functions].
 Suppose we are storing value deltas. If we range-read the
 keyspace we end up with a list of integer values.
 
-```language-fql {.query}
+```fql {.query}
 /deltas("group A",<int>)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /deltas("group A",20)=nil
 /deltas("group A",-18)=nil
 /deltas("group A",3)=nil
@@ -1241,11 +1241,11 @@ keyspace we end up with a list of integer values.
 Instead, we can use the pseudo type `sum` in our variable to
 automatically sum up the deltas into the actual value.
 
-```language-fql {.query}
+```fql {.query}
 /deltas("group A",<sum>)
 ```
 
-```language-fql {.result}
+```fql {.result}
 /deltas("group A",5)=nil
 ```
 
@@ -1256,14 +1256,14 @@ offset of each chunk.
 
 [reading large blobs]: https://apple.github.io/foundationdb/blob.html
 
-```language-fql {.query}
+```fql {.query}
 /blob(
   "my_file.bin",    % The identifier of the blob.
   <offset:int>, % The byte offset within the blob.
 )=<chunk:bytes> % A chunk of the blob.
 ```
 
-```language-fql {.result}
+```fql {.result}
 /blob("my_file.bin",0)=10kb
 /blob("my_file.bin",10000)=10kb
 /blob("my_file.bin",20000)=2.7kb
@@ -1277,11 +1277,11 @@ offset of each chunk.
 Using `append`, the client obtains the entire blob instead
 of having to concatenate the chunks themselves.
 
-```language-fql {.query}
+```fql {.query}
 /blob("my_file.bin",...)=<blob:append>
 ```
 
-```language-fql {.result}
+```fql {.result}
 /blob("my_file.bin",...)=22.7kb
 ```
 
@@ -1315,7 +1315,7 @@ outputs `str` if all inputs are `str`. Otherwise, it outputs
 defines a `str` or `bytes` separator placed between each of
 the appended values.
 
-```language-fql {.query}
+```fql {.query}
 % Append the lines of text for a blog post.
 /blog/post(
   253245,      % post ID
@@ -1354,7 +1354,7 @@ An implementation defines how transaction boundaries are
 specified. The Go implementation uses CLI flags to group
 queries into transactions.
 
-```language-bash
+```bash
 $ fql \
   -q /users(100)="Alice" \
   -q /users(101)="Bob" \
@@ -1378,11 +1378,11 @@ to other parts of the application. For instance, variables
 with the name `stdout` may write their values to the STDOUT
 stream of the process.
 
-```language-fql {.query}
+```fql {.query}
 /mq("topic",<stdout:str>)
 ```
 
-```language-bash {.result}
+```bash {.result}
 topicA
 topicB
 topicC
@@ -1391,7 +1391,7 @@ topicC
 Similarly, references could be used to inject values into
 a query from another part of the process.
 
-```language-fql {.query}
+```fql {.query}
 % Write the string contents of STDIN into the DB.
 /mq("msg","topicB",:stdin)
 ```
@@ -1422,7 +1422,7 @@ Alternative formats may be provided for different use cases:
 
 The complete FQL grammar is specified below.
 
-```language-ebnf {.grammar}
+```ebnf {.grammar}
 (* Top-level query structure *)
 query = [ opts '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
