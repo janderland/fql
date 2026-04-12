@@ -55,18 +55,19 @@
   $toc$
   $body$
   <script>
+    hljs.configure({ languageDetectRe: /\b([\w-]+)\b/ });
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {
       let bash = false;
       for (let p = e.parentElement; p; p = p.parentElement) {
-        if (p.classList.contains("language-bash")) {
+        if (p.classList.contains("bash")) {
           bash = true;
           break;
         }
       }
 
-      if (bash) e.classList.add("language-bash");
-      else e.classList.add("language-fql");
+      if (bash) e.classList.add("bash");
+      else e.classList.add("fql");
       hljs.highlightElement(e);
     });
 
