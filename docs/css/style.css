@@ -1,11 +1,15 @@
+* {
+  transition: color 0.2s, background-color 0.2s, fill 0.2s, opacity 0.2s;
+}
+
 /* Colors */
 
-:root {
-  /* 
-   * base16 "eighties" color scheme
-   * http://chriskempson.com/projects/base16/
-   */
+/*
+ * base16 "eighties" color scheme (dark mode)
+ * http://chriskempson.com/projects/base16/
+ */
 
+[data-theme="dark"] {
   --color0: #2d2d2d;
   --color1: #393939;
   --color2: #515151;
@@ -32,7 +36,7 @@
   --colorX: #141414;
 }
 
-/* 
+/*
  * base16 "tomorrow" color scheme (light mode)
  * http://chriskempson.com/projects/base16/
  */
@@ -92,7 +96,6 @@ p {
 .header-icons a {
   display: flex;
   align-items: center;
-  transition: opacity 0.2s;
 }
 
 .header-icons a:hover {
@@ -150,7 +153,6 @@ p {
   border-radius: 1rem;
   padding: 0.3rem 0.5rem;
   cursor: pointer;
-  transition: background-color 0.2s;
 }
 
 .theme-toggle:hover {
@@ -164,7 +166,6 @@ p {
 .theme-toggle svg {
   width: 1rem;
   height: 1rem;
-  transition: opacity 0.2s;
 }
 
 .theme-toggle .sun-icon {
