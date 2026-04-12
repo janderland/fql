@@ -13,13 +13,15 @@ title: FQL
 /user(33423,"Ryan","Johnson",0x0ffa83,42.2)=nil
 ```
 
-FQL is an [open source](https://github.com/janderland/fql)
-query language and alternative client API for
-[FoundationDB](https://www.foundationdb.org/). It's
-semantics mirror FoundationDB's [core data
-model](https://apple.github.io/foundationdb/data-modeling.html)
-while improving API ergonomics. Fundamental patterns like
-range-reads and indirection are first class citizens.
+FQL is an [open source][] query language and alternative
+client API for [FoundationDB][]. It's semantics mirror
+FoundationDB's [core data model][] while improving API
+ergonomics. Fundamental patterns like range-reads and
+indirection are first class citizens.
+
+[open source]: https://github.com/janderland/fql
+[FoundationDB]: https://www.foundationdb.org/
+[core data model]: https://apple.github.io/foundationdb/data-modeling.html
 
 <!--toc:start-->
 - [Introduction](#introduction)
