@@ -374,11 +374,10 @@ the last element. The last element may be the `...` token
 
 ## Names
 
-Names are a syntax construct used throughout FQL. The are
-not a [data element] because they are
-[*usually*] not serialized and written to the
-database. They are used in many contexts including
-[directories](#directories), [options], and
+Names are a syntax construct used throughout FQL. They are
+not a [data element] because they are *usually* not
+serialized and written to the database. They are used in
+many contexts including [directories], [options], and
 [variables].
 
 ```ebnf {.grammar}
