@@ -180,6 +180,10 @@ if [[ -n "$IMAGE_BUILD" ]]; then
 fi
 
 if [[ -n "$BUILD_COMMAND" ]]; then
+  if ! docker image inspect "docker.io/janderland/fql-build:${DOCKER_TAG}" &>/dev/null; then
+    echo "Build image not found, building..."
+    (set -x; docker buildx bake -f bake.hcl --load build)
+  fi
   (set -x; docker compose run --rm build /bin/sh -c "$BUILD_COMMAND")
 fi
 
@@ -188,5 +192,9 @@ if [[ -n "$IMAGE_FQL" ]]; then
 fi
 
 if [[ -n "$RUN_FQL" ]]; then
+  if ! docker image inspect "docker.io/janderland/fql:${DOCKER_TAG}" &>/dev/null; then
+    echo "FQL image not found, building..."
+    (set -x; docker buildx bake -f bake.hcl --load fql)
+  fi
   (set -x; docker compose run --rm fql 'docker:docker@{fdb}:4500' "${FQL_ARGS[@]}")
 fi
