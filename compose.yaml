@@ -15,8 +15,6 @@ services:
     image: "docker.io/janderland/fql-build:${DOCKER_TAG}"
     pull_policy: "never"
     platform: "linux/amd64"
-    depends_on:
-      - "fdb"
     working_dir: "/fql"
     volumes:
       - ".:/fql"

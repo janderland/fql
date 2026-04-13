@@ -184,6 +184,9 @@ if [[ -n "$BUILD_COMMAND" ]]; then
     echo "Build image not found, building..."
     (set -x; docker buildx bake -f bake.hcl --load build)
   fi
+  if [[ -n "$VERIFY_CODEBASE" ]]; then
+    (set -x; docker compose up -d fdb)
+  fi
   (set -x; docker compose run --rm build /bin/sh -c "$BUILD_COMMAND")
 fi
 
