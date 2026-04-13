@@ -549,9 +549,8 @@ line. They can be used to document a tuple's elements.
 
 ## Options
 
-Options modify the semantics of [data
-elements](#data-elements), [variables], and
-[queries]. They can instruct FQL to use
+Options modify the semantics of [data elements],
+[variables], and [queries]. They can instruct FQL to use
 alternative encodings, limit a query's result count, or
 change other behaviors. 
 
@@ -979,8 +978,8 @@ being read.
 Whether reading single or many, when a key-value is
 encountered which doesn't match the query's schema it is
 filtered out of the results. Including the `strict` [query
-option](#query-options) causes the query to fail when
-encountering a non-conformant key-value.
+option] causes the query to fail when encountering
+a nonconformant key-value.
 
 If a query has the token `clear` as it's value, it clears
 all the key matching the query's schema. Keys not matching
