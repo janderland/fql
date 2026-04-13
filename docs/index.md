@@ -272,8 +272,8 @@ be explicitly removed by suffixing the directory path with
 An FQL query contains instances of data elements. These
 mirror the types of elements found in the [tuple layer].
 This section describes how data elements behave in FQL,
-while [element encoding] describes how FQL
-encodes the elements before writing them to the DB.
+while [element encoding] describes how FQL encodes the
+elements before writing them to the DB.
 
 [tuple layer]: https://github.com/apple/foundationdb/blob/main/design/tuple.md
 
@@ -319,11 +319,10 @@ num = int '.' digits
 ```
 
 The `num` type may be instantiated as any real number which
-can be approximated by an [80-bit floating point] value,
-in accordance with IEEE 754. The implementation determines
-the exact range of allowed values. Scientific notation may
-be used. As expressed in the above specification, the type
-may be instantiated as `-inf`, `inf`, `-nan` or `nan`.
+can be approximated by an [80-bit floating point] value, in
+accordance with IEEE 754. Scientific notation may be used.
+As expressed in the above specification, the type may be
+instantiated as the tokens `-inf`, `inf`, `-nan` or `nan`.
 
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
@@ -344,9 +343,9 @@ hex = digit | 'a' | ... | 'f' | 'A' | ... | 'F'
 
 The `uuid` and `bytes` types may be instantiated using
 upper, lower, or mixed case hexidecimal numbers. For `uuid`,
-the numbers are grouped in the standard 8, 4, 4, 4, 12
+the numbers must be grouped in the standard 8, 4, 4, 4, 12
 format. For `bytes`, any even number of hexidecimal digits
-are prefixed by `0x`.
+must be prefixed by `0x`.
 
 ```ebnf {.grammar}
 vstamp = '#' [ hex{20} ] ':' hex{4}
@@ -355,11 +354,11 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 The `vstamp` type represents a FoundationDB [versionstamp]
 containing a 10-byte transaction version followed by
 a 2-byte user version. These byte strings may be
-instantiated using upper, lower, or mixed case hexidecimal
-digits. The transaction version may be empty, meaning the
-`vstamp` only contains the user version. In this case it
-acts as a placeholder where FoundationDB will write the
-actual transaction version upon commit.
+instantiated using upper, lower, or mixed case hexadecimal
+digits. The transaction version may be omitted. In this case
+it acts as a placeholder where FoundationDB will write the
+actual transaction version upon commit (see
+[versionstamps]).
 
 [versionstamp]: https://apple.github.io/foundationdb/data-modeling.html?highlight=versionstamp#versionstamps
 
@@ -369,10 +368,9 @@ elements = data [ ',' nl elements ] | '...'
 ```
 
 The `tup` type may contain any of the data elements,
-including nested tuples. Elements are separated by commas
-and wrapped in parentheses. A trailing comma is allowed
-after the last element. The last element may be the `...`
-token (see [holes].
+including nested tuples. A trailing comma is allowed after
+the last element. The last element may be the `...` token
+(see [holes]).
 
 ## Names
 
