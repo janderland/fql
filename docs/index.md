@@ -393,8 +393,8 @@ periods.
 Directories provide a way to organize key-values into
 hierarchical namespaces. The [directory layer] manages
 these namespaces and maps each directory path to a short key
-prefix. Key-values with the same directory will be
-adjacently stored.
+prefix. Key-values in the same directory will have the same
+key prefix, and therefore be adjacently stored.
 
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
@@ -442,11 +442,10 @@ type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
      | 'str' | 'uuid' | 'bytes' | 'vstamp'
 ```
 
-Variables are used to represent a single [data
-element](#data-elements). Variables may optionally include a
-[name] before the type list. Variables are specified
-as a list of element types, separated by
-`|`{.hljs-variable}, wrapped in angled braces.
+Variables are used to represent a single [data element].
+Variables may optionally include a [name] before the type
+list for later reference. Variables can match multiple types
+of data elements.
 
 ```fql
 <int|str|uuid|bytes>
