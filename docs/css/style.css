@@ -1,7 +1,3 @@
-* {
-  transition: color 0.2s, background-color 0.2s, fill 0.2s, opacity 0.2s;
-}
-
 /* Colors */
 
 /*
@@ -29,9 +25,10 @@
 
   /*
    * colorX is an addition to the
-   * "eighties" base16 scheme. It's
-   * used as a darkest color, freeing
-   * up color0 to be used elsewhere.
+   * base16 scheme. It's used as the
+   * background color, freeing up
+   * color0 to be used as the code
+   * block background color.
    */
   --colorX: #141414;
 }
@@ -58,7 +55,24 @@
   --colorD: #4271ae;
   --colorE: #8959a8;
   --colorF: #a3685a;
+
+  /*
+   * colorX is an addition to the
+   * base16 scheme. It's used as the
+   * background color, freeing up
+   * color0 to be used as the code
+   * block background color.
+   */
   --colorX: #e0e0e0;
+}
+
+/* 
+ * Smooth transition when changing
+ * between light/dark themes.
+ */
+
+* {
+  transition: color 0.2s, background-color 0.2s, fill 0.2s, opacity 0.2s;
 }
 
 /* General */
@@ -118,7 +132,7 @@ p {
   fill: none;
 }
 
-.icon.janderland-light {
+[data-theme="dark"] .icon.janderland-light {
   display: none;
 }
 
@@ -126,20 +140,12 @@ p {
   display: none;
 }
 
-[data-theme="light"] .icon.janderland-light {
-  display: inline;
-}
-
-.icon.github-light {
+[data-theme="dark"] .icon.github-light {
   display: none;
 }
 
 [data-theme="light"] .icon.github-dark {
   display: none;
-}
-
-[data-theme="light"] .icon.github-light {
-  display: inline;
 }
 
 /* Theme Toggle */
@@ -155,7 +161,7 @@ p {
   cursor: pointer;
 }
 
-.theme-toggle:hover {
+[data-theme="dark"] .theme-toggle:hover {
   background: var(--color2);
 }
 
@@ -218,12 +224,8 @@ a:visited {
   color: var(--colorF);
 }
 
-a:hover {
+[data-theme="dark"] a:hover {
   color: var(--colorA);
-}
-
-[data-theme="light"] a:visited {
-  color: var(--colorF);
 }
 
 [data-theme="light"] a:hover {
