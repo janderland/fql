@@ -585,7 +585,7 @@ before the query.
 ```
 
 Notice that the `limit` option includes a number after the
-colon. Some options include a single argument to further
+colon. Some options require a single argument to further
 specify the option's behavior. The argument may be an
 integer, a [name], or a string.
 
