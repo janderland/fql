@@ -431,10 +431,9 @@ at once.
 
 ### Holes
 
-Holes are a group of syntax constructs used to define
-a key-value schema by acting as placeholders for one or more
-data elements. There are two kinds of holes: variables and
-the `...` token.
+Holes are used to define a key-value schema by acting as
+placeholders for one or more data elements. There are two
+kinds of holes: variables and the `...` token.
 
 ```ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
@@ -443,18 +442,18 @@ type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
 ```
 
 Variables are used to represent a single [data element].
-Variables may optionally include a [name] before the type
-list for later reference. Variables can match multiple types
-of data elements.
+They may optionally include a unique [name] followed by
+their type. The variable below is named "myVar" and acts as
+a placeholder for any integer value.
 
 ```fql
-<int|str|uuid|bytes>
+<myVar:int>
 ```
 
-The variable's type list describes which kinds of data
-elements are allowed at the variable's position.
-A variable's type list may be empty, including no element
-types, meaning it allows any element type.
+A variable may act as a placeholder for multiple types of
+elements with the types separated by `|`{.hljs-variable}. It
+may also have no type meaning it represents any type of
+element.
 
 ```fql {.query}
 /tree/node(<int>,<int|nil>,<int|nil>)=<>
@@ -475,25 +474,23 @@ any type. It is only allowed as the last element of a tuple.
 ```
 
 ```fql {.result}
-/app/queue("topic",54,"event A")
-/app/queue("topic",55,"event Y")
-/app/queue("topic",56,"event Y")
-/app/queue("topic",57,"event C")
+/app/queue("topic",54,"process: 12643")
+/app/queue("topic",55,"process: 12644")
+/app/queue("topic",56,"process: 12648")
+/app/queue("topic",57,"process: 12649")
 /app/queue("topic",58,"done")
 ```
 
 ### References
 
-Before the type list, a variable may include
-a [name]. References can use this name to pass the
-variable's values into a subsequent query, allowing for
-[index indirection]. The reference is
-specified as a variable's name prefixed with
-a `:`{.hljs-variable}.
-
 ```ebnf {.grammar}
 reference = ':' name
 ```
+
+References can use a variable's name to pass previously read
+values into a subsequent query, allowing for [index
+indirection]. The reference is specified as the variable's
+name prefixed with a `:`{.hljs-variable}.
 
 ```fql {.query}
 /user/index/surname("Johnson",<userID:int>)
