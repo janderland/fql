@@ -922,11 +922,9 @@ is executed.
 
 ### Writes
 
-Queries lacking [holes] perform writes on
-the database. You can think of these queries as declaring
-the existence of a particular key-value. If the key's
-directory does not exist, it is created during a write
-operation.
+Queries lacking [holes] perform writes on the database. You
+can think of these queries as declaring the existence of
+a particular key-value. 
 
 > ❗ Queries lacking a value altogether imply an empty
 > [variable] as the value and should not
@@ -934,32 +932,25 @@ operation.
 
 ### Reads
 
-Queries containing [holes] read one or more
-key-values. If the holes only appear in the value, then
-a single key-value is returned, if one matching the schema
-exists. Most query results can be fed back into FQL as write
-queries. The exception to this rule are [aggregate
-queries](#aggregation) and results created by non-default
-[formatting].
+Queries containing [holes] read one or more key-values. You
+can think of these queries as declaring a key-value schema.
+All key-values matching the schema are returned by the
+query.
 
-FQL attempts to decode the value as each of the types listed
-in the variable, stopping at first success. If the value
-cannot be decoded, the key-value does not match the schema.
+The result of most read queries is the inverse (write) query
+of the key-values being read. The exceptions to this rule
+are [aggregate queries](#aggregation) and results created by
+non-default [formatting].
 
-Queries with [variables] in their key (and
-optionally in their value) result in a range of key-values
-being read.
+If the holes only appear in the value, then at most a single
+key-value is returned. If holes appear in the key (and
+optionally, the value) then any number of key-values may be
+returned.
 
-Whether reading single or many, when a key-value is
-encountered which doesn't match the query's schema it is
-filtered out of the results. Including the `strict` [query
-option] causes the query to fail when encountering
-a nonconformant key-value.
+### Clear
 
 If a query has the token `clear` as it's value, it clears
-all the key matching the query's schema. Keys not matching
-the schema are ignored unless the `strict` option is
-present, resulting in the query failing.
+all the keys matching the query's schema.
 
 ### Directories
 
@@ -975,20 +966,30 @@ they will all be removed.
 
 ### Filtering
 
-As stated above, read queries define a schema to which
-key-values may or may-not conform. Because filtering is
-performed on the client side, range reads may stream a lot
-of data to the client while filtering most of it away. For
-example, consider the following query:
+During a read query, FQL scans a subset of the directories
+being read. If a key-value is encountered which doesn't
+match the query's schema it is ignored. Including the
+`strict` [query option] causes the query to fail when
+encountering a nonconformant key-value. This is useful for
+ensuring that all the key-values within a directory have the
+same schema.
+
+FQL attempts to decode the data elements as each of the
+types listed in the respective variable, stopping at first
+success. If the value cannot be decoded according to the
+listed types, the key-value does not match the schema.
+
+Because filtering is performed on the client side, range
+reads may stream a lot of data to the client while filtering
+most of it away. For example, consider the following query:
 
 ```fql {.query}
 /people(3392,<str|int>,<>)=(<int>,...)
 ```
 
-In the key, the location of the first
-[hole] determines the range read prefix
-used by FQL. For this particular query, the prefix would be
-as follows:
+In the key, the location of the first [hole] determines the
+range read prefix used by FQL. For this particular query,
+the prefix would be as follows:
 
 ```fql {.query}
 /people(3392)
@@ -996,12 +997,12 @@ as follows:
 
 FoundationDB will stream all key-values with this prefix to
 the client. As they are received, the client will filter out
-key-values which don't match the query's schema. This may be
-most of the data. Ideally, filter queries are only used on
-small amounts of data to limit wasted bandwidth.
+key-values which don't match the remaining portion of the
+schema. **This may be most of the data.** Ideally, filter
+queries are only used on small amounts of data to limit
+wasted bandwidth.
 
-Below you can see a Python implementation of how this
-filtering would work.
+Below you can see how this filtering could be implemented:
 
 ```python
 @fdb.transactional
@@ -1046,8 +1047,8 @@ def filter_range(tr):
 
 ### Options
 
-As hinted at above, queries have several options which
-modify their default behavior.
+Queries have several options which modify their default
+behavior.
 
 <div>
 
