@@ -89,7 +89,7 @@ structure of queries while the [Semantics] section describes
 their behavior. The [Implementations] section describes the
 Go reference implementation and highlights details not
 dictated by the specification. The complete [EBNF grammar]
-appears at the end.
+appears at the end. 
 
 > ❗ Not all features described in this document have been
 > implemented yet. See the project's [issues] for a roadmap
@@ -600,44 +600,24 @@ TODO: @commit
 
 ---
 
-FQL semantics are designed with the following goals in mind:
-
-- **Provide useful behavior as a standalone [layer].** FQL
-  will be used as an alternative client API. It should unify
-  the core API with the directory and tuple layers while
-  providing improved ergonomics.
-
-TODO: Mention that QL and API semantics must be the same.
-
-- **Provide defaults for value encoding.** FoundationDB
-  suggests a default encoding scheme for keys but not for
-  values. FQL establishes conventions for value encoding
-  using the [tuple layer] and unifies keys and values
-  under a single type system.
-
-- **Interface with other layers.** FQL will be used to
-  explore and debug other layers and should be able to
-  express schemas for common FoundationDB design patterns.
-
 Throughout this section, snippets of Python code are
-included showcasing equivalent client API calls to help
-describe how FQL behaves. These snippets are simplified and
-don't include optimizations found in the actual
-implementation like concurrency, batching, or caching.
+included showcasing simplified implementations of FQL
+features using the FoundationDB API. These snippets don't
+include optimizations found in the actual implementation
+like concurrency, batching, or caching.
 
 ## Data Encoding
 
 FoundationDB stores keys and values as simple byte strings
 leaving the client responsible for encoding the data. FQL
-determines how to encode [data elements]
-based on their data type, position within the query, and
-associated [options].
+determines how to encode [data elements] based on their data
+type, position within the query, and associated [options].
 
 ### Keys
 
-Keys are *always* encoded using the [directory] and
-[tuple] layers. All keys must include a directory prefix.
-Write queries create directories if they do not exist.
+Keys are *always* encoded using the [directory] and [tuple]
+layers. All keys must include a directory prefix. Write
+queries create directories if they do not exist.
 
 ```fql {.query}
 /app/users(57223,"Peter","Carson",56)=nil
@@ -705,9 +685,9 @@ def do_read_all(tr, dir):
 
 ### Values
 
-When used as a value, [data elements] are
-encoded as the lone member of a tuple. This approach
-preserves type information for flexible decoding.
+Value [data elements] are encoded as the lone member of
+a tuple. This approach preserves type information for
+flexible decoding.
 
 ```fql {.query}
 /people/age("jon","smith")=42
@@ -754,11 +734,10 @@ def read_age(tr):
         return val_bytes
 ```
 
-As the Python snippet above implies, tuples and byte strings
-are treated differently. As a value, tuples are encoded
-using the tuple layer, but they are not wrapped in a tuple
-like the other data elements. Byte strings are written
-as-is.
+Not all data elements are encoded the same way. As a value,
+tuples are encoded using the tuple layer, but they are not
+wrapped in a tuple like the other data elements. Byte
+strings are written as-is.
 
 This means that `42` and `(42)` have the same value
 encoding. The way the value is returned depends on how it's
@@ -783,10 +762,10 @@ queried.
 ### Empty
 
 Within a tuple, `nil`, empty bytes `0x`, and empty nested tuples `()`
-are encoded with their types preserved by the [tuple
-layer][]. As a value, all three are encoded as an empty byte
-string. A typeless variable will decode an empty byte string
-as `nil`.
+are encoded with their types preserved by the [tuple layer].
+As a value, all three are encoded as an empty byte string.
+A typeless variable will decode an empty byte string as
+`nil`.
 
 ```fql {.query}
 /globals/selection("object")=0x
@@ -802,8 +781,8 @@ as `nil`.
 /globals/selection("text")=nil
 ```
 
-Likewise, the tuple of a key is encoded as an empty byte string
-when it contains no elements, allowing queries to write
+Likewise, the tuple of a key is encoded as an empty byte
+string when it contains no elements, allowing queries to use
 a key that is simply the directory prefix.
 
 ```fql {.query}    
@@ -828,10 +807,13 @@ def set_next_id(tr):
 
 ### Options
 
-Options allow for encoding [data elements]
-in different ways than the default outlined above. The table
-below shows [options] which change how the `int`
-and `num` types are encoded as values.
+Options allow for encoding values in different ways than
+outlined above. The table below shows [options] which change
+how the `int` and `num` types are encoded.
+
+> ❗ Options only change how data elements are encoded as
+> values. In keys, the tuple layer encodes data elements in
+> the smallest representation available.
 
 <div>
 
@@ -844,9 +826,9 @@ and `num` types are encoded as values.
 </div>
 
 `int` may use the widths `8`, `16`, `32`, and `64`, while `num` may
-use `32`, `64`, and `80`. When the width option is present, values
-use little endian encoding, as long as the `bigendian`
-option isn't also present.
+use `32`, `64`, and `80`. When the width option is present,
+values use little endian encoding, as long as the
+`bigendian` option isn't also present.
 
 ```fql {.query}
 /globals/next-id()=37534[width:64,bigendian]
@@ -865,13 +847,6 @@ def set_next_id(tr):
     tr[key] = val
 ``` 
 
-TODO: The following explanation should appear appear right
-before the alias tables.
-
-FQL provides aliases for the `int` and `num` options to
-decrease their verbosity. For instance,
-`[width:64,bigendian]` can be written as `[i64,be]`.
-
 When writing values with non-default encoding, type metadata
 will be lost. Read queries will need the appropriate options
 specified. Otherwise, the value will not match the schema.
@@ -888,8 +863,11 @@ specified. Otherwise, the value will not match the schema.
 /globals/next-id()=37534[i64,be]
 ```
 
-The tables below list the available aliases for for `int`
-and `num` options.
+FQL provides aliases for the `int` and `num` options to
+decrease their verbosity. For instance,
+`[width:64,bigendian]` can be written as `[i64,be]`. The
+tables below list the available aliases for for `int` and
+`num` options.
 
 <div>
 
