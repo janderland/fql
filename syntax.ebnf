@@ -9,6 +9,7 @@
 query = [ options '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 
+(* Key-Values *)
 keyval = key '=' value
 key = directory tuple
 value = 'clear' | data
