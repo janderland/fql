@@ -128,7 +128,7 @@ the tuple `(22,"abc",false)` will appear before the tuple
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```ebnf {.grammar}
-query = [ opts '\n' ] ( keyval | key | dquery )
+query = [ options '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
@@ -137,7 +137,7 @@ value = 'clear' | data
 
 To the left of the `=` is the key which includes a directory
 path and tuple. To the right is the value. For now, the
-`opts`{.hljs-variable} prefixing the query can be ignored.
+`options`{.hljs-variable} prefixing the query can be ignored.
 [Options] will be described later in the document.
 
 A query may be a full key-value, just a key, or just
@@ -327,7 +327,7 @@ instantiated as the tokens `-inf`, `inf`, `-nan` or `nan`.
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```ebnf {.grammar}
-string = '"' { char | '\\"' | '\\\\' } '"'
+string = '"' { char | '\"' | '\\' } '"'
 char = ? Any printable UTF-8 character except '"' and '\' ?
 ```
 
@@ -337,7 +337,7 @@ and backslashes via backslash escapes.
 
 ```ebnf {.grammar}
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
-bytes = '0x' { hex hex } 
+bytes = '0x' { hex{2} } 
 hex = digit | 'a' | ... | 'f' | 'A' | ... | 'F' 
 ```
 
@@ -364,7 +364,7 @@ actual transaction version upon commit (see
 
 ```ebnf {.grammar}
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
-elements = data [ ',' nl elements ] | '...'
+elements = '...' | data [ ',' nl elements ]
 ```
 
 The `tup` type may contain any of the data elements,
@@ -399,8 +399,7 @@ key prefix, and therefore be adjacently stored.
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
 ```ebnf {.grammar}
-directory = '/' element [ directory ]
-element = '<>' | name | string
+directory = '/' ( '<>' | name | string ) [ directory ]
 ```
 
 A directory is specified as a sequence of strings, each
@@ -438,7 +437,8 @@ kinds of holes: variables and the `...` token.
 ```ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
-     | 'str' | 'uuid' | 'bytes' | 'vstamp'
+     | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
+agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 ```
 
 Variables are used to represent a single [data element].
@@ -1395,7 +1395,7 @@ The complete FQL grammar is specified below.
 
 ```ebnf {.grammar}
 (* Top-level query structure *)
-query = [ opts '\n' ] ( keyval | key | dquery )
+query = [ options '\n' ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 
 keyval = key '=' value
@@ -1416,6 +1416,7 @@ data = 'nil' | bool | int | num | string | uuid
 bool = 'true' | 'false'
 int = [ '-' ] digits
 num = int '.' digits | ( int | int '.' digits ) 'e' int
+    | '-inf' | 'inf' | '-nan' | 'nan'
 string = '"' { char | '\"' | '\\' } '"'
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
 bytes = '0x' { hex{2} }
@@ -1423,13 +1424,13 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 
 (* Variables and References *)
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-reference = ':' name [ '!' type ]
+reference = ':' name
 type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
      | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 
 (* Options *)
-opts = '[' option { ',' option } ']'
+options = '[' option { ',' option } ']'
 option = name [ ':' argument ]
 argument = name | int | string
 
