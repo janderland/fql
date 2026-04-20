@@ -948,49 +948,99 @@ earlier, all queries resemble key-values, and the tokens
 within said key-values imply which of the above operations
 is executed.
 
-### Writes
+### Mutations
 
 Queries lacking [holes] perform writes on the database. You
 can think of these queries as declaring the existence of
-a particular key-value. 
+a particular key-value. If the key's directory does not
+exist, it is created.
 
 > ❗ Queries lacking a value altogether imply an empty
-> [variable] as the value and should not
-> be confused with write queries.
+> [variable](#holes) as the value and should not be confused
+> with write queries.
+
+```fql {.query}
+% Write queries
+/people(293800,"farmer",nil)=()
+/people(293801,37,"last year")=(12,23,0xff)
+/people(293802,"warrior","")=(12,nil)
+```
+
+Queries having the token `clear` as their value delete one
+or more key-values. These queries may have [holes] in their
+key. If so, all the key-values with a key matching the
+schema are deleted. Clear queries never delete a directory.
+
+```fql {.query}
+% Clear queries
+/people(293800,"farmer",nil)=clear
+/people(293801,<>,"last year")=clear
+/people(293802,...)=clear
+```
 
 ### Reads
 
-Queries containing [holes] read one or more key-values. You
-can think of these queries as declaring a key-value schema.
-All key-values matching the schema are returned by the
-query.
+Queries containing [holes] (and lacking the `clear` token)
+read one or more key-values. You can think of these queries
+as declaring a key-value schema. All key-values matching the
+schema are returned by the query. The results of most read
+queries are the inverse (write) queries of the key-values
+being read. 
 
-The result of most read queries is the inverse (write) query
-of the key-values being read. The exceptions to this rule
-are [aggregate queries](#aggregation) and results created by
-non-default [formatting].
+> ❗ There are several situations where the key-values
+> returned by a read will not perfectly reproduce the data
+> if used as a write:
+>
+> - [Formatting] allows FQL to transform the returned
+>   key-values into any text format, including non-query
+>   strings. 
+>
+> - [Aggregation] queries return key-values representing
+>   a summary of many key-values and are not valid queries.
+>
+> - Byte strings [wrapped in a tuple](#values) and used as
+>   a value will be automatically unwrapped during reading.
+>   If the resultant key-value is used as a query, it will
+>   write an unwrapped byte string by default. 
 
 If the holes only appear in the value, then at most a single
 key-value is returned. If holes appear in the key (and
 optionally, the value) then any number of key-values may be
 returned.
 
-### Clear
+```fql {.query}
+% Read a single key-value
+/people(293800,"farmer",nil)
+/people(293801,37,"last year")=<tup>
 
-If a query has the token `clear` as it's value, it clears
-all the keys matching the query's schema.
+% Read multiple key-values
+/people(293801,<int>,<str>)
+/people(293802,...)=<>
+```
 
 ### Directories
 
-The directory layer may be queried in isolation by using
-a lone directory as a query. Directory queries are read-only
-except when removing a directory. If the directory path
-contains no variables, the query will read that single
-directory.
+The directories may be listed by using a lone directory as
+a query. These kinds of queries are read-only. If the
+directory path contains no [holes], the query will simply
+list that single directory, if it exists.
 
 A directory can be removed by appending `=remove` to the
 directory query. If multiple directories match the schema,
 they will all be removed.
+
+
+```fql {.query}
+% Check if a single directory exists
+/people/name
+
+% List all subdirectories
+/people/<>
+
+% Remove directories
+/people/name=remove
+/people/<>=remove
+```
 
 ### Filtering
 
