@@ -327,6 +327,17 @@ pre.equiv-py > ::before {
   content: "equivalent python";
 }
 
+pre.equiv-py.standalone {
+  > ::before {
+    top: 0;
+  }
+
+  code {
+    margin-top: 0;
+    padding-top: 1.5rem;
+  }
+}
+
 /* Tables */
 
 /* This div hides it's table child
