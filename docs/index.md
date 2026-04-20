@@ -901,42 +901,32 @@ resultant key-value includes the encoding options.
 /globals/next-id()=37534[i64,be]
 ```
 
-FQL provides aliases for the `int` and `num` options to
-decrease their verbosity. For instance,
+FQL provides aliases for the `int` and `num` encoding
+options to decrease their verbosity. For instance,
 `[width:64,bigendian]` can be written as `[i64,be]`. The
-tables below list the available aliases for for `int` and
-`num` options.
+table below lists the available aliases for `int` and `num`
+options.
 
 <div>
 
-| Int Alias | Actual Options      |
-|:----------|:--------------------|
-| `be`      | `bigendian`         |
-| `i8`      | `width:8`           |
-| `i16`     | `width:16`          |
-| `i32`     | `width:32`          |
-| `i64`     | `width:64`          |
-| `u8`      | `unsigned,width:8`  |
-| `u16`     | `unsigned,width:16` |
-| `u32`     | `unsigned,width:32` |
-| `u64`     | `unsigned,width:64` |
-
-</div>
-
-<div>
-
-| Num Alias | Actual Options |
-|:----------|:---------------|
-| `be`      | `bigendian`    |
-| `f32`     | `width:32`     |
-| `f64`     | `width:64`     |
-| `f80`     | `width:80`     |
+| Int Alias | Num Alias | Actual Options      |
+|:----------|:----------|:--------------------|
+| `be`      | `be`      | `bigendian`         |
+| `i8`      | `-`       | `width:8`           |
+| `i16`     | `-`       | `width:16`          |
+| `i32`     | `f32`     | `width:32`          |
+| `i64`     | `f64`     | `width:64`          |
+| `-`       | `f80`     | `width:80`          |
+| `u8`      | `-`       | `unsigned,width:8`  |
+| `u16`     | `-`       | `unsigned,width:16` |
+| `u32`     | `-`       | `unsigned,width:32` |
+| `u64`     | `-`       | `unsigned,width:64` |
 
 </div>
 
 The `str`, `uuid`, and `vstamp` types support the `raw`
-option, which writes their bytes as-is — producing a raw
-value with no further transformation applied. 
+option, which writes their bytes as-is, producing a raw
+value.
 
 ```fql {.query}
 % write raw UUID
