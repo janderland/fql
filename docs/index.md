@@ -685,9 +685,20 @@ def do_read_all(tr, dir):
 
 ### Values
 
-Value [data elements] are encoded as the lone member of
-a tuple. This approach preserves type information for
-flexible decoding.
+By default, values are encoded as the lone member of
+a tuple. This preserves type metadata, allowing the value to
+be decoded without a schema.
+
+When used as a value, [data elements] which are not wrapped
+in a tuple are called *raw values*. By default, two types
+are always written as raw values: `tup` and `bytes`.
+Wrapping a `tup` value in another tuple would be redundant,
+and as explained later on, `bytes` act as the "fallback"
+type of values and therefore are not wrapped either.
+
+Let's take a look at a concrete example. Below, the value
+`42` is written and then decoded using a typeless variable
+`<>`.
 
 ```fql {.query}
 /people/age("jon","smith")=42
@@ -719,29 +730,55 @@ def read_age(tr):
     # Read the value's bytes
     val_bytes = tr[key]
 
+    # Decode the value
     try:
-        # Assume the value is a tuple
         val_tup = fdb.tuple.unpack(val_bytes)
-
         if len(val_tup) == 1:
-            # Unwrap single elements
             return val_tup[0]
         else:
-            # Return as a tuple
             return val_tup
-    except:
-        # Fallback to raw bytes
+    except ValueError:
         return val_bytes
 ```
 
-Not all data elements are encoded the same way. As a value,
-tuples are encoded using the tuple layer, but they are not
-wrapped in a tuple like the other data elements. Byte
-strings are written as-is.
+FoundationDB does not provide an idiomatic value encoding
+format, so the logic above serves as a sane default. Other
+encoding formats are supported, though there are trade-offs.
+The following [options](#options-1) subsection will explain
+more. For now, let's isolate the default decoding logic and
+rationalize it.
 
-This means that `42` and `(42)` have the same value
-encoding. The way the value is returned depends on how it's
-queried.
+```python {.equiv-py .standalone}
+def decode_value(val_bytes):
+    try:
+        # Assume the bytes are a tuple
+        # and attempt to unpack
+        val_tup = fdb.tuple.unpack(val_bytes)
+
+        # If the tuple only contains one
+        # element, unwrap the element
+        if len(val_tup) == 1:
+            return val_tup[0]
+
+        # If the tuple contains multiple
+        # elements, return the tuple
+        else:
+            return val_tup
+
+    # If the value isn't a tuple
+    # return the raw bytes
+    except ValueError:
+        return val_bytes
+```
+
+Default decoding assumes the value is a tuple. If it is
+a tuple and only contains a single element, the element is
+automatically unwrapped. If it's not a tuple, then the value
+is not decoded and simply returned as a byte string.
+
+Because most [data elements] are wrapped with a tuple, the
+values `42` and `(42)` produce identical bytes when encoded.
+The way the value is returned depends on how it's queried.
 
 ```fql {.query}
 % write the key-value once
@@ -759,13 +796,12 @@ queried.
 /app/location("east bay")=(87234)
 ```
 
-### Empty
+### Empty Elements
 
-Within a tuple, `nil`, empty bytes `0x`, and empty nested tuples `()`
-are encoded with their types preserved by the [tuple layer].
-As a value, all three are encoded as an empty byte string.
-A typeless variable will decode an empty byte string as
-`nil`.
+Within a tuple, `nil`, empty bytes `0x`, and empty nested
+tuples `()` are encoded with their types preserved. As a raw
+value, all three collapse to an empty byte string.
+A typeless variable decodes an empty byte string as `nil`.
 
 ```fql {.query}
 /globals/selection("object")=0x
@@ -781,9 +817,9 @@ A typeless variable will decode an empty byte string as
 /globals/selection("text")=nil
 ```
 
-Likewise, the tuple of a key is encoded as an empty byte
-string when it contains no elements, allowing queries to use
-a key that is simply the directory prefix.
+If the tuple of a key contains no elements, it's encoded as
+an empty byte string. This allows queries to use keys that
+are simply a directory prefix.
 
 ```fql {.query}    
 /globals/next-id()=37534
@@ -807,13 +843,14 @@ def set_next_id(tr):
 
 ### Options
 
-Options allow for encoding values in different ways than
-outlined above. The table below shows [options] which change
+Options allow queries to encode any [data element] as a raw
+value, providing additional control over its byte-level
+representation. The table below shows [options] which change
 how the `int` and `num` types are encoded.
 
-> ❗ Options only change how data elements are encoded as
-> values. In keys, the tuple layer encodes data elements in
-> the smallest representation available.
+> ❗ Encoding options only affect values not wrapped by
+> a tuple. Within tuples, as a key or value, data elements
+> are always encoded by the tuple layer.
 
 <div>
 
@@ -827,8 +864,8 @@ how the `int` and `num` types are encoded.
 
 `int` may use the widths `8`, `16`, `32`, and `64`, while `num` may
 use `32`, `64`, and `80`. When the width option is present,
-values use little endian encoding, as long as the
-`bigendian` option isn't also present.
+values default to little endian encoding. The `bigendian`
+option can override this.
 
 ```fql {.query}
 /globals/next-id()=37534[width:64,bigendian]
@@ -847,9 +884,10 @@ def set_next_id(tr):
     tr[key] = val
 ``` 
 
-When writing values with non-default encoding, type metadata
-will be lost. Read queries will need the appropriate options
-specified. Otherwise, the value will not match the schema.
+Because raw values carry no type metadata, read queries must
+specify the same encoding options that were used during the
+write. Otherwise, the value will not match the schema. The
+resultant key-value includes the encoding options.
 
 ```fql {.query}
 % write
@@ -896,9 +934,9 @@ tables below list the available aliases for for `int` and
 
 </div>
 
-The `str`, `uuid`, and `vstamp` types include the option
-`raw` which causes their bytes to be written as-is without
-being wrapped in a tuple. 
+The `str`, `uuid`, and `vstamp` types support the `raw`
+option, which writes their bytes as-is — producing a raw
+value with no further transformation applied. 
 
 ```fql {.query}
 % write raw UUID
