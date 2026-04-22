@@ -620,6 +620,7 @@ layers. All keys must include a directory prefix. Write
 queries create directories if they do not exist.
 
 ```fql {.query}
+% Write a key-value
 /app/users(57223,"Peter","Carson",56)=nil
 ```
 
@@ -644,6 +645,7 @@ nothing is returned. The tuple layer encodes metadata about
 element types, allowing FQL to decode keys without a schema.
 
 ```fql {.query}
+% Read everything under the 'app' directory
 /app/...(...)
 ```
 
@@ -656,11 +658,11 @@ def read_all(tr):
         return []
 
     # Recursively read all directories
-    return do_read_users(tr, dir)
+    return do_read_all(tr, dir)
 
 
 def do_read_all(tr, dir):
-    # Grab all the key-values
+    # Grab all the key-values in this directory
     results = []
     for key, val in tr[dir.range()]:
         # Get the full path of the directory
@@ -687,18 +689,12 @@ def do_read_all(tr, dir):
 
 By default, values are encoded as the lone member of
 a tuple. This preserves type metadata, allowing the value to
-be decoded without a schema.
+be decoded without a schema. [Data elements] which are not
+wrapped in a tuple are called *raw values*. By default, two
+types are written as raw values: `tup` and `bytes`.
 
-When used as a value, [data elements] which are not wrapped
-in a tuple are called *raw values*. By default, two types
-are always written as raw values: `tup` and `bytes`.
-Wrapping a `tup` value in another tuple would be redundant,
-and as explained later on, `bytes` act as the "fallback"
-type of values and therefore are not wrapped either.
-
-Let's take a look at a concrete example. Below, the value
-`42` is written and then decoded using a typeless variable
-`<>`.
+Let's start with a concrete example using the value `42`.
+The implementation is probably as you'd expect.
 
 ```fql {.query}
 /people/age("jon","smith")=42
@@ -707,7 +703,7 @@ Let's take a look at a concrete example. Below, the value
 ```python {.equiv-py}
 @fdb.transactional
 def write_age(tr):
-    # Encoding the key
+    # Encode the key
     key = # ...
 
     # Pack the value as a tuple
@@ -716,6 +712,9 @@ def write_age(tr):
     # Write the key-value
     tr[key] = val
 ```
+
+Reading is a bit more complex. Below we'll read the value
+using a typeless variable `<>`.
 
 ```fql {.query}
 /people/age("jon","smith")=<>
@@ -730,7 +729,9 @@ def read_age(tr):
     # Read the value's bytes
     val_bytes = tr[key]
 
-    # Decode the value
+    # Decode the value; for simplicity, this
+    # function returns only the value rather
+    # than the entire key-value
     try:
         val_tup = fdb.tuple.unpack(val_bytes)
         if len(val_tup) == 1:
@@ -743,10 +744,9 @@ def read_age(tr):
 
 FoundationDB does not provide an idiomatic value encoding
 format, so the logic above serves as a sane default. Other
-encoding formats are supported, though there are trade-offs.
-The following [options](#options-1) subsection will explain
-more. For now, let's isolate the default decoding logic and
-rationalize it.
+encoding [formats](#options-1) are supported, though they
+require certain options during the read. For now, let's
+isolate the default decoding logic and rationalize it.
 
 ```python {.equiv-py .standalone}
 def decode_value(val_bytes):
@@ -776,9 +776,10 @@ a tuple and only contains a single element, the element is
 automatically unwrapped. If it's not a tuple, then the value
 is not decoded and simply returned as a byte string.
 
-Because most [data elements] are wrapped with a tuple, the
-values `42` and `(42)` produce identical bytes when encoded.
-The way the value is returned depends on how it's queried.
+Because most [data elements] are wrapped with a tuple there
+can be encoding ambiguities. For instance, the values `42`
+and `(42)` produce identical bytes when encoded. The way the
+value is returned depends on how it's queried.
 
 ```fql {.query}
 % write the key-value once
@@ -795,6 +796,12 @@ The way the value is returned depends on how it's queried.
 /app/location("east bay")=87234
 /app/location("east bay")=(87234)
 ```
+
+FQL's value encoding tries to strike a balance between
+interoperability with other layers and maximizing the
+potential of under specified schemas. While it's logic may
+seem convoluted at first, the rules become very intuitive
+after a bit of use.
 
 ### Empty Elements
 
@@ -945,8 +952,8 @@ value.
 FQL queries may write a single key-value, read/clear one or
 more key-values, or list/remove directories. As stated
 earlier, all queries resemble key-values, and the tokens
-within said key-values imply which of the above operations
-is executed.
+within said key-values imply which of the above
+operations are executed.
 
 ### Mutations
 
@@ -963,13 +970,14 @@ exist, it is created.
 % Write queries
 /people(293800,"farmer",nil)=()
 /people(293801,37,"last year")=(12,23,0xff)
-/people(293802,"warrior","")=(12,nil)
+/people(293802,"warrior","")=true
 ```
 
 Queries having the token `clear` as their value delete one
 or more key-values. These queries may have [holes] in their
 key. If so, all the key-values with a key matching the
-schema are deleted. Clear queries never delete a directory.
+schema are deleted. Clear queries never delete directories,
+even if all the directory's key-values are cleared.
 
 ```fql {.query}
 % Clear queries
@@ -977,6 +985,11 @@ schema are deleted. Clear queries never delete a directory.
 /people(293801,<>,"last year")=clear
 /people(293802,...)=clear
 ```
+
+For more details on how a key is matched to a schema, see
+the [filtering] section below. Both read and clear queries
+follow the same rules when choosing which key-values to
+operate on.
 
 ### Reads
 
@@ -1000,7 +1013,7 @@ being read.
 >
 > - Byte strings [wrapped in a tuple](#values) and used as
 >   a value will be automatically unwrapped during reading.
->   If the resultant key-value is used as a query, it will
+>   If the resultant key-value is used as a write, it will
 >   write an unwrapped byte string by default. 
 
 If the holes only appear in the value, then at most a single
@@ -1020,7 +1033,7 @@ returned.
 
 ### Directories
 
-The directories may be listed by using a lone directory as
+Directories may be listed by using a lone directory as
 a query. These kinds of queries are read-only. If the
 directory path contains no [holes], the query will simply
 list that single directory, if it exists.
@@ -1044,18 +1057,18 @@ they will all be removed.
 
 ### Filtering
 
-During a read query, FQL scans a subset of the directories
-being read. If a key-value is encountered which doesn't
-match the query's schema it is ignored. Including the
-`strict` [query option] causes the query to fail when
-encountering a nonconformant key-value. This is useful for
-ensuring that all the key-values within a directory have the
-same schema.
+During a read query, FQL scans a subset of the key-values in
+the directories being read. If a key-value is encountered
+which doesn't match the query's schema it is ignored.
+Including the `strict` [option](#options-2) causes the query
+to fail when encountering a nonconformant key-value. This is
+useful for ensuring that all the key-values within
+a directory have the same schema.
 
 FQL attempts to decode the data elements as each of the
-types listed in the respective variable, stopping at first
-success. If the value cannot be decoded according to the
-listed types, the key-value does not match the schema.
+types listed in their respective variables, stopping at
+first success. If the value cannot be decoded according to
+the listed types, the key-value does not match the schema.
 
 Because filtering is performed on the client side, range
 reads may stream a lot of data to the client while filtering
