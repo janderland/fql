@@ -58,6 +58,11 @@
     hljs.configure({ languageDetectRe: /\b([\w-]+)\b/ });
     hljs.highlightAll();
     document.querySelectorAll(":not(pre) > code").forEach((e) => {
+      // Elements pre-tagged with an hljs-* token class (e.g. hljs-variable)
+      // are styled via CSS only; sending them through highlightElement would
+      // make hljs try to load the token name as a language.
+      if ([...e.classList].some((c) => c.startsWith("hljs-"))) return;
+
       let bash = false;
       for (let p = e.parentElement; p; p = p.parentElement) {
         if (p.classList.contains("bash")) {
