@@ -797,17 +797,24 @@ value is returned depends on how it's queried.
 /app/location("east bay")=(87234)
 ```
 
-FQL's value encoding tries to strike a balance between
-interoperability with other layers and maximizing the
-potential of under specified schemas. While it's logic may
-seem convoluted at first, the rules become very intuitive
-after a bit of use.
+Furthermore, all values can be decoded as a byte string.
+
+```fql {.query}
+/app/location("east bay")=<bytes>
+```
+
+> ❗ Generally, read query results can be used as a write
+> query to replicate the read key-values. An exception to
+> this rule is a wrapped byte string `(0xabcd)` used as
+> a value. As a single element, the byte string will be
+> unwrapped when read. If the result is used as a write, the
+> default encoding writes it as a raw value.
 
 ### Empty Elements
 
 Within a tuple, `nil`, empty bytes `0x`, and empty nested
-tuples `()` are encoded with their types preserved. As a raw
-value, all three collapse to an empty byte string.
+tuples `()` are encoded with their types preserved. As
+a value, all three collapse to an empty byte string.
 A typeless variable decodes an empty byte string as `nil`.
 
 ```fql {.query}
@@ -850,10 +857,11 @@ def set_next_id(tr):
 
 ### Options
 
-Options allow queries to encode any [data element] as a raw
-value, providing additional control over its byte-level
-representation. The table below shows [options] which change
-how the `int` and `num` types are encoded.
+Options allow queries to encode any [data
+element](#data-elements) as a raw value, providing
+additional control over its byte-level representation. The
+table below shows [options] which change how the `int` and
+`num` types are encoded.
 
 > ❗ Encoding options only affect values not wrapped by
 > a tuple. Within tuples, as a key or value, data elements
@@ -963,8 +971,8 @@ a particular key-value. If the key's directory does not
 exist, it is created.
 
 > ❗ Queries lacking a value altogether imply an empty
-> [variable](#holes) as the value and should not be confused
-> with write queries.
+> [variable](#holes) `<>` as the value and should not be
+> confused with write queries.
 
 ```fql {.query}
 % Write queries
@@ -976,7 +984,7 @@ exist, it is created.
 Queries having the token `clear` as their value delete one
 or more key-values. These queries may have [holes] in their
 key. If so, all the key-values with a key matching the
-schema are deleted. Clear queries never delete directories,
+schema are deleted. Clear queries never remove directories,
 even if all the directory's key-values are cleared.
 
 ```fql {.query}
@@ -997,8 +1005,8 @@ Queries containing [holes] (and lacking the `clear` token)
 read one or more key-values. You can think of these queries
 as declaring a key-value schema. All key-values matching the
 schema are returned by the query. The results of most read
-queries are the inverse (write) queries of the key-values
-being read. 
+queries are the inverse of the read query; they would write
+the key-values being read. 
 
 > ❗ There are several situations where the key-values
 > returned by a read will not perfectly reproduce the data
@@ -1011,10 +1019,7 @@ being read.
 > - [Aggregation] queries return key-values representing
 >   a summary of many key-values and are not valid queries.
 >
-> - Byte strings [wrapped in a tuple](#values) and used as
->   a value will be automatically unwrapped during reading.
->   If the resultant key-value is used as a write, it will
->   write an unwrapped byte string by default. 
+> - Values with [wrapped byte strings](#values).
 
 If the holes only appear in the value, then at most a single
 key-value is returned. If holes appear in the key (and
@@ -1022,7 +1027,8 @@ optionally, the value) then any number of key-values may be
 returned.
 
 ```fql {.query}
-% Read a single key-value
+% Read a single key-value; the lack of
+% a value implies a typeless variable `<>`
 /people(293800,"farmer",nil)
 /people(293801,37,"last year")=<tup>
 
@@ -1057,22 +1063,23 @@ they will all be removed.
 
 ### Filtering
 
-During a read query, FQL scans a subset of the key-values in
-the directories being read. If a key-value is encountered
-which doesn't match the query's schema it is ignored.
-Including the `strict` [option](#options-2) causes the query
-to fail when encountering a nonconformant key-value. This is
-useful for ensuring that all the key-values within
-a directory have the same schema.
+During a read query or a clear query with a [hole](#holes),
+FQL scans a subset of the key-values in the directories
+being read. If a key-value is encountered which doesn't
+match the query's schema it is ignored. Including the
+`strict` [option](#options-2) causes the query to fail when
+encountering a nonconformant key-value. This is useful for
+ensuring that all the key-values within a directory have the
+same schema.
 
-FQL attempts to decode the data elements as each of the
-types listed in their respective variables, stopping at
-first success. If the value cannot be decoded according to
-the listed types, the key-value does not match the schema.
+> ❗ As outlined in the [data encoding](#values) section,
+> there is a degree of type ambiguity regarding values. Most
+> [data elements] will match the `tup` type and all will
+> match the `bytes` type.
 
-Because filtering is performed on the client side, range
-reads may stream a lot of data to the client while filtering
-most of it away. For example, consider the following query:
+Filtering is performed on the client side and the query may
+stream a lot of data to the client while filtering most of
+it away. For example, consider the following query:
 
 ```fql {.query}
 /people(3392,<str|int>,<>)=(<int>,...)
