@@ -798,9 +798,16 @@ value is returned depends on how it's queried.
 ```
 
 Furthermore, all values can be decoded as a byte string.
+`bytes` is the fallback type for values and will always
+succeed.
 
 ```fql {.query}
 /app/location("east bay")=<bytes>
+```
+
+```fql {.result}
+% `(87234)` returned as bytes
+/app/location("east bay")=0x170154c2
 ```
 
 > ❗ Generally, read query results can be used as a write
@@ -1085,9 +1092,9 @@ it away. For example, consider the following query:
 /people(3392,<str|int>,<>)=(<int>,...)
 ```
 
-In the key, the location of the first [hole] determines the
-range read prefix used by FQL. For this particular query,
-the prefix would be as follows:
+In the key, the location of the first [hole](#holes)
+determines the range read prefix used by FQL. For this
+particular query, the prefix would be as follows:
 
 ```fql {.query}
 /people(3392)
@@ -1100,7 +1107,7 @@ schema. **This may be most of the data.** Ideally, filter
 queries are only used on small amounts of data to limit
 wasted bandwidth.
 
-Below you can see how this filtering could be implemented:
+Below you can see how this filtering is implemented:
 
 ```python
 @fdb.transactional
@@ -1124,7 +1131,7 @@ def filter_range(tr):
         if not isinstance(tup[1], (str, int)):
             continue
 
-        # The query tells us to assume the value is a packed tuple
+        # The query tells us the value must be a packed tuple
         try:
             val_tup = fdb.tuple.unpack(val)
         except:
@@ -1138,7 +1145,7 @@ def filter_range(tr):
         if not isinstance(val_tup[0], int):
             continue
 
-        results.append((tup, val_tup))
+        results.append((dir, tup, val_tup))
 
     return results
 ```
@@ -1163,8 +1170,8 @@ behavior.
 Range-read queries support all the options listed above.
 Single-read queries support `snapshot` and `strict`. Clear
 queries support `strict`. With the `strict` option, the
-clear operation is a no-op if FQL encounters a key in the
-given directory which doesn't match the schema.
+clear operation is a no-op if FQL encounters a key which
+doesn't match the schema.
 
 ## Advanced Queries
 
