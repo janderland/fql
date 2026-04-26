@@ -35,15 +35,15 @@ indirection are first class citizens.
     - [References](#references)
   - [Space & Comments](#space-comments)
   - [Options](#options)
-  - [Meta Statements](#meta-statements)
+  - [Statements](#statements)
 - [Semantics](#semantics)
   - [Data Encoding](#data-encoding)
     - [Keys](#keys)
     - [Values](#values)
     - [Empty](#empty)
     - [Options](#options-1)
-  - [Types of Queries](#types-of-queries)
-    - [Writes](#writes)
+  - [Basic Queries](#basic-queries)
+    - [Mutations](#mutations)
     - [Reads](#reads)
     - [Directories](#directories-1)
     - [Filtering](#filtering)
@@ -592,7 +592,7 @@ integer, a [name], or a string.
 Details about the various options will be included in the
 sections explaining the semantics which they modify.
 
-## Meta Statements
+## Statements
 
 TODO: @commit
 
@@ -817,7 +817,7 @@ succeed.
 > unwrapped when read. If the result is used as a write, the
 > default encoding writes it as a raw value.
 
-### Empty Elements
+### Empty
 
 Within a tuple, `nil`, empty bytes `0x`, and empty nested
 tuples `()` are encoded with their types preserved. As
@@ -962,7 +962,7 @@ value.
 /tag_code("food")=0x7754286957084af9821ed65354fb1a12
 ```
 
-## Types of Queries
+## Basic Queries
 
 FQL queries may write a single key-value, read/clear one or
 more key-values, or list/remove directories. As stated
@@ -1089,7 +1089,7 @@ stream a lot of data to the client while filtering most of
 it away. For example, consider the following query:
 
 ```fql {.query}
-/people(3392,<str|int>,<>)=(<int>,...)
+/people(3392,<int>,<int>)
 ```
 
 In the key, the location of the first [hole](#holes)
@@ -1101,22 +1101,36 @@ particular query, the prefix would be as follows:
 ```
 
 FoundationDB will stream all key-values with this prefix to
-the client. As they are received, the client will filter out
+the client. As they are received, FQL will filter out
 key-values which don't match the remaining portion of the
-schema. **This may be most of the data.** Ideally, filter
-queries are only used on small amounts of data to limit
-wasted bandwidth.
+schema. **This may be most of the data.** Keys with tuples
+like `(2293,"hi",254)` and `(2293,7324,"wow")` will use up
+bandwidth and be decoded but end up not matching the schema.
 
-Below you can see how this filtering is implemented:
+Ideally, filter queries are only used on small amounts of
+data to limit wasted bandwidth. It's important to have
+a general idea of what a directory contains to avoid wasting
+bandwidth and CPU time.
 
-```python
+Filtering logic can become fairly complex. Let's add some
+extra specifications to the query above. Although this query
+is over the top, it will showcase how FQL approaches
+filtering when multiple [holes] are present.
+
+```fql {.query}
+/people(3392,<str|int>,<>)=(<int>,...)
+```
+
+```python {.equiv-py}
 @fdb.transactional
 def filter_range(tr):
+    # open the directory; return nothing if it doesn't exist
     dir = fdb.directory.open(tr, ('people',))
     if dir is None:
         return []
 
     prefix = dir.pack((3392,))
+    # TODO: this is incorrect; validate all python code
     range_result = tr[fdb.Range(prefix, fdb.strinc(prefix))]
 
     results = []
