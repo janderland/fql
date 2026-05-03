@@ -45,10 +45,10 @@ kill_tree() {
 # after a grace period. Only removes the pidfile when the root is actually
 # gone, so a wedged process stays visible to the next --stop invocation.
 terminate() {
-  local pidfile=$1 pid i
+  local pidfile=$1 pid
   pid=$(cat "$pidfile")
   kill_tree "$pid" TERM
-  for i in 1 2 3 4 5; do
+  for _ in 1 2 3 4 5; do
     kill -0 "$pid" 2>/dev/null || break
     sleep 1
   done
