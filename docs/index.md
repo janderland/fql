@@ -593,9 +593,32 @@ integer, a [name], or a string.
 Details about the various options will be included in the
 sections explaining the semantics which they modify.
 
-## Statements
+## Virtual Directories
 
-TODO: @commit
+Virtual directories allow FQL to model everything as
+a key-value operation, including things like calling
+functions, writing to files, or setting global parameters.
+
+The most commonly used virtual directory is `@commit` which
+marks the boundary between two transactions.
+
+```fql {.query}
+% read data from the source into memory
+/app/source(<i:any>)=<data:bytes>
+
+% start a new transaction before writing
+@commit()=nil
+
+% write data from memory to the destination
+/app/destination(:i)=:data
+```
+
+Notice that the `@commit` virtual directory starts with
+a `@`. The first part of a virtual directory path must
+always begin with `@`. The remaining parts of the path don't
+have this requirement.
+
+TODO: complete this section.
 
 # Semantics 
 
