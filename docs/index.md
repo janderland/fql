@@ -1433,8 +1433,9 @@ key = directory tuple
 value = 'clear' | data
 
 (* Directories *)
-directory = ( '/' | '@' ) ( '<>' | name | string ) [ subdir ]
-subdir = '/' ( '<>' | name | string ) [ subdir ]
+directory = ( '/' | '@' ) segment [ subdir ]
+subdir = '/' segment [ subdir ]
+segment = '<>' | name | string
 
 (* Tuples *)
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
