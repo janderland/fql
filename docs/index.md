@@ -35,7 +35,6 @@ indirection are first class citizens.
     - [References](#references)
   - [Space & Comments](#space-comments)
   - [Options](#options)
-  - [Statements](#statements)
 - [Semantics](#semantics)
   - [Data Encoding](#data-encoding)
     - [Keys](#keys)
@@ -52,6 +51,8 @@ indirection are first class citizens.
     - [Versionstamps](#versionstamps)
     - [Indirection](#indirection)
     - [Aggregation](#aggregation)
+  - [Virtual Key-Values](#virtual-key-values)
+  - [Flow Control](#flow-control)
 - [Implementations](#implementations)
   - [Connection](#connection)
   - [Permissions](#permissions)
@@ -592,33 +593,6 @@ integer, a [name], or a string.
 
 Details about the various options will be included in the
 sections explaining the semantics which they modify.
-
-## Virtual Directories
-
-Virtual directories allow FQL to model everything as
-a key-value operation, including things like calling
-functions, writing to files, or setting global parameters.
-
-The most commonly used virtual directory is `@commit` which
-marks the boundary between two transactions.
-
-```fql {.query}
-% read data from the source into memory
-/app/source(<i:any>)=<data:bytes>
-
-% start a new transaction before writing
-@commit()=nil
-
-% write data from memory to the destination
-/app/destination(:i)=:data
-```
-
-Notice that the `@commit` virtual directory starts with
-a `@`. The first part of a virtual directory path must
-always begin with `@`. The remaining parts of the path don't
-have this requirement.
-
-TODO: complete this section.
 
 # Semantics 
 
@@ -1446,6 +1420,59 @@ the appended values.
   <offset:int> % line offset
 )=<body:append[sep:"\n"]>
 ```
+
+## Virtual Key-Values
+
+Virtual key-values allow FQL to model side-effects and
+foreign functions as key-value operation. These key-values
+are syntactically identical to other key-values except their
+directory path must begin with `@` instead of `/`.
+
+```fql {.query}
+@cryto/hash("somehow we made it")=<result:bytes|str>
+@globals("retry connection")=true
+@file("err.txt","wa")=:result
+```
+
+For example, the most commonly used virtual directory is
+`@commit` which marks the boundary between two transactions.
+
+```fql {.query}
+% read data from the source into memory
+/app/source(<i:any>)=<data:bytes>
+
+% start a new transaction before writing
+@commit()=nil
+
+% write data from memory to the destination
+/app/destination(:i)=:data
+```
+
+Notice that the `@commit` virtual directory starts with
+a `@`. The first part of a virtual directory path must
+always begin with `@`. The remaining parts of the path don't
+have this requirement.
+
+TODO: complete this section.
+
+## Flow Control
+
+Flow control is achieved using guards. A guard is a scope
+with defined allowed types, optionally protected by
+a conditional expression.
+
+```fql {.query}
+{:result!str}={
+    @file("err.txt","wa")=:result
+}
+```
+
+TODO: complete this section.
+
+TODO: i think variables should be able to contain data
+elements, not only types: `<bytes|int|"no connection"|>`
+Then we can use the variable for pattern matching in the
+guards: `{:result!str=<"hello"|"wow">}`.
 
 # Implementations
 
