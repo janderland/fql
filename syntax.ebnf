@@ -13,7 +13,11 @@ key = directory tuple
 
 value = 'clear' | data
 
-directory = '/' ( '<>' | name | string ) [ directory ]
+directory = ( '/' | '@' ) segment [ subdir ]
+
+subdir = '/' segment [ subdir ]
+
+segment = '<>' | name | string
 
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
 
