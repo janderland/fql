@@ -51,8 +51,8 @@ indirection are first class citizens.
     - [Versionstamps](#versionstamps)
     - [Indirection](#indirection)
     - [Aggregation](#aggregation)
-  - [Virtual Key-Values](#virtual-key-values)
-  - [Flow Control](#flow-control)
+    - [Virtual Key-Values](#virtual-key-values)
+    - [Flow Control](#flow-control)
 - [Implementations](#implementations)
   - [Connection](#connection)
   - [Permissions](#permissions)
@@ -1421,7 +1421,7 @@ the appended values.
 )=<body:append[sep:"\n"]>
 ```
 
-## Virtual Key-Values
+### Virtual Key-Values
 
 Virtual key-values allow FQL to model side-effects and
 foreign functions as key-value operation. These key-values
@@ -1454,25 +1454,6 @@ always begin with `@`. The remaining parts of the path don't
 have this requirement.
 
 TODO: complete this section.
-
-## Flow Control
-
-Flow control is achieved using guards. A guard is a scope
-with defined allowed types, optionally protected by
-a conditional expression.
-
-```fql {.query}
-{:result!str}={
-    @file("err.txt","wa")=:result
-}
-```
-
-TODO: complete this section.
-
-TODO: i think variables should be able to contain data
-elements, not only types: `<bytes|int|"no connection"|>`
-Then we can use the variable for pattern matching in the
-guards: `{:result!str=<"hello"|"wow">}`.
 
 # Implementations
 
