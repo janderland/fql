@@ -291,7 +291,7 @@
 
   const DIRECTORY = {
     scope: 'directory',
-    begin: /\//,
+    begin: /[/@]/,
     end: /(?=[\(=\s]|$)/,
     contains: [
       STRING,

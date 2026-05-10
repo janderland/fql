@@ -402,7 +402,8 @@ adjacently stored.
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
 ```ebnf {.grammar}
-directory = '/' element [ directory ]
+directory = ( '/' | '@' ) element [ subdir ]
+subdir = '/' element [ subdir ]
 element = '<>' | name | string
 ```
 
@@ -1432,7 +1433,8 @@ key = directory tuple
 value = 'clear' | data
 
 (* Directories *)
-directory = '/' ( '<>' | name | string ) [ directory ]
+directory = ( '/' | '@' ) ( '<>' | name | string ) [ subdir ]
+subdir = '/' ( '<>' | name | string ) [ subdir ]
 
 (* Tuples *)
 tuple = '(' [ nl elements [ ',' ] nl ] ')'
