@@ -356,8 +356,8 @@ containing a 10-byte transaction version followed by
 a 2-byte user version. These byte strings may be
 instantiated using upper, lower, or mixed case hexadecimal
 digits. The transaction version may be omitted. In this case
-it acts as a placeholder where FoundationDB will write the
-actual transaction version upon commit (see
+the `vstamp` acts as a placeholder where FoundationDB will
+write the actual transaction version upon commit (see
 [versionstamps]).
 
 [versionstamp]: https://apple.github.io/foundationdb/data-modeling.html?highlight=versionstamp#versionstamps
@@ -1193,10 +1193,20 @@ doesn't match the schema.
 
 ### Versionstamps
 
-As stated in the [data elements] section,
-a `vstamp` is composed of two components: the transaction
-version prefixed by `#`{.hljs-title} and the user version
-prefixed by `:`{.hljs-title}.
+Versionstamps are monotonically increasing numbers which are
+associated with a particular commit. They are unique for
+a given FoundationDB cluster and remain unique for the
+cluster's lifetime. All reads are performed against
+a particular versionstamp which defines the version of the
+data which the read observes. Upon commit, every transaction
+is assigned a versionstamp by the DB.
+
+During a write query...
+
+As stated in the [data elements] section, a `vstamp` is
+composed of two components: the transaction version prefixed
+by `#` and the user version prefixed by `:`.
+
 
 A `vstamp` lacking a transaction version is called an
 "incomplete" `vstamp`. In a write query, an incomplete
