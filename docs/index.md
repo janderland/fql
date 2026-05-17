@@ -1197,27 +1197,30 @@ a particular versionstamp which defines the version of the
 data which the read observes. Upon commit, every transaction
 is assigned a versionstamp by the DB.
 
-During a write query...
-
 As stated in the [data elements] section, a `vstamp` is
 composed of two components: the transaction version prefixed
-by `#` and the user version prefixed by `:`.
-
+by `#` and the user version prefixed by `:`. The user
+version is 2 bytes chosen by the client and appended to the
+transaction version. This allows for up to 65k unique
+`vstamp` to be created within a single transaction.
 
 A `vstamp` lacking a transaction version is called an
-"incomplete" `vstamp`. In a write query, an incomplete
-`vstamp` has unique behavior. Upon commit, the transaction's
-10-byte version is written to the first 10-bytes of the
-`vstamp`. 
+"incomplete" `vstamp`. They are only allowed in write
+queries. Upon commit, the transaction's 10-byte version is
+written to the first 10-bytes of the `vstamp`. 
 
 ```fql {.query}
-@write
+% Write two versionstamps with the
+% 'user versions' `#ff00` and `#00cd`.
 /app/queue(#:ff00)="jason"
 /app/heartbeat("jason")=#:00cd
 
+% Upon commit, FoundationDB populates
+% the 'transaction version' portion of
+% the versionstamps.
 @commit
 
-@read
+% Read the full versionstamps from the DB.
 /app/queue(<index:vstamp>)
 /app/heartbeat(...)=<heartbeat:vstamp>
 ```
@@ -1226,26 +1229,6 @@ A `vstamp` lacking a transaction version is called an
 /app/queue(#8e9ddaa52e44733526e2:ff00)="jason"
 /app/heartbeat("jason")=#8e9ddaa52e44733526e3:00cd
 ```
-
-The example above showcases several details about writing an
-incomplete `vstamp`:
-
-- The transaction version component of the `vstamp` is
-  written at commit time, so you must start a new
-  transaction before reading it. If you attempt to read an
-  empty `vstamp` before the transaction is committed, the
-  query will fail.
-
-- The user version component of the `vstamp` is not
-  overwritten. Only the transaction version is.
-
-- The final two bytes of the transaction version component
-  (right before the user version) are incremented within
-  a transaction. In this particular example, the `/queue`
-  key's transaction version ends with `26e2` while the
-  `/heartbeat` transaction version ends with `26e3`. This
-  ensures that multiple versionstamps written by the same
-  transaction are unique.
 
 `vstamp` elements are monotonically increasing and unique
 for the lifetime of a particular database. They may be used
@@ -1310,9 +1293,40 @@ subset from the "people" directory.
 /people(2003,"Larry","Johnson",8,"N/A")=nil
 ```
 
+#### Series
+
 Notice that the results of the first query are not returned.
 Instead, they are used to build a collection of single-KV
-read queries whose results are the ones returned.
+read queries whose results are the ones returned. A queries
+which reference a named variable is said to be "in series"
+with the query defining the variable. 
+
+Series can be several queries deep. Each leaf query forms
+a separate series. A leaf query is a query which doesn't
+define any variables referenced by another query.
+
+```fql {.query}
+% A root query which branches off into two series.
+% Obtain the ID for "Dave Rogers".
+/person/name/index("Dave Rogers",<personID:int>)
+
+% These three queries (plus the root) form a series.
+% Find the names of all other people the same age as
+% "Dave Rogers".
+/person/age(:personID,<age:int>)
+/person/age/index(:age,<otherPersonID:int>)
+/person/name(:otherPersonID,<str>)
+
+% This query (plus the root) forms another series.
+% Find the address of "Dave Rogers".
+/person/address(:personID,<str>)
+```
+
+Series can be several queries deep. By default, only the
+leaf query of each series produces output. This can be
+overridden by using the `[return]` option to force a query's
+key-values to be included in the returned set.
+
 
 ### Aggregation
 
