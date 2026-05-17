@@ -47,3 +47,25 @@ work out regarding this functionality:
    Alternatively we can lean into the fact that scopes are
    mostly used for routing data rather than working with it
    in detail.
+
+Or, what if scopes were simply virtual key-values as well?
+
+```fql
+% Define custom types
+% for flow control.
+$HashErr=str
+$HashResult=bytes
+
+% For each blob with state="ready",
+% construct the full blob from
+% individual chunks.
+/blobs/state(<id:uuid>)="ready"
+/blobs/data(:id,...)=<blob:append>
+
+% Hash the blobs with sha256
+@cryto/sha256(:blob)=<hash:$HashResult|$HashErr>
+
+% Handle results and errors via typecasting.
+@file("hash.txt","wa")=:hash!$HashResult
+@file("err.txt","wa")=:hash!$HashErr
+```
