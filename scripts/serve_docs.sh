@@ -116,7 +116,7 @@ fi
 # Drop any stale pidfiles (dead PID, or PID reused by an unrelated process).
 rm -f "$CHOKIDAR_PID" "$BROWSERSYNC_PID"
 
-npx chokidar-cli "docs/index.md" "docs/index.tmpl" -c "./build.sh --docs" >"$CHOKIDAR_LOG" 2>&1 &
+npx chokidar-cli "docs/index.[mt]*" -c "./build.sh --docs" >"$CHOKIDAR_LOG" 2>&1 &
 echo $! > "$CHOKIDAR_PID"
 
 npx browser-sync start --server docs --files "docs/index.html" >"$BROWSERSYNC_LOG" 2>&1 &

@@ -292,7 +292,7 @@ pre {
   }
 }
 
-pre.query, pre.grammar {
+pre.query, pre.grammar, pre.schema {
   code {
     padding: 1.5rem 1rem 0.5rem 1rem;
   }
@@ -315,6 +315,10 @@ pre.result, pre.equiv-py {
 
 pre.query > ::before {
   content: "query";
+}
+
+pre.schema > ::before {
+  content: "schema";
 }
 
 pre.result > ::before {

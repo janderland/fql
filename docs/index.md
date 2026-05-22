@@ -1237,14 +1237,13 @@ as unique identifiers or non-contiguous indexes.
 ### Indirection
 
 Indirection queries are similar to SQL joins. They associate
-different groups of key-values via some shared data element.
-
-In FoundationDB, indexes are implemented using indirection.
+different key-spaces via some shared data element. In
+FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
 each person.
 
-```fql {.query}
-/people(
+```fql {.schema}
+/person(
   <int>, % ID
   <str>, % First Name
   <str>, % Last Name
@@ -1253,13 +1252,13 @@ each person.
 ```
 
 If we wanted to read all records containing the last name
-"Johnson", we'd have to perform a linear search across the
-entire "people" directory. To make this kind of search more
-efficient, we can store an index for last names in
-a separate directory.
+"Johnson" we'd have to perform a linear search across the
+entire "people" directory. To avoid this, we can store an
+index for last names in a separate directory.
 
-```fql {.query}
-/people/last_name(
+```fql {.schema}
+% Index for last names
+/person/last-name(
   <str>, % Last Name
   <int>, % ID
 )=nil
@@ -1269,13 +1268,13 @@ If we query the index, we can get the IDs of the records
 containing the last name "Johnson".
 
 ```fql {.query}
-/people/last_name("Johnson",<int>)
+/people/last-name("Johnson",<int>)
 ```
 
 ```fql {.result}
-/people/last_name("Johnson",23)=nil
-/people/last_name("Johnson",348)=nil
-/people/last_name("Johnson",2003)=nil
+/people/last-name("Johnson",23)=nil
+/people/last-name("Johnson",348)=nil
+/people/last-name("Johnson",2003)=nil
 ```
 
 FQL can forward the observed values of named variables from
@@ -1283,49 +1282,122 @@ one query to the next. We can use this to obtain our desired
 subset from the "people" directory.
 
 ```fql {.query}
-/people/last_name("Johnson",<id:int>)
+/people/last-name("Johnson",<id:int>)
 /people(:id,...)
 ```
 
 ```fql {.result}
-/people(23,"Lenny","Johnson",22,"Mechanic")=nil
-/people(348,"Roger","Johnson",54,"Engineer")=nil
-/people(2003,"Larry","Johnson",8,"N/A")=nil
+/people(23,"Lenny","Johnson",22)=nil
+/people(348,"Roger","Johnson",54)=nil
+/people(2003,"Larry","Johnson",8)=nil
 ```
 
-#### Series
+#### Pipelines
 
-Notice that the results of the first query are not returned.
-Instead, they are used to build a collection of single-KV
-read queries whose results are the ones returned. A queries
-which reference a named variable is said to be "in series"
-with the query defining the variable. 
+In the above example, notice that the results of the first
+query are not returned. Instead, they are used to build
+a collection of single key-value read queries whose results
+are the ones returned.
 
-Series can be several queries deep. Each leaf query forms
-a separate series. A leaf query is a query which doesn't
-define any variables referenced by another query.
+A query which reference a named variable forms a "pipeline"
+with the query defining the variable. Pipelines can be
+several queries deep. Each leaf query forms a unique
+pipeline. A leaf query is a query which doesn't define any
+variables referenced by another query.
 
 ```fql {.query}
-% A root query which branches off into two series.
-% Obtain the ID for "Dave Rogers".
+% A query which branches off into two pipelines
+% and obtains the ID(s) for "Dave Rogers".
 /person/name/index("Dave Rogers",<personID:int>)
 
-% These three queries (plus the root) form a series.
-% Find the names of all other people the same age as
-% "Dave Rogers".
+% These three queries (plus the one above) form a pipeline
+% which finds the names of all other people the same age
+% as "Dave Rogers".
 /person/age(:personID,<age:int>)
 /person/age/index(:age,<otherPersonID:int>)
 /person/name(:otherPersonID,<str>)
 
-% This query (plus the root) forms another series.
+% This query (plus the root) forms another Pipelines.
 % Find the address of "Dave Rogers".
 /person/address(:personID,<str>)
 ```
 
-Series can be several queries deep. By default, only the
-leaf query of each series produces output. This can be
+Pipelines can be several queries deep. By default, only the
+leaf query of each pipeline produces output. This can be
 overridden by using the `[return]` option to force a query's
 key-values to be included in the returned set.
+
+
+#### Cardinality
+
+If a pipeline is made up of queries with different
+cardinalities, FQL joins the key-spaces in subsequent
+queries within the pipeline.
+
+For instance, consider the following pipeline.
+
+```fql {.query}
+% Obtain a list of parents from all families.
+/families/parents(<parentID:int>,...)
+
+% For each parent, read their children.
+/families/chidren/parent(:parentID,<childID:int>)
+
+% Schedule a conseling session with each child-parent
+% pair. The versionstamp at the start of the tuple
+% is just for ordering.
+/schedule/counseling(#:0000,:parentID,:childID)=nil
+```
+
+The second query may return multiple key-values for each
+parent ID, because parents may have multiple children. When
+both the parent and child IDs are used in the third query,
+FQL performs a join between each parent and all their
+children. If parent ID `5` is associated with child IDs
+`10`, `11`, and `12`, then the third query is called for the
+groups `(5,10)`, `(5,11)`, and `(5,12)`.
+
+This mirrors joins in SQL. Below is how the above pipeline
+may look in an SQL database.
+
+```sql
+INSERT INTO
+  schedule (event, client1, client2)
+SELECT
+  'counseling', p.id, c.id
+FROM
+  parent p
+  JOIN child c ON c.parent_id = p.id;
+```
+
+Things become more interesting if constraints are put on the
+queries. For instance, let's add a limit and order to the
+query reading the child IDs.
+
+```fql {.query} 
+% Given we store child IDs ordered by age, for each parent
+% read only their youngest child.
+[reverse,limit:1]
+/families/chidren/parent(:parentID,<childID:int>)
+```
+
+If the other queries are unchanged, the third query will
+only be called once per parent ID because we've ensured
+there will only be one child ID associated with it. You
+could achieve similar behavior with the following SQL query.
+
+```sql
+SELECT
+  p.id, c.id
+FROM
+  parent p
+  CROSS JOIN LATERAL (
+   SELECT id FROM child
+   WHERE parent_id = p.id
+   ORDER BY age ASC
+   LIMIT 1
+  ) c;
+```
 
 
 ### Aggregation
@@ -1627,4 +1699,4 @@ ws = { ' ' | '\t' }
 nl = { ' ' | '\t' | '\n' | '\r' }
 ```
 
-<!-- vim: set tw=60 :-->
+<!-- vim: set tw=60 conceallevel=0 :-->
