@@ -439,8 +439,8 @@ kinds of holes: variables and the `...` token.
 
 ```ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
-     | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
+type = ( 'any' | 'tuple' | 'bool' | 'int' | 'num'
+       | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg ) [ options ]
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 ```
 
@@ -487,7 +487,8 @@ any type. It is only allowed as the last element of a tuple.
 ### References
 
 ```ebnf {.grammar}
-reference = ':' name
+reference = ':' name [ type_cast ]
+type_cast = '!' type
 ```
 
 References can use a variable's name to pass previously read
@@ -1660,8 +1661,9 @@ tuple = '(' [ nl elements [ ',' ] nl ] ')'
 elements = '...' | data [ ',' nl elements ]
 
 (* Data elements *)
-data = 'nil' | bool | int | num | string | uuid
-     | bytes | tuple | vstamp | variable | reference
+data = ( 'nil' | bool | int | num | string | uuid
+       | bytes | tuple | vstamp | variable | reference )
+       [ options ]
 
 bool = 'true' | 'false'
 int = [ '-' ] digits
@@ -1674,9 +1676,10 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 
 (* Variables and References *)
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-reference = ':' name
-type = 'any' | 'tuple' | 'bool' | 'int' | 'num'
-     | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg
+reference = ':' name [ type_cast ]
+type_cast = '!' type
+type = ( 'any' | 'tuple' | 'bool' | 'int' | 'num'
+       | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg ) [ options ]
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 
 (* Options *)
@@ -1695,9 +1698,12 @@ name = ( letter | '_' ) { letter | digit | '_' | '-' | '.' }
 letter = 'a' | ... | 'z' | 'A' | ... | 'Z'
 char = ? Any printable UTF-8 character except '"' and '\' ?
 
+(* Comments *)
+comment = '%' { ? any character except '\n' ? } '\n'
+
 (* Whitespace *)
 ws = { ' ' | '\t' }
-nl = { ' ' | '\t' | '\n' | '\r' }
+nl = { ' ' | '\t' | '\n' | '\r' | comment }
 ```
 
 <!-- vim: set tw=60 conceallevel=0 :-->
