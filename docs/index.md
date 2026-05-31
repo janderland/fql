@@ -402,7 +402,8 @@ key prefix, and therefore be adjacently stored.
 ```ebnf {.grammar}
 directory = ( '/' | '@' ) segment [ subdir ]
 subdir = '/' segment [ subdir ]
-segment = '<>' | name | string ```
+segment = '<>' | name | string
+```
 
 A directory is specified as a sequence of strings, each
 prefixed by a forward slash. If the string only contains
