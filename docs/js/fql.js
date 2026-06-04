@@ -1,373 +1,318 @@
-(function() {
-  const ESCAPE = {
-    scope: 'escape',
-    begin: /\\./,
-  };
+/*! highlightjs-fql | Apache-2.0 | https://github.com/janderland/fql */
+var hljsFQL = (function (hljs) {
+  'use strict';
 
-  const COMMENT = {
-    scope: 'comment',
-    begin: /%.*\n?/,
-  };
+  /*
+  Language: FQL
+  Description: FoundationDB Query Language
+  Website: https://github.com/janderland/fql
+  Category: database
+  */
 
-  const NUMBER = {
-    begin: [
-      /-?/,
-      /\d+/,
-      /\.?/,
-      /\d*/,
-      /e?/,
-      /\d*/,
-      /(kb|mb|gb)?/, // allow a byte-unit to appear after numbers.
-    ],
-    beginScope: {
-      1: 'accent',
-      2: 'number',
-      3: 'accent',
-      4: 'number',
-      5: 'accent',
-      6: 'number',
-      7: 'accent',
-    },
-  };
+  // Keyword categories
+  const LITERALS    = ['true', 'false', 'nil', 'inf', '-inf', 'nan', '-nan'];
+  const VERBS       = ['clear', 'remove'];
+  const TYPES       = ['any', 'int', 'bool', 'num', 'str', 'bytes', 'uuid', 'tup', 'vstamp'];
+  const TYPES_INT   = ['i8', 'i16', 'i32', 'i64', 'u8', 'u16', 'u32', 'u64'];
+  const TYPES_FLOAT = ['f32', 'f64', 'f80'];
+  const AGGREGATES  = ['append', 'sum', 'avg', 'min', 'max', 'count'];
+  const OPTIONS_KW  = [
+    'be', 'bigendian', 'unsigned', 'width', 'raw',
+    'rev', 'reverse', 'snap', 'snapshot', 'limit', 'mode',
+    'sep', 'separator',
+    'strict',
+  ];
+  const OPTION_VALUES  = ['want_all', 'iterator', 'exact', 'small', 'medium', 'large', 'serial'];
 
-  const BYTES = {
-    begin: [
-      /0/,
-      /x/,
-      /[A-Za-z0-9]*/,
-    ],
-    beginScope: {
-      1: 'number',
-      2: 'accent',
-      3: 'number',
-    },
-  };
+  // US-keyboard ASCII punctuation. Used to construct broad terminator regexes
+  // (e.g. OPTION.end). Excludes `_` since it's a word character.
+  // Pre-escaped for use inside a regex `[...]` char class.
+  const SYMBOLS = '`~!@#$%^&*()\\-=+[\\]{}\\\\|;:\'",.<>/?';
 
-  const UUID = {
-    begin: [
-      /\w{8}/,
-      /-/,
-      /\w{4}/,
-      /-/,
-      /\w{4}/,
-      /-/,
-      /\w{4}/,
-      /-/,
-      /\w{12}/,
-    ],
-    beginScope: {
-      1: 'number',
-      2: 'accent',
-      3: 'number',
-      4: 'accent',
-      5: 'number',
-      6: 'accent',
-      7: 'number',
-      8: 'accent',
-      9: 'number',
-    },
-  };
+  // Build a lookahead-end regex: triggers on whitespace, EOL, or any keyboard
+  // symbol not matched by `keep`. Used by OPTION/DIRECTORY/VALUE/TYPE/TYPE_CAST.
+  const endAtSymbol = (keep) =>
+    new RegExp('(?=[\\s' + SYMBOLS.replace(keep, '') + ']|$)');
 
-  const VSTAMP = {
-    begin: [
-      /#/,
-      /[A-Fa-f0-9]*/,
-      /:/,
-      /[A-Fa-f0-9]{4}/,
-    ],
-    beginScope: {
-      1: 'accent',
-      2: 'number',
-      3: 'accent',
-      4: 'number',
-    },
-  };
+  // Build a multi-capture numeric mode where scopes strictly alternate between
+  // 'accent' and 'number'. `firstIsAccent` picks the starting phase.
+  //
+  // Example: NUMBER is built with firstIsAccent=true and the parts below.
+  // For input `-42.3e7`:
+  //   parts[0] /-?/   capture 1  accent   matches '-'
+  //   parts[1] /\d+/  capture 2  number   matches '42'
+  //   parts[2] /\.?/  capture 3  accent   matches '.'
+  //   parts[3] /\d*/  capture 4  number   matches '3'
+  //   parts[4] /e?/   capture 5  accent   matches 'e'
+  //   parts[5] /\d*/  capture 6  number   matches '7'
+  const numericMode = (parts, firstIsAccent) => ({
+    begin: parts,
+    beginScope: Object.fromEntries(
+      parts.map((_, i) => [i + 1, (i % 2 === 0) === firstIsAccent ? 'accent' : 'number']),
+    ),
+  });
 
-  const STRING = {
-    scope: 'string',
-    begin: /"/,
-    end: /"/,
-    contains: [ESCAPE],
-  };
-
-  const DSTRING = {
-    scope: 'dstring',
-    begin: /[\w\.\-]/,
-  };
-
-  const KEYWORD = {
+  // Build a beginKeywords mode scoped 'keyword'. Used by KEYWORD/OPTNAME.
+  const keywordMode = (words) => ({
     scope: 'keyword',
-    beginKeywords: [
-      'true',
-      'false',
-      '-inf',
-      'inf',
-      '-nan',
-      'nan',
-      'clear',
-      'remove',
-      'nil',
-      'any',
-      'int',
-      'bool',
-      'num',
-      'bint',
-      'str',
-      'bytes',
-      'uuid',
-      'tup',
-      'vstamp',
-      'append',
-      'sum',
-      'avg',
-      'min',
-      'max',
-      'count',
-      'sep',
-      'be',
-      'i8',
-      'i16',
-      'i32',
-      'i64',
-      'u8',
-      'u16',
-      'u32',
-      'u64',
-      'f32',
-      'f64',
-      'f80',
-      'bigendian',
-      'raw',
-      'width',
-      'unsigned',
-      'reverse',
-      'limit',
-      'mode',
-      'want_all',
-      'iterator',
-      'exact',
-      'small',
-      'medium',
-      'large',
-      'serial',
-      'snapshot',
-      'strict',
-      'rand',
-      'pick',
-    ].join(' '),
-  };
+    beginKeywords: words.join(' '),
+  });
 
-  const OPTIONS = {
-    scope: 'options',
-    begin: /\[/,
-    end: /]/,
-    keywords: {
-      $$pattern: /[^,:"]+/,
-      keyword: [
-        'be',
-        'i8',
-        'i16',
-        'i32',
-        'i64',
-        'u8',
-        'u16',
-        'u32',
-        'u64',
-        'f32',
-        'f64',
-        'f80',
-        'bigendian',
-        'raw',
-        'endian',
-        'width',
-        'unsigned',
-        'reverse',
-        'limit',
-        'mode',
-        'snapshot',
-        'strict',
-        'pick',
-        'sep',
-      ],
-    },
-    contains: [
-      STRING,
-      {
-        begin: [
-          /:/,
-          /[^,\]"]+/,
-        ],
-        beginScope: {
-          1: 'option',
-          2: 'number',
+  // Composed lists for specific modes.
+  const TOP_KEYWORDS = [
+    ...LITERALS, ...VERBS, ...TYPES, ...TYPES_INT, ...TYPES_FLOAT,
+    ...AGGREGATES, ...OPTIONS_KW, ...OPTION_VALUES,
+  ];
+  const VARIABLE_KEYWORDS = [...LITERALS, ...TYPES, ...AGGREGATES];
+  const BRACKET_KEYWORDS  = [...OPTIONS_KW, ...TYPES_INT, ...TYPES_FLOAT];
+
+  function fql(_hljs) {
+    const ESCAPE = {
+      scope: 'escape',
+      begin: /\\./,
+    };
+
+    const COMMENT = {
+      scope: 'comment',
+      begin: /%.*\n?/,
+    };
+
+    const NUMBER = numericMode(
+      [/-?/, /\d+/, /\.?/, /\d*/, /e?/, /\d*/],
+      true,
+    );
+
+    const BYTES = numericMode(
+      [/0/, /x/, /[A-Za-z0-9]*/],
+      false,
+    );
+
+    const UUID = numericMode(
+      [/\w{8}/, /-/, /\w{4}/, /-/, /\w{4}/, /-/, /\w{4}/, /-/, /\w{12}/],
+      false,
+    );
+
+    const VSTAMP = numericMode(
+      [/#/, /[A-Fa-f0-9]*/, /:/, /[A-Fa-f0-9]{4}/],
+      true,
+    );
+
+    const STRING = {
+      scope: 'string',
+      begin: /"/,
+      end: /"/,
+      contains: [ESCAPE],
+    };
+
+    const DSTRING = {
+      scope: 'dstring',
+      begin: /[\w\.\-]/,
+    };
+
+    const KEYWORD = keywordMode(TOP_KEYWORDS);
+
+    // OPTNAME — recognizes a token as an option-keyword name.
+    const OPTNAME = keywordMode(OPTIONS_KW);
+
+    // OPTION — a single option, with or without `:value`. The single entry
+    // point for option syntax everywhere — inside [...], at top level, in
+    // TUPLE, in VALUE. Ends at any keyboard symbol other than `:`, plus
+    // whitespace and EOL.
+    const OPTION = {
+      scope: 'accent',
+      begin: new RegExp('(?=\\b(?:' + OPTIONS_KW.join('|') + ')\\b)'),
+      end: endAtSymbol(/:/g),
+      contains: [
+        OPTNAME,
+        STRING,
+        {
+          begin: [
+            /:/,
+            /[\w.\-]+/,
+          ],
+          beginScope: {
+            1: 'option',
+            2: 'number',
+          },
         },
-      },
-    ],
-  };
-
-  const INLINEOPT = {
-    scope: 'accent',
-    begin: /(?=\b(width|unsigned)\b)/,
-    end: /(?=\s|$)/,
-    keywords: OPTIONS.keywords,
-    contains: OPTIONS.contains,
-  };
-
-  const VAR_NAME = {
-    begin: [
-      /[\w\.]+/,
-      /:/,
-    ],
-    beginScope: {
-      1: 'params',
-      2: 'variable',
-    },
-  };
-
-  const VARIABLE = {
-    begin: /</,
-    beginScope: 'variable',
-    end: />/,
-    endScope: 'variable',
-    keywords: {
-      $$pattern: /[^:|]+/,
-      keyword: [
-        'any',
-        'int',
-        'bool',
-        'num',
-        'bint',
-        'str',
-        'bytes',
-        'uuid',
-        'tup',
-        'vstamp',
-        'nil',
-        'append',
-        'sum',
-        'avg',
-        'min',
-        'max',
-        'count',
       ],
-    },
-    contains: [
-      VAR_NAME,
-      OPTIONS,
-      {
-        scope: 'variable',
-        begin: /\|/,
+    };
+
+    const OPTIONS = {
+      scope: 'options',
+      begin: /\[/,
+      end: /]/,
+      keywords: {
+        $$pattern: /[^,:"]+/,
+        keyword: BRACKET_KEYWORDS,
       },
-    ],
-  };
+      contains: [
+        OPTION,
+        STRING,
+      ],
+    };
 
-  const TYPE_CAST = {
-    begin: [
-      /!/,
-      /\w+/,
-    ],
-    beginScope: {
-      1: 'reference',
-      2: 'keyword',
-    },
-  };
+    const VAR_NAME = {
+      begin: [
+        /[\w\.]+/,
+        /:/,
+      ],
+      beginScope: {
+        1: 'params',
+        2: 'variable',
+      },
+    };
 
-  const REFERENCE = {
-    begin: [
-      /:/,
-      /[\w\.]+/,
-    ],
-    beginScope: {
-      1: 'reference',
-      2: 'params',
-    },
-    contains: [TYPE_CAST],
-  };
+    // TYPE — a type-name keyword optionally followed by [options]. Used inside
+    // VARIABLE (per `|`-separated type) so options bind to the immediately
+    // preceding type rather than the variable as a whole. beginKeywords
+    // auto-scopes the keyword itself, so no outer `scope:` is needed (and
+    // adding one would double-wrap the keyword span).
+    const TYPE = {
+      beginKeywords: VARIABLE_KEYWORDS.join(' '),
+      end: endAtSymbol(/\[/g),
+      contains: [OPTIONS],
+    };
 
-  const MAYBEMORE = {
-    scope: 'variable',
-    begin: /\.\.\./,
-  };
+    const VARIABLE = {
+      begin: /</,
+      beginScope: 'variable',
+      end: />/,
+      endScope: 'variable',
+      contains: [
+        VAR_NAME,
+        TYPE,
+        {
+          scope: 'variable',
+          begin: /\|/,
+        },
+      ],
+    };
 
-  const DIRECTORY = {
-    scope: 'directory',
-    begin: /[/@]/,
-    end: /(?=[\(=\s]|$)/,
-    contains: [
-      STRING,
-      VARIABLE,
-      MAYBEMORE,
-      DSTRING,
-    ],
-  };
+    const TYPE_CAST = {
+      begin: [
+        /!/,
+        /\w+/,
+      ],
+      beginScope: {
+        1: 'reference',
+        2: 'keyword',
+      },
+      end: endAtSymbol(/\[/g),
+      contains: [OPTIONS],
+    };
 
-  const TUPLE = {
-    scope: 'tuple',
-    begin: /\(/,
-    end: /\)/,
-    contains: [
-      COMMENT,
-      'self',
-      STRING,
-      VARIABLE,
-      REFERENCE,
-      MAYBEMORE,
-      KEYWORD,
-      UUID,
-      VSTAMP,
-      BYTES,
-      NUMBER,
-      OPTIONS,
-    ],
-  };
+    const REFERENCE = {
+      begin: [
+        /:/,
+        /[\w\.]+/,
+      ],
+      beginScope: {
+        1: 'reference',
+        2: 'params',
+      },
+    };
 
-  const VALUE = {
-    scope: 'value',
-    begin: /=/,
-    end: /[\s%]/,
-    contains: [
-      TUPLE,
-      STRING,
-      VARIABLE,
-      REFERENCE,
-      KEYWORD,
-      UUID,
-      VSTAMP,
-      BYTES,
-      NUMBER,
-      OPTIONS,
-    ],
-  };
+    const MAYBEMORE = {
+      scope: 'variable',
+      begin: /\.\.\./,
+    };
 
-  hljs.registerLanguage('fql', (_hljs) => ({
-    classNameAliases: {
-      directory: 'built_in',
-      tuple: 'built_in',
-      value: 'built_in',
+    const DIRECTORY = {
+      scope: 'directory',
+      begin: /[/@]/,
+      end: endAtSymbol(/[/@.\-"]/g),
+      contains: [
+        STRING,
+        // Only the bare '<>' placeholder is a valid directory segment; any
+        // other '<...>' terminates DIRECTORY and is parsed as a top-level
+        // VARIABLE.
+        { scope: 'variable', begin: /<>/ },
+        MAYBEMORE,
+        DSTRING,
+      ],
+    };
 
-      reference: 'variable',
-      dstring: 'section',
+    const TUPLE = {
+      scope: 'tuple',
+      begin: /\(/,
+      end: /\)/,
+      contains: [
+        COMMENT,
+        'self',
+        STRING,
+        VARIABLE,
+        OPTION,
+        REFERENCE,
+        TYPE_CAST,
+        MAYBEMORE,
+        KEYWORD,
+        UUID,
+        VSTAMP,
+        BYTES,
+        NUMBER,
+        OPTIONS,
+      ],
+    };
 
-      options: 'title',
-      accent: 'title',
-      escape: 'subst',
-    },
-    contains: [
-      COMMENT,
-      DIRECTORY,
-      TUPLE,
-      VALUE,
-      VARIABLE,
-      REFERENCE,
-      MAYBEMORE,
-      INLINEOPT,
-      KEYWORD,
-      STRING,
-      UUID,
-      VSTAMP,
-      BYTES,
-      NUMBER,
-      OPTIONS,
-    ],
-  }));
-})();
+    const VALUE = {
+      scope: 'value',
+      begin: /=/,
+      end: endAtSymbol(/[(<\[:!#\-"]/g),
+      contains: [
+        TUPLE,
+        STRING,
+        VARIABLE,
+        OPTION,
+        REFERENCE,
+        TYPE_CAST,
+        KEYWORD,
+        UUID,
+        VSTAMP,
+        BYTES,
+        NUMBER,
+        OPTIONS,
+      ],
+    };
+
+    return {
+      name: 'FQL',
+      aliases: ['fql'],
+      classNameAliases: {
+        directory: 'built_in',
+        tuple: 'built_in',
+        value: 'built_in',
+
+        reference: 'variable',
+        dstring: 'section',
+
+        options: 'title',
+        accent: 'title',
+        escape: 'subst',
+      },
+      contains: [
+        COMMENT,
+        DIRECTORY,
+        TUPLE,
+        VALUE,
+        VARIABLE,
+        OPTION,
+        REFERENCE,
+        TYPE_CAST,
+        MAYBEMORE,
+        KEYWORD,
+        STRING,
+        UUID,
+        VSTAMP,
+        BYTES,
+        NUMBER,
+        OPTIONS,
+      ],
+    };
+  }
+
+  hljs.registerLanguage('fql', fql);
+
+  return fql;
+
+})(hljs);
