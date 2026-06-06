@@ -18,11 +18,11 @@ var hljsFQL = (function (hljs) {
   const AGGREGATES  = ['append', 'sum', 'avg', 'min', 'max', 'count'];
   const OPTIONS_KW  = [
     'be', 'bigendian', 'unsigned', 'width', 'raw',
-    'rev', 'reverse', 'snap', 'snapshot', 'limit', 'mode',
-    'sep', 'separator',
+    'reverse', 'snapshot', 'limit', 'mode',
+    'separator',
     'strict',
   ];
-  const OPTION_VALUES  = ['want_all', 'iterator', 'exact', 'small', 'medium', 'large', 'serial'];
+  const OPTION_VALUES  = ['wantall', 'iterator', 'exact', 'small', 'medium', 'large', 'serial'];
 
   // US-keyboard ASCII punctuation. Used to construct broad terminator regexes
   // (e.g. OPTION.end). Excludes `_` since it's a word character.

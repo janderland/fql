@@ -1175,7 +1175,7 @@ behavior.
 |:-------------|:---------|:-----------------------------------------|
 | `reverse`    | none     | Range read in reverse order              |
 | `limit`      | `int`    | Maximum number of results                |
-| `mode`       | name     | Range read mode: `want_all`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
+| `mode`       | name     | Range read mode: `wantall`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
 | `snapshot`   | none     | Use snapshot read                        |
 | `strict`     | none     | Error when a read key-values doesn't conform to the schema |
 
@@ -1497,7 +1497,7 @@ The table below lists the available aggregation types.
 outputs `str` if all inputs are `str`. Otherwise, it outputs
 `bytes`.
 
-`append` may be given the [option] `sep` which
+`append` may be given the [option] `separator` which
 defines a `str` or `bytes` separator placed between each of
 the appended values.
 
@@ -1506,7 +1506,7 @@ the appended values.
 /blog/post(
   253245,      % post ID
   <offset:int> % line offset
-)=<body:append[sep:"\n"]>
+)=<body:append[separator:"\n"]>
 ```
 
 ### Virtual Key-Values
