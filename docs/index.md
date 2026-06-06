@@ -439,7 +439,7 @@ kinds of holes: variables and the `...` token.
 
 ```ebnf {.grammar}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-type = ( 'any' | 'tuple' | 'bool' | 'int' | 'num'
+type = ( 'any' | 'tup' | 'bool' | 'int' | 'num'
        | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg ) [ options ]
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 ```
@@ -1678,7 +1678,7 @@ vstamp = '#' [ hex{20} ] ':' hex{4}
 variable = '<' [ name ':' ] [ type { '|' type } ] '>'
 reference = ':' name [ type_cast ]
 type_cast = '!' type
-type = ( 'any' | 'tuple' | 'bool' | 'int' | 'num'
+type = ( 'any' | 'tup' | 'bool' | 'int' | 'num'
        | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg ) [ options ]
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 
