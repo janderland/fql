@@ -1,3 +1,4 @@
 /fql
 *.cluster
 docs/index.html
+.aider*
