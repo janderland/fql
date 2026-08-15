@@ -984,7 +984,7 @@ exist, it is created.
 
 ```fql {.query}
 % Write queries
-/people(293800,"farmer",nil)=()
+/people(293800,"farmer",nil)=nil
 /people(293801,37,"last year")=(12,23,0xff)
 /people(293802,"warrior","")=true
 ```
@@ -1025,7 +1025,8 @@ the key-values being read.
 >   strings. 
 >
 > - [Aggregation] queries return key-values representing
->   a summary of many key-values and are not valid queries.
+>   a summary of many key-values and are not valid write
+>   queries.
 >
 > - Values with [wrapped byte strings](#values).
 
@@ -1035,14 +1036,19 @@ optionally, the value) then any number of key-values may be
 returned.
 
 ```fql {.query}
+% Read a single key-value
+/people(293801,37,"last year")=<tup>
+
 % Read a single key-value; the lack of
 % a value implies a typeless variable `<>`
 /people(293800,"farmer",nil)
-/people(293801,37,"last year")=<tup>
 
 % Read multiple key-values
-/people(293801,<int>,<str>)
 /people(293802,...)=<>
+
+% Read multiple key-values; the lack of
+% a value implies a typeless variable `<>`
+/people(293801,<int>,<str>)
 ```
 
 ### Directories
@@ -1056,7 +1062,6 @@ A directory can be removed by appending `=remove` to the
 directory query. If multiple directories match the schema,
 they will all be removed.
 
-
 ```fql {.query}
 % Check if a single directory exists
 /people/name
@@ -1064,8 +1069,10 @@ they will all be removed.
 % List all subdirectories
 /people/<>
 
-% Remove directories
+% Remove a single directory
 /people/name=remove
+
+% Remove many directories
 /people/<>=remove
 ```
 
