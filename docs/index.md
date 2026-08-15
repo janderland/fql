@@ -1083,9 +1083,9 @@ FQL scans a subset of the key-values in the directories
 being read. If a key-value is encountered which doesn't
 match the query's schema it is ignored. Including the
 `strict` [option](#options-2) causes the query to fail when
-encountering a nonconformant key-value. This is useful for
-ensuring that all the key-values within a directory have the
-same schema.
+encountering a nonconformant key-value. This will verify
+that all the key-values within a directory have the same
+schema.
 
 > ❗ As outlined in the [data encoding](#values) section,
 > there is a degree of type ambiguity regarding values. Most
@@ -1113,16 +1113,16 @@ the client. As they are received, FQL will filter out
 key-values which don't match the remaining portion of the
 schema. **This may be most of the data.** Keys with tuples
 like `(2293,"hi",254)` and `(2293,7324,"wow")` will use up
-bandwidth and be decoded but end up not matching the schema.
+bandwidth and be decoded and then throw away.
 
 Ideally, filter queries are only used on small amounts of
-data to limit wasted bandwidth. It's important to have
-a general idea of what a directory contains to avoid wasting
-bandwidth and CPU time.
+data. It's important to have a general idea of what
+a directory contains to avoid wasting bandwidth and CPU
+time.
 
 Filtering logic can become fairly complex. Let's add some
 extra specifications to the query above. Although this query
-is over the top, it will showcase how FQL approaches
+isn't practical, it will showcase how FQL approaches
 filtering when multiple [holes] are present.
 
 ```fql {.query}
