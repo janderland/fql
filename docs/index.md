@@ -1179,13 +1179,13 @@ behavior.
 
 <div>
 
-| Query Option | Argument | Description                              |
-|:-------------|:---------|:-----------------------------------------|
-| `reverse`    | none     | Range read in reverse order              |
-| `limit`      | `int`    | Maximum number of results                |
+| Query Option | Argument | Description                                                                           |
+|:-------------|:---------|:--------------------------------------------------------------------------------------|
+| `reverse`    | none     | Range read in reverse order                                                           |
+| `limit`      | `int`    | Maximum number of results                                                             |
 | `mode`       | name     | Range read mode: `wantall`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
-| `snapshot`   | none     | Use snapshot read                        |
-| `strict`     | none     | Error when a read key-values doesn't conform to the schema |
+| `snapshot`   | none     | Use snapshot reads                                                                    |
+| `strict`     | none     | Error when a read key-values doesn't conform to the schema                            |
 
 </div>
 
