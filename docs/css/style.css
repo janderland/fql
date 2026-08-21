@@ -253,6 +253,8 @@ blockquote {
 
 code {
   font-family: "Fira Code", monospace;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0;
   border-radius: 0.3rem;
   padding: 0 0.2rem 0 0.2rem;
   background-color: var(--color1);
@@ -290,7 +292,7 @@ pre {
   }
 }
 
-pre.query, pre.grammar {
+pre.query, pre.grammar, pre.schema {
   code {
     padding: 1.5rem 1rem 0.5rem 1rem;
   }
@@ -315,6 +317,10 @@ pre.query > ::before {
   content: "query";
 }
 
+pre.schema > ::before {
+  content: "schema";
+}
+
 pre.result > ::before {
   content: "result";
 }
@@ -325,6 +331,17 @@ pre.grammar > ::before {
 
 pre.equiv-py > ::before {
   content: "equivalent python";
+}
+
+pre.equiv-py.standalone {
+  > ::before {
+    top: 0;
+  }
+
+  code {
+    margin-top: 0;
+    padding-top: 1.5rem;
+  }
 }
 
 /* Tables */
