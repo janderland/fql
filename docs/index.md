@@ -1368,7 +1368,6 @@ leaf query of each pipeline produces output. This can be
 overridden by using the `[return]` option to force a query's
 key-values to be included in the returned set.
 
-
 #### Cardinality
 
 If a pipeline is made up of queries with different
