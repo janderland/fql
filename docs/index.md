@@ -48,12 +48,12 @@ indirection are first class citizens.
     - [Filtering](#filtering)
     - [Options](#options-2)
   - [Advanced Queries](#advanced-queries)
+    - [Virtual Key-Values](#virtual-key-values)
     - [Versionstamps](#versionstamps)
     - [Indirection](#indirection)
       - [Pipelines](#pipelines)
       - [Cardinality](#cardinality)
     - [Aggregation](#aggregation)
-    - [Virtual Key-Values](#virtual-key-values)
 - [Implementations](#implementations)
   - [Connection](#connection)
   - [Permissions](#permissions)
@@ -1080,12 +1080,12 @@ they will all be removed.
 
 During a read query or a clear query with a [hole](#holes),
 FQL scans a subset of the key-values in the directories
-being read. If a key-value is encountered which doesn't
-match the query's schema it is ignored. Including the
-`strict` [option](#options-2) causes the query to fail when
-encountering a nonconformant key-value. This will verify
-that all the key-values within a directory have the same
-schema.
+matching the schema. If a key-value is encountered which
+doesn't match the query's schema it is ignored. Including
+the `strict` [option](#options-2) causes the query to fail
+when encountering a nonconformant key-value. This will
+verify that all the key-values within a directory have the
+same schema.
 
 > ❗ As outlined in the [data encoding](#values) section,
 > there is a degree of type ambiguity regarding values. Most
@@ -1196,6 +1196,37 @@ clear operation is a no-op if FQL encounters a key which
 doesn't match the schema.
 
 ## Advanced Queries
+
+### Virtual Key-Values
+
+Virtual key-values allow FQL to model side-effects and
+foreign functions as key-value operation. These key-values
+are syntactically identical to other key-values except their
+directory path must begin with `@` instead of `/`.
+
+```fql {.query}
+@cryto/hash("somehow we made it")=<result:bytes>
+@var("retry connection")=true
+@file("err.txt","wa")=:result
+```
+
+Virtual directories (without a key-tuple or value) can also
+perform side effects. For example, the most commonly used
+virtual directory is `@commit` which marks the boundary
+between two transactions.
+
+```fql {.query}
+% read data from the source into memory
+/app/source(<i:any>)=<data:bytes>
+
+% start a new transaction before writing
+@commit
+
+% write data from memory to the destination
+/app/destination(:i)=:data
+```
+> ❗ A standard library of virtual key-values has yet to be
+> defined. It will later be added to this document.
 
 ### Versionstamps
 
@@ -1516,40 +1547,6 @@ the appended values.
   <offset:int> % line offset
 )=<body:append[separator:"\n"]>
 ```
-
-### Virtual Key-Values
-
-Virtual key-values allow FQL to model side-effects and
-foreign functions as key-value operation. These key-values
-are syntactically identical to other key-values except their
-directory path must begin with `@` instead of `/`.
-
-```fql {.query}
-@cryto/hash("somehow we made it")=<result:bytes|str>
-@globals("retry connection")=true
-@file("err.txt","wa")=:result
-```
-
-For example, the most commonly used virtual directory is
-`@commit` which marks the boundary between two transactions.
-
-```fql {.query}
-% read data from the source into memory
-/app/source(<i:any>)=<data:bytes>
-
-% start a new transaction before writing
-@commit()=nil
-
-% write data from memory to the destination
-/app/destination(:i)=:data
-```
-
-Notice that the `@commit` virtual directory starts with
-a `@`. The first part of a virtual directory path must
-always begin with `@`. The remaining parts of the path don't
-have this requirement.
-
-TODO: complete this section.
 
 # Implementations
 
