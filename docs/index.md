@@ -61,8 +61,6 @@ indirection are first class citizens.
 - [Implementations](#implementations)
   - [Connection](#connection)
   - [Permissions](#permissions)
-  - [Transactions](#transactions)
-  - [Variables & References](#variables-references)
   - [Extensions](#extensions)
   - [Formatting](#formatting)
 - [Grammar](#grammar)
@@ -1571,7 +1569,7 @@ reaches FoundationDB.
 
 ```fql {.query}
 @env("HOME")=<home:str>
-@var("retry connection")=true
+@var("count")=5
 @file("err.txt","wa")=:result
 ```
 
@@ -1589,12 +1587,6 @@ else is an input.
 @file("err.txt","wa")=:result
 ```
 
-> ❗ Holes do not mean the same thing under `@` as they do
-> under `/`. In a normal key-value a hole triggers a range
-> read and [filtering]. In a virtual key-value it marks an
-> output parameter. The syntax is shared; the semantics are
-> not.
-
 Outputs are not limited to the value. A function returning
 more than one result marks each of them in the tuple. For
 instance, a function splitting a path into its parent and
@@ -1604,12 +1596,16 @@ file name would return both through the argument list.
 @path/split("/tmp/data/log.txt",<dir:str>,<file:str>)
 ```
 
-`@path` is not part of the [standard library] as of now. It
-appears here only to illustrate multiple outputs.
+> ❗ `@path` is not part of the [standard library] as of
+> now. It appears here only to illustrate multiple outputs.
 
 Every output must be a named, typed [variable](#holes). The
 empty variable `<>` is not allowed, since an anonymous
 output cannot be referenced by a later query.
+
+Unlike a normal key-value, a virtual key-value which omits
+its value does not imply the empty variable `<>`. It has no
+value at all.
 
 #### Signatures
 
@@ -1631,10 +1627,12 @@ invoking the function.
 A signature names every argument and its type, but it does
 not say which arguments are outputs. That is decided at the
 call site by where the [holes] are placed. Above, `contents`
-is an output when read and an input when written.
+is an output when read and an input when written. Which
+holes each function accepts will be described by the
+[standard library] documentation once it is defined.
 
 Virtual directories are listed like any other [directory],
-which is how the available functions are discovered.
+which allows the available functions to be discovered.
 
 ```fql {.query}
 @<>
@@ -1673,15 +1671,13 @@ into submodules.
 @crypto/sign/rsa
 ```
 
-Like `@path`, `@crypto` is not part of the [standard
-library] as of now.
+> ❗ Like `@path`, `@crypto` is not part of the
+> [standard library] as of now.
 
 Directory listing is the only context in which `<>` may
 appear under `@`. Virtual directories cannot be removed, so
 `=remove` is not allowed. Neither are [options], at the
-query or element level: options describe how bytes are laid
-out in FoundationDB, and a virtual key-value never reaches
-it.
+query or element level.
 
 #### Effects
 
@@ -1713,8 +1709,9 @@ attempted. Session state buffers the same way, so a `@var`
 set inside a transaction that never commits is rolled back
 along with the key-values.
 
-Reads are not cached. They observe the live state of their
-source, overlaid with this transaction's buffered writes.
+File reads are not cached. They observe the live state of
+their source, overlaid with this transaction's buffered file
+writes.
 
 > ❗ Flushing the buffer is not atomic with the FoundationDB
 > commit. If the transaction commits and an effect then
@@ -1743,28 +1740,28 @@ the buffer.
 
 FQL's standard library has yet to be defined. The functions
 below are the initial set; more will be added as the
-language settles.
+language is developed.
 
 <div>
 
-| Function           | Reading it gives        | Writing it does         | Effect |
-|:-------------------|:------------------------|:------------------------|:-------|
-| `@commit()`        | -                       | Commits the transaction | Yes    |
-| `@var(name)`       | A session value         | Sets it; `clear` unsets | Write  |
-| `@env(name)`       | An environment variable | Sets it                 | Write  |
-| `@file(path,mode)` | The file's contents     | Writes or appends       | Write  |
-| `@print()`         | -                       | Writes to standard out  | Write  |
-| `@error()`         | -                       | Writes to standard error| Write  |
+| Function           | Reading it gives        | Writing it does         | Effect   |
+|:-------------------|:------------------------|:------------------------|:---------|
+| `@commit()`        | -                       | Commits the transaction | Yes      |
+| `@var(name)`       | A session value         | Sets it; `clear` unsets | On Write |
+| `@env(name)`       | An environment variable | Sets it                 | On Write |
+| `@file(path,mode)` | The file's contents     | Writes or appends       | On Write |
+| `@print(text)`     | -                       | Writes to standard out  | Yes      |
+| `@error(text)`     | -                       | Writes to standard error| Yes      |
 
 </div>
 
 The "Effect" column states which direction of the call is
-buffered. Neither `@print` nor `@error` appends a newline to
-what it writes.
+buffered, or "Yes" when every call is an effect. Neither
+`@print` nor `@error` appends a newline to what it writes.
 
 ```fql {.query}
-@print()="no newline is added, so this "
-@print()="line is printed in two parts\n"
+@print("no newline is added, so this ")
+@print("line is printed in two parts\n")
 ```
 
 ```bash {.result}
@@ -1795,56 +1792,6 @@ specific configuration option is enabled. This provides
 a safeguard against accidental mutations. Implementations
 could also limit access to certain directories or any
 other behavior for any reason.
-
-## Transactions
-
-Within a script, transaction boundaries are specified with
-[`@commit()`](#transaction-boundaries). An implementation
-may offer additional ways to express the same boundary when
-queries do not arrive as a script. The Go implementation
-accepts queries as individual CLI flags, and groups them
-using a flag rather than a query.
-
-```bash
-$ fql \
-  -q /users(100)="Alice" \
-  -q /users(101)="Bob" \
-  --tx \
-  -q /users(...)
-```
-
-The `--tx` flag represents a transaction boundary. The
-first two queries execute within the same transaction.
-The third query runs in its own transaction.
-
-## Variables & References
-
-An implementation defines the scope of named variables.
-Variables may be namespaced to a single transaction,
-available across multiple transactions, or persist for
-an entire session.
-
-Moving values between a query and the surrounding process is
-the job of the [standard library](#standard-library), not of
-specially named variables. A variable which happens to be
-named `stdout` is an ordinary variable; it is `@print()`
-which writes to the process.
-
-```fql {.query}
-/mq("topic",<topic:str>)
-@print()=:topic
-```
-
-```bash {.result}
-topicAtopicBtopicC
-```
-
-The values run together because `@print` does not append
-a newline.
-
-An implementation may extend the standard library with
-functions describing whatever else the process exposes. See
-[Extensions].
 
 ## Extensions
 
