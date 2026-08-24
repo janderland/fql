@@ -1604,6 +1604,9 @@ file name would return both through the argument list.
 @path/split("/tmp/data/log.txt",<dir:str>,<file:str>)
 ```
 
+`@path` is not part of the [standard library] as of now. It
+appears here only to illustrate multiple outputs.
+
 Every output must be a named, typed [variable](#holes). The
 empty variable `<>` is not allowed, since an anonymous
 output cannot be referenced by a later query.
@@ -1647,10 +1650,31 @@ which is how the available functions are discovered.
 ```
 
 While `<>` matches a single path segment, `...` matches
-every descendant. The two produce the same listing above
-because the initial set of functions is flat, but they
-diverge once an implementation groups functions into
-submodules.
+every descendant. The two differ once functions are grouped
+into submodules.
+
+```fql {.query}
+@crypto/<>
+```
+
+```fql {.result}
+@crypto/hash
+@crypto/sign
+```
+
+```fql {.query}
+@crypto/...
+```
+
+```fql {.result}
+@crypto/hash/sha256
+@crypto/hash/blake3
+@crypto/sign/ed25519
+@crypto/sign/rsa
+```
+
+Like `@path`, `@crypto` is not part of the [standard
+library] as of now.
 
 Directory listing is the only context in which `<>` may
 appear under `@`. Virtual directories cannot be removed, so
@@ -1689,12 +1713,8 @@ attempted. Session state buffers the same way, so a `@var`
 set inside a transaction that never commits is rolled back
 along with the key-values.
 
-Reads which can be repeated harmlessly are not cached. They
-observe the live state of their source, overlaid with this
-transaction's buffered writes. Reads which *consume* their
-source are buffered and replayed on retry, so a retried
-transaction does not discard input. No function described
-below consumes its source.
+Reads are not cached. They observe the live state of their
+source, overlaid with this transaction's buffered writes.
 
 > ❗ Flushing the buffer is not atomic with the FoundationDB
 > commit. If the transaction commits and an effect then
