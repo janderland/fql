@@ -48,17 +48,19 @@ indirection are first class citizens.
     - [Filtering](#filtering)
     - [Options](#options-2)
   - [Advanced Queries](#advanced-queries)
-    - [Virtual Key-Values](#virtual-key-values)
     - [Versionstamps](#versionstamps)
     - [Indirection](#indirection)
       - [Pipelines](#pipelines)
       - [Cardinality](#cardinality)
     - [Aggregation](#aggregation)
+    - [Virtual Key-Values](#virtual-key-values)
+      - [Signatures](#signatures)
+      - [Effects](#effects)
+      - [Transaction Boundaries](#transaction-boundaries)
+      - [Standard Library](#standard-library)
 - [Implementations](#implementations)
   - [Connection](#connection)
   - [Permissions](#permissions)
-  - [Transactions](#transactions)
-  - [Variables & References](#variables-references)
   - [Extensions](#extensions)
   - [Formatting](#formatting)
 - [Grammar](#grammar)
@@ -337,13 +339,15 @@ instantiated as the tokens `-inf`, `inf`, `-nan` or `nan`.
 [80-bit floating point]: https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format
 
 ```ebnf {.grammar}
-string = '"' { char | '\"' | '\\' } '"'
+string = '"' { char | escape } '"'
+escape = ? A backslash followed by '"', '\', 'n', 'r', or 't' ?
 char = ? Any printable UTF-8 character except '"' and '\' ?
 ```
 
 The `str` type may be instantiated as a unicode string
-wrapped in double quotes. Strings may contain double quotes
-and backslashes via backslash escapes.
+wrapped in double quotes. Double quotes, backslashes,
+newlines, carriage returns, and tabs are written as the
+backslash escapes `\"`, `\\`, `\n`, `\r`, and `\t`.
 
 ```ebnf {.grammar}
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
@@ -1231,37 +1235,6 @@ doesn't match the schema.
 
 ## Advanced Queries
 
-### Virtual Key-Values
-
-Virtual key-values allow FQL to model side-effects and
-foreign functions as key-value operation. These key-values
-are syntactically identical to other key-values except their
-directory path must begin with `@` instead of `/`.
-
-```fql {.query}
-@crypto/hash("somehow we made it")=<result:bytes>
-@var("retry connection")=true
-@file("err.txt","wa")=:result
-```
-
-Virtual directories (without a key-tuple or value) can also
-perform side effects. For example, the most commonly used
-virtual directory is `@commit` which marks the boundary
-between two transactions.
-
-```fql {.query}
-% read data from the source into memory
-/app/source(<i:any>)=<data:bytes>
-
-% start a new transaction before writing
-@commit
-
-% write data from memory to the destination
-/app/destination(:i)=:data
-```
-> ❗ A standard library of virtual key-values has yet to be
-> defined. It will later be added to this document.
-
 ### Versionstamps
 
 Versionstamps are monotonically increasing numbers which are
@@ -1282,7 +1255,9 @@ transaction version. This allows for up to 65k unique
 A `vstamp` lacking a transaction version is called an
 "incomplete" `vstamp`. They are only allowed in write
 queries. Upon commit, the transaction's 10-byte version is
-written to the first 10-bytes of the `vstamp`. 
+written to the first 10-bytes of the `vstamp`. The
+`@commit()` appearing below ends the current transaction and
+is explained under [virtual key-values]. 
 
 ```fql {.query}
 % Write two versionstamps with the
@@ -1293,7 +1268,7 @@ written to the first 10-bytes of the `vstamp`.
 % Upon commit, FoundationDB populates
 % the 'transaction version' portion of
 % the versionstamps.
-@commit
+@commit()
 
 % Read the full versionstamps from the DB.
 /app/queue(<index:vstamp>)
@@ -1581,6 +1556,218 @@ the appended values.
 )=<body:append[separator:"\n"]>
 ```
 
+### Virtual Key-Values
+
+Virtual key-values allow FQL to model side effects and
+foreign functions as key-value operations. They are
+syntactically identical to other key-values except their
+directory path begins with `@` instead of `/`.
+
+The `@` namespace is maintained entirely by the client. It
+is disjoint from `/`, is never stored, and no part of it
+reaches FoundationDB.
+
+```fql {.query}
+@env("HOME")=<home:str>
+@var("count")=5
+@file("err.txt","wa")=:result
+```
+
+A virtual key-value is an *invocation*. The key's tuple is
+the argument list and the value is an additional argument.
+[Holes] mark which of those arguments are outputs, much like
+a C function returning values through a pointer. Everything
+else is an input.
+
+```fql {.query}
+% 'contents' is an output; the file is read.
+@file("in.txt","r")=<contents:bytes>
+
+% 'contents' is an input; the file is appended to.
+@file("err.txt","wa")=:result
+```
+
+Outputs are not limited to the value. A function returning
+more than one result marks each of them in the tuple. For
+instance, a function splitting a path into its parent and
+file name would return both through the argument list.
+
+```fql {.query}
+@path/split("/tmp/data/log.txt",<dir:str>,<file:str>)
+```
+
+> ❗ `@path` is not part of the [standard library] as of
+> now. It appears here only to illustrate multiple outputs.
+
+Every output must be a named, typed [variable](#holes). The
+empty variable `<>` is not allowed, since an anonymous
+output cannot be referenced by a later query.
+
+Unlike a normal key-value, a virtual key-value which omits
+its value does not imply the empty variable `<>`. It has no
+value at all.
+
+#### Signatures
+
+Each virtual key-value has exactly one signature. FQL does
+not support overloading, so a given path always takes the
+same arguments with the same types.
+
+Ending the tuple with `...` prints that signature instead of
+invoking the function.
+
+```fql {.query}
+@file(...)
+```
+
+```fql {.result}
+@file(<path:str>,<mode:str>)=<contents:bytes>
+```
+
+A signature names every argument and its type, but it does
+not say which arguments are outputs. That is decided at the
+call site by where the [holes] are placed. Above, `contents`
+is an output when read and an input when written. Which
+holes each function accepts will be described by the
+[standard library] documentation once it is defined.
+
+Virtual directories are listed like any other [directory],
+which allows the available functions to be discovered.
+
+```fql {.query}
+@<>
+```
+
+```fql {.result}
+@commit
+@var
+@env
+@file
+@print
+@error
+```
+
+While `<>` matches a single path segment, `...` matches
+every descendant. The two differ once functions are grouped
+into submodules.
+
+```fql {.query}
+@crypto/<>
+```
+
+```fql {.result}
+@crypto/hash
+@crypto/sign
+```
+
+```fql {.query}
+@crypto/...
+```
+
+```fql {.result}
+@crypto/hash/sha256
+@crypto/hash/blake3
+@crypto/sign/ed25519
+@crypto/sign/rsa
+```
+
+> ❗ Like `@path`, `@crypto` is not part of the
+> [standard library] as of now.
+
+Directory listing is the only context in which `<>` may
+appear under `@`. Virtual directories cannot be removed, so
+`=remove` is not allowed. Neither are [options], at the
+query or element level.
+
+#### Effects
+
+Virtual key-values which modify state outside the query are
+*effectful*. Effects are buffered rather than applied
+immediately, and the buffer is flushed only once the
+enclosing transaction commits.
+
+Whether a call is effectful depends on the direction it is
+invoked in, not on the function itself. Reading `@env` is
+not an effect; writing it is.
+
+Within a transaction, a query reads its own writes. A write
+to a file is held in memory, and a subsequent read of that
+file observes it.
+
+```fql {.query}
+@file("log.txt","wa")="first line\n"
+
+% Sees the buffered write, even though nothing
+% has been written to disk yet.
+@file("log.txt","r")=<contents:bytes>
+```
+
+Because the buffer is discarded and rebuilt whenever
+FoundationDB retries a transaction, effects are applied
+exactly once no matter how many times the transaction is
+attempted. Session state buffers the same way, so a `@var`
+set inside a transaction that never commits is rolled back
+along with the key-values.
+
+File reads are not cached. They observe the live state of
+their source, overlaid with this transaction's buffered file
+writes.
+
+> ❗ Flushing the buffer is not atomic with the FoundationDB
+> commit. If the transaction commits and an effect then
+> fails to apply, the key-values are durable but the effect
+> is lost.
+
+#### Transaction Boundaries
+
+`@commit()` marks the boundary between two transactions. It
+takes no arguments, produces no output, and is the only
+effect which is never buffered, because it is what flushes
+the buffer.
+
+```fql {.query}
+% read data from the source into memory
+/app/source(<i:any>)=<data:bytes>
+
+% start a new transaction before writing
+@commit()
+
+% write data from memory to the destination
+/app/destination(:i)=:data
+```
+
+#### Standard Library
+
+FQL's standard library has yet to be defined. The functions
+below are the initial set; more will be added as the
+language is developed.
+
+<div>
+
+| Function           | Reading it gives        | Writing it does         | Effect   |
+|:-------------------|:------------------------|:------------------------|:---------|
+| `@commit()`        | -                       | Commits the transaction | Yes      |
+| `@var(name)`       | A session value         | Sets it; `clear` unsets | On Write |
+| `@env(name)`       | An environment variable | Sets it                 | On Write |
+| `@file(path,mode)` | The file's contents     | Writes or appends       | On Write |
+| `@print(text)`     | -                       | Writes to standard out  | Yes      |
+| `@error(text)`     | -                       | Writes to standard error| Yes      |
+
+</div>
+
+The "Effect" column states which direction of the call is
+buffered, or "Yes" when every call is an effect. Neither
+`@print` nor `@error` appends a newline to what it writes.
+
+```fql {.query}
+@print("no newline is added, so this ")
+@print("line is printed in two parts\n")
+```
+
+```bash {.result}
+no newline is added, so this line is printed in two parts
+```
+
 # Implementations
 
 FQL defines the query language but leaves many details to
@@ -1605,54 +1792,6 @@ specific configuration option is enabled. This provides
 a safeguard against accidental mutations. Implementations
 could also limit access to certain directories or any
 other behavior for any reason.
-
-## Transactions
-
-An implementation defines how transaction boundaries are
-specified. The Go implementation uses CLI flags to group
-queries into transactions.
-
-```bash
-$ fql \
-  -q /users(100)="Alice" \
-  -q /users(101)="Bob" \
-  --tx \
-  -q /users(...)
-```
-
-The `--tx` flag represents a transaction boundary. The
-first two queries execute within the same transaction.
-The third query runs in its own transaction.
-
-## Variables & References
-
-An implementation defines the scope of named variables.
-Variables may be namespaced to a single transaction,
-available across multiple transactions, or persist for
-an entire session.
-
-Named variables could also be used to output specific values
-to other parts of the application. For instance, variables
-with the name `stdout` may write their values to the STDOUT
-stream of the process.
-
-```fql {.query}
-/mq("topic",<stdout:str>)
-```
-
-```bash {.result}
-topicA
-topicB
-topicC
-```
-
-Similarly, references could be used to inject values into
-a query from another part of the process.
-
-```fql {.query}
-% Write the string contents of STDIN into the DB.
-/mq("msg","topicB",:stdin)
-```
 
 ## Extensions
 
@@ -1709,7 +1848,7 @@ bool = 'true' | 'false'
 int = [ '-' ] digits
 num = int '.' digits | ( int | int '.' digits ) 'e' int
     | '-inf' | 'inf' | '-nan' | 'nan'
-string = '"' { char | '\"' | '\\' } '"'
+string = '"' { char | escape } '"'
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
 bytes = '0x' { hex{2} }
 vstamp = '#' [ hex{20} ] ':' hex{4}
@@ -1736,6 +1875,7 @@ hex = digit
     | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 name = ( letter | '_' ) { letter | digit | '_' | '-' | '.' }
 letter = 'a' | ... | 'z' | 'A' | ... | 'Z'
+escape = ? A backslash followed by '"', '\', 'n', 'r', or 't' ?
 char = ? Any printable UTF-8 character except '"' and '\' ?
 
 (* Comments *)
@@ -1761,6 +1901,7 @@ listed here.
 [name]: #names
 [option]: #options
 [queries]: #basic-queries
+[virtual key-values]: #virtual-key-values
 [variables]: #holes
 
 <!-- vim: set tw=60 conceallevel=0 :-->
