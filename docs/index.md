@@ -14,7 +14,7 @@ title: FQL
 ```
 
 FQL is an [open source] query language and alternative
-client API for [FoundationDB]. It's semantics mirror
+client API for [FoundationDB]. Its semantics mirror
 FoundationDB's [core data model] while improving API
 ergonomics. Fundamental patterns like range-reads and
 indirection are first class citizens.
@@ -105,9 +105,11 @@ appears at the end.
  
 Throughout this section, relevant grammar rules are shown
 alongside the text. These rules are written in extended
-Backus-Naur form as defined in ISO/IEC 14977 with
-a modification: concatenation and rule termination are
-implicit.
+Backus-Naur form as defined in ISO/IEC 14977 with three
+modifications: concatenation is implicit, rules terminate at
+a newline, and `x{n}`{.hljs-variable} means
+`x`{.hljs-variable} repeated exactly `n`{.hljs-variable}
+times.
 
 ## Overview
 
@@ -130,12 +132,18 @@ the tuple `(22,"abc",false)` will appear before the tuple
 [tuple]: https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples
 
 ```ebnf {.grammar}
-query = [ options '\n' ] ( keyval | key | dquery )
+script = nl [ query { eol query } nl ]
+query = [ options eol ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 keyval = key '=' value
 key = directory tuple
-value = 'clear' | data 
+value = 'clear' | data
 ```
+
+FQL's top level construct is a script: a newline separated
+sequence of queries. Most of this document discusses queries
+in isolation, though queries within a script may pass data
+to each other via [references].
 
 To the left of the `=` is the key which includes a directory
 path and tuple. To the right is the value. For now, the
@@ -344,9 +352,9 @@ hex = digit | 'a' | ... | 'f' | 'A' | ... | 'F'
 ```
 
 The `uuid` and `bytes` types may be instantiated using
-upper, lower, or mixed case hexidecimal numbers. For `uuid`,
+upper, lower, or mixed case hexadecimal numbers. For `uuid`,
 the numbers must be grouped in the standard 8, 4, 4, 4, 12
-format. For `bytes`, any even number of hexidecimal digits
+format. For `bytes`, any even number of hexadecimal digits
 must be prefixed by `0x`.
 
 ```ebnf {.grammar}
@@ -401,8 +409,8 @@ key prefix, and therefore be adjacently stored.
 [directory layer]: https://apple.github.io/foundationdb/developer-guide.html#directories
 
 ```ebnf {.grammar}
-directory = ( '/' | '@' ) segment [ subdir ]
-subdir = '/' segment [ subdir ]
+directory = ( '/' | '@' ) segments
+segments = '...' | segment [ '/' segments ]
 segment = '<>' | name | string
 ```
 
@@ -430,6 +438,22 @@ at once.
 /app/actions/index
 ```
 
+A directory path may end with the `...` token, matching every
+directory descending from the preceding path. Unlike `<>`,
+which matches a single path segment, `...` matches any number
+of segments, including none.
+
+```fql {.query}
+/app/...
+```
+
+```fql {.result}
+/app
+/app/users
+/app/users/index
+/app/roles/index
+```
+
 ## Schemas
 
 ### Holes
@@ -439,8 +463,9 @@ placeholders for one or more data elements. There are two
 kinds of holes: variables and the `...` token.
 
 ```ebnf {.grammar}
-variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-type = ( 'any' | 'tup' | 'bool' | 'int' | 'num'
+variable = '<' ( [ types ] | name ':' types ) '>'
+types = type { '|' type }
+type = ( 'any' | 'nil' | 'tup' | 'bool' | 'int' | 'num'
        | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg ) [ options ]
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 ```
@@ -455,9 +480,9 @@ a placeholder for any integer value.
 ```
 
 A variable may act as a placeholder for multiple types of
-elements with the types separated by `|`{.hljs-variable}. It
-may also have no type meaning it represents any type of
-element.
+elements with the types separated by `|`{.hljs-variable}. An
+unnamed variable may omit its types entirely, meaning it
+represents any type of element.
 
 ```fql {.query}
 /tree/node(<int>,<int|nil>,<int|nil>)=<>
@@ -488,8 +513,7 @@ any type. It is only allowed as the last element of a tuple.
 ### References
 
 ```ebnf {.grammar}
-reference = ':' name [ type_cast ]
-type_cast = '!' type
+reference = ':' name
 ```
 
 References can use a variable's name to pass previously read
@@ -509,7 +533,7 @@ name prefixed with a `:`{.hljs-variable}.
 ```
 
 Named variables must include at least one type. To allow
-named variables to match all element type, use the `any`
+a named variable to match all element types, use the `any`
 type.
 
 ```fql {.query}
@@ -526,6 +550,13 @@ type.
 
 ## Space & Comments
 
+```ebnf {.grammar}
+ws = { ' ' | '\t' }
+nl = { ' ' | '\t' | '\n' | '\r' | comment }
+eol = ws ( comment | '\n' ) nl
+comment = '%' { ? any character except '\n' ? } '\n'
+```
+
 Whitespace and newlines are allowed within a tuple, between
 its elements.
 
@@ -538,7 +569,9 @@ its elements.
 ```
 
 Comments start with a `%` and continue until the end of the
-line. They can be used to document a tuple's elements.
+line. They may appear anywhere a newline may appear: between
+the queries of a script, or within a tuple to document its
+elements.
 
 ```fql
 % private account balances
@@ -1113,7 +1146,7 @@ the client. As they are received, FQL will filter out
 key-values which don't match the remaining portion of the
 schema. **This may be most of the data.** Keys with tuples
 like `(2293,"hi",254)` and `(2293,7324,"wow")` will use up
-bandwidth and be decoded and then throw away.
+bandwidth and be decoded and then thrown away.
 
 Ideally, filter queries are only used on small amounts of
 data. It's important to have a general idea of what
@@ -1186,6 +1219,7 @@ behavior.
 | `mode`       | name     | Range read mode: `wantall`, `iterator`, `exact`, `small`, `medium`, `large`, `serial` |
 | `snapshot`   | none     | Use snapshot reads                                                                    |
 | `strict`     | none     | Error when a read key-values doesn't conform to the schema                            |
+| `return`     | none     | Include this query's key-values in the output (see [pipelines])                       |
 
 </div>
 
@@ -1205,7 +1239,7 @@ are syntactically identical to other key-values except their
 directory path must begin with `@` instead of `/`.
 
 ```fql {.query}
-@cryto/hash("somehow we made it")=<result:bytes>
+@crypto/hash("somehow we made it")=<result:bytes>
 @var("retry connection")=true
 @file("err.txt","wa")=:result
 ```
@@ -1284,7 +1318,7 @@ Suppose we have a large list of people, one key-value for
 each person.
 
 ```fql {.schema}
-/person(
+/people(
   <int>, % ID
   <str>, % First Name
   <str>, % Last Name
@@ -1299,7 +1333,7 @@ index for last names in a separate directory.
 
 ```fql {.schema}
 % Index for last names
-/person/last-name(
+/people/last-name(
   <str>, % Last Name
   <int>, % ID
 )=nil
@@ -1340,27 +1374,27 @@ query are not returned. Instead, they are used to build
 a collection of single key-value read queries whose results
 are the ones returned.
 
-A query which reference a named variable forms a "pipeline"
+A query which references a named variable forms a "pipeline"
 with the query defining the variable. Pipelines can be
 several queries deep. Each leaf query forms a unique
 pipeline. A leaf query is a query which doesn't define any
 variables referenced by another query.
 
 ```fql {.query}
-% A query which branches off into two pipelines
-% and obtains the ID(s) for "Dave Rogers".
-/person/name/index("Dave Rogers",<personID:int>)
+% A query which obtains the ID(s) for "Dave Rogers"
+% and branches off into two pipelines.
+/people/name/index("Dave Rogers",<personID:int>)
 
 % These three queries (plus the one above) form a pipeline
 % which finds the names of all other people the same age
 % as "Dave Rogers".
-/person/age(:personID,<age:int>)
-/person/age/index(:age,<otherPersonID:int>)
-/person/name(:otherPersonID,<str>)
+/people/age(:personID,<age:int>)
+/people/age/index(:age,<otherPersonID:int>)
+/people/name(:otherPersonID,<str>)
 
-% This query (plus the root) forms another Pipelines.
+% This query (plus the root) forms another pipeline.
 % Find the address of "Dave Rogers".
-/person/address(:personID,<str>)
+/people/address(:personID,<str>)
 ```
 
 Pipelines can be several queries deep. By default, only the
@@ -1381,9 +1415,9 @@ For instance, consider the following pipeline.
 /families/parents(<parentID:int>,...)
 
 % For each parent, read their children.
-/families/chidren/parent(:parentID,<childID:int>)
+/families/children/parent(:parentID,<childID:int>)
 
-% Schedule a conseling session with each child-parent
+% Schedule a counseling session with each child-parent
 % pair. The versionstamp at the start of the tuple
 % is just for ordering.
 /schedule/counseling(#:0000,:parentID,:childID)=nil
@@ -1418,7 +1452,7 @@ query reading the child IDs.
 % Given we store child IDs ordered by age, for each parent
 % read only their youngest child.
 [reverse,limit:1]
-/families/chidren/parent(:parentID,<childID:int>)
+/families/children/parent(:parentID,<childID:int>)
 ```
 
 If the other queries are unchanged, the third query will
@@ -1550,7 +1584,7 @@ the appended values.
 # Implementations
 
 FQL defines the query language but leaves many details to
-the implementation. This sections outlines some of those
+the implementation. This section outlines some of those
 details and how an implementation may choose to provide
 them.
 
@@ -1568,9 +1602,9 @@ locally for testing purposes.
 
 An implementation may disallow write queries unless a
 specific configuration option is enabled. This provides
-a safeguard against accidental mutations. Implements could
-also limit access to certain directories or any other
-behavior for any reason.
+a safeguard against accidental mutations. Implementations
+could also limit access to certain directories or any
+other behavior for any reason.
 
 ## Transactions
 
@@ -1648,16 +1682,18 @@ The complete FQL grammar is specified below.
 
 ```ebnf {.grammar}
 (* Top-level query structure *)
-query = [ options '\n' ] ( keyval | key | dquery )
+script = nl [ query { eol query } nl ]
+query = [ options eol ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 
+(* Key-Values *)
 keyval = key '=' value
 key = directory tuple
 value = 'clear' | data
 
 (* Directories *)
-directory = ( '/' | '@' ) segment [ subdir ]
-subdir = '/' segment [ subdir ]
+directory = ( '/' | '@' ) segments
+segments = '...' | segment [ '/' segments ]
 segment = '<>' | name | string
 
 (* Tuples *)
@@ -1679,10 +1715,10 @@ bytes = '0x' { hex{2} }
 vstamp = '#' [ hex{20} ] ':' hex{4}
 
 (* Variables and References *)
-variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-reference = ':' name [ type_cast ]
-type_cast = '!' type
-type = ( 'any' | 'tup' | 'bool' | 'int' | 'num'
+variable = '<' ( [ types ] | name ':' types ) '>'
+types = type { '|' type }
+reference = ':' name
+type = ( 'any' | 'nil' | 'tup' | 'bool' | 'int' | 'num'
        | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg ) [ options ]
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 
@@ -1708,6 +1744,23 @@ comment = '%' { ? any character except '\n' ? } '\n'
 (* Whitespace *)
 ws = { ' ' | '\t' }
 nl = { ' ' | '\t' | '\n' | '\r' | comment }
+eol = ws ( comment | '\n' ) nl
 ```
+
+<!--
+Link definitions for cross-references whose label doesn't
+match a section heading. Labels which do match a heading
+(e.g. [holes], [filtering]) resolve implicitly and are not
+listed here.
+-->
+
+[data element]: #data-elements
+[element encoding]: #data-encoding
+[EBNF grammar]: #grammar
+[index indirection]: #indirection
+[name]: #names
+[option]: #options
+[queries]: #basic-queries
+[variables]: #holes
 
 <!-- vim: set tw=60 conceallevel=0 :-->

@@ -1,12 +1,14 @@
 (*
  This document defines the syntax of the FQL query
  language. The meta language used is extended Backus-Naur
- form as defined in ISO/IEC 14977 with two modifications:
- concatenation is implicit and rules terminate at newline.
+ form as defined in ISO/IEC 14977 with three modifications:
+ concatenation is implicit, rules terminate at newline, and
+ 'x{n}' means 'x' repeated exactly 'n' times.
 *)
 
 (* Top-level query structure *)
-query = [ options '\n' ] ( keyval | key | dquery )
+script = nl [ query { eol query } nl ]
+query = [ options eol ] ( keyval | key | dquery )
 dquery = directory [ '=' 'remove' ]
 
 (* Key-Values *)
@@ -15,8 +17,8 @@ key = directory tuple
 value = 'clear' | data
 
 (* Directories *)
-directory = ( '/' | '@' ) segment [ subdir ]
-subdir = '/' segment [ subdir ]
+directory = ( '/' | '@' ) segments
+segments = '...' | segment [ '/' segments ]
 segment = '<>' | name | string
 
 (* Tuples *)
@@ -38,10 +40,10 @@ bytes = '0x' { hex{2} }
 vstamp = '#' [ hex{20} ] ':' hex{4}
 
 (* Variables and References *)
-variable = '<' [ name ':' ] [ type { '|' type } ] '>'
-reference = ':' name [ type_cast ]
-type_cast = '!' type
-type = ( 'any' | 'tup' | 'bool' | 'int' | 'num'
+variable = '<' ( [ types ] | name ':' types ) '>'
+types = type { '|' type }
+reference = ':' name
+type = ( 'any' | 'nil' | 'tup' | 'bool' | 'int' | 'num'
        | 'str' | 'uuid' | 'bytes' | 'vstamp' | agg ) [ options ]
 agg = 'count' | 'sum' | 'avg' | 'min' | 'max' | 'append'
 
@@ -67,3 +69,4 @@ comment = '%' { ? any character except '\n' ? } '\n'
 (* Whitespace *)
 ws = { ' ' | '\t' }
 nl = { ' ' | '\t' | '\n' | '\r' | comment }
+eol = ws ( comment | '\n' ) nl
