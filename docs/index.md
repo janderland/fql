@@ -532,10 +532,9 @@ name prefixed with a `:`{.hljs-variable}.
 /user(33423,"Ryan","Johnson",32,"England")=nil
 ```
 
-Named variables must include at least one type. This is why
-the [variable](#holes) grammar only allows the types to be
-omitted when the variable is unnamed. To allow a named
-variable to match all element types, use the `any` type.
+Named variables must include at least one type. To allow
+a named variable to match all element types, use the `any`
+type.
 
 ```fql {.query}
 /store/hash(<bytes>,<thing:any>)
@@ -1382,8 +1381,8 @@ pipeline. A leaf query is a query which doesn't define any
 variables referenced by another query.
 
 ```fql {.query}
-% A query which branches off into two pipelines
-% and obtains the ID(s) for "Dave Rogers".
+% A query which obtains the ID(s) for "Dave Rogers"
+% and branches off into two pipelines.
 /people/name/index("Dave Rogers",<personID:int>)
 
 % These three queries (plus the one above) form a pipeline
