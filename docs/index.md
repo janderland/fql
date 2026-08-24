@@ -48,16 +48,16 @@ indirection are first class citizens.
     - [Filtering](#filtering)
     - [Options](#options-2)
   - [Advanced Queries](#advanced-queries)
-    - [Virtual Key-Values](#virtual-key-values)
-      - [Signatures](#signatures)
-      - [Effects](#effects)
-      - [Transaction Boundaries](#transaction-boundaries)
-      - [Standard Library](#standard-library)
     - [Versionstamps](#versionstamps)
     - [Indirection](#indirection)
       - [Pipelines](#pipelines)
       - [Cardinality](#cardinality)
     - [Aggregation](#aggregation)
+    - [Virtual Key-Values](#virtual-key-values)
+      - [Signatures](#signatures)
+      - [Effects](#effects)
+      - [Transaction Boundaries](#transaction-boundaries)
+      - [Standard Library](#standard-library)
 - [Implementations](#implementations)
   - [Connection](#connection)
   - [Permissions](#permissions)
@@ -1237,192 +1237,6 @@ doesn't match the schema.
 
 ## Advanced Queries
 
-### Virtual Key-Values
-
-Virtual key-values allow FQL to model side effects and
-foreign functions as key-value operations. They are
-syntactically identical to other key-values except their
-directory path begins with `@` instead of `/`.
-
-The `@` namespace is maintained entirely by the client. It
-is disjoint from `/`, is never stored, and no part of it
-reaches FoundationDB.
-
-```fql {.query}
-@crypto/hash/sha256("somehow we made it")=<digest:bytes>
-@var("retry connection")=true
-@file("err.txt","wa")=:result
-```
-
-A virtual key-value is an *invocation*. The key's tuple is
-the argument list and the value is an additional argument.
-[Holes] mark which of those arguments are outputs, much like
-a C function returning values through a pointer. Everything
-else is an input.
-
-```fql {.query}
-% 'contents' is an output; the file is read.
-@file("in.txt","r")=<contents:bytes>
-
-% 'contents' is an input; the file is appended to.
-@file("err.txt","wa")=:result
-```
-
-> ❗ Holes do not mean the same thing under `@` as they do
-> under `/`. In a normal key-value a hole triggers a range
-> read and [filtering]. In a virtual key-value it marks an
-> output parameter. The syntax is shared; the semantics are
-> not.
-
-Outputs are not limited to the value. A function returning
-more than one result marks each of them in the tuple.
-
-```fql {.query}
-% Split a path into its parent and file name.
-@path/split("/tmp/data/log.txt",<dir:str>,<file:str>)
-```
-
-Every output must be a named, typed [variable](#holes). The
-empty variable `<>` is not allowed, since an anonymous
-output cannot be referenced by a later query.
-
-#### Signatures
-
-Each virtual key-value has exactly one signature. FQL does
-not support overloading, so a given path always takes the
-same arguments with the same types.
-
-Ending the tuple with `...` prints that signature instead of
-invoking the function.
-
-```fql {.query}
-@file(...)
-```
-
-```fql {.result}
-@file(<path:str>,<mode:str>)=<contents:bytes>
-```
-
-A signature names every argument and its type, but it does
-not say which arguments are outputs. That is decided at the
-call site by where the [holes] are placed. Above, `contents`
-is an output when read and an input when written.
-
-Virtual directories are listed like any other [directory],
-which is how the available functions are discovered. `<>`
-matches a single path segment while `...` matches every
-descendant.
-
-```fql {.query}
-@crypto/<>
-```
-
-```fql {.result}
-@crypto/hash
-@crypto/sign
-```
-
-```fql {.query}
-@crypto/...
-```
-
-```fql {.result}
-@crypto/hash/sha256
-@crypto/hash/blake3
-@crypto/sign/ed25519
-@crypto/sign/rsa
-```
-
-Directory listing is the only context in which `<>` may
-appear under `@`. Virtual directories cannot be removed, so
-`=remove` is not allowed. Neither are [options], at the
-query or element level: options describe how bytes are laid
-out in FoundationDB, and a virtual key-value never reaches
-it.
-
-#### Effects
-
-Virtual key-values which modify state outside the query are
-*effectful*. Effects are buffered rather than applied
-immediately, and the buffer is flushed only once the
-enclosing transaction commits.
-
-Whether a call is effectful depends on the direction it is
-invoked in, not on the function itself. Reading `@env` is
-not an effect; writing it is.
-
-Within a transaction, a query reads its own writes. A write
-to a file is held in memory, and a subsequent read of that
-file observes it.
-
-```fql {.query}
-@file("log.txt","wa")="first line\n"
-
-% Sees the buffered write, even though nothing
-% has been written to disk yet.
-@file("log.txt","r")=<contents:bytes>
-```
-
-Because the buffer is discarded and rebuilt whenever
-FoundationDB retries a transaction, effects are applied
-exactly once no matter how many times the transaction is
-attempted. Session state buffers the same way, so a `@var`
-set inside a transaction that never commits is rolled back
-along with the key-values.
-
-Reads which can be repeated harmlessly are not cached. They
-observe the live state of their source, overlaid with this
-transaction's buffered writes. Reads which *consume* their
-source, such as `@stdin`, are buffered and replayed on
-retry, so a retried transaction does not discard input.
-
-> ❗ Flushing the buffer is not atomic with the FoundationDB
-> commit. If the transaction commits and an effect then
-> fails to apply, the key-values are durable but the effect
-> is lost.
-
-#### Transaction Boundaries
-
-`@commit()` marks the boundary between two transactions. It
-takes no arguments, produces no output, and is the only
-effect which is never buffered, because it is what flushes
-the buffer.
-
-```fql {.query}
-% read data from the source into memory
-/app/source(<i:any>)=<data:bytes>
-
-% start a new transaction before writing
-@commit()
-
-% write data from memory to the destination
-/app/destination(:i)=:data
-```
-
-#### Standard Library
-
-<div>
-
-| Function                    | Reading it gives      | Writing it does          | Effect |
-|:----------------------------|:----------------------|:-------------------------|:-------|
-| `@commit()`                 | -                     | Commits the transaction  | Yes    |
-| `@var(name)`                | A session value       | Sets it; `clear` unsets  | Write  |
-| `@env(name)`                | An environment var    | Sets it                  | Write  |
-| `@file(path,mode)`          | The file's contents   | Writes or appends        | Write  |
-| `@stdin()`                  | A line of input       | -                        | Read   |
-| `@stdout()`                 | -                     | Writes a line of output  | Write  |
-| `@path/split(path)`         | Parent & file name    | -                        | No     |
-| `@crypto/hash/sha256(data)` | A digest              | -                        | No     |
-| `@crypto/sign/ed25519(...)` | A signature           | -                        | No     |
-| `@now()`                    | The current time      | -                        | No     |
-| `@rand(...)`                | A random element      | -                        | No     |
-
-</div>
-
-The "Effect" column states which direction of the call is
-buffered. `@stdin` is marked as a read because consuming
-input is itself an effect, even though nothing is written.
-
 ### Versionstamps
 
 Versionstamps are monotonically increasing numbers which are
@@ -1443,7 +1257,9 @@ transaction version. This allows for up to 65k unique
 A `vstamp` lacking a transaction version is called an
 "incomplete" `vstamp`. They are only allowed in write
 queries. Upon commit, the transaction's 10-byte version is
-written to the first 10-bytes of the `vstamp`. 
+written to the first 10-bytes of the `vstamp`. The
+`@commit()` appearing below ends the current transaction and
+is explained under [virtual key-values]. 
 
 ```fql {.query}
 % Write two versionstamps with the
@@ -1742,6 +1558,199 @@ the appended values.
 )=<body:append[separator:"\n"]>
 ```
 
+### Virtual Key-Values
+
+Virtual key-values allow FQL to model side effects and
+foreign functions as key-value operations. They are
+syntactically identical to other key-values except their
+directory path begins with `@` instead of `/`.
+
+The `@` namespace is maintained entirely by the client. It
+is disjoint from `/`, is never stored, and no part of it
+reaches FoundationDB.
+
+```fql {.query}
+@env("HOME")=<home:str>
+@var("retry connection")=true
+@file("err.txt","wa")=:result
+```
+
+A virtual key-value is an *invocation*. The key's tuple is
+the argument list and the value is an additional argument.
+[Holes] mark which of those arguments are outputs, much like
+a C function returning values through a pointer. Everything
+else is an input.
+
+```fql {.query}
+% 'contents' is an output; the file is read.
+@file("in.txt","r")=<contents:bytes>
+
+% 'contents' is an input; the file is appended to.
+@file("err.txt","wa")=:result
+```
+
+> ❗ Holes do not mean the same thing under `@` as they do
+> under `/`. In a normal key-value a hole triggers a range
+> read and [filtering]. In a virtual key-value it marks an
+> output parameter. The syntax is shared; the semantics are
+> not.
+
+Outputs are not limited to the value. A function returning
+more than one result marks each of them in the tuple. For
+instance, a function splitting a path into its parent and
+file name would return both through the argument list.
+
+```fql {.query}
+@path/split("/tmp/data/log.txt",<dir:str>,<file:str>)
+```
+
+Every output must be a named, typed [variable](#holes). The
+empty variable `<>` is not allowed, since an anonymous
+output cannot be referenced by a later query.
+
+#### Signatures
+
+Each virtual key-value has exactly one signature. FQL does
+not support overloading, so a given path always takes the
+same arguments with the same types.
+
+Ending the tuple with `...` prints that signature instead of
+invoking the function.
+
+```fql {.query}
+@file(...)
+```
+
+```fql {.result}
+@file(<path:str>,<mode:str>)=<contents:bytes>
+```
+
+A signature names every argument and its type, but it does
+not say which arguments are outputs. That is decided at the
+call site by where the [holes] are placed. Above, `contents`
+is an output when read and an input when written.
+
+Virtual directories are listed like any other [directory],
+which is how the available functions are discovered.
+
+```fql {.query}
+@<>
+```
+
+```fql {.result}
+@commit
+@var
+@env
+@file
+@print
+@error
+```
+
+While `<>` matches a single path segment, `...` matches
+every descendant. The two produce the same listing above
+because the initial set of functions is flat, but they
+diverge once an implementation groups functions into
+submodules.
+
+Directory listing is the only context in which `<>` may
+appear under `@`. Virtual directories cannot be removed, so
+`=remove` is not allowed. Neither are [options], at the
+query or element level: options describe how bytes are laid
+out in FoundationDB, and a virtual key-value never reaches
+it.
+
+#### Effects
+
+Virtual key-values which modify state outside the query are
+*effectful*. Effects are buffered rather than applied
+immediately, and the buffer is flushed only once the
+enclosing transaction commits.
+
+Whether a call is effectful depends on the direction it is
+invoked in, not on the function itself. Reading `@env` is
+not an effect; writing it is.
+
+Within a transaction, a query reads its own writes. A write
+to a file is held in memory, and a subsequent read of that
+file observes it.
+
+```fql {.query}
+@file("log.txt","wa")="first line\n"
+
+% Sees the buffered write, even though nothing
+% has been written to disk yet.
+@file("log.txt","r")=<contents:bytes>
+```
+
+Because the buffer is discarded and rebuilt whenever
+FoundationDB retries a transaction, effects are applied
+exactly once no matter how many times the transaction is
+attempted. Session state buffers the same way, so a `@var`
+set inside a transaction that never commits is rolled back
+along with the key-values.
+
+Reads which can be repeated harmlessly are not cached. They
+observe the live state of their source, overlaid with this
+transaction's buffered writes. Reads which *consume* their
+source are buffered and replayed on retry, so a retried
+transaction does not discard input. No function described
+below consumes its source.
+
+> ❗ Flushing the buffer is not atomic with the FoundationDB
+> commit. If the transaction commits and an effect then
+> fails to apply, the key-values are durable but the effect
+> is lost.
+
+#### Transaction Boundaries
+
+`@commit()` marks the boundary between two transactions. It
+takes no arguments, produces no output, and is the only
+effect which is never buffered, because it is what flushes
+the buffer.
+
+```fql {.query}
+% read data from the source into memory
+/app/source(<i:any>)=<data:bytes>
+
+% start a new transaction before writing
+@commit()
+
+% write data from memory to the destination
+/app/destination(:i)=:data
+```
+
+#### Standard Library
+
+FQL's standard library has yet to be defined. The functions
+below are the initial set; more will be added as the
+language settles.
+
+<div>
+
+| Function           | Reading it gives        | Writing it does         | Effect |
+|:-------------------|:------------------------|:------------------------|:-------|
+| `@commit()`        | -                       | Commits the transaction | Yes    |
+| `@var(name)`       | A session value         | Sets it; `clear` unsets | Write  |
+| `@env(name)`       | An environment variable | Sets it                 | Write  |
+| `@file(path,mode)` | The file's contents     | Writes or appends       | Write  |
+| `@print()`         | -                       | Writes to standard out  | Write  |
+| `@error()`         | -                       | Writes to standard error| Write  |
+
+</div>
+
+The "Effect" column states which direction of the call is
+buffered. Neither `@print` nor `@error` appends a newline to
+what it writes.
+
+```fql {.query}
+@print()="no newline is added, so this "
+@print()="line is printed in two parts\n"
+```
+
+```bash {.result}
+no newline is added, so this line is printed in two parts
+```
+
 # Implementations
 
 FQL defines the query language but leaves many details to
@@ -1798,19 +1807,20 @@ an entire session.
 Moving values between a query and the surrounding process is
 the job of the [standard library](#standard-library), not of
 specially named variables. A variable which happens to be
-named `stdout` is an ordinary variable; it is `@stdout()`
+named `stdout` is an ordinary variable; it is `@print()`
 which writes to the process.
 
 ```fql {.query}
 /mq("topic",<topic:str>)
-@stdout()=:topic
+@print()=:topic
 ```
 
 ```bash {.result}
-topicA
-topicB
-topicC
+topicAtopicBtopicC
 ```
+
+The values run together because `@print` does not append
+a newline.
 
 An implementation may extend the standard library with
 functions describing whatever else the process exposes. See
@@ -1924,6 +1934,7 @@ listed here.
 [name]: #names
 [option]: #options
 [queries]: #basic-queries
+[virtual key-values]: #virtual-key-values
 [variables]: #holes
 
 <!-- vim: set tw=60 conceallevel=0 :-->
