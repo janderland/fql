@@ -34,7 +34,7 @@ bool = 'true' | 'false'
 int = [ '-' ] digits
 num = int '.' digits | ( int | int '.' digits ) 'e' int
     | '-inf' | 'inf' | '-nan' | 'nan'
-string = '"' { char | '\"' | '\\' } '"'
+string = '"' { char | escape } '"'
 uuid = hex{8} '-' hex{4} '-' hex{4} '-' hex{4} '-' hex{12}
 bytes = '0x' { hex{2} }
 vstamp = '#' [ hex{20} ] ':' hex{4}
@@ -61,6 +61,7 @@ hex = digit
     | 'A' | 'B' | 'C' | 'D' | 'E' | 'F'
 name = ( letter | '_' ) { letter | digit | '_' | '-' | '.' }
 letter = 'a' | ... | 'z' | 'A' | ... | 'Z'
+escape = ? A backslash followed by '"', '\', 'n', 'r', or 't' ?
 char = ? Any printable UTF-8 character except '"' and '\' ?
 
 (* Comments *)
