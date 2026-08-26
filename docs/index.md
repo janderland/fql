@@ -1224,12 +1224,14 @@ behavior.
 | `snapshot`   | none     | Use snapshot reads                                                                    |
 | `strict`     | none     | Error when a read key-values doesn't conform to the schema                            |
 | `return`     | none     | Include this query's key-values in the output (see [pipelines])                       |
+| `default`    | none     | Return a key-value when an [aggregation] matches nothing                              |
 
 </div>
 
-Range-read queries support all the options listed above.
-Single-read queries support `snapshot` and `strict`. Clear
-queries support `strict`. With the `strict` option, the
+Range-read queries support all the options listed above,
+though `default` is only meaningful for [aggregation]
+queries. Single-read queries support `snapshot` and
+`strict`. Clear queries support `strict`. With the `strict` option, the
 clear operation is a no-op if FQL encounters a key which
 doesn't match the schema.
 
@@ -1549,7 +1551,7 @@ whether or not they aggregate. The `...` token is not, since
 it does not stand for a single element, and so it appears
 unchanged in the key-value above.
 
-Every invocation of an aggregation query returns exactly one
+Every invocation of an aggregation query returns at most one
 key-value. How many invocations occur is a separate matter,
 decided by the query's holes and by the [cardinality] of the
 pipeline it belongs to.
@@ -1558,14 +1560,14 @@ The table below lists the available aggregation types.
 
 <div>
 
-| Aggregate | I/O                            | Description                     |
-|:----------|:-------------------------------|:--------------------------------|
-| `count`   | `any` ➜ `int`                  | Count the number of results     |
-| `sum`     | `int`,`num` ➜ `int`,`num`      | Sum numeric values              |
-| `min`     | `int`,`num` ➜ `int`,`num`,`nil`| Minimum numeric value           |
-| `max`     | `int`,`num` ➜ `int`,`num`,`nil`| Maximum numeric value           |
-| `avg`     | `int`,`num` ➜ `num`,`nil`      | Average numeric values          |
-| `append`  | `bytes`,`str` ➜ `bytes`,`str`  | Concatenate bytes/strings       |
+| Aggregate | I/O                            | Default | Description                 |
+|:----------|:-------------------------------|:--------|:----------------------------|
+| `count`   | `any` ➜ `int`                  | `0`     | Count the number of results |
+| `sum`     | `int`,`num` ➜ `int`,`num`      | `0`     | Sum numeric values          |
+| `min`     | `int`,`num` ➜ `int`,`num`,`nil`| `nil`   | Minimum numeric value       |
+| `max`     | `int`,`num` ➜ `int`,`num`,`nil`| `nil`   | Maximum numeric value       |
+| `avg`     | `int`,`num` ➜ `num`,`nil`      | `nil`   | Average numeric values      |
+| `append`  | `bytes`,`str` ➜ `bytes`,`str`  | `0x`    | Concatenate bytes/strings   |
 
 </div>
 
@@ -1574,16 +1576,30 @@ The table below lists the available aggregation types.
 outputs `str` if all inputs are `str`. Otherwise, it outputs
 `bytes`.
 
-An invocation which aggregates no key-values still returns
-one. `count` and `sum` return `0` and `append` returns an
-empty `bytes`, as these are the values leaving an
-aggregation unchanged. `min`, `max`, and `avg` have no such
-value, so they return `nil`.
+An aggregate's default is the value which leaves it
+unchanged, and is what the `default` [option](#options-2)
+returns for an empty aggregation. `min`, `max`, and `avg`
+have no such value, so they default to `nil`.
+
+An invocation which aggregates no key-values returns
+nothing, just as any other read query matching nothing
+returns nothing. The `default` [option](#options-2)
+overrides this, forcing the invocation to return its
+aggregate's default value.
+
+```fql {.query}
+[default]
+/deltas("no such group",<sum>)
+```
+
+```fql {.result}
+/deltas("no such group",0)=nil
+```
 
 > ❗ A hole only enumerates values which appear in the
 > database, so a grouped aggregation never aggregates an
-> empty set. Only a query whose key is fully specified, such
-> as `/deltas("no such group",<sum>)`, can do so.
+> empty set. Only a query whose key is fully specified, as
+> above, can do so.
 
 `append` may be given the [option] `separator` which
 defines a `str` or `bytes` separator placed between each of
