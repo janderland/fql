@@ -149,8 +149,8 @@ to each other via [references].
 
 To the left of the `=` is the key which includes a directory
 path and tuple. To the right is the value. For now, the
-`options`{.hljs-variable} prefixing the query can be ignored.
-[Options] will be described later in the document.
+`options`{.hljs-variable} prefixing the query can be
+ignored. [Options] will be described later in the document.
 
 A query may be a full key-value, just a key, or just
 a directory path. The contents of the query implies whether
@@ -442,10 +442,10 @@ at once.
 /app/actions/index
 ```
 
-A directory path may end with the `...` token, matching every
-directory descending from the preceding path. Unlike `<>`,
-which matches a single path segment, `...` matches any number
-of segments, including none.
+A directory path may end with the `...` token, matching
+every directory descending from the preceding path. Unlike
+`<>`, which matches a single path segment, `...` matches any
+number of segments, including none.
 
 ```fql {.query}
 /app/...
@@ -922,10 +922,10 @@ table below shows [options] which change how the `int` and
 
 </div>
 
-`int` may use the widths `8`, `16`, `32`, and `64`, while `num` may
-use `32`, `64`, and `80`. When the width option is present,
-values default to little endian encoding. The `bigendian`
-option can override this.
+`int` may use the widths `8`, `16`, `32`, and `64`, while
+`num` may use `32`, `64`, and `80`. When the width option is
+present, values default to little endian encoding. The
+`bigendian` option can override this.
 
 ```fql {.query}
 /globals/next-id()=37534[width:64,bigendian]
@@ -1231,9 +1231,11 @@ behavior.
 Range-read queries support all the options listed above,
 though `default` is only meaningful for [aggregation]
 queries. Single-read queries support `snapshot` and
-`strict`. Clear queries support `strict`. With the `strict` option, the
-clear operation is a no-op if FQL encounters a key which
-doesn't match the schema.
+`strict`. Clear queries support `strict`.
+
+With the `strict` option, the entire transaction is aborted
+if FQL encounters a key-value which doesn't conform to the
+query's schema.
 
 ## Advanced Queries
 
@@ -1575,11 +1577,6 @@ The table below lists the available aggregation types.
 `int`. Otherwise, they output `num`. Similarly, `append`
 outputs `str` if all inputs are `str`. Otherwise, it outputs
 `bytes`.
-
-An aggregate's default is the value which leaves it
-unchanged, and is what the `default` [option](#options-2)
-returns for an empty aggregation. `min`, `max`, and `avg`
-have no such value, so they default to `nil`.
 
 An invocation which aggregates no key-values returns
 nothing, just as any other read query matching nothing
