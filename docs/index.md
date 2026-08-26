@@ -691,9 +691,9 @@ element types, allowing FQL to decode keys without a schema.
 @fdb.transactional
 def read_all(tr):
     # Open directory; exit if it doesn't exist
-    dir = fdb.directory.open(tr, ('app',))
-    if dir is None:
+    if not fdb.directory.exists(tr, ('app',)):
         return []
+    dir = fdb.directory.open(tr, ('app',))
 
     # Recursively read all directories
     return do_read_all(tr, dir)
@@ -888,7 +888,7 @@ are simply a directory prefix.
 @fdb.transactional
 def set_next_id(tr):
     # Open directory; create if doesn't exist
-    dir = fdb.directory.open(tr, ('globals', 'next-id'))
+    dir = fdb.directory.create_or_open(tr, ('globals', 'next-id'))
 
     # Use directory prefix as the key
     key = dir.key()
@@ -1170,13 +1170,13 @@ filtering when multiple [holes] are present.
 @fdb.transactional
 def filter_range(tr):
     # open the directory; return nothing if it doesn't exist
-    dir = fdb.directory.open(tr, ('people',))
-    if dir is None:
+    if not fdb.directory.exists(tr, ('people',)):
         return []
+    dir = fdb.directory.open(tr, ('people',))
 
-    prefix = dir.pack((3392,))
-    # TODO: this is incorrect; validate all python code
-    range_result = tr[fdb.Range(prefix, fdb.strinc(prefix))]
+    # Range read everything under the prefix implied by the
+    # elements preceding the query's first hole
+    range_result = tr[dir.range((3392,))]
 
     results = []
     for key, val in range_result:
@@ -1193,7 +1193,7 @@ def filter_range(tr):
         # The query tells us the value must be a packed tuple
         try:
             val_tup = fdb.tuple.unpack(val)
-        except:
+        except ValueError:
             continue
 
         # The value-tuple must have one or more elements
@@ -1204,7 +1204,7 @@ def filter_range(tr):
         if not isinstance(val_tup[0], int):
             continue
 
-        results.append((dir, tup, val_tup))
+        results.append((dir.get_path(), tup, val_tup))
 
     return results
 ```
@@ -1482,6 +1482,32 @@ automatically sum up the deltas into the actual value.
 /deltas("group A",5)=nil
 ```
 
+An aggregation query may also contain ordinary [holes]. Such
+a hole enumerates the distinct values found at its position,
+and the query is invoked once for each of them. This groups
+the aggregation, much like SQL's `GROUP BY` clause.
+
+```fql {.query}
+/deltas(<group:str>,<sum>)
+```
+
+```fql {.result}
+/deltas("group A",5)=nil
+/deltas("group B",-2)=nil
+/deltas("group C",118)=nil
+```
+
+Because each distinct value produces its own invocation, the
+query above is equivalent to the [pipeline] below. The
+difference is that the pipeline reads its group names from
+a second directory, while the single query discovers them
+from the key-values it is already scanning.
+
+```fql {.query}
+/deltas/groups(<group:str>)
+/deltas(:group,<sum>)
+```
+
 Aggregation queries are also useful when [reading large
 blobs][]. The data is usually split into chunks stored in
 separate key-values. The respective keys contain the byte
@@ -1518,11 +1544,15 @@ of having to concatenate the chunks themselves.
 /blob("my_file.bin",...)=22.7kb
 ```
 
-With non-aggregation queries, [holes] are
-resolved to actual data elements in the results. For
-aggregation queries, only aggregation variables are
-resolved, leaving the `...` token in the resulting
-key-value.
+Holes are resolved to actual data elements in the results,
+whether or not they aggregate. The `...` token is not, since
+it does not stand for a single element, and so it appears
+unchanged in the key-value above.
+
+Every invocation of an aggregation query returns exactly one
+key-value. How many invocations occur is a separate matter,
+decided by the query's holes and by the [cardinality] of the
+pipeline it belongs to.
 
 The table below lists the available aggregation types.
 
@@ -1532,9 +1562,9 @@ The table below lists the available aggregation types.
 |:----------|:-------------------------------|:--------------------------------|
 | `count`   | `any` ➜ `int`                  | Count the number of results     |
 | `sum`     | `int`,`num` ➜ `int`,`num`      | Sum numeric values              |
-| `min`     | `int`,`num` ➜ `int`,`num`      | Minimum numeric value           |
-| `max`     | `int`,`num` ➜ `int`,`num`      | Maximum numeric value           |
-| `avg`     | `int`,`num` ➜ `num`            | Average numeric values          |
+| `min`     | `int`,`num` ➜ `int`,`num`,`nil`| Minimum numeric value           |
+| `max`     | `int`,`num` ➜ `int`,`num`,`nil`| Maximum numeric value           |
+| `avg`     | `int`,`num` ➜ `num`,`nil`      | Average numeric values          |
 | `append`  | `bytes`,`str` ➜ `bytes`,`str`  | Concatenate bytes/strings       |
 
 </div>
@@ -1543,6 +1573,17 @@ The table below lists the available aggregation types.
 `int`. Otherwise, they output `num`. Similarly, `append`
 outputs `str` if all inputs are `str`. Otherwise, it outputs
 `bytes`.
+
+An invocation which aggregates no key-values still returns
+one. `count` and `sum` return `0` and `append` returns an
+empty `bytes`, as these are the values leaving an
+aggregation unchanged. `min`, `max`, and `avg` have no such
+value, so they return `nil`.
+
+> ❗ A hole only enumerates values which appear in the
+> database, so a grouped aggregation never aggregates an
+> empty set. Only a query whose key is fully specified, such
+> as `/deltas("no such group",<sum>)`, can do so.
 
 `append` may be given the [option] `separator` which
 defines a `str` or `bytes` separator placed between each of
@@ -1900,6 +1941,7 @@ listed here.
 [index indirection]: #indirection
 [name]: #names
 [option]: #options
+[pipeline]: #pipelines
 [queries]: #basic-queries
 [virtual key-values]: #virtual-key-values
 [variables]: #holes
