@@ -903,10 +903,10 @@ def set_next_id(tr):
 
 ### Options
 
-Options can override the default value encoding, providing
-additional control over byte-level representation. The table
-below shows [options] which change how the `int` and `num`
-types are encoded.
+Options can override the default value encoding, producing
+raw values with additional control over byte-level
+representation. The table below shows [options] which change
+how the `int` and `num` types are encoded.
 
 > ❗ Encoding options only affect values not wrapped by
 > a tuple. Within tuples, as a key or value, these options
