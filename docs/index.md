@@ -39,6 +39,7 @@ indirection are first class citizens.
   - [Data Encoding](#data-encoding)
     - [Keys](#keys)
     - [Values](#values)
+    - [Bytes](#bytes)
     - [Empty](#empty)
     - [Options](#options-1)
   - [Basic Queries](#basic-queries)
@@ -849,12 +850,21 @@ succeed.
 /app/location("east bay")=0x170154c2
 ```
 
-Generally, read query results can be used as a write query
-to rewrite the key-values which were read. An exception to
-this rule is a wrapped byte string `(0xabcd)` used as
-a value. As a single element, the byte string will be
-unwrapped when read. If the result is used as a write, the
-default encoding writes it as a raw value.
+### Bytes
+
+When storing a byte string as a value, you should avoid
+wrapping it in a tuple. Byte strings are the fundamental
+form of data in FoundationDB. Using byte strings tells FQL
+to skip the encoding/decoding process. Wrapping a byte
+string in a tuple adds useless type metadata in most cases.
+
+Furthermore, a wrapped byte string breaks one of FQL's
+invariants: Read query results can be used as write queries
+to rewrite the key-values which were read.
+
+As a single element, the byte string will be unwrapped when
+read. If the result is used as a write, the default encoding
+writes it as a raw value, not a wrapped one.
 
 ### Empty
 
@@ -1049,8 +1059,8 @@ operate on.
 Queries containing [holes] (and lacking the `clear` token)
 read one or more key-values. You can think of these queries
 as declaring a key-value schema. All key-values matching the
-schema are returned by the query. The results of most read
-queries are the inverse of the read query; they would write
+schema are returned by the query. The resultant key-values
+are usually the inverse of the read query; they would write
 the key-values being read. 
 
 > ❗ There are several situations where the key-values
@@ -1065,7 +1075,7 @@ the key-values being read.
 >   a summary of many key-values and are not valid write
 >   queries.
 >
-> - Values with [wrapped byte strings](#values).
+> - Values with [wrapped byte strings](#bytes).
 
 If the holes only appear in the value, then at most a single
 key-value is returned. If holes appear in the key (and
