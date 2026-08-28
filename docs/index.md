@@ -725,11 +725,12 @@ def do_read_all(tr, dir):
 
 ### Values
 
-By default, values are encoded as the lone member of
-a tuple. This preserves type metadata, allowing the value to
-be decoded without a schema. [Data elements] which are not
-wrapped in a tuple are called *raw values*. By default, two
-types are written as raw values: `tup` and `bytes`.
+By default, [data element] values are encoded as the lone
+member of a tuple. This preserves type metadata, allowing
+the value to be decoded without a schema. [Data elements]
+which are not wrapped in a tuple are called *raw values*. By
+default, two types are written as raw values: `tup` and
+`bytes`.
 
 Let's start with a concrete example using the value `42`.
 The implementation is probably as you'd expect.
@@ -782,9 +783,9 @@ def read_age(tr):
 
 FoundationDB does not provide an idiomatic value encoding
 format, so the logic above serves as a sane default. Other
-encoding [formats](#options-1) are supported, though they
-require certain options during the read. For now, let's
-isolate the default decoding logic and rationalize it.
+value encoding [formats](#options-1) are supported, though
+they require options specified during the read. For now,
+let's isolate the default decoding logic and rationalize it.
 
 ```python {.equiv-py .standalone}
 def decode_value(val_bytes):
@@ -809,15 +810,15 @@ def decode_value(val_bytes):
         return val_bytes
 ```
 
-Default decoding assumes the value is a tuple. If it is
-a tuple and only contains a single element, the element is
-automatically unwrapped. If it's not a tuple, then the value
-is not decoded and simply returned as a byte string.
+Default decoding assumes the value is a tuple. As stated
+above, lone [data elements] are wrapped in a tuple, so if
+the value tuple only contains a single element the element
+is automatically unwrapped. If it's not a tuple, then the
+value is not decoded and simply returned as a byte string.
 
-Because most [data elements] are wrapped with a tuple there
-can be encoding ambiguities. For instance, the values `42`
-and `(42)` produce identical bytes when encoded. The way the
-value is returned depends on how it's queried.
+This logic can produce some ambiguities. For instance, the
+values `42` and `(42)` produce identical bytes when encoded.
+The way the value is returned depends on how it's queried.
 
 ```fql {.query}
 % write the key-value once
@@ -848,12 +849,12 @@ succeed.
 /app/location("east bay")=0x170154c2
 ```
 
-> ❗ Generally, read query results can be used as a write
-> query to replicate the read key-values. An exception to
-> this rule is a wrapped byte string `(0xabcd)` used as
-> a value. As a single element, the byte string will be
-> unwrapped when read. If the result is used as a write, the
-> default encoding writes it as a raw value.
+Generally, read query results can be used as a write query
+to rewrite the key-values which were read. An exception to
+this rule is a wrapped byte string `(0xabcd)` used as
+a value. As a single element, the byte string will be
+unwrapped when read. If the result is used as a write, the
+default encoding writes it as a raw value.
 
 ### Empty
 
@@ -902,15 +903,14 @@ def set_next_id(tr):
 
 ### Options
 
-Options allow queries to encode any [data
-element](#data-elements) as a raw value, providing
-additional control over its byte-level representation. The
-table below shows [options] which change how the `int` and
-`num` types are encoded.
+Options can override the default value encoding, producing
+raw values with additional control over byte-level
+representation. The table below shows [options] which change
+how the `int` and `num` types are encoded.
 
 > ❗ Encoding options only affect values not wrapped by
-> a tuple. Within tuples, as a key or value, data elements
-> are always encoded by the tuple layer.
+> a tuple. Within tuples, as a key or value, these options
+> are not supported.
 
 <div>
 
