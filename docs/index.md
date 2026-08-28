@@ -1043,9 +1043,13 @@ schema are deleted. Clear queries never remove directories,
 even if all the directory's key-values are cleared.
 
 ```fql {.query}
-% Clear queries
+% Clear a single key-value
 /people(293800,"farmer",nil)=clear
+
+% Clear many key-values
 /people(293801,<>,"last year")=clear
+
+% Clear many key-values
 /people(293802,...)=clear
 ```
 
