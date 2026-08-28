@@ -1132,16 +1132,17 @@ they will all be removed.
 During a read query or a clear query with a [hole](#holes),
 FQL scans a subset of the key-values in the directories
 matching the schema. If a key-value is encountered which
-doesn't match the query's schema it is ignored. Including
-the `strict` [option](#options-2) causes the query to fail
-when encountering a nonconformant key-value. This will
-verify that all the key-values within a directory have the
-same schema.
+doesn't match the query's schema it is ignored.
+
+Including the `strict` [option](#options-2) causes the query
+to fail when encountering a nonconformant key-value. This
+will verify that all the key-values within a directory have
+the same schema.
 
 > ❗ As outlined in the [data encoding](#values) section,
 > there is a degree of type ambiguity regarding values. Most
-> [data elements] will match the `tup` type and all will
-> match the `bytes` type.
+> [data elements] will match the `tup` type because they are
+> wrapped, and all will match the `bytes` type.
 
 Filtering is performed on the client side and the query may
 stream a lot of data to the client while filtering most of
@@ -1163,7 +1164,7 @@ FoundationDB will stream all key-values with this prefix to
 the client. As they are received, FQL will filter out
 key-values which don't match the remaining portion of the
 schema. **This may be most of the data.** Keys with tuples
-like `(2293,"hi",254)` and `(2293,7324,"wow")` will use up
+like `(3392,"hi",254)` and `(3392,7324,"wow")` will use up
 bandwidth and be decoded and then thrown away.
 
 Ideally, filter queries are only used on small amounts of
@@ -1183,25 +1184,24 @@ filtering when multiple [holes] are present.
 ```python {.equiv-py}
 @fdb.transactional
 def filter_range(tr):
-    # open the directory; return nothing if it doesn't exist
+    # Open the directory; return nothing if it doesn't exist
     if not fdb.directory.exists(tr, ('people',)):
         return []
     dir = fdb.directory.open(tr, ('people',))
 
-    # Range read everything under the prefix implied by the
-    # elements preceding the query's first hole
+    # Range read everything under the prefix of the query
     range_result = tr[dir.range((3392,))]
 
     results = []
     for key, val in range_result:
-        tup = dir.unpack(key)
+        key_tup = dir.unpack(key)
 
         # Our query specifies a key-tuple with 3 elements
-        if len(tup) != 3:
+        if len(key_tup) != 3:
             continue
 
         # The 2nd element must be either a string or an int
-        if not isinstance(tup[1], (str, int)):
+        if not isinstance(key_tup[1], (str, int)):
             continue
 
         # The query tells us the value must be a packed tuple
@@ -1218,6 +1218,8 @@ def filter_range(tr):
         if not isinstance(val_tup[0], int):
             continue
 
+        # If we made it past all the above guards, add the
+        # key-value to our result set
         results.append((dir.get_path(), tup, val_tup))
 
     return results
@@ -1226,7 +1228,14 @@ def filter_range(tr):
 ### Options
 
 Queries have several options which modify their default
-behavior.
+behavior. As explained in the [syntax] section, query
+options are declared on the line immediately before the
+query.
+
+```fql {.query}
+[limit:5]
+/my/dir(...)
+```
 
 <div>
 
