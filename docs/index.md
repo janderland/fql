@@ -1264,6 +1264,10 @@ query's schema.
 
 ## Advanced Queries
 
+FQL queries can do more than basic CRUD operations,
+including things like unique ID generation, joins across
+keyspaces, and aggregation.
+
 ### Versionstamps
 
 Versionstamps are monotonically increasing numbers which are
