@@ -1237,6 +1237,8 @@ query.
 /my/dir(...)
 ```
 
+The query options are listed below.
+
 <div>
 
 | Query Option | Argument | Description                                                                           |
