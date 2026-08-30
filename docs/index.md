@@ -1274,7 +1274,7 @@ Versionstamps are monotonically increasing numbers which are
 associated with a particular commit. They are unique for
 a given FoundationDB cluster and remain unique for the
 cluster's lifetime. All reads are performed against
-a particular versionstamp which defines the version of the
+a particular versionstamp which specifies the version of the
 data which the read observes. Upon commit, every transaction
 is assigned a versionstamp by the DB.
 
@@ -1287,19 +1287,20 @@ transaction version. This allows for up to 65k unique
 
 A `vstamp` lacking a transaction version is called an
 "incomplete" `vstamp`. They are only allowed in write
-queries. Upon commit, the transaction's 10-byte version is
-written to the first 10-bytes of the `vstamp`. The
-`@commit()` appearing below ends the current transaction and
-is explained under [virtual key-values]. 
+queries and only one is allowed per query. Upon commit, the
+transaction's 10-byte version is written to the first
+10-bytes of the `vstamp`. The `@commit()` appearing below
+ends the current transaction and is explained under [virtual
+key-values]. 
 
 ```fql {.query}
 % Write two versionstamps with the
-% 'user versions' `#ff00` and `#00cd`.
+% user versions `#ff00` and `#00cd`.
 /app/queue(#:ff00)="jason"
 /app/heartbeat("jason")=#:00cd
 
 % Upon commit, FoundationDB populates
-% the 'transaction version' portion of
+% the transaction version portion of
 % the versionstamps.
 @commit()
 
@@ -1315,11 +1316,13 @@ is explained under [virtual key-values].
 
 `vstamp` elements are monotonically increasing and unique
 for the lifetime of a particular database. They may be used
-as unique identifiers or non-contiguous indexes.
+as identifiers, non-contiguous indexes, or even as
+heartbeats (check if a `vstamp` changed to know if the actor
+is alive).
 
 ### Indirection
 
-Indirection queries are similar to SQL joins. They associate
+Indirection queries are similar to SQL joins; they associate
 different key-spaces via some shared data element. In
 FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
@@ -1391,18 +1394,19 @@ variables referenced by another query.
 ```fql {.query}
 % A query which obtains the ID(s) for "Dave Rogers"
 % and branches off into two pipelines.
-/people/name/index("Dave Rogers",<personID:int>)
+/people/name("Dave Rogers",<personID:vstamp>)
 
 % These three queries (plus the one above) form a pipeline
 % which finds the names of all other people the same age
 % as "Dave Rogers".
-/people/age(:personID,<age:int>)
-/people/age/index(:age,<otherPersonID:int>)
-/people/name(:otherPersonID,<str>)
+/people(:personID,<>,<age:int>...)
+/people/age(:age,<otherPersonID:vstamp>)
+/people(:otherPersonID,...)
 
-% This query (plus the root) forms another pipeline.
-% Find the address of "Dave Rogers".
-/people/address(:personID,<str>)
+% This query (plus the first one above) forms another
+% pipeline. Find Dave Rogers's car's VIN.
+/cars/owner(:personID,<carID:vstamp>)
+/cars(:carID,<>,<>,<>,<vin:int>,...)
 ```
 
 Pipelines can be several queries deep. By default, only the
