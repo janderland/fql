@@ -1416,9 +1416,16 @@ key-values to be included in the returned set.
 
 #### Cardinality
 
-If a pipeline is made up of queries with different
-cardinalities, FQL joins the key-spaces in subsequent
-queries within the pipeline.
+A query may reference variables from multiple queries, and
+the referenced queries may have different cardinalities.
+
+TODO: I think we need to figure out how these kinds of joins
+are done.
+
+In this case, FQL performs an inner join the referenced
+key-spaces in subsequent queries within the pipeline. In
+other words, if keyspace A has 2 key-values for every joined
+key-value in keyspace B, 
 
 For instance, consider the following pipeline.
 
