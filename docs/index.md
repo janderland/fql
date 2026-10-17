@@ -1250,6 +1250,7 @@ The query options are listed below.
 | `strict`     | none     | Error when a read key-values doesn't conform to the schema                            |
 | `return`     | none     | Include this query's key-values in the output (see [pipelines])                       |
 | `default`    | none     | Return a key-value when an [aggregation] matches nothing                              |
+| `join`       | name     | How unrelated references combine: `cross` (see [cardinality])                         |
 
 </div>
 
@@ -1399,7 +1400,7 @@ variables referenced by another query.
 % These three queries (plus the one above) form a pipeline
 % which finds the names of all other people the same age
 % as "Dave Rogers".
-/people(:personID,<>,<age:int>...)
+/people(:personID,<>,<age:int>,...)
 /people/age(:age,<otherPersonID:vstamp>)
 /people(:otherPersonID,...)
 
@@ -1417,15 +1418,9 @@ key-values to be included in the returned set.
 #### Cardinality
 
 A query may reference variables from multiple queries, and
-the referenced queries may have different cardinalities.
-
-TODO: I think we need to figure out how these kinds of joins
-are done.
-
-In this case, FQL performs an inner join the referenced
-key-spaces in subsequent queries within the pipeline. In
-other words, if keyspace A has 2 key-values for every joined
-key-value in keyspace B, 
+the referenced queries may have different cardinalities. FQL
+resolves this by nesting: a query is invoked once for every
+combination of values bound by the queries it depends on.
 
 For instance, consider the following pipeline.
 
@@ -1443,14 +1438,16 @@ For instance, consider the following pipeline.
 ```
 
 The second query may return multiple key-values for each
-parent ID, because parents may have multiple children. When
-both the parent and child IDs are used in the third query,
-FQL performs a join between each parent and all their
-children. If parent ID `5` is associated with child IDs
-`10`, `11`, and `12`, then the third query is called for the
-groups `(5,10)`, `(5,11)`, and `(5,12)`.
+parent ID, because parents may have multiple children. The
+third query is invoked once for each parent-child pair. If
+parent ID `5` is associated with child IDs `10`, `11`, and
+`12`, then the third query is invoked for the pairs
+`(5,10)`, `(5,11)`, and `(5,12)`.
 
-This mirrors joins in SQL. Below is how the above pipeline
+Notice that the second query references `:parentID` within
+its own key. The reference constrains the children being
+read to those of the current parent, making this pipeline
+equivalent to an inner join. Below is how the above pipeline
 may look in an SQL database.
 
 ```sql
@@ -1463,9 +1460,10 @@ FROM
   JOIN child c ON c.parent_id = p.id;
 ```
 
-Things become more interesting if constraints are put on the
-queries. For instance, let's add a limit and order to the
-query reading the child IDs.
+Query [options](#options-2) apply to each invocation of
+a query rather than to the pipeline as a whole. For
+instance, let's add a limit and order to the query reading
+the child IDs.
 
 ```fql {.query} 
 % Given we store child IDs ordered by age, for each parent
@@ -1475,9 +1473,10 @@ query reading the child IDs.
 ```
 
 If the other queries are unchanged, the third query will
-only be called once per parent ID because we've ensured
-there will only be one child ID associated with it. You
-could achieve similar behavior with the following SQL query.
+only be called once per parent ID. The limit selects one
+child from each parent's children rather than one child
+overall. You could achieve similar behavior with the
+following SQL query.
 
 ```sql
 SELECT
@@ -1491,6 +1490,47 @@ FROM
    LIMIT 1
   ) c;
 ```
+
+The nested queries need not reference each other. When two
+queries in a pipeline are unrelated, neither referencing the
+other directly or transitively, the nesting still occurs and
+produces every combination of their values: a cross product.
+
+```fql {.query}
+% Obtain a list of parents.
+/families/parents(<parentID:int>,...)
+
+% Obtain a list of tutors. This query doesn't reference
+% `:parentID`, so it reads the same tutors for each parent.
+/schools/tutors(<tutorID:int>,...)
+
+% Schedule a meeting for every parent-tutor pair.
+[join:cross]
+/schedule/meeting(#:0000,:parentID,:tutorID)=nil
+```
+
+Because a cross product is rarely intended, FQL fails when
+a query references unrelated queries unless the `join`
+option is present. The option is declared on the query
+performing the join, so a query's cardinality can be
+determined without reading the rest of the pipeline.
+
+```sql
+INSERT INTO
+  schedule (event, client1, client2)
+SELECT
+  'meeting', p.id, t.id
+FROM
+  parent p
+  CROSS JOIN tutor t;
+```
+
+Queries are nested in the order they appear in the script,
+so a reference must appear after the query defining it. For
+an inner join this order is forced by the references
+themselves, but for a cross product it determines the order
+of the results and, combined with `limit`, which results are
+produced at all.
 
 
 ### Aggregation
