@@ -1323,7 +1323,7 @@ is alive).
 
 ### Indirection
 
-Indirection queries are similar to SQL joins; they associate
+Indirection is similar to SQL foreign keys; they associate
 different key-spaces via some shared data element. In
 FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
@@ -1331,7 +1331,7 @@ each person.
 
 ```fql {.schema}
 /people(
-  <int>, % ID
+  <int>, % Person ID
   <str>, % First Name
   <str>, % Last Name
   <int>, % Age
@@ -1340,14 +1340,27 @@ each person.
 
 If we wanted to read all records containing the last name
 "Johnson" we'd have to perform a linear search across the
-entire "people" directory. To avoid this, we can store an
-index for last names in a separate directory.
+entire "people" directory.
+
+```fql {.query}
+/people(<>,<>,"Johnson",<>)
+```
+
+```fql {.result}
+/people(23,"Lenny","Johnson",22)=nil
+/people(348,"Roger","Johnson",54)=nil
+/people(2003,"Larry","Johnson",8)=nil
+```
+
+As mentioned earlier, these kinds of filtering queries can
+be expensive. Many of the key-value streamed to the client
+may be filtered out. To avoid wasting bandwidth, we can
+store an index for last names in a separate directory.
 
 ```fql {.schema}
-% Index for last names
 /people/last-name(
   <str>, % Last Name
-  <int>, % ID
+  <int>, % Person ID
 )=nil
 ```
 
@@ -1364,9 +1377,25 @@ containing the last name "Johnson".
 /people/last-name("Johnson",2003)=nil
 ```
 
+Once we have these IDs, we'll need to query the `/people`
+directory with each ID to obtain our final results.
+
+```fql {.query}
+/people(23,...)
+/people(348,...)
+/people(2003,...)
+```
+
+```fql {.result}
+/people(23,"Lenny","Johnson",22)=nil
+/people(348,"Roger","Johnson",54)=nil
+/people(2003,"Larry","Johnson",8)=nil
+```
+
 FQL can forward the observed values of named variables from
-one query to the next. We can use this to obtain our desired
-subset from the "people" directory.
+one query to the next, simplifying indirection reads. In the
+example below, FQL executes the second query multiple times,
+once for each of the IDs returned by the first query.
 
 ```fql {.query}
 /people/last-name("Johnson",<id:int>)
@@ -1380,11 +1409,6 @@ subset from the "people" directory.
 ```
 
 #### Pipelines
-
-In the above example, notice that the results of the first
-query are not returned. Instead, they are used to build
-a collection of single key-value read queries whose results
-are the ones returned.
 
 A query which references a named variable forms a "pipeline"
 with the query defining the variable. Pipelines can be
