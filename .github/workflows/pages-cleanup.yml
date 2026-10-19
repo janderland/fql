@@ -1,0 +1,26 @@
+name: Remove Branch Docs
+
+# Removes the docs subdirectory of a branch when the
+# branch is deleted. GitHub runs this workflow from the
+# default branch, so it only takes effect once merged.
+
+on: delete
+
+permissions:
+  contents: write
+
+concurrency:
+  group: pages-cleanup-${{ github.event.ref }}
+
+jobs:
+  remove:
+    runs-on: ubuntu-latest
+    if: github.event.ref_type == 'branch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Remove docs
+        run: ./scripts/deploy_docs.sh --remove "$BRANCH"
+        env:
+          BRANCH: ${{ github.event.ref }}

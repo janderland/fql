@@ -80,6 +80,7 @@ Query syntax uses directories (`/path/to/dir`), tuples `("elem1", 2, 0xFF)`, and
 
 - Source file: `docs/index.md`
 - When modifying `docs/index.md`, run `./scripts/generate_docs.sh` to regenerate the HTML output
+- CI publishes the docs to the `gh-pages` branch via `./scripts/deploy_docs.sh`: `main` is served at `https://jander.land/` and every other branch at `https://jander.land/<branch>/` (characters other than `A-Za-z0-9._-` become `-`)
 
 ## Docker Environment
 
