@@ -1,0 +1,1807 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+  <title>FQL</title>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto|Merriweather" rel="stylesheet">
+  <link href="css/code.css" rel="stylesheet" >
+  <link href="css/style.css" rel="stylesheet"/>
+  <script src="js/highlight.js"></script>
+  <script src="js/fql.js"></script>
+  <script src="js/ebnf.js"></script>
+  <script src="js/python.js"></script>
+  <script src="js/sql.js"></script>
+  <script>
+    // Theme initialization - runs immediately to prevent flash
+    (function() {
+      function getPreferredTheme() {
+        const stored = localStorage.getItem('theme');
+        if (stored) return stored;
+        return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', getPreferredTheme());
+    })();
+  </script>
+</head>
+<body>
+  <div class="header-container">
+    <h1>FQL</h1>
+    <div class="header-icons">
+      <a href="https://github.com/janderland/fql" target="_blank" title="View on GitHub">
+        <img class="icon github-dark" src="img/github-dark.svg" alt="GitHub" />
+        <img class="icon github-light" src="img/github-light.svg" alt="GitHub" />
+      </a>
+      <a href="https://www.foundationdb.org/" target="_blank" title="FoundationDB">
+        <img class="icon fdb" src="img/fdb.svg" alt="FoundationDB" />
+      </a>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+    
+  <pre class="fql query"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
+/user(:userID,...)</code></pre>
+  <pre class="fql result"><code>/user(9323,&quot;Timothy&quot;,&quot;Johnson&quot;,37)=nil
+/user(24335,&quot;Andrew&quot;,&quot;Johnson&quot;,42)=nil
+/user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,0x0ffa83,42.2)=nil</code></pre>
+  <p>FQL is an <a href="https://github.com/janderland/fql">open
+  source</a> query language and alternative client API for <a
+  href="https://www.foundationdb.org/">FoundationDB</a>. Its semantics
+  mirror FoundationDB’s <a
+  href="https://apple.github.io/foundationdb/data-modeling.html">core
+  data model</a> while improving API ergonomics. Fundamental patterns
+  like range-reads and indirection are first class citizens.</p>
+  <!--toc:start-->
+  <ul>
+  <li><a href="#introduction">Introduction</a></li>
+  <li><a href="#syntax">Syntax</a>
+  <ul>
+  <li><a href="#overview">Overview</a></li>
+  <li><a href="#data-elements">Data Elements</a></li>
+  <li><a href="#names">Names</a></li>
+  <li><a href="#directories">Directories</a></li>
+  <li><a href="#schemas">Schemas</a>
+  <ul>
+  <li><a href="#holes">Holes</a></li>
+  <li><a href="#references">References</a></li>
+  </ul></li>
+  <li><a href="#space-comments">Space &amp; Comments</a></li>
+  <li><a href="#options">Options</a></li>
+  </ul></li>
+  <li><a href="#semantics">Semantics</a>
+  <ul>
+  <li><a href="#data-encoding">Data Encoding</a>
+  <ul>
+  <li><a href="#keys">Keys</a></li>
+  <li><a href="#values">Values</a></li>
+  <li><a href="#bytes">Bytes</a></li>
+  <li><a href="#empty">Empty</a></li>
+  <li><a href="#options-1">Options</a></li>
+  </ul></li>
+  <li><a href="#basic-queries">Basic Queries</a>
+  <ul>
+  <li><a href="#mutations">Mutations</a></li>
+  <li><a href="#reads">Reads</a></li>
+  <li><a href="#directories-1">Directories</a></li>
+  <li><a href="#filtering">Filtering</a></li>
+  <li><a href="#options-2">Options</a></li>
+  </ul></li>
+  <li><a href="#advanced-queries">Advanced Queries</a>
+  <ul>
+  <li><a href="#versionstamps">Versionstamps</a></li>
+  <li><a href="#indirection">Indirection</a>
+  <ul>
+  <li><a href="#pipelines">Pipelines</a></li>
+  <li><a href="#cardinality">Cardinality</a></li>
+  </ul></li>
+  <li><a href="#aggregation">Aggregation</a></li>
+  <li><a href="#virtual-key-values">Virtual Key-Values</a>
+  <ul>
+  <li><a href="#signatures">Signatures</a></li>
+  <li><a href="#effects">Effects</a></li>
+  <li><a href="#transaction-boundaries">Transaction Boundaries</a></li>
+  <li><a href="#standard-library">Standard Library</a></li>
+  </ul></li>
+  </ul></li>
+  </ul></li>
+  <li><a href="#implementations">Implementations</a>
+  <ul>
+  <li><a href="#connection">Connection</a></li>
+  <li><a href="#permissions">Permissions</a></li>
+  <li><a href="#extensions">Extensions</a></li>
+  <li><a href="#formatting">Formatting</a></li>
+  </ul></li>
+  <li><a href="#grammar">Grammar</a> <!--toc:end--></li>
+  </ul>
+  <h1 id="introduction">Introduction</h1>
+  <hr />
+  <p>FoundationDB provides the <em>foundations</em> of a fully-featured
+  ACID, distributed, key-value database. It implements solutions for the
+  hard problems related to distributed data sharding and replication.
+  Highly concurrent workflows are enabled via many small, lock-free
+  transactions. Key-values are stored in sorted order and large batches
+  of adjacent key-values can be efficiently streamed to clients.</p>
+  <p>Traditionally, client access is facilitated by a low level C
+  library with various language bindings. FQL is a <a
+  href="https://apple.github.io/foundationdb/layer-concept.html">layer</a>
+  atop this library, providing a query language and a higher-level
+  client API. FQL provides a generic way of describing and querying
+  FoundationDB data, facilitating schema documentation, client
+  implementation, and debugging.</p>
+  <p>This document serves as both a language specification and a usage
+  guide for FQL. The <a href="#syntax">Syntax</a> section describes the
+  structure of queries while the <a href="#semantics">Semantics</a>
+  section describes their behavior. The <a
+  href="#implementations">Implementations</a> section describes the Go
+  reference implementation and highlights details not dictated by the
+  specification. The complete <a href="#grammar">EBNF grammar</a>
+  appears at the end.</p>
+  <blockquote>
+  <p>❗ Not all features described in this document have been
+  implemented yet. See the project’s <a
+  href="https://github.com/janderland/fql/issues">issues</a> for a
+  roadmap of implementation plans.</p>
+  </blockquote>
+  <h1 id="syntax">Syntax</h1>
+  <hr />
+  <p>Throughout this section, relevant grammar rules are shown alongside
+  the text. These rules are written in extended Backus-Naur form as
+  defined in ISO/IEC 14977 with three modifications: concatenation is
+  implicit, rules terminate at a newline, and <code
+  class="hljs-variable">x{n}</code> means <code
+  class="hljs-variable">x</code> repeated exactly <code
+  class="hljs-variable">n</code> times.</p>
+  <h2 id="overview">Overview</h2>
+  <p>FQL is specified as a context-free <a href="#grammar">grammar</a>.
+  The queries resemble key-values encoded using the <a
+  href="https://apple.github.io/foundationdb/developer-guide.html#directories">directory</a>
+  and <a
+  href="https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples">tuple</a>
+  layers.</p>
+  <p>Directories are used to group sets of key-values. Often, though not
+  necessarily, the key-values of a particular directory will follow the
+  same schema. In this sense, they are analogous to SQL tables.</p>
+  <p>Tuples provide a way to encode primitive data types into byte
+  strings while preserving type information and natural ordering. For
+  instance, after being serialized and sorted, the tuple
+  <code>(22,"abc",false)</code> will appear before the tuple
+  <code>(23,"bcd",true)</code>.</p>
+  <pre class="ebnf grammar"><code>script = nl [ query { eol query } nl ]
+query = [ options eol ] ( keyval | key | dquery )
+dquery = directory [ &#39;=&#39; &#39;remove&#39; ]
+keyval = key &#39;=&#39; value
+key = directory tuple
+value = &#39;clear&#39; | data</code></pre>
+  <p>FQL’s top level construct is a script: a newline separated sequence
+  of queries. Most of this document discusses queries in isolation,
+  though queries within a script may pass data to each other via <a
+  href="#references">references</a>.</p>
+  <p>To the left of the <code>=</code> is the key which includes a
+  directory path and tuple. To the right is the value. For now, the
+  <code class="hljs-variable">options</code> prefixing the query can be
+  ignored. <a href="#options">Options</a> will be described later in the
+  document.</p>
+  <p>A query may be a full key-value, just a key, or just a directory
+  path. The contents of the query implies whether it’s reading or
+  writing data.</p>
+  <pre class="fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
+  <p>FQL queries may define a single key-value to be written, as shown
+  above, or may define a set of key-values to be read, as shown
+  below.</p>
+  <pre class="fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=&lt;int&gt;</code></pre>
+  <pre class="fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=4000</code></pre>
+  <p>The query above has the variable <code>&lt;int&gt;</code> as its
+  value. Variables act as placeholders for any of the supported <a
+  href="#data-elements">data elements</a>.</p>
+  <p>FQL queries may also perform <a
+  href="https://apple.github.io/foundationdb/developer-guide.html#range-reads">range
+  reads</a> and filtering by including one or more variables in the key.
+  The query below will return all key-values which conform to the schema
+  it defines.</p>
+  <pre class="fql query"><code>/my/directory(&lt;&gt;,&quot;tuple&quot;)=nil</code></pre>
+  <pre class="fql result"><code>/my/directory(&quot;your&quot;,&quot;tuple&quot;)=nil
+/my/directory(42,&quot;tuple&quot;)=nil</code></pre>
+  <p>Unlike the first variable we saw, the variable
+  <code>&lt;&gt;</code> in the query above lacks a type. This means the
+  schema allows any type of <a href="#data-elements">data element</a> at
+  the variable’s position.</p>
+  <p>All key-values with a certain key prefix may be range read by
+  ending the key’s tuple with <code>...</code>. Due to sorting,
+  key-values with a common prefix are stored adjacently and are
+  efficiently streamed to the client.</p>
+  <pre class="fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)=&lt;&gt;</code></pre>
+  <pre class="fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
+/my/directory(&quot;my&quot;,&quot;tuple&quot;,47.3)=0x8f3a
+/my/directory(&quot;my&quot;,&quot;tuple&quot;,false,0xff9a853c12)=nil</code></pre>
+  <p>A query’s value may be omitted to imply the variable
+  <code>&lt;&gt;</code>, meaning the following query is semantically
+  identical to the one above.</p>
+  <pre class="fql query"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;,...)</code></pre>
+  <pre class="fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
+/my/directory(&quot;my&quot;,&quot;tuple&quot;,47.3)=0x8f3a
+/my/directory(&quot;my&quot;,&quot;tuple&quot;,false,0xff9a853c12)=nil</code></pre>
+  <p>Key-values may be cleared by using the special <code>clear</code>
+  token as the value. If the schema matches multiple keys they will all
+  be cleared by the query.</p>
+  <pre class="fql query"><code>/my/directory(&quot;my&quot;,...)=clear </code></pre>
+  <p>Including a variable in the directory path tells FQL to perform the
+  read on all directory paths matching the schema.</p>
+  <pre class="fql query"><code>/&lt;&gt;/directory(&quot;my&quot;,&quot;tuple&quot;)</code></pre>
+  <pre class="fql result"><code>/my/directory(&quot;my&quot;,&quot;tuple&quot;)=0x0fa0
+/your/directory(&quot;my&quot;,&quot;tuple&quot;)=nil</code></pre>
+  <p>The directory path may end with the <code>...</code> token to
+  perform the read on all descendant directories.</p>
+  <pre class="fql query"><code>/your/...(...)</code></pre>
+  <pre class="fql result"><code>/your/directory(&quot;my&quot;,&quot;tuple&quot;)=nil
+/your/keyspace(&quot;the&quot;,&quot;tuple&quot;)=547
+/your/keyspace/subspace(&quot;tuple&quot;)=&quot;value&quot;</code></pre>
+  <p>The directory layer may be queried by only including a directory
+  path.</p>
+  <pre class="fql query"><code>/my/&lt;&gt;</code></pre>
+  <pre class="fql result"><code>/my/directory</code></pre>
+  <p>Directories are not explicitly created. During a write query, the
+  directory is created if it doesn’t exist. Directories, along with all
+  their contained key-values, may be explicitly removed by suffixing the
+  directory path with <code>=remove</code>.</p>
+  <pre class="fql query"><code>/my/directory=remove</code></pre>
+  <h2 id="data-elements">Data Elements</h2>
+  <p>An FQL query contains instances of data elements. These mirror the
+  types of elements found in the <a
+  href="https://github.com/apple/foundationdb/blob/main/design/tuple.md">tuple
+  layer</a>. This section describes how data elements behave in FQL,
+  while <a href="#data-encoding">element encoding</a> describes how FQL
+  encodes the elements before writing them to the DB.</p>
+  <div>
+  <table>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Type</th>
+  <th style="text-align: left;">Description</th>
+  <th style="text-align: left;">Examples</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>nil</code></td>
+  <td style="text-align: left;">Empty Type</td>
+  <td style="text-align: left;"><code>nil</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>bool</code></td>
+  <td style="text-align: left;">Boolean</td>
+  <td style="text-align: left;"><code>true</code>
+  <code>false</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>int</code></td>
+  <td style="text-align: left;">Signed Integer</td>
+  <td style="text-align: left;"><code>-14</code> <code>3033</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>num</code></td>
+  <td style="text-align: left;">Floating Point</td>
+  <td style="text-align: left;"><code>33.4</code>
+  <code>-3.2e5</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>str</code></td>
+  <td style="text-align: left;">Unicode String</td>
+  <td style="text-align: left;"><code>"happy😁"</code>
+  <code>"\"quoted\""</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>bytes</code></td>
+  <td style="text-align: left;">Byte String</td>
+  <td style="text-align: left;"><code>0xa2bff2438312aac032</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>uuid</code></td>
+  <td style="text-align: left;">UUID</td>
+  <td
+  style="text-align: left;"><code>5a5ebefd-2193-47e2-8def-f464fc698e31</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>vstamp</code></td>
+  <td style="text-align: left;">Version Stamp</td>
+  <td style="text-align: left;"><code>#:0000</code>
+  <code>#0102030405060708090a:0000</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>tup</code></td>
+  <td style="text-align: left;">Tuple</td>
+  <td style="text-align: left;"><code>("hello",27.4,nil)</code></td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <p>The <code>nil</code> type may only be instantiated as the element
+  <code>nil</code>.</p>
+  <pre class="ebnf grammar"><code>bool = &#39;true&#39; | &#39;false&#39;</code></pre>
+  <p>The <code>bool</code> type may be instantiated as <code>true</code>
+  or <code>false</code>.</p>
+  <pre class="ebnf grammar"><code>int = [ &#39;-&#39; ] digits
+digits = digit { digit }
+digit = &#39;0&#39; | ... | &#39;9&#39;</code></pre>
+  <p>The <code>int</code> type may be instantiated as any arbitrarily
+  large integer.</p>
+  <pre class="ebnf grammar"><code>num = int &#39;.&#39; digits
+    | ( int | int &#39;.&#39; digits ) &#39;e&#39; int 
+    | &#39;-inf&#39; | &#39;inf&#39; | &#39;-nan&#39; | &#39;nan&#39;</code></pre>
+  <p>The <code>num</code> type may be instantiated as any real number
+  which can be approximated by an <a
+  href="https://en.wikipedia.org/wiki/Extended_precision#x86_extended_precision_format">80-bit
+  floating point</a> value, in accordance with IEEE 754. Scientific
+  notation may be used. As expressed in the above specification, the
+  type may be instantiated as the tokens <code>-inf</code>,
+  <code>inf</code>, <code>-nan</code> or <code>nan</code>.</p>
+  <pre class="ebnf grammar"><code>string = &#39;&quot;&#39; { char | escape } &#39;&quot;&#39;
+escape = ? A backslash followed by &#39;&quot;&#39;, &#39;\&#39;, &#39;n&#39;, &#39;r&#39;, or &#39;t&#39; ?
+char = ? Any printable UTF-8 character except &#39;&quot;&#39; and &#39;\&#39; ?</code></pre>
+  <p>The <code>str</code> type may be instantiated as a unicode string
+  wrapped in double quotes. Double quotes, backslashes, newlines,
+  carriage returns, and tabs are written as the backslash escapes
+  <code>\"</code>, <code>\\</code>, <code>\n</code>, <code>\r</code>,
+  and <code>\t</code>.</p>
+  <pre class="ebnf grammar"><code>uuid = hex{8} &#39;-&#39; hex{4} &#39;-&#39; hex{4} &#39;-&#39; hex{4} &#39;-&#39; hex{12}
+bytes = &#39;0x&#39; { hex{2} } 
+hex = digit | &#39;a&#39; | ... | &#39;f&#39; | &#39;A&#39; | ... | &#39;F&#39; </code></pre>
+  <p>The <code>uuid</code> and <code>bytes</code> types may be
+  instantiated using upper, lower, or mixed case hexadecimal numbers.
+  For <code>uuid</code>, the numbers must be grouped in the standard 8,
+  4, 4, 4, 12 format. For <code>bytes</code>, any even number of
+  hexadecimal digits must be prefixed by <code>0x</code>.</p>
+  <pre class="ebnf grammar"><code>vstamp = &#39;#&#39; [ hex{20} ] &#39;:&#39; hex{4}</code></pre>
+  <p>The <code>vstamp</code> type represents a FoundationDB <a
+  href="https://apple.github.io/foundationdb/data-modeling.html?highlight=versionstamp#versionstamps">versionstamp</a>
+  containing a 10-byte transaction version followed by a 2-byte user
+  version. These byte strings may be instantiated using upper, lower, or
+  mixed case hexadecimal digits. The transaction version may be omitted.
+  In this case the <code>vstamp</code> acts as a placeholder where
+  FoundationDB will write the actual transaction version upon commit
+  (see <a href="#versionstamps">versionstamps</a>).</p>
+  <pre class="ebnf grammar"><code>tuple = &#39;(&#39; [ nl elements [ &#39;,&#39; ] nl ] &#39;)&#39;
+elements = &#39;...&#39; | data [ &#39;,&#39; nl elements ]</code></pre>
+  <p>The <code>tup</code> type may contain any of the data elements,
+  including nested tuples. A trailing comma is allowed after the last
+  element. The last element may be the <code>...</code> token (see <a
+  href="#holes">holes</a>).</p>
+  <h2 id="names">Names</h2>
+  <p>Names are a syntax construct used throughout FQL. They are not a <a
+  href="#data-elements">data element</a> because they are
+  <em>usually</em> not serialized and written to the database. They are
+  used in many contexts including <a
+  href="#directories">directories</a>, <a href="#options">options</a>,
+  and <a href="#holes">variables</a>.</p>
+  <pre class="ebnf grammar"><code>name = ( letter | &#39;_&#39; ) { letter | digit | &#39;_&#39; | &#39;-&#39; | &#39;.&#39; }</code></pre>
+  <p>A name must start with a letter or underscore, followed by any
+  combination of letters, digits, underscores, dashes, or periods.</p>
+  <h2 id="directories">Directories</h2>
+  <p>Directories provide a way to organize key-values into hierarchical
+  namespaces. The <a
+  href="https://apple.github.io/foundationdb/developer-guide.html#directories">directory
+  layer</a> manages these namespaces and maps each directory path to a
+  short key prefix. Key-values in the same directory will have the same
+  key prefix, and therefore be adjacently stored.</p>
+  <pre class="ebnf grammar"><code>directory = ( &#39;/&#39; | &#39;@&#39; ) segments
+segments = &#39;...&#39; | segment [ &#39;/&#39; segments ]
+segment = &#39;&lt;&gt;&#39; | name | string</code></pre>
+  <p>A directory is specified as a sequence of strings, each prefixed by
+  a forward slash. If the string only contains characters allowed in a
+  <a href="#names">name</a>, the quotes may be excluded.</p>
+  <pre class="fql query"><code>/my/directory/path_way
+/another/&quot;d!r3ct0ry&quot;/&quot;\&quot;path\&quot;&quot;</code></pre>
+  <p>The empty variable <code>&lt;&gt;</code> may be used in a directory
+  path as a placeholder, allowing multiple directories to be queried at
+  once.</p>
+  <pre class="fql query"><code>/app/&lt;&gt;/index</code></pre>
+  <pre class="fql result"><code>/app/users/index
+/app/roles/index
+/app/actions/index</code></pre>
+  <p>A directory path may end with the <code>...</code> token, matching
+  every directory descending from the preceding path. Unlike
+  <code>&lt;&gt;</code>, which matches a single path segment,
+  <code>...</code> matches any number of segments, including none.</p>
+  <pre class="fql query"><code>/app/...</code></pre>
+  <pre class="fql result"><code>/app
+/app/users
+/app/users/index
+/app/roles/index</code></pre>
+  <h2 id="schemas">Schemas</h2>
+  <h3 id="holes">Holes</h3>
+  <p>Holes are used to define a key-value schema by acting as
+  placeholders for one or more data elements. There are two kinds of
+  holes: variables and the <code>...</code> token.</p>
+  <pre class="ebnf grammar"><code>variable = &#39;&lt;&#39; ( [ types ] | name &#39;:&#39; types ) &#39;&gt;&#39;
+types = type { &#39;|&#39; type }
+type = ( &#39;any&#39; | &#39;nil&#39; | &#39;tup&#39; | &#39;bool&#39; | &#39;int&#39; | &#39;num&#39;
+       | &#39;str&#39; | &#39;uuid&#39; | &#39;bytes&#39; | &#39;vstamp&#39; | agg ) [ options ]
+agg = &#39;count&#39; | &#39;sum&#39; | &#39;avg&#39; | &#39;min&#39; | &#39;max&#39; | &#39;append&#39;</code></pre>
+  <p>Variables are used to represent a single <a
+  href="#data-elements">data element</a>. They may optionally include a
+  unique <a href="#names">name</a> followed by their type. The variable
+  below is named “myVar” and acts as a placeholder for any integer
+  value.</p>
+  <pre class="fql"><code>&lt;myVar:int&gt;</code></pre>
+  <p>A variable may act as a placeholder for multiple types of elements
+  with the types separated by <code class="hljs-variable">|</code>. An
+  unnamed variable may omit its types entirely, meaning it represents
+  any type of element.</p>
+  <pre class="fql query"><code>/tree/node(&lt;int&gt;,&lt;int|nil&gt;,&lt;int|nil&gt;)=&lt;&gt;</code></pre>
+  <pre class="fql result"><code>/tree/node(5,12,14)=nil
+/tree/node(12,nil,nil)=&quot;payload&quot;
+/tree/node(14,nil,15)=0xa3127b
+/tree/node(15,nil,nil)=(42,96,nil)</code></pre>
+  <p>The <code>...</code> token represents any number of data elements
+  of any type. It is only allowed as the last element of a tuple.</p>
+  <pre class="fql query"><code>/app/queue(&quot;topic&quot;,...)</code></pre>
+  <pre class="fql result"><code>/app/queue(&quot;topic&quot;,54,&quot;process: 12643&quot;)
+/app/queue(&quot;topic&quot;,55,&quot;process: 12644&quot;)
+/app/queue(&quot;topic&quot;,56,&quot;process: 12648&quot;)
+/app/queue(&quot;topic&quot;,57,&quot;process: 12649&quot;)
+/app/queue(&quot;topic&quot;,58,&quot;done&quot;)</code></pre>
+  <h3 id="references">References</h3>
+  <pre class="ebnf grammar"><code>reference = &#39;:&#39; name</code></pre>
+  <p>References can use a variable’s name to pass previously read values
+  into a subsequent query, allowing for <a href="#indirection">index
+  indirection</a>. The reference is specified as the variable’s name
+  prefixed with a <code class="hljs-variable">:</code>.</p>
+  <pre class="fql query"><code>/user/index/surname(&quot;Johnson&quot;,&lt;userID:int&gt;)
+/user(:userID,...)</code></pre>
+  <pre class="fql result"><code>/user(9323,&quot;Timothy&quot;,&quot;Johnson&quot;,37,&quot;United States&quot;)=nil
+/user(24335,&quot;Andrew&quot;,&quot;Johnson&quot;,42,&quot;United States&quot;)=nil
+/user(33423,&quot;Ryan&quot;,&quot;Johnson&quot;,32,&quot;England&quot;)=nil</code></pre>
+  <p>Named variables must include at least one type. To allow a named
+  variable to match all element types, use the <code>any</code>
+  type.</p>
+  <pre class="fql query"><code>/store/hash(&lt;bytes&gt;,&lt;thing:any&gt;)</code></pre>
+  <pre class="fql result"><code>/store/hash(0x6dc88b,&quot;somewhere we have&quot;)=nil
+/store/hash(0x8b593b,523.8e90)=nil
+/store/hash(0x9ccf9d,&quot;I have yet to find&quot;)=nil
+/store/hash(0xcd53e8,ca03676e-1c59-4dd4-a7ea-36c90714c2b7)=nil
+/store/hash(0xda3924,0x96f70a30)=nil</code></pre>
+  <h2 id="space-comments">Space &amp; Comments</h2>
+  <pre class="ebnf grammar"><code>ws = { &#39; &#39; | &#39;\t&#39; }
+nl = { &#39; &#39; | &#39;\t&#39; | &#39;\n&#39; | &#39;\r&#39; | comment }
+eol = ws ( comment | &#39;\n&#39; ) nl
+comment = &#39;%&#39; { ? any character except &#39;\n&#39; ? } &#39;\n&#39;</code></pre>
+  <p>Whitespace and newlines are allowed within a tuple, between its
+  elements.</p>
+  <pre class="fql query"><code>/account/private(
+  &lt;int&gt;,
+  &lt;int&gt;,
+  &lt;str&gt;,
+)=&lt;int&gt;</code></pre>
+  <p>Comments start with a <code>%</code> and continue until the end of
+  the line. They may appear anywhere a newline may appear: between the
+  queries of a script, or within a tuple to document its elements.</p>
+  <pre class="fql"><code>% private account balances
+/account/private(
+  &lt;int&gt;,  % group ID
+  &lt;int&gt;,  % account ID
+  &lt;str&gt;,  % account name
+)=&lt;int&gt;   % balance in USD</code></pre>
+  <h2 id="options">Options</h2>
+  <p>Options modify the semantics of <a href="#data-elements">data
+  elements</a>, <a href="#holes">variables</a>, and <a
+  href="#basic-queries">queries</a>. They can instruct FQL to use
+  alternative encodings, limit a query’s result count, or change other
+  behaviors.</p>
+  <pre class="ebnf grammar"><code>options = &#39;[&#39; option { &#39;,&#39; option } &#39;]&#39;
+option = name [ &#39;:&#39; argument ]
+argument = name | int | string</code></pre>
+  <p>Options are specified as a comma separated list wrapped in
+  brackets. For instance, to specify that an <code>int</code> should be
+  encoded as a little-endian unsigned 8-bit integer, the following
+  options would be included after the element.</p>
+  <pre class="fql"><code>3548[u8]</code></pre>
+  <p>If a variable should only match against big-endian 32-bit floats
+  then the following options would be included after the
+  <code>num</code> type.</p>
+  <pre class="fql"><code>&lt;num[f32,be]&gt;</code></pre>
+  <p>Query options are specified on the line before the query. To
+  specify that a range-read query should read in reverse and only read 5
+  items, the following options would be included before the query.</p>
+  <pre class="fql query"><code>[reverse,limit:5]
+/my/integers(&lt;int&gt;)=nil</code></pre>
+  <p>Notice that the <code>limit</code> option includes a number after
+  the colon. Some options require a single argument to further specify
+  the option’s behavior. The argument may be an integer, a <a
+  href="#names">name</a>, or a string.</p>
+  <p>Details about the various options will be included in the sections
+  explaining the semantics which they modify.</p>
+  <h1 id="semantics">Semantics</h1>
+  <hr />
+  <p>Throughout this section, snippets of Python code are included
+  showcasing simplified implementations of FQL features using the
+  FoundationDB API. These snippets don’t include optimizations found in
+  the actual implementation like concurrency, batching, or caching.</p>
+  <h2 id="data-encoding">Data Encoding</h2>
+  <p>FoundationDB stores keys and values as simple byte strings leaving
+  the client responsible for encoding the data. FQL determines how to
+  encode <a href="#data-elements">data elements</a> based on their data
+  type, position within the query, and associated <a
+  href="#options">options</a>.</p>
+  <h3 id="keys">Keys</h3>
+  <p>Keys are <em>always</em> encoded using the <a
+  href="https://apple.github.io/foundationdb/developer-guide.html#directories">directory</a>
+  and <a
+  href="https://apple.github.io/foundationdb/data-modeling.html#data-modeling-tuples">tuple</a>
+  layers. All keys must include a directory prefix. Write queries create
+  directories if they do not exist.</p>
+  <pre class="fql query"><code>% Write a key-value
+/app/users(57223,&quot;Peter&quot;,&quot;Carson&quot;,56)=nil</code></pre>
+  <pre class="python equiv-py"><code>@fdb.transactional
+def write_user(tr):
+    # Open directory; create if doesn&#39;t exist
+    dir = fdb.directory.create_or_open(tr, (&#39;app&#39;, &#39;users&#39;))
+
+    # Pack the tuple and prepend the directory prefix
+    key = dir.pack((57223, &quot;Peter&quot;, &quot;Carson&quot;, 56))
+
+    # Encode the value
+    val = # ...
+
+    # Write the KV
+    tr[key] = val</code></pre>
+  <p>If a query reads from a directory which doesn’t exist, nothing is
+  returned. The tuple layer encodes metadata about element types,
+  allowing FQL to decode keys without a schema.</p>
+  <pre class="fql query"><code>% Read everything under the &#39;app&#39; directory
+/app/...(...)</code></pre>
+  <pre class="python equiv-py"><code>@fdb.transactional
+def read_all(tr):
+    # Open directory; exit if it doesn&#39;t exist
+    if not fdb.directory.exists(tr, (&#39;app&#39;,)):
+        return []
+    dir = fdb.directory.open(tr, (&#39;app&#39;,))
+
+    # Recursively read all directories
+    return do_read_all(tr, dir)
+
+
+def do_read_all(tr, dir):
+    # Grab all the key-values in this directory
+    results = []
+    for key, val in tr[dir.range()]:
+        # Get the full path of the directory
+        path = dir.get_path()
+
+        # Remove the directory prefix and unpack the tuple
+        tup = dir.unpack(key)
+
+        # Unpack the value
+        val = # ...
+
+        # Collect the key-values
+        results.append((path, tup, val))
+
+    # Recurse into child directories
+    for child_name in dir.list(tr):
+        child_dir = dir.open(tr, (child_name,))
+        results += do_read_all(tr, child_dir)
+
+    return results</code></pre>
+  <h3 id="values">Values</h3>
+  <p>By default, <a href="#data-elements">data element</a> values are
+  encoded as the lone member of a tuple. This preserves type metadata,
+  allowing the value to be decoded without a schema. <a
+  href="#data-elements">Data elements</a> which are not wrapped in a
+  tuple are called <em>raw values</em>. By default, two types are
+  written as raw values: <code>tup</code> and <code>bytes</code>.</p>
+  <p>Let’s start with a concrete example using the value
+  <code>42</code>. The implementation is probably as you’d expect.</p>
+  <pre class="fql query"><code>/people/age(&quot;jon&quot;,&quot;smith&quot;)=42</code></pre>
+  <pre class="python equiv-py"><code>@fdb.transactional
+def write_age(tr):
+    # Encode the key
+    key = # ...
+
+    # Pack the value as a tuple
+    val = fdb.tuple.pack((42,))
+
+    # Write the key-value
+    tr[key] = val</code></pre>
+  <p>Reading is a bit more complex. Below we’ll read the value using a
+  typeless variable <code>&lt;&gt;</code>.</p>
+  <pre class="fql query"><code>/people/age(&quot;jon&quot;,&quot;smith&quot;)=&lt;&gt;</code></pre>
+  <pre class="python equiv-py"><code>@fdb.transactional
+def read_age(tr):
+    # Encode the key
+    key = # ...
+
+    # Read the value&#39;s bytes
+    val_bytes = tr[key]
+
+    # Decode the value; for simplicity, this
+    # function returns only the value rather
+    # than the entire key-value
+    try:
+        val_tup = fdb.tuple.unpack(val_bytes)
+        if len(val_tup) == 1:
+            return val_tup[0]
+        else:
+            return val_tup
+    except ValueError:
+        return val_bytes</code></pre>
+  <p>FoundationDB does not provide an idiomatic value encoding format,
+  so the logic above serves as a sane default. Other value encoding <a
+  href="#options-1">formats</a> are supported, though they require
+  options specified during the read. For now, let’s isolate the default
+  decoding logic and rationalize it.</p>
+  <pre class="python equiv-py standalone"><code>def decode_value(val_bytes):
+    try:
+        # Assume the bytes are a tuple
+        # and attempt to unpack
+        val_tup = fdb.tuple.unpack(val_bytes)
+
+        # If the tuple only contains one
+        # element, unwrap the element
+        if len(val_tup) == 1:
+            return val_tup[0]
+
+        # If the tuple contains multiple
+        # elements, return the tuple
+        else:
+            return val_tup
+
+    # If the value isn&#39;t a tuple
+    # return the raw bytes
+    except ValueError:
+        return val_bytes</code></pre>
+  <p>Default decoding assumes the value is a tuple. As stated above,
+  lone <a href="#data-elements">data elements</a> are wrapped in a
+  tuple, so if the value tuple only contains a single element the
+  element is automatically unwrapped. If it’s not a tuple, then the
+  value is not decoded and simply returned as a byte string.</p>
+  <p>This logic can produce some ambiguities. For instance, the values
+  <code>42</code> and <code>(42)</code> produce identical bytes when
+  encoded. The way the value is returned depends on how it’s
+  queried.</p>
+  <pre class="fql query"><code>% write the key-value once
+/app/location(&quot;east bay&quot;)=87234
+
+% read without a tuple
+/app/location(&quot;east bay&quot;)=&lt;&gt;
+
+% read with a tuple
+/app/location(&quot;east bay&quot;)=(&lt;&gt;)</code></pre>
+  <pre class="fql result"><code>/app/location(&quot;east bay&quot;)=87234
+/app/location(&quot;east bay&quot;)=(87234)</code></pre>
+  <p>Furthermore, all values can be decoded as a byte string.
+  <code>bytes</code> is the fallback type for values and will always
+  succeed.</p>
+  <pre class="fql query"><code>/app/location(&quot;east bay&quot;)=&lt;bytes&gt;</code></pre>
+  <pre class="fql result"><code>% `(87234)` returned as bytes
+/app/location(&quot;east bay&quot;)=0x170154c2</code></pre>
+  <h3 id="bytes">Bytes</h3>
+  <p>When storing a byte string as a value, you should avoid wrapping it
+  in a tuple. Byte strings are the fundamental form of data in
+  FoundationDB. Using byte strings tells FQL to skip the
+  encoding/decoding process. Wrapping a byte string in a tuple adds
+  useless type metadata in most cases.</p>
+  <p>Furthermore, a wrapped byte string breaks one of FQL’s invariants:
+  Read query results can be used as write queries to rewrite the
+  key-values which were read.</p>
+  <p>As a single element, the byte string will be unwrapped when read.
+  If the result is used as a write, the default encoding writes it as a
+  raw value, not a wrapped one.</p>
+  <h3 id="empty">Empty</h3>
+  <p>Within a tuple, <code>nil</code>, empty bytes <code>0x</code>, and
+  empty nested tuples <code>()</code> are encoded with their types
+  preserved. As a value, all three collapse to an empty byte string. A
+  typeless variable decodes an empty byte string as
+  <code>nil</code>.</p>
+  <pre class="fql query"><code>/globals/selection(&quot;object&quot;)=0x
+/globals/selection(&quot;item&quot;)=nil
+/globals/selection(&quot;text&quot;)=()
+
+/globals/selection(...)=&lt;&gt;</code></pre>
+  <pre class="fql result"><code>/globals/selection(&quot;object&quot;)=nil
+/globals/selection(&quot;item&quot;)=nil
+/globals/selection(&quot;text&quot;)=nil</code></pre>
+  <p>If the tuple of a key contains no elements, it’s encoded as an
+  empty byte string. This allows queries to use keys that are simply a
+  directory prefix.</p>
+  <pre class="fql query"><code>/globals/next-id()=37534</code></pre>
+  <pre class="python equiv-py"><code>@fdb.transactional
+def set_next_id(tr):
+    # Open directory; create if doesn&#39;t exist
+    dir = fdb.directory.create_or_open(tr, (&#39;globals&#39;, &#39;next-id&#39;))
+
+    # Use directory prefix as the key
+    key = dir.key()
+
+    # Encode the value
+    val = # ...
+
+    # Write key-value
+    tr[key] = val</code></pre>
+  <h3 id="options-1">Options</h3>
+  <p>Options can override the default value encoding, producing raw
+  values with additional control over byte-level representation. The
+  table below shows <a href="#options">options</a> which change how the
+  <code>int</code> and <code>num</code> types are encoded.</p>
+  <blockquote>
+  <p>❗ Encoding options only affect values not wrapped by a tuple.
+  Within tuples, as a key or value, these options are not supported.</p>
+  </blockquote>
+  <div>
+  <table>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Option</th>
+  <th style="text-align: left;">Argument</th>
+  <th style="text-align: left;">Description</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>width</code></td>
+  <td style="text-align: left;"><code>int</code></td>
+  <td style="text-align: left;">Bit width: <code>8</code>,
+  <code>16</code>, <code>32</code>, <code>64</code>,
+  <code>80</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>bigendian</code></td>
+  <td style="text-align: left;">none</td>
+  <td style="text-align: left;">Use big endian encoding</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>unsigned</code></td>
+  <td style="text-align: left;">none</td>
+  <td style="text-align: left;">Use unsigned encoding</td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <p><code>int</code> may use the widths <code>8</code>,
+  <code>16</code>, <code>32</code>, and <code>64</code>, while
+  <code>num</code> may use <code>32</code>, <code>64</code>, and
+  <code>80</code>. When the width option is present, values default to
+  little endian encoding. The <code>bigendian</code> option can override
+  this.</p>
+  <pre class="fql query"><code>/globals/next-id()=37534[width:64,bigendian]</code></pre>
+  <pre class="python equiv-py"><code>@fdb.transactional
+def set_next_id(tr):
+    # Encode the key
+    key = # ...
+
+    # Encode the value as a big-endian, 64-bit, signed int
+    val = struct.pack(&#39;&gt;q&#39;, 37534)
+
+    # Write the key-value
+    tr[key] = val</code></pre>
+  <p>Because raw values carry no type metadata, read queries must
+  specify the same encoding options that were used during the write.
+  Otherwise, the value will not match the schema. The resultant
+  key-value includes the encoding options.</p>
+  <pre class="fql query"><code>% write
+/globals/next-id()=37534[i64,be]
+
+% read
+/globals/next-id()=&lt;int[i64,be]&gt;</code></pre>
+  <pre class="fql result"><code>/globals/next-id()=37534[i64,be]</code></pre>
+  <p>FQL provides aliases for the <code>int</code> and <code>num</code>
+  encoding options to decrease their verbosity. For instance,
+  <code>[width:64,bigendian]</code> can be written as
+  <code>[i64,be]</code>. The table below lists the available aliases for
+  <code>int</code> and <code>num</code> options.</p>
+  <div>
+  <table>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Int Alias</th>
+  <th style="text-align: left;">Num Alias</th>
+  <th style="text-align: left;">Actual Options</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>be</code></td>
+  <td style="text-align: left;"><code>be</code></td>
+  <td style="text-align: left;"><code>bigendian</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i8</code></td>
+  <td style="text-align: left;"><code>-</code></td>
+  <td style="text-align: left;"><code>width:8</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i16</code></td>
+  <td style="text-align: left;"><code>-</code></td>
+  <td style="text-align: left;"><code>width:16</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i32</code></td>
+  <td style="text-align: left;"><code>f32</code></td>
+  <td style="text-align: left;"><code>width:32</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>i64</code></td>
+  <td style="text-align: left;"><code>f64</code></td>
+  <td style="text-align: left;"><code>width:64</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>-</code></td>
+  <td style="text-align: left;"><code>f80</code></td>
+  <td style="text-align: left;"><code>width:80</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u8</code></td>
+  <td style="text-align: left;"><code>-</code></td>
+  <td style="text-align: left;"><code>unsigned,width:8</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u16</code></td>
+  <td style="text-align: left;"><code>-</code></td>
+  <td style="text-align: left;"><code>unsigned,width:16</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u32</code></td>
+  <td style="text-align: left;"><code>-</code></td>
+  <td style="text-align: left;"><code>unsigned,width:32</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>u64</code></td>
+  <td style="text-align: left;"><code>-</code></td>
+  <td style="text-align: left;"><code>unsigned,width:64</code></td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <p>The <code>str</code>, <code>uuid</code>, and <code>vstamp</code>
+  types support the <code>raw</code> option, which writes their bytes
+  as-is, producing a raw value.</p>
+  <pre class="fql query"><code>% write raw UUID
+/tag_code(&quot;food&quot;)=77542869-5708-4af9-821e-d65354fb1a12[raw]
+
+% read as bytes
+/tag_code(&quot;food&quot;)=&lt;bytes&gt;</code></pre>
+  <pre class="fql result"><code>/tag_code(&quot;food&quot;)=0x7754286957084af9821ed65354fb1a12</code></pre>
+  <h2 id="basic-queries">Basic Queries</h2>
+  <p>FQL queries may write a single key-value, read/clear one or more
+  key-values, or list/remove directories. As stated earlier, all queries
+  resemble key-values, and the tokens within said key-values imply which
+  of the above operations are executed.</p>
+  <h3 id="mutations">Mutations</h3>
+  <p>Queries lacking <a href="#holes">holes</a> perform writes on the
+  database. You can think of these queries as declaring the existence of
+  a particular key-value. If the key’s directory does not exist, it is
+  created.</p>
+  <blockquote>
+  <p>❗ Queries lacking a value altogether imply an empty <a
+  href="#holes">variable</a> <code>&lt;&gt;</code> as the value and
+  should not be confused with write queries.</p>
+  </blockquote>
+  <pre class="fql query"><code>% Write queries
+/people(293800,&quot;farmer&quot;,nil)=nil
+/people(293801,37,&quot;last year&quot;)=(12,23,0xff)
+/people(293802,&quot;warrior&quot;,&quot;&quot;)=true</code></pre>
+  <p>Queries having the token <code>clear</code> as their value delete
+  one or more key-values. These queries may have <a
+  href="#holes">holes</a> in their key. If so, all the key-values with a
+  key matching the schema are deleted. Clear queries never remove
+  directories, even if all the directory’s key-values are cleared.</p>
+  <pre class="fql query"><code>% Clear a single key-value
+/people(293800,&quot;farmer&quot;,nil)=clear
+
+% Clear many key-values
+/people(293801,&lt;&gt;,&quot;last year&quot;)=clear
+
+% Clear many key-values
+/people(293802,...)=clear</code></pre>
+  <p>For more details on how a key is matched to a schema, see the <a
+  href="#filtering">filtering</a> section below. Both read and clear
+  queries follow the same rules when choosing which key-values to
+  operate on.</p>
+  <h3 id="reads">Reads</h3>
+  <p>Queries containing <a href="#holes">holes</a> (and lacking the
+  <code>clear</code> token) read one or more key-values. You can think
+  of these queries as declaring a key-value schema. All key-values
+  matching the schema are returned by the query. The resultant
+  key-values are usually the inverse of the read query; they would write
+  the key-values being read.</p>
+  <blockquote>
+  <p>❗ There are several situations where the key-values returned by a
+  read will not perfectly reproduce the data if used as a write:</p>
+  <ul>
+  <li><p><a href="#formatting">Formatting</a> allows FQL to transform
+  the returned key-values into any text format, including non-query
+  strings.</p></li>
+  <li><p><a href="#aggregation">Aggregation</a> queries return
+  key-values representing a summary of many key-values and are not valid
+  write queries.</p></li>
+  <li><p>Values with <a href="#bytes">wrapped byte strings</a>.</p></li>
+  </ul>
+  </blockquote>
+  <p>If the holes only appear in the value, then at most a single
+  key-value is returned. If holes appear in the key (and optionally, the
+  value) then any number of key-values may be returned.</p>
+  <pre class="fql query"><code>% Read a single key-value
+/people(293801,37,&quot;last year&quot;)=&lt;tup&gt;
+
+% Read a single key-value; the lack of
+% a value implies a typeless variable `&lt;&gt;`
+/people(293800,&quot;farmer&quot;,nil)
+
+% Read multiple key-values
+/people(293802,...)=&lt;&gt;
+
+% Read multiple key-values; the lack of
+% a value implies a typeless variable `&lt;&gt;`
+/people(293801,&lt;int&gt;,&lt;str&gt;)</code></pre>
+  <h3 id="directories-1">Directories</h3>
+  <p>Directories may be listed by using a lone directory as a query.
+  These kinds of queries are read-only. If the directory path contains
+  no <a href="#holes">holes</a>, the query will simply list that single
+  directory, if it exists.</p>
+  <p>A directory can be removed by appending <code>=remove</code> to the
+  directory query. If multiple directories match the schema, they will
+  all be removed.</p>
+  <pre class="fql query"><code>% Check if a single directory exists
+/people/name
+
+% List all subdirectories
+/people/&lt;&gt;
+
+% Remove a single directory
+/people/name=remove
+
+% Remove many directories
+/people/&lt;&gt;=remove</code></pre>
+  <h3 id="filtering">Filtering</h3>
+  <p>During a read query or a clear query with a <a
+  href="#holes">hole</a>, FQL scans a subset of the key-values in the
+  directories matching the schema. If a key-value is encountered which
+  doesn’t match the query’s schema it is ignored.</p>
+  <p>Including the <code>strict</code> <a href="#options-2">option</a>
+  causes the query to fail when encountering a nonconformant key-value.
+  This will verify that all the key-values within a directory have the
+  same schema.</p>
+  <blockquote>
+  <p>❗ As outlined in the <a href="#values">data encoding</a> section,
+  there is a degree of type ambiguity regarding values. Most <a
+  href="#data-elements">data elements</a> will match the
+  <code>tup</code> type because they are wrapped, and all will match the
+  <code>bytes</code> type.</p>
+  </blockquote>
+  <p>Filtering is performed on the client side and the query may stream
+  a lot of data to the client while filtering most of it away. For
+  example, consider the following query:</p>
+  <pre class="fql query"><code>/people(3392,&lt;int&gt;,&lt;int&gt;)</code></pre>
+  <p>In the key, the location of the first <a href="#holes">hole</a>
+  determines the range read prefix used by FQL. For this particular
+  query, the prefix would be as follows:</p>
+  <pre class="fql query"><code>/people(3392)</code></pre>
+  <p>FoundationDB will stream all key-values with this prefix to the
+  client. As they are received, FQL will filter out key-values which
+  don’t match the remaining portion of the schema. <strong>This may be
+  most of the data.</strong> Keys with tuples like
+  <code>(3392,"hi",254)</code> and <code>(3392,7324,"wow")</code> will
+  use up bandwidth and be decoded and then thrown away.</p>
+  <p>Ideally, filter queries are only used on small amounts of data.
+  It’s important to have a general idea of what a directory contains to
+  avoid wasting bandwidth and CPU time.</p>
+  <p>Filtering logic can become fairly complex. Let’s add some extra
+  specifications to the query above. Although this query isn’t
+  practical, it will showcase how FQL approaches filtering when multiple
+  <a href="#holes">holes</a> are present.</p>
+  <pre class="fql query"><code>/people(3392,&lt;str|int&gt;,&lt;&gt;)=(&lt;int&gt;,...)</code></pre>
+  <pre class="python equiv-py"><code>@fdb.transactional
+def filter_range(tr):
+    # Open the directory; return nothing if it doesn&#39;t exist
+    if not fdb.directory.exists(tr, (&#39;people&#39;,)):
+        return []
+    dir = fdb.directory.open(tr, (&#39;people&#39;,))
+
+    # Range read everything under the prefix of the query
+    range_result = tr[dir.range((3392,))]
+
+    results = []
+    for key, val in range_result:
+        key_tup = dir.unpack(key)
+
+        # Our query specifies a key-tuple with 3 elements
+        if len(key_tup) != 3:
+            continue
+
+        # The 2nd element must be either a string or an int
+        if not isinstance(key_tup[1], (str, int)):
+            continue
+
+        # The query tells us the value must be a packed tuple
+        try:
+            val_tup = fdb.tuple.unpack(val)
+        except ValueError:
+            continue
+
+        # The value-tuple must have one or more elements
+        if len(val_tup) == 0:
+            continue
+
+        # The first element of the value-tuple must be an int
+        if not isinstance(val_tup[0], int):
+            continue
+
+        # If we made it past all the above guards, add the
+        # key-value to our result set
+        results.append((dir.get_path(), tup, val_tup))
+
+    return results</code></pre>
+  <h3 id="options-2">Options</h3>
+  <p>Queries have several options which modify their default behavior.
+  As explained in the <a href="#syntax">syntax</a> section, query
+  options are declared on the line immediately before the query.</p>
+  <pre class="fql query"><code>[limit:5]
+/my/dir(...)</code></pre>
+  <p>The query options are listed below.</p>
+  <div>
+  <table>
+  <colgroup>
+  <col style="width: 12%" />
+  <col style="width: 9%" />
+  <col style="width: 78%" />
+  </colgroup>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Query Option</th>
+  <th style="text-align: left;">Argument</th>
+  <th style="text-align: left;">Description</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>reverse</code></td>
+  <td style="text-align: left;">none</td>
+  <td style="text-align: left;">Range read in reverse order</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>limit</code></td>
+  <td style="text-align: left;"><code>int</code></td>
+  <td style="text-align: left;">Maximum number of results</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>mode</code></td>
+  <td style="text-align: left;">name</td>
+  <td style="text-align: left;">Range read mode: <code>wantall</code>,
+  <code>iterator</code>, <code>exact</code>, <code>small</code>,
+  <code>medium</code>, <code>large</code>, <code>serial</code></td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>snapshot</code></td>
+  <td style="text-align: left;">none</td>
+  <td style="text-align: left;">Use snapshot reads</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>strict</code></td>
+  <td style="text-align: left;">none</td>
+  <td style="text-align: left;">Error when a read key-values doesn’t
+  conform to the schema</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>return</code></td>
+  <td style="text-align: left;">none</td>
+  <td style="text-align: left;">Include this query’s key-values in the
+  output (see <a href="#pipelines">pipelines</a>)</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>default</code></td>
+  <td style="text-align: left;">none</td>
+  <td style="text-align: left;">Return a key-value when an <a
+  href="#aggregation">aggregation</a> matches nothing</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>join</code></td>
+  <td style="text-align: left;">name</td>
+  <td style="text-align: left;">How unrelated references combine:
+  <code>cross</code> (see <a href="#cardinality">cardinality</a>)</td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <p>Range-read queries support all the options listed above, though
+  <code>default</code> is only meaningful for <a
+  href="#aggregation">aggregation</a> queries. Single-read queries
+  support <code>snapshot</code> and <code>strict</code>. Clear queries
+  support <code>strict</code>.</p>
+  <p>With the <code>strict</code> option, the entire transaction is
+  aborted if FQL encounters a key-value which doesn’t conform to the
+  query’s schema.</p>
+  <h2 id="advanced-queries">Advanced Queries</h2>
+  <p>FQL queries can do more than basic CRUD operations, including
+  things like unique ID generation, joins across keyspaces, and
+  aggregation.</p>
+  <h3 id="versionstamps">Versionstamps</h3>
+  <p>Versionstamps are monotonically increasing numbers which are
+  associated with a particular commit. They are unique for a given
+  FoundationDB cluster and remain unique for the cluster’s lifetime. All
+  reads are performed against a particular versionstamp which specifies
+  the version of the data which the read observes. Upon commit, every
+  transaction is assigned a versionstamp by the DB.</p>
+  <p>As stated in the <a href="#data-elements">data elements</a>
+  section, a <code>vstamp</code> is composed of two components: the
+  transaction version prefixed by <code>#</code> and the user version
+  prefixed by <code>:</code>. The user version is 2 bytes chosen by the
+  client and appended to the transaction version. This allows for up to
+  65k unique <code>vstamp</code> to be created within a single
+  transaction.</p>
+  <p>A <code>vstamp</code> lacking a transaction version is called an
+  “incomplete” <code>vstamp</code>. They are only allowed in write
+  queries and only one is allowed per query. Upon commit, the
+  transaction’s 10-byte version is written to the first 10-bytes of the
+  <code>vstamp</code>. The <code>@commit()</code> appearing below ends
+  the current transaction and is explained under <a
+  href="#virtual-key-values">virtual key-values</a>.</p>
+  <pre class="fql query"><code>% Write two versionstamps with the
+% user versions `#ff00` and `#00cd`.
+/app/queue(#:ff00)=&quot;jason&quot;
+/app/heartbeat(&quot;jason&quot;)=#:00cd
+
+% Upon commit, FoundationDB populates
+% the transaction version portion of
+% the versionstamps.
+@commit()
+
+% Read the full versionstamps from the DB.
+/app/queue(&lt;index:vstamp&gt;)
+/app/heartbeat(...)=&lt;heartbeat:vstamp&gt;</code></pre>
+  <pre class="fql result"><code>/app/queue(#8e9ddaa52e44733526e2:ff00)=&quot;jason&quot;
+/app/heartbeat(&quot;jason&quot;)=#8e9ddaa52e44733526e3:00cd</code></pre>
+  <p><code>vstamp</code> elements are monotonically increasing and
+  unique for the lifetime of a particular database. They may be used as
+  identifiers, non-contiguous indexes, or even as heartbeats (check if a
+  <code>vstamp</code> changed to know if the actor is alive).</p>
+  <h3 id="indirection">Indirection</h3>
+  <p>Indirection queries are similar to SQL joins; they associate
+  different key-spaces via some shared data element. In FoundationDB,
+  indexes are implemented using indirection. Suppose we have a large
+  list of people, one key-value for each person.</p>
+  <pre class="fql schema"><code>/people(
+  &lt;int&gt;, % ID
+  &lt;str&gt;, % First Name
+  &lt;str&gt;, % Last Name
+  &lt;int&gt;, % Age
+)=nil</code></pre>
+  <p>If we wanted to read all records containing the last name “Johnson”
+  we’d have to perform a linear search across the entire “people”
+  directory. To avoid this, we can store an index for last names in a
+  separate directory.</p>
+  <pre class="fql schema"><code>% Index for last names
+/people/last-name(
+  &lt;str&gt;, % Last Name
+  &lt;int&gt;, % ID
+)=nil</code></pre>
+  <p>If we query the index, we can get the IDs of the records containing
+  the last name “Johnson”.</p>
+  <pre class="fql query"><code>/people/last-name(&quot;Johnson&quot;,&lt;int&gt;)</code></pre>
+  <pre class="fql result"><code>/people/last-name(&quot;Johnson&quot;,23)=nil
+/people/last-name(&quot;Johnson&quot;,348)=nil
+/people/last-name(&quot;Johnson&quot;,2003)=nil</code></pre>
+  <p>FQL can forward the observed values of named variables from one
+  query to the next. We can use this to obtain our desired subset from
+  the “people” directory.</p>
+  <pre class="fql query"><code>/people/last-name(&quot;Johnson&quot;,&lt;id:int&gt;)
+/people(:id,...)</code></pre>
+  <pre class="fql result"><code>/people(23,&quot;Lenny&quot;,&quot;Johnson&quot;,22)=nil
+/people(348,&quot;Roger&quot;,&quot;Johnson&quot;,54)=nil
+/people(2003,&quot;Larry&quot;,&quot;Johnson&quot;,8)=nil</code></pre>
+  <h4 id="pipelines">Pipelines</h4>
+  <p>In the above example, notice that the results of the first query
+  are not returned. Instead, they are used to build a collection of
+  single key-value read queries whose results are the ones returned.</p>
+  <p>A query which references a named variable forms a “pipeline” with
+  the query defining the variable. Pipelines can be several queries
+  deep. Each leaf query forms a unique pipeline. A leaf query is a query
+  which doesn’t define any variables referenced by another query.</p>
+  <pre class="fql query"><code>% A query which obtains the ID(s) for &quot;Dave Rogers&quot;
+% and branches off into two pipelines.
+/people/name(&quot;Dave Rogers&quot;,&lt;personID:vstamp&gt;)
+
+% These three queries (plus the one above) form a pipeline
+% which finds the names of all other people the same age
+% as &quot;Dave Rogers&quot;.
+/people(:personID,&lt;&gt;,&lt;age:int&gt;,...)
+/people/age(:age,&lt;otherPersonID:vstamp&gt;)
+/people(:otherPersonID,...)
+
+% This query (plus the first one above) forms another
+% pipeline. Find Dave Rogers&#39;s car&#39;s VIN.
+/cars/owner(:personID,&lt;carID:vstamp&gt;)
+/cars(:carID,&lt;&gt;,&lt;&gt;,&lt;&gt;,&lt;vin:int&gt;,...)</code></pre>
+  <p>Pipelines can be several queries deep. By default, only the leaf
+  query of each pipeline produces output. This can be overridden by
+  using the <code>[return]</code> option to force a query’s key-values
+  to be included in the returned set.</p>
+  <h4 id="cardinality">Cardinality</h4>
+  <p>A query may reference variables from multiple queries, and the
+  referenced queries may have different cardinalities. FQL resolves this
+  by nesting: a query is invoked once for every combination of values
+  bound by the queries it depends on.</p>
+  <p>For instance, consider the following pipeline.</p>
+  <pre class="fql query"><code>% Obtain a list of parents from all families.
+/families/parents(&lt;parentID:int&gt;,...)
+
+% For each parent, read their children.
+/families/children/parent(:parentID,&lt;childID:int&gt;)
+
+% Schedule a counseling session with each child-parent
+% pair. The versionstamp at the start of the tuple
+% is just for ordering.
+/schedule/counseling(#:0000,:parentID,:childID)=nil</code></pre>
+  <p>The second query may return multiple key-values for each parent ID,
+  because parents may have multiple children. The third query is invoked
+  once for each parent-child pair. If parent ID <code>5</code> is
+  associated with child IDs <code>10</code>, <code>11</code>, and
+  <code>12</code>, then the third query is invoked for the pairs
+  <code>(5,10)</code>, <code>(5,11)</code>, and <code>(5,12)</code>.</p>
+  <p>Notice that the second query references <code>:parentID</code>
+  within its own key. The reference constrains the children being read
+  to those of the current parent, making this pipeline equivalent to an
+  inner join. Below is how the above pipeline may look in an SQL
+  database.</p>
+  <pre class="sql"><code>INSERT INTO
+  schedule (event, client1, client2)
+SELECT
+  &#39;counseling&#39;, p.id, c.id
+FROM
+  parent p
+  JOIN child c ON c.parent_id = p.id;</code></pre>
+  <p>Query <a href="#options-2">options</a> apply to each invocation of
+  a query rather than to the pipeline as a whole. For instance, let’s
+  add a limit and order to the query reading the child IDs.</p>
+  <pre class="fql query"><code>% Given we store child IDs ordered by age, for each parent
+% read only their youngest child.
+[reverse,limit:1]
+/families/children/parent(:parentID,&lt;childID:int&gt;)</code></pre>
+  <p>If the other queries are unchanged, the third query will only be
+  called once per parent ID. The limit selects one child from each
+  parent’s children rather than one child overall. You could achieve
+  similar behavior with the following SQL query.</p>
+  <pre class="sql"><code>SELECT
+  p.id, c.id
+FROM
+  parent p
+  CROSS JOIN LATERAL (
+   SELECT id FROM child
+   WHERE parent_id = p.id
+   ORDER BY age ASC
+   LIMIT 1
+  ) c;</code></pre>
+  <p>The nested queries need not reference each other. When two queries
+  in a pipeline are unrelated, neither referencing the other directly or
+  transitively, the nesting still occurs and produces every combination
+  of their values: a cross product.</p>
+  <pre class="fql query"><code>% Obtain a list of parents.
+/families/parents(&lt;parentID:int&gt;,...)
+
+% Obtain a list of tutors. This query doesn&#39;t reference
+% `:parentID`, so it reads the same tutors for each parent.
+/schools/tutors(&lt;tutorID:int&gt;,...)
+
+% Schedule a meeting for every parent-tutor pair.
+[join:cross]
+/schedule/meeting(#:0000,:parentID,:tutorID)=nil</code></pre>
+  <p>Because a cross product is rarely intended, FQL fails when a query
+  references unrelated queries unless the <code>join</code> option is
+  present. The option is declared on the query performing the join, so a
+  query’s cardinality can be determined without reading the rest of the
+  pipeline.</p>
+  <pre class="sql"><code>INSERT INTO
+  schedule (event, client1, client2)
+SELECT
+  &#39;meeting&#39;, p.id, t.id
+FROM
+  parent p
+  CROSS JOIN tutor t;</code></pre>
+  <p>Queries are nested in the order they appear in the script, so a
+  reference must appear after the query defining it. For an inner join
+  this order is forced by the references themselves, but for a cross
+  product it determines the order of the results and, combined with
+  <code>limit</code>, which results are produced at all.</p>
+  <h3 id="aggregation">Aggregation</h3>
+  <p>Aggregation queries combine multiple key-values into a single
+  key-value. FQL provides pseudo data types for performing aggregation,
+  similar to SQL’s <a
+  href="https://en.wikipedia.org/wiki/Aggregate_function">aggregate
+  functions</a>.</p>
+  <p>Suppose we are storing value deltas. If we range-read the keyspace
+  we end up with a list of integer values.</p>
+  <pre class="fql query"><code>/deltas(&quot;group A&quot;,&lt;int&gt;)</code></pre>
+  <pre class="fql result"><code>/deltas(&quot;group A&quot;,20)=nil
+/deltas(&quot;group A&quot;,-18)=nil
+/deltas(&quot;group A&quot;,3)=nil</code></pre>
+  <p>Instead, we can use the pseudo type <code>sum</code> in our
+  variable to automatically sum up the deltas into the actual value.</p>
+  <pre class="fql query"><code>/deltas(&quot;group A&quot;,&lt;sum&gt;)</code></pre>
+  <pre class="fql result"><code>/deltas(&quot;group A&quot;,5)=nil</code></pre>
+  <p>An aggregation query may also contain ordinary <a
+  href="#holes">holes</a>. Such a hole enumerates the distinct values
+  found at its position, and the query is invoked once for each of them.
+  This groups the aggregation, much like SQL’s <code>GROUP BY</code>
+  clause.</p>
+  <pre class="fql query"><code>/deltas(&lt;group:str&gt;,&lt;sum&gt;)</code></pre>
+  <pre class="fql result"><code>/deltas(&quot;group A&quot;,5)=nil
+/deltas(&quot;group B&quot;,-2)=nil
+/deltas(&quot;group C&quot;,118)=nil</code></pre>
+  <p>Because each distinct value produces its own invocation, the query
+  above is equivalent to the <a href="#pipelines">pipeline</a> below.
+  The difference is that the pipeline reads its group names from a
+  second directory, while the single query discovers them from the
+  key-values it is already scanning.</p>
+  <pre class="fql query"><code>/deltas/groups(&lt;group:str&gt;)
+/deltas(:group,&lt;sum&gt;)</code></pre>
+  <p>Aggregation queries are also useful when <a
+  href="https://apple.github.io/foundationdb/blob.html">reading large
+  blobs</a>. The data is usually split into chunks stored in separate
+  key-values. The respective keys contain the byte offset of each
+  chunk.</p>
+  <pre class="fql query"><code>/blob(
+  &quot;my_file.bin&quot;,    % The identifier of the blob.
+  &lt;offset:int&gt;, % The byte offset within the blob.
+)=&lt;chunk:bytes&gt; % A chunk of the blob.</code></pre>
+  <pre class="fql result"><code>/blob(&quot;my_file.bin&quot;,0)=10kb
+/blob(&quot;my_file.bin&quot;,10000)=10kb
+/blob(&quot;my_file.bin&quot;,20000)=2.7kb</code></pre>
+  <blockquote>
+  <p>❗ Instead of printing the actual byte strings in these results,
+  only the byte lengths are printed. This is a possible feature of an
+  FQL implementation. See <a href="#formatting">Formatting</a> for more
+  details.</p>
+  </blockquote>
+  <p>Using <code>append</code>, the client obtains the entire blob
+  instead of having to concatenate the chunks themselves.</p>
+  <pre class="fql query"><code>/blob(&quot;my_file.bin&quot;,...)=&lt;blob:append&gt;</code></pre>
+  <pre class="fql result"><code>/blob(&quot;my_file.bin&quot;,...)=22.7kb</code></pre>
+  <p>Holes are resolved to actual data elements in the results, whether
+  or not they aggregate. The <code>...</code> token is not, since it
+  does not stand for a single element, and so it appears unchanged in
+  the key-value above.</p>
+  <p>Every invocation of an aggregation query returns at most one
+  key-value. How many invocations occur is a separate matter, decided by
+  the query’s holes and by the <a href="#cardinality">cardinality</a> of
+  the pipeline it belongs to.</p>
+  <p>The table below lists the available aggregation types.</p>
+  <div>
+  <table>
+  <colgroup>
+  <col style="width: 13%" />
+  <col style="width: 39%" />
+  <col style="width: 11%" />
+  <col style="width: 35%" />
+  </colgroup>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Aggregate</th>
+  <th style="text-align: left;">I/O</th>
+  <th style="text-align: left;">Default</th>
+  <th style="text-align: left;">Description</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>count</code></td>
+  <td style="text-align: left;"><code>any</code> ➜ <code>int</code></td>
+  <td style="text-align: left;"><code>0</code></td>
+  <td style="text-align: left;">Count the number of results</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>sum</code></td>
+  <td style="text-align: left;"><code>int</code>,<code>num</code> ➜
+  <code>int</code>,<code>num</code></td>
+  <td style="text-align: left;"><code>0</code></td>
+  <td style="text-align: left;">Sum numeric values</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>min</code></td>
+  <td style="text-align: left;"><code>int</code>,<code>num</code> ➜
+  <code>int</code>,<code>num</code>,<code>nil</code></td>
+  <td style="text-align: left;"><code>nil</code></td>
+  <td style="text-align: left;">Minimum numeric value</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>max</code></td>
+  <td style="text-align: left;"><code>int</code>,<code>num</code> ➜
+  <code>int</code>,<code>num</code>,<code>nil</code></td>
+  <td style="text-align: left;"><code>nil</code></td>
+  <td style="text-align: left;">Maximum numeric value</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>avg</code></td>
+  <td style="text-align: left;"><code>int</code>,<code>num</code> ➜
+  <code>num</code>,<code>nil</code></td>
+  <td style="text-align: left;"><code>nil</code></td>
+  <td style="text-align: left;">Average numeric values</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>append</code></td>
+  <td style="text-align: left;"><code>bytes</code>,<code>str</code> ➜
+  <code>bytes</code>,<code>str</code></td>
+  <td style="text-align: left;"><code>0x</code></td>
+  <td style="text-align: left;">Concatenate bytes/strings</td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <p><code>sum</code>, <code>min</code>, and <code>max</code> output
+  <code>int</code> if all inputs are <code>int</code>. Otherwise, they
+  output <code>num</code>. Similarly, <code>append</code> outputs
+  <code>str</code> if all inputs are <code>str</code>. Otherwise, it
+  outputs <code>bytes</code>.</p>
+  <p>An invocation which aggregates no key-values returns nothing, just
+  as any other read query matching nothing returns nothing. The
+  <code>default</code> <a href="#options-2">option</a> overrides this,
+  forcing the invocation to return its aggregate’s default value.</p>
+  <pre class="fql query"><code>[default]
+/deltas(&quot;no such group&quot;,&lt;sum&gt;)</code></pre>
+  <pre class="fql result"><code>/deltas(&quot;no such group&quot;,0)=nil</code></pre>
+  <blockquote>
+  <p>❗ A hole only enumerates values which appear in the database, so a
+  grouped aggregation never aggregates an empty set. Only a query whose
+  key is fully specified, as above, can do so.</p>
+  </blockquote>
+  <p><code>append</code> may be given the <a href="#options">option</a>
+  <code>separator</code> which defines a <code>str</code> or
+  <code>bytes</code> separator placed between each of the appended
+  values.</p>
+  <pre class="fql query"><code>% Append the lines of text for a blog post.
+/blog/post(
+  253245,      % post ID
+  &lt;offset:int&gt; % line offset
+)=&lt;body:append[separator:&quot;\n&quot;]&gt;</code></pre>
+  <h3 id="virtual-key-values">Virtual Key-Values</h3>
+  <p>Virtual key-values allow FQL to model side effects and foreign
+  functions as key-value operations. They are syntactically identical to
+  other key-values except their directory path begins with
+  <code>@</code> instead of <code>/</code>.</p>
+  <p>The <code>@</code> namespace is maintained entirely by the client.
+  It is disjoint from <code>/</code>, is never stored, and no part of it
+  reaches FoundationDB.</p>
+  <pre class="fql query"><code>@env(&quot;HOME&quot;)=&lt;home:str&gt;
+@var(&quot;count&quot;)=5
+@file(&quot;err.txt&quot;,&quot;wa&quot;)=:result</code></pre>
+  <p>A virtual key-value is an <em>invocation</em>. The key’s tuple is
+  the argument list and the value is an additional argument. <a
+  href="#holes">Holes</a> mark which of those arguments are outputs,
+  much like a C function returning values through a pointer. Everything
+  else is an input.</p>
+  <pre class="fql query"><code>% &#39;contents&#39; is an output; the file is read.
+@file(&quot;in.txt&quot;,&quot;r&quot;)=&lt;contents:bytes&gt;
+
+% &#39;contents&#39; is an input; the file is appended to.
+@file(&quot;err.txt&quot;,&quot;wa&quot;)=:result</code></pre>
+  <p>Outputs are not limited to the value. A function returning more
+  than one result marks each of them in the tuple. For instance, a
+  function splitting a path into its parent and file name would return
+  both through the argument list.</p>
+  <pre class="fql query"><code>@path/split(&quot;/tmp/data/log.txt&quot;,&lt;dir:str&gt;,&lt;file:str&gt;)</code></pre>
+  <blockquote>
+  <p>❗ <code>@path</code> is not part of the <a
+  href="#standard-library">standard library</a> as of now. It appears
+  here only to illustrate multiple outputs.</p>
+  </blockquote>
+  <p>Every output must be a named, typed <a href="#holes">variable</a>.
+  The empty variable <code>&lt;&gt;</code> is not allowed, since an
+  anonymous output cannot be referenced by a later query.</p>
+  <p>Unlike a normal key-value, a virtual key-value which omits its
+  value does not imply the empty variable <code>&lt;&gt;</code>. It has
+  no value at all.</p>
+  <h4 id="signatures">Signatures</h4>
+  <p>Each virtual key-value has exactly one signature. FQL does not
+  support overloading, so a given path always takes the same arguments
+  with the same types.</p>
+  <p>Ending the tuple with <code>...</code> prints that signature
+  instead of invoking the function.</p>
+  <pre class="fql query"><code>@file(...)</code></pre>
+  <pre class="fql result"><code>@file(&lt;path:str&gt;,&lt;mode:str&gt;)=&lt;contents:bytes&gt;</code></pre>
+  <p>A signature names every argument and its type, but it does not say
+  which arguments are outputs. That is decided at the call site by where
+  the <a href="#holes">holes</a> are placed. Above,
+  <code>contents</code> is an output when read and an input when
+  written. Which holes each function accepts will be described by the <a
+  href="#standard-library">standard library</a> documentation once it is
+  defined.</p>
+  <p>Virtual directories are listed like any other <a
+  href="https://apple.github.io/foundationdb/developer-guide.html#directories">directory</a>,
+  which allows the available functions to be discovered.</p>
+  <pre class="fql query"><code>@&lt;&gt;</code></pre>
+  <pre class="fql result"><code>@commit
+@var
+@env
+@file
+@print
+@error</code></pre>
+  <p>While <code>&lt;&gt;</code> matches a single path segment,
+  <code>...</code> matches every descendant. The two differ once
+  functions are grouped into submodules.</p>
+  <pre class="fql query"><code>@crypto/&lt;&gt;</code></pre>
+  <pre class="fql result"><code>@crypto/hash
+@crypto/sign</code></pre>
+  <pre class="fql query"><code>@crypto/...</code></pre>
+  <pre class="fql result"><code>@crypto/hash/sha256
+@crypto/hash/blake3
+@crypto/sign/ed25519
+@crypto/sign/rsa</code></pre>
+  <blockquote>
+  <p>❗ Like <code>@path</code>, <code>@crypto</code> is not part of the
+  <a href="#standard-library">standard library</a> as of now.</p>
+  </blockquote>
+  <p>Directory listing is the only context in which
+  <code>&lt;&gt;</code> may appear under <code>@</code>. Virtual
+  directories cannot be removed, so <code>=remove</code> is not allowed.
+  Neither are <a href="#options">options</a>, at the query or element
+  level.</p>
+  <h4 id="effects">Effects</h4>
+  <p>Virtual key-values which modify state outside the query are
+  <em>effectful</em>. Effects are buffered rather than applied
+  immediately, and the buffer is flushed only once the enclosing
+  transaction commits.</p>
+  <p>Whether a call is effectful depends on the direction it is invoked
+  in, not on the function itself. Reading <code>@env</code> is not an
+  effect; writing it is.</p>
+  <p>Within a transaction, a query reads its own writes. A write to a
+  file is held in memory, and a subsequent read of that file observes
+  it.</p>
+  <pre class="fql query"><code>@file(&quot;log.txt&quot;,&quot;wa&quot;)=&quot;first line\n&quot;
+
+% Sees the buffered write, even though nothing
+% has been written to disk yet.
+@file(&quot;log.txt&quot;,&quot;r&quot;)=&lt;contents:bytes&gt;</code></pre>
+  <p>Because the buffer is discarded and rebuilt whenever FoundationDB
+  retries a transaction, effects are applied exactly once no matter how
+  many times the transaction is attempted. Session state buffers the
+  same way, so a <code>@var</code> set inside a transaction that never
+  commits is rolled back along with the key-values.</p>
+  <p>File reads are not cached. They observe the live state of their
+  source, overlaid with this transaction’s buffered file writes.</p>
+  <blockquote>
+  <p>❗ Flushing the buffer is not atomic with the FoundationDB commit.
+  If the transaction commits and an effect then fails to apply, the
+  key-values are durable but the effect is lost.</p>
+  </blockquote>
+  <h4 id="transaction-boundaries">Transaction Boundaries</h4>
+  <p><code>@commit()</code> marks the boundary between two transactions.
+  It takes no arguments, produces no output, and is the only effect
+  which is never buffered, because it is what flushes the buffer.</p>
+  <pre class="fql query"><code>% read data from the source into memory
+/app/source(&lt;i:any&gt;)=&lt;data:bytes&gt;
+
+% start a new transaction before writing
+@commit()
+
+% write data from memory to the destination
+/app/destination(:i)=:data</code></pre>
+  <h4 id="standard-library">Standard Library</h4>
+  <p>FQL’s standard library has yet to be defined. The functions below
+  are the initial set; more will be added as the language is
+  developed.</p>
+  <div>
+  <table>
+  <colgroup>
+  <col style="width: 25%" />
+  <col style="width: 31%" />
+  <col style="width: 31%" />
+  <col style="width: 12%" />
+  </colgroup>
+  <thead>
+  <tr>
+  <th style="text-align: left;">Function</th>
+  <th style="text-align: left;">Reading it gives</th>
+  <th style="text-align: left;">Writing it does</th>
+  <th style="text-align: left;">Effect</th>
+  </tr>
+  </thead>
+  <tbody>
+  <tr>
+  <td style="text-align: left;"><code>@commit()</code></td>
+  <td style="text-align: left;">-</td>
+  <td style="text-align: left;">Commits the transaction</td>
+  <td style="text-align: left;">Yes</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>@var(name)</code></td>
+  <td style="text-align: left;">A session value</td>
+  <td style="text-align: left;">Sets it; <code>clear</code> unsets</td>
+  <td style="text-align: left;">On Write</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>@env(name)</code></td>
+  <td style="text-align: left;">An environment variable</td>
+  <td style="text-align: left;">Sets it</td>
+  <td style="text-align: left;">On Write</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>@file(path,mode)</code></td>
+  <td style="text-align: left;">The file’s contents</td>
+  <td style="text-align: left;">Writes or appends</td>
+  <td style="text-align: left;">On Write</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>@print(text)</code></td>
+  <td style="text-align: left;">-</td>
+  <td style="text-align: left;">Writes to standard out</td>
+  <td style="text-align: left;">Yes</td>
+  </tr>
+  <tr>
+  <td style="text-align: left;"><code>@error(text)</code></td>
+  <td style="text-align: left;">-</td>
+  <td style="text-align: left;">Writes to standard error</td>
+  <td style="text-align: left;">Yes</td>
+  </tr>
+  </tbody>
+  </table>
+  </div>
+  <p>The “Effect” column states which direction of the call is buffered,
+  or “Yes” when every call is an effect. Neither <code>@print</code> nor
+  <code>@error</code> appends a newline to what it writes.</p>
+  <pre class="fql query"><code>@print(&quot;no newline is added, so this &quot;)
+@print(&quot;line is printed in two parts\n&quot;)</code></pre>
+  <pre class="bash result"><code>no newline is added, so this line is printed in two parts</code></pre>
+  <h1 id="implementations">Implementations</h1>
+  <p>FQL defines the query language but leaves many details to the
+  implementation. This section outlines some of those details and how an
+  implementation may choose to provide them.</p>
+  <p>TODO: talk about FQL as a client API.</p>
+  <h2 id="connection">Connection</h2>
+  <p>An implementation determines how users connect to a FoundationDB
+  cluster. This may involve selecting from predefined cluster files or
+  specifying a custom path. An implementation could even simulate an FDB
+  cluster locally for testing purposes.</p>
+  <h2 id="permissions">Permissions</h2>
+  <p>An implementation may disallow write queries unless a specific
+  configuration option is enabled. This provides a safeguard against
+  accidental mutations. Implementations could also limit access to
+  certain directories or any other behavior for any reason.</p>
+  <h2 id="extensions">Extensions</h2>
+  <p>An implementation may provide custom options and types beyond those
+  defined by FQL. For example, the pseudo type <code>json</code> could
+  act as a restricted form of <code>str</code> which only matches valid
+  JSON. A custom option <code>every:5</code> could filter results to
+  return only every fifth key-value.</p>
+  <h2 id="formatting">Formatting</h2>
+  <p>An implementation can provide multiple formatting options for
+  key-values returned by read queries. The default format prints
+  key-values as their equivalent write queries. Alternative formats may
+  be provided for different use cases:</p>
+  <ul>
+  <li>Print byte lengths instead of actual bytes to reduce output
+  verbosity for large values.</li>
+  <li>Print placeholders (<code>&lt;uuid&gt;</code>,
+  <code>&lt;vstamp&gt;</code>) in place of actual values when the
+  details are not relevant.</li>
+  <li>Output key-values in a binary format suitable for storage on disk
+  or transmission over a network.</li>
+  </ul>
+  <h1 id="grammar">Grammar</h1>
+  <p>The complete FQL grammar is specified below.</p>
+  <pre class="ebnf grammar"><code>(* Top-level query structure *)
+script = nl [ query { eol query } nl ]
+query = [ options eol ] ( keyval | key | dquery )
+dquery = directory [ &#39;=&#39; &#39;remove&#39; ]
+
+(* Key-Values *)
+keyval = key &#39;=&#39; value
+key = directory tuple
+value = &#39;clear&#39; | data
+
+(* Directories *)
+directory = ( &#39;/&#39; | &#39;@&#39; ) segments
+segments = &#39;...&#39; | segment [ &#39;/&#39; segments ]
+segment = &#39;&lt;&gt;&#39; | name | string
+
+(* Tuples *)
+tuple = &#39;(&#39; [ nl elements [ &#39;,&#39; ] nl ] &#39;)&#39;
+elements = &#39;...&#39; | data [ &#39;,&#39; nl elements ]
+
+(* Data elements *)
+data = ( &#39;nil&#39; | bool | int | num | string | uuid
+       | bytes | tuple | vstamp | variable | reference )
+       [ options ]
+
+bool = &#39;true&#39; | &#39;false&#39;
+int = [ &#39;-&#39; ] digits
+num = int &#39;.&#39; digits | ( int | int &#39;.&#39; digits ) &#39;e&#39; int
+    | &#39;-inf&#39; | &#39;inf&#39; | &#39;-nan&#39; | &#39;nan&#39;
+string = &#39;&quot;&#39; { char | escape } &#39;&quot;&#39;
+uuid = hex{8} &#39;-&#39; hex{4} &#39;-&#39; hex{4} &#39;-&#39; hex{4} &#39;-&#39; hex{12}
+bytes = &#39;0x&#39; { hex{2} }
+vstamp = &#39;#&#39; [ hex{20} ] &#39;:&#39; hex{4}
+
+(* Variables and References *)
+variable = &#39;&lt;&#39; ( [ types ] | name &#39;:&#39; types ) &#39;&gt;&#39;
+types = type { &#39;|&#39; type }
+reference = &#39;:&#39; name
+type = ( &#39;any&#39; | &#39;nil&#39; | &#39;tup&#39; | &#39;bool&#39; | &#39;int&#39; | &#39;num&#39;
+       | &#39;str&#39; | &#39;uuid&#39; | &#39;bytes&#39; | &#39;vstamp&#39; | agg ) [ options ]
+agg = &#39;count&#39; | &#39;sum&#39; | &#39;avg&#39; | &#39;min&#39; | &#39;max&#39; | &#39;append&#39;
+
+(* Options *)
+options = &#39;[&#39; option { &#39;,&#39; option } &#39;]&#39;
+option = name [ &#39;:&#39; argument ]
+argument = name | int | string
+
+(* Primitives *)
+digits = digit { digit }
+digit = &#39;0&#39; | &#39;1&#39; | &#39;2&#39; | &#39;3&#39; | &#39;4&#39;
+      | &#39;5&#39; | &#39;6&#39; | &#39;7&#39; | &#39;8&#39; | &#39;9&#39;
+hex = digit
+    | &#39;a&#39; | &#39;b&#39; | &#39;c&#39; | &#39;d&#39; | &#39;e&#39; | &#39;f&#39;
+    | &#39;A&#39; | &#39;B&#39; | &#39;C&#39; | &#39;D&#39; | &#39;E&#39; | &#39;F&#39;
+name = ( letter | &#39;_&#39; ) { letter | digit | &#39;_&#39; | &#39;-&#39; | &#39;.&#39; }
+letter = &#39;a&#39; | ... | &#39;z&#39; | &#39;A&#39; | ... | &#39;Z&#39;
+escape = ? A backslash followed by &#39;&quot;&#39;, &#39;\&#39;, &#39;n&#39;, &#39;r&#39;, or &#39;t&#39; ?
+char = ? Any printable UTF-8 character except &#39;&quot;&#39; and &#39;\&#39; ?
+
+(* Comments *)
+comment = &#39;%&#39; { ? any character except &#39;\n&#39; ? } &#39;\n&#39;
+
+(* Whitespace *)
+ws = { &#39; &#39; | &#39;\t&#39; }
+nl = { &#39; &#39; | &#39;\t&#39; | &#39;\n&#39; | &#39;\r&#39; | comment }
+eol = ws ( comment | &#39;\n&#39; ) nl</code></pre>
+  <!--
+  Link definitions for cross-references whose label doesn't
+  match a section heading. Labels which do match a heading
+  (e.g. [holes], [filtering]) resolve implicitly and are not
+  listed here.
+  -->
+  <!-- vim: set tw=60 conceallevel=0 :-->
+  <script>
+    hljs.configure({ languageDetectRe: /\b([\w-]+)\b/ });
+    hljs.highlightAll();
+    document.querySelectorAll(":not(pre) > code").forEach((e) => {
+      // Elements pre-tagged with an hljs-* token class (e.g. hljs-variable)
+      // are styled via CSS only; sending them through highlightElement would
+      // make hljs try to load the token name as a language.
+      if ([...e.classList].some((c) => c.startsWith("hljs-"))) return;
+
+      let bash = false;
+      for (let p = e.parentElement; p; p = p.parentElement) {
+        if (p.classList.contains("bash")) {
+          bash = true;
+          break;
+        }
+      }
+
+      if (bash) e.classList.add("bash");
+      else e.classList.add("fql");
+      hljs.highlightElement(e);
+    });
+
+    // Theme toggle
+    (function() {
+      const toggle = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+
+      function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+      }
+
+      toggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'light' ? 'dark' : 'light');
+      });
+
+      // Listen for system preference changes (only if no stored preference)
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('theme')) {
+          setTheme(e.matches ? 'light' : 'dark');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

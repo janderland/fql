@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html data-theme="dark">
+<head>
+  <title>$title$</title>
+  <meta charset="utf-8" />
+  <meta name="generator" content="pandoc" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@300..700&family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css?family=Roboto|Merriweather" rel="stylesheet">
+  <link href="css/code.css" rel="stylesheet" >
+  <link href="css/style.css" rel="stylesheet"/>
+  <script src="js/highlight.js"></script>
+  <script src="js/fql.js"></script>
+  <script src="js/ebnf.js"></script>
+  <script src="js/python.js"></script>
+  <script src="js/sql.js"></script>
+  <script>
+    // Theme initialization - runs immediately to prevent flash
+    (function() {
+      function getPreferredTheme() {
+        const stored = localStorage.getItem('theme');
+        if (stored) return stored;
+        return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark';
+      }
+      document.documentElement.setAttribute('data-theme', getPreferredTheme());
+    })();
+  </script>
+</head>
+<body>
+  <div class="header-container">
+    <h1>$title$</h1>
+    <div class="header-icons">
+      <a href="https://github.com/janderland/fql" target="_blank" title="View on GitHub">
+        <img class="icon github-dark" src="img/github-dark.svg" alt="GitHub" />
+        <img class="icon github-light" src="img/github-light.svg" alt="GitHub" />
+      </a>
+      <a href="https://www.foundationdb.org/" target="_blank" title="FoundationDB">
+        <img class="icon fdb" src="img/fdb.svg" alt="FoundationDB" />
+      </a>
+      <button class="theme-toggle" id="theme-toggle" title="Toggle light/dark mode" aria-label="Toggle light/dark mode">
+        <svg class="sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="5"/>
+          <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/>
+        </svg>
+        <svg class="moon-icon" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+        </svg>
+      </button>
+    </div>
+  </div>
+  $for(include-before)$
+  $include-before$
+  $endfor$
+  $toc$
+  $body$
+  <script>
+    hljs.configure({ languageDetectRe: /\b([\w-]+)\b/ });
+    hljs.highlightAll();
+    document.querySelectorAll(":not(pre) > code").forEach((e) => {
+      // Elements pre-tagged with an hljs-* token class (e.g. hljs-variable)
+      // are styled via CSS only; sending them through highlightElement would
+      // make hljs try to load the token name as a language.
+      if ([...e.classList].some((c) => c.startsWith("hljs-"))) return;
+
+      let bash = false;
+      for (let p = e.parentElement; p; p = p.parentElement) {
+        if (p.classList.contains("bash")) {
+          bash = true;
+          break;
+        }
+      }
+
+      if (bash) e.classList.add("bash");
+      else e.classList.add("fql");
+      hljs.highlightElement(e);
+    });
+
+    // Theme toggle
+    (function() {
+      const toggle = document.getElementById('theme-toggle');
+      const html = document.documentElement;
+
+      function setTheme(theme) {
+        html.setAttribute('data-theme', theme);
+        localStorage.setItem('theme', theme);
+      }
+
+      toggle.addEventListener('click', () => {
+        const current = html.getAttribute('data-theme');
+        setTheme(current === 'light' ? 'dark' : 'light');
+      });
+
+      // Listen for system preference changes (only if no stored preference)
+      window.matchMedia('(prefers-color-scheme: light)').addEventListener('change', (e) => {
+        if (!localStorage.getItem('theme')) {
+          setTheme(e.matches ? 'light' : 'dark');
+        }
+      });
+    })();
+  </script>
+</body>
+</html>

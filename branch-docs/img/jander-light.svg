@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   viewBox="0 0 32 32"
+   version="1.1"
+   id="svg1"
+   xmlns="http://www.w3.org/2000/svg">
+  <rect
+     width="32"
+     height="32"
+     rx="4"
+     fill="#e0e0e0"
+     id="rect1" />
+  <text
+     x="8.6996994"
+     y="23.006323"
+     font-family="serif"
+     font-size="30.4921px"
+     font-weight="bold"
+     fill="#8959a8"
+     text-anchor="middle"
+     id="text1"
+     transform="scale(0.99821261,1.0017906)"
+     style="stroke-width:1.69399">j</text>
+  <text
+     x="20.27212"
+     y="25.007669"
+     font-family="serif"
+     font-size="33.1093px"
+     font-weight="bold"
+     fill="#4271ae"
+     text-anchor="middle"
+     id="text2"
+     transform="scale(1.0951916,0.91308224)"
+     style="stroke-width:1.83939">?</text>
+</svg>

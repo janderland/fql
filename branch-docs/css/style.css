@@ -1,0 +1,397 @@
+/* Colors */
+
+/*
+ * base16 "eighties" color scheme (dark mode)
+ * http://chriskempson.com/projects/base16/
+ */
+
+[data-theme="dark"] {
+  --color0: #2d2d2d;
+  --color1: #393939;
+  --color2: #515151;
+  --color3: #747369;
+  --color4: #a09f93;
+  --color5: #d3d0c8;
+  --color6: #e8e6df;
+  --color7: #f2f0ec;
+  --color8: #f2777a;
+  --color9: #f99157;
+  --colorA: #ffcc66;
+  --colorB: #99cc99;
+  --colorC: #66cccc;
+  --colorD: #6699cc;
+  --colorE: #cc99cc;
+  --colorF: #d27b53;
+
+  /*
+   * colorX is an addition to the
+   * base16 scheme. It's used as the
+   * background color, freeing up
+   * color0 to be used as the code
+   * block background color.
+   */
+  --colorX: #141414;
+}
+
+/*
+ * base16 "tomorrow" color scheme (light mode)
+ * http://chriskempson.com/projects/base16/
+ */
+
+[data-theme="light"] {
+  --color0: #f5f5f5;
+  --color1: #ffffff;
+  --color2: #d6d6d6;
+  --color3: #8e908c;
+  --color4: #969896;
+  --color5: #4d4d4c;
+  --color6: #282a2e;
+  --color7: #1d1f21;
+  --color8: #c82829;
+  --color9: #f5871f;
+  --colorA: #eab700;
+  --colorB: #718c00;
+  --colorC: #3e999f;
+  --colorD: #4271ae;
+  --colorE: #8959a8;
+  --colorF: #a3685a;
+
+  /*
+   * colorX is an addition to the
+   * base16 scheme. It's used as the
+   * background color, freeing up
+   * color0 to be used as the code
+   * block background color.
+   */
+  --colorX: #e0e0e0;
+}
+
+/* 
+ * Smooth transition when changing
+ * between light/dark themes.
+ */
+
+* {
+  transition: color 0.2s, background-color 0.2s, fill 0.2s, opacity 0.2s;
+}
+
+/* General */
+
+body {
+  font-family: "Roboto", sans-serif;
+  background-color: var(--colorX);
+  color: var(--color7);
+
+  line-height: 1.75;
+  max-width: 40rem;
+  padding: 0 0.6rem;
+  margin: 0 auto;
+}
+
+p {
+  margin: 1rem 0;
+}
+
+/* Header */
+
+.header-container {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.header-icons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.header-icons a {
+  display: flex;
+  align-items: center;
+}
+
+.header-icons a:hover {
+  opacity: 0.7;
+}
+
+.icon {
+  width: 1.5rem;
+  height: 1.5rem;
+  fill: var(--color7);
+}
+
+.icon.fdb {
+  fill: none;
+  width: auto;
+}
+
+.icon.janderland-dark,
+.icon.janderland-light {
+  fill: none;
+}
+
+[data-theme="dark"] .icon.janderland-light {
+  display: none;
+}
+
+[data-theme="light"] .icon.janderland-dark {
+  display: none;
+}
+
+[data-theme="dark"] .icon.github-light {
+  display: none;
+}
+
+[data-theme="light"] .icon.github-dark {
+  display: none;
+}
+
+/* Theme Toggle */
+
+.theme-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--color1);
+  border: none;
+  border-radius: 1rem;
+  padding: 0.3rem 0.5rem;
+  cursor: pointer;
+}
+
+[data-theme="dark"] .theme-toggle:hover {
+  background: var(--color2);
+}
+
+[data-theme="light"] .theme-toggle:hover {
+  background: var(--color0);
+}
+
+.theme-toggle svg {
+  width: 1rem;
+  height: 1rem;
+}
+
+.theme-toggle .sun-icon {
+  color: var(--colorA);
+}
+
+.theme-toggle .moon-icon {
+  color: var(--colorD);
+}
+
+[data-theme="dark"] .theme-toggle .sun-icon,
+[data-theme="light"] .theme-toggle .moon-icon {
+  opacity: 0.4;
+}
+
+[data-theme="dark"] .theme-toggle .moon-icon,
+[data-theme="light"] .theme-toggle .sun-icon {
+  opacity: 1;
+}
+
+/* Titles */
+
+h1, h2, h3 {
+  font-family: "Merriweather", serif;
+}
+
+body > h1 {
+  margin-top: 3rem;
+}
+
+h1 {
+  font-size: 2.5rem;
+  line-height: 1.25;
+  margin: 0;
+}
+
+h2 {
+  font-size: 2rem;
+  line-height: 1.25;
+  margin: 2rem 0 0.5rem 0;
+}
+
+/* Links */
+
+a:link {
+  color: var(--color8);
+}
+
+a:visited {
+  color: var(--colorF);
+}
+
+[data-theme="dark"] a:hover {
+  color: var(--colorA);
+}
+
+[data-theme="light"] a:hover {
+  color: var(--color9);
+}
+
+/* Images */
+
+img {
+  border-radius: 0.5rem;
+  width: 100%;
+}
+
+/* Callouts */
+
+blockquote {
+  border-left: 1rem solid var(--colorF);
+  padding: 0.5rem 1rem;
+  margin: 2rem 0;
+  background-color: var(--color1);
+  border-radius: 0.5rem;
+}
+
+/* Inline Code */
+
+code {
+  font-family: "Fira Code", monospace;
+  font-variant-ligatures: none;
+  font-feature-settings: "calt" 0;
+  border-radius: 0.3rem;
+  padding: 0 0.2rem 0 0.2rem;
+  background-color: var(--color1);
+}
+
+/* Code Blocks */
+
+pre {
+  position: relative;
+  z-index: 1;
+
+  /* This is the label at the top-left
+   * of the code block. The 'content'
+   * property must be overriden for
+   * it to be displayed.
+   */
+  > ::before {
+    position: absolute;
+    top: 0;
+    left: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--color4);
+  }
+
+  code {
+    width: 100%;
+    display: block;
+    margin: 2rem 0;
+    padding: 0.5rem 1rem;
+    box-sizing: border-box;
+    border-radius: 0.5rem;
+    overflow-x: auto;
+    color: var(--color6);
+    background-color: var(--color1);
+  }
+}
+
+pre.query, pre.grammar, pre.schema {
+  code {
+    padding: 1.5rem 1rem 0.5rem 1rem;
+  }
+}
+
+pre.result, pre.equiv-py {
+  z-index: 0;
+
+  > ::before {
+    top: 1rem;
+    color: var(--color3);
+  }
+
+  code {
+    margin-top: -3rem;
+    padding: 2.5rem 1rem 0.5rem 1rem;
+    background-color: var(--color0);
+  }
+}
+
+pre.query > ::before {
+  content: "query";
+}
+
+pre.schema > ::before {
+  content: "schema";
+}
+
+pre.result > ::before {
+  content: "result";
+}
+
+pre.grammar > ::before {
+  content: "ebnf";
+}
+
+pre.equiv-py > ::before {
+  content: "equivalent python";
+}
+
+pre.equiv-py.standalone {
+  > ::before {
+    top: 0;
+  }
+
+  code {
+    margin-top: 0;
+    padding-top: 1.5rem;
+  }
+}
+
+/* Tables */
+
+/* This div hides it's table child
+ * when it's larger than the screen
+ * width and provides scollability.
+ */
+div:has(> table) {
+  width: 100%;
+  overflow-x: auto;
+  margin: 2rem 0;
+  border-radius: 0.5rem;
+  background-color: var(--color0);
+}
+
+table {
+  width: 100%;
+  border-spacing: 0;
+  background-color: var(--color0);
+  border-radius: 0.5rem;
+
+  /* Hide inline code's bg color by matching
+   * the table's bg color. Within the tables,
+   * code is always next to code so there's
+   * no need to highlight it.
+   */
+  code {
+    background-color: var(--color0);
+  }
+
+  tr {
+    th {
+      background-color: var(--color1);
+    }
+
+    th, td {
+      padding: 0.5rem 1rem;
+    }
+  }
+
+  tr:first-child {
+    th:first-child {
+      border-top-left-radius: 0.5rem;
+      border-bottom-left-radius: 0.5rem;
+    }
+
+    th:last-child {
+      border-top-right-radius: 0.5rem;
+      border-bottom-right-radius: 0.5rem;
+    }
+  }
+}
