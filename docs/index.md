@@ -1352,10 +1352,10 @@ entire "people" directory.
 /people(2003,"Larry","Johnson",8)=nil
 ```
 
-As mentioned earlier, these kinds of filtering queries can
-be expensive. Many of the key-value streamed to the client
-may be filtered out. To avoid wasting bandwidth, we can
-store an index for last names in a separate directory.
+As mentioned earlier, [filtering](#filtering) queries can be
+expensive. Many of the key-value streamed to the client may
+be filtered out. To avoid wasting bandwidth, we can store an
+index for last names in a separate directory.
 
 ```fql {.schema}
 /people/last-name(
@@ -1393,7 +1393,7 @@ directory with each ID to obtain our final results.
 ```
 
 FQL can forward the observed values of named variables from
-one query to the next, simplifying indirection reads. In the
+one query to the next, simplifying the task above. In the
 example below, FQL executes the second query multiple times,
 once for each of the IDs returned by the first query.
 
