@@ -1323,7 +1323,7 @@ is alive).
 
 ### Indirection
 
-Indirection is similar to SQL foreign keys; they associate
+Indirection is similar to SQL's foreign keys; it associates
 different key-spaces via some shared data element. In
 FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
@@ -1352,10 +1352,11 @@ entire "people" directory.
 /people(2003,"Larry","Johnson",8)=nil
 ```
 
-As mentioned earlier, [filtering](#filtering) queries can be
-expensive. Many of the key-value streamed to the client may
-be filtered out. To avoid wasting bandwidth, we can store an
-index for last names in a separate directory.
+As mentioned earlier, this kind of [filtering](#filtering)
+query can be expensive. Many of the key-value streamed to
+the client may be filtered out. To avoid wasting bandwidth,
+we can store an index for last names in a separate
+directory.
 
 ```fql {.schema}
 /people/last-name(
@@ -1393,7 +1394,7 @@ directory with each ID to obtain our final results.
 ```
 
 FQL can forward the observed values of named variables from
-one query to the next, simplifying the task above. In the
+one query to the next, simplifying the example above. In the
 example below, FQL executes the second query multiple times,
 once for each of the IDs returned by the first query.
 
@@ -1442,11 +1443,8 @@ key-values to be included in the returned set.
 #### Cardinality
 
 A query may reference variables from multiple queries, and
-the referenced queries may have different cardinalities. FQL
-resolves this by nesting: a query is invoked once for every
-combination of values bound by the queries it depends on.
-
-For instance, consider the following pipeline.
+the referenced queries may have different cardinalities. For
+instance, consider the following example.
 
 ```fql {.query}
 % Obtain a list of parents from all families.
@@ -1455,34 +1453,57 @@ For instance, consider the following pipeline.
 % For each parent, read their children.
 /families/children/parent(:parentID,<childID:int>)
 
-% Schedule a counseling session with each child-parent
-% pair. The versionstamp at the start of the tuple
-% is just for ordering.
+% Schedule a counseling session.
 /schedule/counseling(#:0000,:parentID,:childID)=nil
 ```
 
-The second query may return multiple key-values for each
-parent ID, because parents may have multiple children. The
-third query is invoked once for each parent-child pair. If
-parent ID `5` is associated with child IDs `10`, `11`, and
-`12`, then the third query is invoked for the pairs
-`(5,10)`, `(5,11)`, and `(5,12)`.
+For what parent-child pairs will the final query be
+executed? Does the query write a key-value for every
+parent-child combination, regardless of family ties? FQL
+treats each query in the pipeline like a nested for-loop.
+Let's rewrite the above queries using Python-style pseudo
+code.
 
-Notice that the second query references `:parentID` within
-its own key. The reference constrains the children being
-read to those of the current parent, making this pipeline
-equivalent to an inner join. Below is how the above pipeline
-may look in an SQL database.
-
-```sql
-INSERT INTO
-  schedule (event, client1, client2)
-SELECT
-  'counseling', p.id, c.id
-FROM
-  parent p
-  JOIN child c ON c.parent_id = p.id;
+```py
+# /families/parents(<parentID:int>,...)
+for parentID in listParents():
+  # /families/children/parent(:parentID,<childID:int>)
+  for childID in listChildrenByParent(parentID):
+    # /schedule/counseling(#:0000,:parentID,:childID)=nil
+    scheduleCounseling(parentID, childID)
 ```
+
+Because the second query depends on a parent ID as input, it
+naturally constrains the final query so that parents are
+only scheduled counseling sessions with their children.
+
+Compare this to a similar pipeline where the second query no
+longer takes a parent ID as input.
+
+```fql {.query}
+% Obtain a list of parents from all families.
+/families/parents(<parentID:int>,...)
+
+% Obtain a list of children from all families.
+/families/children(<childID:int>,...)
+
+% Schedule a counseling session.
+/schedule/counseling(#:0000,:parentID,:childID)=nil
+```
+
+```py
+# /families/parents(<parentID:int>,...)
+for parentID in listParents():
+  # /families/children(<childID:int>,...)
+  for childID in listChildren():
+    # /schedule/counseling(#:0000,:parentID,:childID)=nil
+    scheduleCounseling(parentID, childID)
+```
+
+Because the second query is not constrained by a parent ID,
+this pipeline ends up scheduling a counseling session
+between every parent and every child, regardless of family
+ties.
 
 Query [options](#options-2) apply to each invocation of
 a query rather than to the pipeline as a whole. For
