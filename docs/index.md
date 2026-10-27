@@ -1411,34 +1411,72 @@ once for each of the IDs returned by the first query.
 
 #### Pipelines
 
-A query which references a named variable forms a "pipeline"
-with the query defining the variable. Pipelines can be
-several queries deep. Each leaf query forms a unique
-pipeline. A leaf query is a query which doesn't define any
-variables referenced by another query.
+Several indirection queries can be chained, forming
+a "pipeline" of queries connected via their named variables.
+Pipelines can be uniquely identified by their "leaf" query:
+the query at the end of the pipeline which doesn't define
+any new named variable used by other queries.
+
+For instance, consider the schema below. It defines records
+for people and cars, plus a handful of indexes.
+
+```fql {.schema}
+% Person records
+/person(
+  <id:vstamp>,
+  <name:str>,
+  <age:int>,
+  <city:str>,
+  <country:str>,
+)=nil
+
+% Indexes for name/age -> person
+/person/name(<name:str>,<id:vstamp>)=nil
+/person/age(<age:int>,<id:vstamp>)=nil
+
+% Car records
+/car(
+  <carID:vstamp>,
+  <ownerID:vstamp>,
+  <vin:int>,
+  <year:int>,
+  <make:str>,
+  <model:str>,
+)=nil
+
+% Index for owner -> car
+/car/owner(<ownerID:vstamp>,<carID:vstamp>)=nil
+```
+
+Given a person named "Dave Rogers", let's say we want to
+query for the names of all other people the same age as Dave
+and query for the VIN of Dave's car. We would first query
+for Dave himself and then split the result into two
+pipelines: one for his peers of the same age and one for his
+car.
 
 ```fql {.query}
 % A query which obtains the ID(s) for "Dave Rogers"
 % and branches off into two pipelines.
-/people/name("Dave Rogers",<personID:vstamp>)
+/person/name("Dave Rogers",<personID:vstamp>)
 
 % These three queries (plus the one above) form a pipeline
 % which finds the names of all other people the same age
 % as "Dave Rogers".
-/people(:personID,<>,<age:int>,...)
-/people/age(:age,<otherPersonID:vstamp>)
-/people(:otherPersonID,...)
+/person(:personID,<>,<age:int>,...)
+/person/age(:age,<otherPersonID:vstamp>)
+/person(:otherPersonID,<name:str>)
 
-% This query (plus the first one above) forms another
-% pipeline. Find Dave Rogers's car's VIN.
-/cars/owner(:personID,<carID:vstamp>)
-/cars(:carID,<>,<>,<>,<vin:int>,...)
+% These queries (plus the first one above) forms another
+% pipeline which finds Dave Rogers's car's VIN.
+/car/owner(:personID,<carID:vstamp>)
+/car(:carID,<>,<vin:int>,...)
 ```
 
-Pipelines can be several queries deep. By default, only the
-leaf query of each pipeline produces output. This can be
-overridden by using the `[return]` option to force a query's
-key-values to be included in the returned set.
+The final queries to the `/car` and `/person` directories
+are leaf queries. While they do define the variables
+`<name:str>` and `<vin:int>`, those variables are not used
+by any subsequent queries.
 
 #### Cardinality
 
