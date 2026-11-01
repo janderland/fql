@@ -1481,8 +1481,44 @@ by any subsequent queries.
 #### Cardinality
 
 A query may reference variables from multiple queries, and
-the referenced queries may have different cardinalities. For
-instance, consider the following example.
+the referenced queries may have different cardinalities. 
+
+Imagine we manage a database for scheduling parent-child
+counseling sessions. Our database contains records for each
+parent and child, an index linking parents to their
+children, and the scheduled counseling appointments.
+
+```fql {.schema}
+% Parent records
+/parent(
+  <int>, % Parent ID
+  <str>, % Name
+  <str>, % Sex
+  <int>, % Age
+)=nil
+
+% Child records
+/child(
+  <int>, % Child ID
+  <str>, % Name
+  <str>, % Sex
+  <int>, % Age
+)=nil
+
+% Index for parent -> child
+/child/parent(<int>,<int>)=nil
+
+% Counseling appointments
+/counseling(
+  <vstamp>, % Appointment ID
+  <str>,    % Datetime
+  <int>,    % Parent ID
+  <int>,    % Child ID
+)=nil
+```
+
+Let's schedule a counseling session for all parent-child
+pairs.
 
 ```fql {.query}
 % Obtain a list of parents from all families.
