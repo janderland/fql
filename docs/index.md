@@ -1579,6 +1579,8 @@ this pipeline ends up scheduling a counseling session
 between every parent and every child, regardless of family
 ties.
 
+#### Options
+
 Query [options](#options-2) apply to each invocation of
 a query rather than to the pipeline as a whole. For
 instance, let's add a limit and order to the query reading
@@ -1609,48 +1611,6 @@ FROM
    LIMIT 1
   ) c;
 ```
-
-The nested queries need not reference each other. When two
-queries in a pipeline are unrelated, neither referencing the
-other directly or transitively, the nesting still occurs and
-produces every combination of their values: a cross product.
-
-```fql {.query}
-% Obtain a list of parents.
-/families/parents(<parentID:int>,...)
-
-% Obtain a list of tutors. This query doesn't reference
-% `:parentID`, so it reads the same tutors for each parent.
-/schools/tutors(<tutorID:int>,...)
-
-% Schedule a meeting for every parent-tutor pair.
-[join:cross]
-/schedule/meeting(#:0000,:parentID,:tutorID)=nil
-```
-
-Because a cross product is rarely intended, FQL fails when
-a query references unrelated queries unless the `join`
-option is present. The option is declared on the query
-performing the join, so a query's cardinality can be
-determined without reading the rest of the pipeline.
-
-```sql
-INSERT INTO
-  schedule (event, client1, client2)
-SELECT
-  'meeting', p.id, t.id
-FROM
-  parent p
-  CROSS JOIN tutor t;
-```
-
-Queries are nested in the order they appear in the script,
-so a reference must appear after the query defining it. For
-an inner join this order is forced by the references
-themselves, but for a cross product it determines the order
-of the results and, combined with `limit`, which results are
-produced at all.
-
 
 ### Aggregation
 
