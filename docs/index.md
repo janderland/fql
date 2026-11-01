@@ -1414,8 +1414,8 @@ once for each of the IDs returned by the first query.
 Several indirection queries can be chained, forming
 a "pipeline" of queries connected via their named variables.
 Pipelines can be uniquely identified by their "leaf" query:
-the query at the end of the pipeline which doesn't define
-any new named variable used by other queries.
+the query at the end of the pipeline which doesn't forward
+any data to other queries.
 
 For instance, consider the schema below. It defines records
 for people and cars, plus a handful of indexes.
@@ -1423,29 +1423,29 @@ for people and cars, plus a handful of indexes.
 ```fql {.schema}
 % Person records
 /person(
-  <id:vstamp>,
-  <name:str>,
-  <age:int>,
-  <city:str>,
-  <country:str>,
+  <vstamp>, % Person ID
+  <str>,    % Name
+  <int>,    % Age
+  <str>,    % City
+  <str>,    % Country
 )=nil
 
 % Indexes for name/age -> person
-/person/name(<name:str>,<id:vstamp>)=nil
-/person/age(<age:int>,<id:vstamp>)=nil
+/person/name(<str>,<vstamp>)=nil
+/person/age(<int>,<vstamp>)=nil
 
 % Car records
 /car(
-  <carID:vstamp>,
-  <ownerID:vstamp>,
-  <vin:int>,
-  <year:int>,
-  <make:str>,
-  <model:str>,
+  <vstamp>, % Car ID
+  <vstamp>, % Owner ID
+  <int>,    % VIN
+  <int>,    % Year
+  <str>,    % Make
+  <str>,    % Model
 )=nil
 
 % Index for owner -> car
-/car/owner(<ownerID:vstamp>,<carID:vstamp>)=nil
+/car/owner(<vstamp>,<vstamp>)=nil
 ```
 
 Given a person named "Dave Rogers", let's say we want to
