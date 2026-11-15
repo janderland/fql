@@ -1323,7 +1323,7 @@ is alive).
 
 ### Indirection
 
-Indirection queries are similar to SQL joins; they associate
+Indirection is similar to SQL's foreign keys; it associates
 different key-spaces via some shared data element. In
 FoundationDB, indexes are implemented using indirection.
 Suppose we have a large list of people, one key-value for
@@ -1331,7 +1331,7 @@ each person.
 
 ```fql {.schema}
 /people(
-  <int>, % ID
+  <int>, % Person ID
   <str>, % First Name
   <str>, % Last Name
   <int>, % Age
@@ -1340,14 +1340,28 @@ each person.
 
 If we wanted to read all records containing the last name
 "Johnson" we'd have to perform a linear search across the
-entire "people" directory. To avoid this, we can store an
-index for last names in a separate directory.
+entire "people" directory.
+
+```fql {.query}
+/people(<>,<>,"Johnson",<>)
+```
+
+```fql {.result}
+/people(23,"Lenny","Johnson",22)=nil
+/people(348,"Roger","Johnson",54)=nil
+/people(2003,"Larry","Johnson",8)=nil
+```
+
+As mentioned earlier, this kind of [filtering](#filtering)
+query can be expensive. Many of the key-value streamed to
+the client may be filtered out. To avoid wasting bandwidth,
+we can store an index for last names in a separate
+directory.
 
 ```fql {.schema}
-% Index for last names
 /people/last-name(
   <str>, % Last Name
-  <int>, % ID
+  <int>, % Person ID
 )=nil
 ```
 
@@ -1364,9 +1378,25 @@ containing the last name "Johnson".
 /people/last-name("Johnson",2003)=nil
 ```
 
+Once we have these IDs, we'll need to query the `/people`
+directory with each ID to obtain our final results.
+
+```fql {.query}
+/people(23,...)
+/people(348,...)
+/people(2003,...)
+```
+
+```fql {.result}
+/people(23,"Lenny","Johnson",22)=nil
+/people(348,"Roger","Johnson",54)=nil
+/people(2003,"Larry","Johnson",8)=nil
+```
+
 FQL can forward the observed values of named variables from
-one query to the next. We can use this to obtain our desired
-subset from the "people" directory.
+one query to the next, simplifying the example above. In the
+example below, FQL executes the second query multiple times,
+once for each of the IDs returned by the first query.
 
 ```fql {.query}
 /people/last-name("Johnson",<id:int>)
@@ -1381,48 +1411,114 @@ subset from the "people" directory.
 
 #### Pipelines
 
-In the above example, notice that the results of the first
-query are not returned. Instead, they are used to build
-a collection of single key-value read queries whose results
-are the ones returned.
+Several indirection queries can be chained, forming
+a "pipeline" of queries connected via their named variables.
+Pipelines can be uniquely identified by their "leaf" query:
+the query at the end of the pipeline which doesn't forward
+any data to other queries.
 
-A query which references a named variable forms a "pipeline"
-with the query defining the variable. Pipelines can be
-several queries deep. Each leaf query forms a unique
-pipeline. A leaf query is a query which doesn't define any
-variables referenced by another query.
+For instance, consider the schema below. It defines records
+for people and cars, plus a handful of indexes.
+
+```fql {.schema}
+% Person records
+/person(
+  <vstamp>, % Person ID
+  <str>,    % Name
+  <int>,    % Age
+  <str>,    % City
+  <str>,    % Country
+)=nil
+
+% Indexes for name/age -> person
+/person/name(<str>,<vstamp>)=nil
+/person/age(<int>,<vstamp>)=nil
+
+% Car records
+/car(
+  <vstamp>, % Car ID
+  <vstamp>, % Owner ID
+  <int>,    % VIN
+  <int>,    % Year
+  <str>,    % Make
+  <str>,    % Model
+)=nil
+
+% Index for owner -> car
+/car/owner(<vstamp>,<vstamp>)=nil
+```
+
+Given a person named "Dave Rogers", let's say we want to
+query for the names of all other people the same age as Dave
+and query for the VIN of Dave's car. We would first query
+for Dave himself and then split the result into two
+pipelines: one for his peers of the same age and one for his
+car.
 
 ```fql {.query}
 % A query which obtains the ID(s) for "Dave Rogers"
 % and branches off into two pipelines.
-/people/name("Dave Rogers",<personID:vstamp>)
+/person/name("Dave Rogers",<personID:vstamp>)
 
 % These three queries (plus the one above) form a pipeline
 % which finds the names of all other people the same age
 % as "Dave Rogers".
-/people(:personID,<>,<age:int>,...)
-/people/age(:age,<otherPersonID:vstamp>)
-/people(:otherPersonID,...)
+/person(:personID,<>,<age:int>,...)
+/person/age(:age,<otherPersonID:vstamp>)
+/person(:otherPersonID,<name:str>)
 
-% This query (plus the first one above) forms another
-% pipeline. Find Dave Rogers's car's VIN.
-/cars/owner(:personID,<carID:vstamp>)
-/cars(:carID,<>,<>,<>,<vin:int>,...)
+% These queries (plus the first one above) forms another
+% pipeline which finds Dave Rogers's car's VIN.
+/car/owner(:personID,<carID:vstamp>)
+/car(:carID,<>,<vin:int>,...)
 ```
 
-Pipelines can be several queries deep. By default, only the
-leaf query of each pipeline produces output. This can be
-overridden by using the `[return]` option to force a query's
-key-values to be included in the returned set.
+The final queries to the `/car` and `/person` directories
+are leaf queries. While they do define the variables
+`<name:str>` and `<vin:int>`, those variables are not used
+by any subsequent queries.
 
 #### Cardinality
 
 A query may reference variables from multiple queries, and
-the referenced queries may have different cardinalities. FQL
-resolves this by nesting: a query is invoked once for every
-combination of values bound by the queries it depends on.
+the referenced queries may have different cardinalities. 
 
-For instance, consider the following pipeline.
+Imagine we manage a database for scheduling parent-child
+counseling sessions. Our database contains records for each
+parent and child, an index linking parents to their
+children, and the scheduled counseling appointments.
+
+```fql {.schema}
+% Parent records
+/parent(
+  <int>, % Parent ID
+  <str>, % Name
+  <str>, % Sex
+  <int>, % Age
+)=nil
+
+% Child records
+/child(
+  <int>, % Child ID
+  <str>, % Name
+  <str>, % Sex
+  <int>, % Age
+)=nil
+
+% Index for parent -> child
+/child/parent(<int>,<int>)=nil
+
+% Counseling appointments
+/counseling(
+  <vstamp>, % Appointment ID
+  <str>,    % Datetime
+  <int>,    % Parent ID
+  <int>,    % Child ID
+)=nil
+```
+
+Let's schedule a counseling session for all parent-child
+pairs.
 
 ```fql {.query}
 % Obtain a list of parents from all families.
@@ -1431,34 +1527,59 @@ For instance, consider the following pipeline.
 % For each parent, read their children.
 /families/children/parent(:parentID,<childID:int>)
 
-% Schedule a counseling session with each child-parent
-% pair. The versionstamp at the start of the tuple
-% is just for ordering.
+% Schedule a counseling session.
 /schedule/counseling(#:0000,:parentID,:childID)=nil
 ```
 
-The second query may return multiple key-values for each
-parent ID, because parents may have multiple children. The
-third query is invoked once for each parent-child pair. If
-parent ID `5` is associated with child IDs `10`, `11`, and
-`12`, then the third query is invoked for the pairs
-`(5,10)`, `(5,11)`, and `(5,12)`.
+For what parent-child pairs will the final query be
+executed? Does the query write a key-value for every
+parent-child combination, regardless of family ties? FQL
+treats each query in the pipeline like a nested for-loop.
+Let's rewrite the above queries using Python-style pseudo
+code.
 
-Notice that the second query references `:parentID` within
-its own key. The reference constrains the children being
-read to those of the current parent, making this pipeline
-equivalent to an inner join. Below is how the above pipeline
-may look in an SQL database.
-
-```sql
-INSERT INTO
-  schedule (event, client1, client2)
-SELECT
-  'counseling', p.id, c.id
-FROM
-  parent p
-  JOIN child c ON c.parent_id = p.id;
+```py
+# /families/parents(<parentID:int>,...)
+for parentID in listParents():
+  # /families/children/parent(:parentID,<childID:int>)
+  for childID in listChildrenByParent(parentID):
+    # /schedule/counseling(#:0000,:parentID,:childID)=nil
+    scheduleCounseling(parentID, childID)
 ```
+
+Because the second query depends on a parent ID as input, it
+naturally constrains the final query so that parents are
+only scheduled counseling sessions with their children.
+
+Compare this to a similar pipeline where the second query no
+longer takes a parent ID as input.
+
+```fql {.query}
+% Obtain a list of parents from all families.
+/families/parents(<parentID:int>,...)
+
+% Obtain a list of children from all families.
+/families/children(<childID:int>,...)
+
+% Schedule a counseling session.
+/schedule/counseling(#:0000,:parentID,:childID)=nil
+```
+
+```py
+# /families/parents(<parentID:int>,...)
+for parentID in listParents():
+  # /families/children(<childID:int>,...)
+  for childID in listChildren():
+    # /schedule/counseling(#:0000,:parentID,:childID)=nil
+    scheduleCounseling(parentID, childID)
+```
+
+Because the second query is not constrained by a parent ID,
+this pipeline ends up scheduling a counseling session
+between every parent and every child, regardless of family
+ties.
+
+#### Options
 
 Query [options](#options-2) apply to each invocation of
 a query rather than to the pipeline as a whole. For
@@ -1490,48 +1611,6 @@ FROM
    LIMIT 1
   ) c;
 ```
-
-The nested queries need not reference each other. When two
-queries in a pipeline are unrelated, neither referencing the
-other directly or transitively, the nesting still occurs and
-produces every combination of their values: a cross product.
-
-```fql {.query}
-% Obtain a list of parents.
-/families/parents(<parentID:int>,...)
-
-% Obtain a list of tutors. This query doesn't reference
-% `:parentID`, so it reads the same tutors for each parent.
-/schools/tutors(<tutorID:int>,...)
-
-% Schedule a meeting for every parent-tutor pair.
-[join:cross]
-/schedule/meeting(#:0000,:parentID,:tutorID)=nil
-```
-
-Because a cross product is rarely intended, FQL fails when
-a query references unrelated queries unless the `join`
-option is present. The option is declared on the query
-performing the join, so a query's cardinality can be
-determined without reading the rest of the pipeline.
-
-```sql
-INSERT INTO
-  schedule (event, client1, client2)
-SELECT
-  'meeting', p.id, t.id
-FROM
-  parent p
-  CROSS JOIN tutor t;
-```
-
-Queries are nested in the order they appear in the script,
-so a reference must appear after the query defining it. For
-an inner join this order is forced by the references
-themselves, but for a cross product it determines the order
-of the results and, combined with `limit`, which results are
-produced at all.
-
 
 ### Aggregation
 
